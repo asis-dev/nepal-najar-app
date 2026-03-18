@@ -1,8 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run -w @nepal-progress/admin-web build",
-  "outputDirectory": "apps/admin-web/.next",
-  "installCommand": "npm install",
   "framework": "nextjs",
   "ignoreCommand": "exit 1"
 }
