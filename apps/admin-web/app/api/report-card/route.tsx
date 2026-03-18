@@ -31,7 +31,7 @@ export async function GET() {
   const scoreColor = najarScore >= 60 ? '#3b82f6' : najarScore >= 40 ? '#f59e0b' : '#ef4444';
   const arcLength = Math.round((najarScore / 100) * 534);
 
-  return new ImageResponse(
+  const response = new ImageResponse(
     (
       <div
         style={{
@@ -225,4 +225,8 @@ export async function GET() {
     ),
     { width: 1080, height: 1080 },
   );
+
+  // Prevent aggressive caching — revalidate every 10 minutes
+  response.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=300');
+  return response;
 }

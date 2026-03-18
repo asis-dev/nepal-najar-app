@@ -22,6 +22,9 @@ export default function ReportCardPage() {
 
   const [copied, setCopied] = useState(false);
 
+  // Cache-bust key so the image always shows the latest data (changes every 10 minutes)
+  const cacheBust = typeof window !== 'undefined' ? Math.floor(Date.now() / 600_000) : 0;
+
   const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://nepalnajar.com/report-card';
   const imageUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/report-card` : '/api/report-card';
 
@@ -96,7 +99,7 @@ export default function ReportCardPage() {
             {/* Report Card Image */}
             <div className="glass-card p-3 sm:p-4 mb-8">
               <img
-                src="/api/report-card"
+                src={`/api/report-card?v=${cacheBust}`}
                 alt="Report Card"
                 className="w-full rounded-xl shadow-lg shadow-black/30"
               />
