@@ -1,0 +1,13 @@
+{
+  "name": "Nepal Najar — नेपाल नजर",
+  "short_name": "Nepal Najar",
+  "description": "जनताको नजरमा Balenको Nepal — The public eye on Balen's Nepal",
+  "start_url": "/explore",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

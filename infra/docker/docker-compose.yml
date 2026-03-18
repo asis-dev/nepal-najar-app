@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nepal-progress-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nepal
+      POSTGRES_PASSWORD: nepal_dev_password
+      POSTGRES_DB: nepal_progress
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nepal -d nepal_progress']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nepal-progress-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: nepal-progress-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: nepal_minio_access
+      MINIO_ROOT_PASSWORD: nepal_minio_secret
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - ./data/minio:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  createbucket:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 nepal_minio_access nepal_minio_secret;
+      mc mb myminio/nepal-progress-evidence --ignore-existing;
+      mc anonymous set download myminio/nepal-progress-evidence;
+      exit 0;
+      "

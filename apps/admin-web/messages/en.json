@@ -1,0 +1,306 @@
+{
+  "nav": {
+    "home": "Home",
+    "map": "Map",
+    "projects": "Projects",
+    "chat": "Chat",
+    "more": "More",
+    "first100Days": "First 100 Days",
+    "admin": "Admin",
+    "dashboard": "Dashboard"
+  },
+  "hero": {
+    "title": "Nepal Najar",
+    "tagline": "The public eye on Balen's Nepal",
+    "searchPlaceholder": "Search any project, district, or ministry..."
+  },
+  "stats": {
+    "totalProjects": "Total Projects",
+    "active": "Active",
+    "avgProgress": "Avg Progress",
+    "provinces": "Provinces"
+  },
+  "section": {
+    "featuredProjects": "Featured Projects",
+    "featuredProjectsDesc": "Major development initiatives across Nepal",
+    "developmentByProvince": "Development by Province",
+    "developmentByProvinceDesc": "Progress across all 7 provinces",
+    "latestUpdates": "Latest Updates",
+    "latestUpdatesDesc": "What changed across Nepal today",
+    "viewAll": "View All Projects",
+    "viewMap": "View Map"
+  },
+  "status": {
+    "active": "Active",
+    "completed": "Completed",
+    "suspended": "Suspended",
+    "draft": "Draft",
+    "cancelled": "Cancelled"
+  },
+  "commitment": {
+    "trackerTitle": "Commitment Tracker",
+    "trackerLabel": "Accountability Tracker",
+    "first100Days": "Balen's First 100 Days",
+    "first100DaysDesc": "Track promises, milestones, and real progress from Day 1. Full transparency for every citizen.",
+    "daysUntil": "Days Until",
+    "daysSince": "Days Since",
+    "inauguration": "Inauguration",
+    "bachanTracker": "Commitment Tracker",
+    "bachanTrackerNe": "Bachan Tracker",
+    "wachanMeter": "Promise Meter",
+    "overallScorecard": "Overall Accountability Scorecard",
+    "deliveryRate": "delivery rate",
+    "total": "Total",
+    "inProgress": "In Progress",
+    "delivered": "Delivered",
+    "notStarted": "Not Started",
+    "stalled": "Stalled",
+    "filterPromises": "Filter Promises",
+    "category": "Category",
+    "promiseList": "Promise List",
+    "promisesShown": "{count} of {total} promises shown",
+    "noPromises": "No promises match the current filters.",
+    "progress": "Progress",
+    "projects": "project",
+    "projectsPlural": "projects",
+    "evidence": "evidence",
+    "shareTracker": "Share this tracker",
+    "shareTrackerDesc": "Help hold leaders accountable",
+    "shareWhatsApp": "Share on WhatsApp",
+    "copyLink": "Copy Link",
+    "copied": "Copied!",
+    "keyEvents": "Key Events Timeline",
+    "trackingCommitments": "Tracking commitments made by Nepal's leadership"
+  },
+  "project": {
+    "milestones": "Milestones",
+    "blockers": "Blockers",
+    "progress": "Progress",
+    "complete": "complete",
+    "startDate": "Start Date",
+    "targetEnd": "Target End",
+    "region": "Region",
+    "priority": "Priority",
+    "viewDetails": "View Details",
+    "backToProjects": "Back to Projects",
+    "notFound": "Project not found.",
+    "completed": "Completed",
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    }
+  },
+  "footer": {
+    "brandDesc": "Tracking Nepal's development, one project at a time.",
+    "quickLinks": "Quick Links",
+    "ourMission": "Our Mission",
+    "missionText": "Built with transparency for Nepal's future. Every citizen deserves to see where public funds go and what progress is being made.",
+    "copyright": "2026 Nepal Najar. The public eye on Balen's Nepal."
+  },
+  "chat": {
+    "askNepalNajar": "Ask Nepal Najar",
+    "askDesc": "Ask anything about Nepal's development — in English or Nepali",
+    "askDescEmpty": "Ask questions about development projects, progress, delays, and more. I understand both English and Nepali.",
+    "placeholder": "Ask about Nepal's development progress...",
+    "thinking": "Thinking...",
+    "clearChat": "Clear Chat",
+    "poweredBy": "Powered by AI · Answers are based on project data in the system",
+    "suggestions": {
+      "1": "What projects are happening in Bagmati Province?",
+      "2": "Show me delayed projects across Nepal",
+      "3": "Which province has the most active projects?",
+      "4": "Tell me about road construction projects",
+      "5": "What is the overall progress in Nepal?",
+      "6": "What is happening in Karnali?"
+    }
+  },
+  "map": {
+    "nationalMap": "National Map",
+    "mapDesc": "Click any province to explore development projects",
+    "riskLevel": "Risk Level",
+    "projectsInView": "Projects in View",
+    "onTrack": "On Track",
+    "delayed": "Delayed",
+    "allProvinces": "All Provinces",
+    "noProjects": "No projects found",
+    "noProjectsProvince": "No projects in this province",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "explore": {
+    "title": "Explore Projects",
+    "subtitle": "Browse and track national development projects across Nepal",
+    "searchPlaceholder": "Search projects...",
+    "all": "all",
+    "failedToLoad": "Failed to load projects. Please try again later.",
+    "noResults": "No projects found.",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "province": {
+    "Koshi": "Koshi",
+    "Madhesh": "Madhesh",
+    "Bagmati": "Bagmati",
+    "Gandaki": "Gandaki",
+    "Lumbini": "Lumbini",
+    "Karnali": "Karnali",
+    "Sudurpashchim": "Sudurpashchim",
+    "projects": "Projects",
+    "delayed": "Delayed",
+    "status": "Status"
+  },
+  "trust": {
+    "verified": "Verified",
+    "partial": "Partial",
+    "unverified": "Unverified",
+    "disputed": "Disputed"
+  },
+  "categoryName": {
+    "All": "All",
+    "Infrastructure": "Infrastructure",
+    "Transport": "Transport",
+    "Technology": "Technology",
+    "Health": "Health",
+    "Energy": "Energy",
+    "Education": "Education",
+    "Environment": "Environment",
+    "Governance": "Governance",
+    "Anti-Corruption": "Anti-Corruption",
+    "Economy": "Economy",
+    "Social": "Social"
+  },
+  "budget": {
+    "estimated": "Estimated Budget",
+    "spent": "Spent So Far",
+    "utilization": "Budget Utilization",
+    "fundingSource": "Funding Source",
+    "notAllocated": "Not yet allocated"
+  },
+  "voting": {
+    "publicSentiment": "Public Sentiment",
+    "approve": "approve",
+    "votes": "votes",
+    "verified": "verified",
+    "fromNepalOnly": "Voting available from Nepal only",
+    "verifying": "Verifying location..."
+  },
+  "news": {
+    "relatedNews": "Related News",
+    "readFullArticle": "Read full article",
+    "noNews": "No news articles found",
+    "articles": "articles",
+    "loadMore": "Load More",
+    "remaining": "remaining",
+    "confirms": "Confirms",
+    "contradicts": "Contradicts",
+    "neutral": "Neutral"
+  },
+  "promiseDetail": {
+    "backToPromises": "Back to Promise List",
+    "linkedProjects": "Linked Projects",
+    "linkedProjectsDesc": "linked development projects",
+    "evidence": "Evidence & Documents",
+    "timeline": "Related Events",
+    "notFound": "Promise not found.",
+    "budgetSection": "Budget & Funding",
+    "sharePromise": "Share this promise"
+  },
+  "countdown": {
+    "keyDeadlines": "Key Deadlines",
+    "daysLeft": "days left",
+    "daysOverdue": "days overdue",
+    "legal": "Legal",
+    "policy": "Policy",
+    "budget": "Budget",
+    "milestone": "Milestone",
+    "parliamentary": "Parliamentary"
+  },
+  "landing": {
+    "tagline": "The public eye on Balen's Nepal",
+    "exploreNepal": "Explore Nepal",
+    "adminDashboard": "Admin Dashboard",
+    "projectsTracked": "Projects Tracked",
+    "provinces": "Provinces",
+    "avgProgress": "Avg Progress"
+  },
+  "hometown": {
+    "whereAreYou": "Where in Nepal are you from?",
+    "selectDistrict": "Select your district (optional)",
+    "chooseDistrict": "{province} — Choose district",
+    "backToProvinces": "← Back to provinces",
+    "skipUseProvince": "Skip — just use province",
+    "maybeLater": "Maybe later",
+    "setLocation": "Set Location"
+  },
+  "najarIndex": {
+    "title": "Nepal Najar Index",
+    "score": "Score",
+    "change": "this week",
+    "grade": "Grade",
+    "deliveryRate": "Delivery Rate",
+    "avgProgress": "Average Progress",
+    "trustScore": "Trust Score",
+    "budgetUtilization": "Budget Utilization",
+    "citizenSentiment": "Citizen Sentiment",
+    "governanceScore": "Governance Performance Score"
+  },
+  "dailyStreak": {
+    "title": "Daily Watch",
+    "streakCount": "day streak",
+    "todaysPromise": "Today's Promise",
+    "doneForToday": "Done for today!",
+    "longestStreak": "Longest streak",
+    "days": "days",
+    "shareStreak": "Share your streak",
+    "voteOnIt": "Vote on it",
+    "keepGoing": "Keep your streak alive!"
+  },
+  "watchlist": {
+    "title": "My Watchlist",
+    "empty": "No promises watched yet. Tap the bookmark icon on any promise to start tracking it.",
+    "clearAll": "Clear All",
+    "unwatch": "Remove",
+    "watchPromise": "Watch",
+    "watching": "Watching",
+    "manageWatchlist": "Manage Watchlist",
+    "promisesWatched": "promises watched"
+  },
+  "reportCard": {
+    "title": "Weekly Report Card",
+    "weeklyReport": "Weekly Governance Report",
+    "shareTitle": "Nepal Najar Weekly Report Card",
+    "shareDesc": "See how Nepal's governance is performing this week",
+    "weekOf": "Week of",
+    "downloadImage": "Download Image",
+    "shareReport": "Share Report Card"
+  },
+  "meroWard": {
+    "title": "Mero Ward Score",
+    "yourScore": "Your Score",
+    "ranked": "Ranked",
+    "outOf": "out of",
+    "provinceLeaderboard": "Province Leaderboard",
+    "districtDrilldown": "Districts",
+    "setLocation": "Set your location to see your score",
+    "changeLocation": "Change",
+    "nationalAverage": "National Average",
+    "projects": "Projects",
+    "delayed": "Delayed",
+    "budgetAllocated": "Budget Allocated",
+    "viewDistricts": "View Districts",
+    "yourProvince": "Your Province"
+  },
+  "common": {
+    "search": "Search",
+    "clear": "Clear",
+    "share": "Share",
+    "copyLink": "Copy Link",
+    "loading": "Loading...",
+    "noResults": "No results",
+    "back": "Back"
+  }
+}

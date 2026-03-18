@@ -1,0 +1,29 @@
+{
+  "name": "nepal-progress",
+  "version": "0.1.0",
+  "private": true,
+  "description": "National delivery intelligence and transparency platform for Nepal",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "db:seed": "npm run -w @nepal-progress/db seed",
+    "db:reset": "npm run -w @nepal-progress/db reset",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:reset": "docker compose down -v && docker compose up -d"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@10.0.0"
+}

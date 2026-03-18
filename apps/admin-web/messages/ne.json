@@ -1,0 +1,306 @@
+{
+  "nav": {
+    "home": "गृहपृष्ठ",
+    "map": "नक्सा",
+    "projects": "आयोजनाहरू",
+    "chat": "संवाद",
+    "more": "थप",
+    "first100Days": "पहिलो १०० दिन",
+    "admin": "प्रशासन",
+    "dashboard": "नियन्त्रण पाटी"
+  },
+  "hero": {
+    "title": "नेपाल नजर",
+    "tagline": "जनताको नजरमा बालेनको नेपाल",
+    "searchPlaceholder": "आयोजना, जिल्ला वा मन्त्रालय खोज्नुहोस्..."
+  },
+  "stats": {
+    "totalProjects": "कुल आयोजना",
+    "active": "सक्रिय",
+    "avgProgress": "औसत प्रगति",
+    "provinces": "प्रदेशहरू"
+  },
+  "section": {
+    "featuredProjects": "प्रमुख आयोजनाहरू",
+    "featuredProjectsDesc": "नेपालभरका प्रमुख विकास आयोजनाहरू",
+    "developmentByProvince": "प्रदेश अनुसार विकास",
+    "developmentByProvinceDesc": "सातवटै प्रदेशमा भइरहेको प्रगति",
+    "latestUpdates": "ताजा अद्यावधिक",
+    "latestUpdatesDesc": "आज नेपालभर के परिवर्तन भयो",
+    "viewAll": "सबै आयोजनाहरू हेर्नुहोस्",
+    "viewMap": "नक्सामा हेर्नुहोस्"
+  },
+  "status": {
+    "active": "सक्रिय",
+    "completed": "सम्पन्न",
+    "suspended": "स्थगित",
+    "draft": "मस्यौदा",
+    "cancelled": "रद्द"
+  },
+  "commitment": {
+    "trackerTitle": "वचन अनुगमन",
+    "trackerLabel": "जवाफदेहिता अनुगमन",
+    "first100Days": "बालेनको पहिलो १०० दिन",
+    "first100DaysDesc": "पहिलो दिनदेखि प्रतिबद्धता, टप्पा र वास्तविक प्रगतिको अनुगमन गर्नुहोस्। प्रत्येक नागरिकका लागि पूर्ण पारदर्शिता।",
+    "daysUntil": "दिन बाँकी",
+    "daysSince": "दिन बितिसक्यो",
+    "inauguration": "शपथ ग्रहण",
+    "bachanTracker": "वचन अनुगमन",
+    "bachanTrackerNe": "प्रतिबद्धता अनुगमन",
+    "wachanMeter": "वचन मापक",
+    "overallScorecard": "समग्र जवाफदेहिता मूल्याङ्कन",
+    "deliveryRate": "कार्यान्वयन दर",
+    "total": "कुल",
+    "inProgress": "प्रगतिमा",
+    "delivered": "सम्पन्न",
+    "notStarted": "सुरु नभएको",
+    "stalled": "रोकिएको",
+    "filterPromises": "वचनहरू छान्नुहोस्",
+    "category": "वर्ग",
+    "promiseList": "वचन सूची",
+    "promisesShown": "{total} मध्ये {count} वचन देखाइएको",
+    "noPromises": "यो छनोटमा कुनै वचन भेटिएन।",
+    "progress": "प्रगति",
+    "projects": "आयोजना",
+    "projectsPlural": "आयोजनाहरू",
+    "evidence": "प्रमाण",
+    "shareTracker": "यो अनुगमन साझा गर्नुहोस्",
+    "shareTrackerDesc": "जनतालाई जानकारी दिनुहोस्",
+    "shareWhatsApp": "WhatsApp मा पठाउनुहोस्",
+    "copyLink": "लिङ्क प्रतिलिपि गर्नुहोस्",
+    "copied": "प्रतिलिपि भयो!",
+    "keyEvents": "मुख्य घटनाक्रम",
+    "trackingCommitments": "नेपालको नेतृत्वले गरेका प्रतिबद्धताहरूको अनुगमन"
+  },
+  "project": {
+    "milestones": "टप्पाहरू",
+    "blockers": "बाधाहरू",
+    "progress": "प्रगति",
+    "complete": "पूर्ण",
+    "startDate": "सुरु मिति",
+    "targetEnd": "लक्षित समाप्ति",
+    "region": "प्रदेश",
+    "priority": "प्राथमिकता",
+    "viewDetails": "विवरण हेर्नुहोस्",
+    "backToProjects": "आयोजनाहरूमा फर्कनुहोस्",
+    "notFound": "आयोजना भेटिएन।",
+    "completed": "सम्पन्न",
+    "severity": {
+      "low": "न्यून",
+      "medium": "मध्यम",
+      "high": "उच्च",
+      "critical": "गम्भीर"
+    }
+  },
+  "footer": {
+    "brandDesc": "नेपालको विकासलाई एक-एक आयोजना गरेर अनुगमन गर्दै।",
+    "quickLinks": "द्रुत लिङ्कहरू",
+    "ourMission": "हाम्रो उद्देश्य",
+    "missionText": "नेपालको भविष्यका लागि पारदर्शिता सहित निर्मित। प्रत्येक नागरिकले सार्वजनिक कोष कहाँ खर्च हुन्छ र के प्रगति भइरहेको छ भनी जान्ने अधिकार राख्छन्।",
+    "copyright": "२०२६ नेपाल नजर। जनताको नजरमा बालेनको नेपाल।"
+  },
+  "chat": {
+    "askNepalNajar": "नेपाल नजरलाई सोध्नुहोस्",
+    "askDesc": "नेपालको विकासबारे जे पनि सोध्नुहोस् — अंग्रेजी वा नेपालीमा",
+    "askDescEmpty": "विकास आयोजना, प्रगति, ढिलाइ तथा अन्य विषयमा प्रश्न सोध्नुहोस्। म अंग्रेजी र नेपाली दुवै बुझ्छु।",
+    "placeholder": "नेपालको विकास प्रगतिबारे सोध्नुहोस्...",
+    "thinking": "विचार गर्दैछु...",
+    "clearChat": "संवाद मेटाउनुहोस्",
+    "poweredBy": "कृत्रिम बुद्धिमत्ताद्वारा सञ्चालित · उत्तरहरू प्रणालीको आयोजना तथ्याङ्कमा आधारित छन्",
+    "suggestions": {
+      "1": "बागमती प्रदेशमा कुन आयोजनाहरू सञ्चालन भइरहेका छन्?",
+      "2": "नेपालभरका ढिलो भएका आयोजनाहरू देखाउनुहोस्",
+      "3": "कुन प्रदेशमा सबैभन्दा धेरै सक्रिय आयोजनाहरू छन्?",
+      "4": "सडक निर्माण आयोजनाहरूबारे बताउनुहोस्",
+      "5": "नेपालमा समग्र प्रगति कस्तो छ?",
+      "6": "कर्णालीमा के भइरहेको छ?"
+    }
+  },
+  "map": {
+    "nationalMap": "राष्ट्रिय नक्सा",
+    "mapDesc": "विकास आयोजनाहरू अन्वेषण गर्न कुनै पनि प्रदेशमा थिच्नुहोस्",
+    "riskLevel": "जोखिम स्तर",
+    "projectsInView": "दृश्यमा आयोजनाहरू",
+    "onTrack": "समयमा",
+    "delayed": "ढिलो",
+    "allProvinces": "सबै प्रदेशहरू",
+    "noProjects": "कुनै आयोजना भेटिएन",
+    "noProjectsProvince": "यो प्रदेशमा कुनै आयोजना छैन",
+    "low": "न्यून",
+    "medium": "मध्यम",
+    "high": "उच्च",
+    "critical": "गम्भीर"
+  },
+  "explore": {
+    "title": "आयोजनाहरू अन्वेषण गर्नुहोस्",
+    "subtitle": "नेपालभरका राष्ट्रिय विकास आयोजनाहरू खोज्नुहोस् र अनुगमन गर्नुहोस्",
+    "searchPlaceholder": "आयोजनाहरू खोज्नुहोस्...",
+    "all": "सबै",
+    "failedToLoad": "आयोजनाहरू लोड गर्न असफल। कृपया पछि पुनः प्रयास गर्नुहोस्।",
+    "noResults": "कुनै आयोजना भेटिएन।",
+    "previous": "अघिल्लो",
+    "next": "पछिल्लो"
+  },
+  "province": {
+    "Koshi": "कोशी",
+    "Madhesh": "मधेश",
+    "Bagmati": "बागमती",
+    "Gandaki": "गण्डकी",
+    "Lumbini": "लुम्बिनी",
+    "Karnali": "कर्णाली",
+    "Sudurpashchim": "सुदूरपश्चिम",
+    "projects": "आयोजनाहरू",
+    "delayed": "ढिलो",
+    "status": "अवस्था"
+  },
+  "trust": {
+    "verified": "प्रमाणित",
+    "partial": "आंशिक",
+    "unverified": "अपुष्ट",
+    "disputed": "विवादित"
+  },
+  "categoryName": {
+    "All": "सबै",
+    "Infrastructure": "पूर्वाधार",
+    "Transport": "यातायात",
+    "Technology": "प्रविधि",
+    "Health": "स्वास्थ्य",
+    "Energy": "ऊर्जा",
+    "Education": "शिक्षा",
+    "Environment": "वातावरण",
+    "Governance": "सुशासन",
+    "Anti-Corruption": "भ्रष्टाचार निवारण",
+    "Economy": "अर्थतन्त्र",
+    "Social": "सामाजिक"
+  },
+  "budget": {
+    "estimated": "अनुमानित बजेट",
+    "spent": "खर्च भइसकेको",
+    "utilization": "बजेट उपयोग दर",
+    "fundingSource": "कोष स्रोत",
+    "notAllocated": "अझै विनियोजन नभएको"
+  },
+  "voting": {
+    "publicSentiment": "जनमत",
+    "approve": "सहमत",
+    "votes": "मत",
+    "verified": "प्रमाणित",
+    "fromNepalOnly": "मतदान नेपालबाट मात्र उपलब्ध छ",
+    "verifying": "स्थान प्रमाणित गर्दैछ..."
+  },
+  "news": {
+    "relatedNews": "सम्बन्धित समाचार",
+    "readFullArticle": "पूरा पढ्नुहोस्",
+    "noNews": "कुनै समाचार भेटिएन",
+    "articles": "लेख",
+    "loadMore": "थप लोड गर्नुहोस्",
+    "remaining": "बाँकी",
+    "confirms": "पुष्टि गर्छ",
+    "contradicts": "खण्डन गर्छ",
+    "neutral": "तटस्थ"
+  },
+  "promiseDetail": {
+    "backToPromises": "वचन सूचीमा फर्कनुहोस्",
+    "linkedProjects": "सम्बन्धित आयोजनाहरू",
+    "linkedProjectsDesc": "सम्बन्धित विकास आयोजनाहरू",
+    "evidence": "प्रमाण तथा दस्तावेज",
+    "timeline": "सम्बन्धित घटनाक्रम",
+    "notFound": "वचन भेटिएन।",
+    "budgetSection": "बजेट र कोष",
+    "sharePromise": "यो वचन साझा गर्नुहोस्"
+  },
+  "countdown": {
+    "keyDeadlines": "प्रमुख समयसीमा",
+    "daysLeft": "दिन बाँकी",
+    "daysOverdue": "दिन बितिसक्यो",
+    "legal": "कानूनी",
+    "policy": "नीति",
+    "budget": "बजेट",
+    "milestone": "टप्पा",
+    "parliamentary": "संसदीय"
+  },
+  "landing": {
+    "tagline": "जनताको नजरमा बालेनको नेपाल",
+    "exploreNepal": "नेपाल अन्वेषण गर्नुहोस्",
+    "adminDashboard": "प्रशासन नियन्त्रण पाटी",
+    "projectsTracked": "अनुगमन गरिएका आयोजना",
+    "provinces": "प्रदेशहरू",
+    "avgProgress": "औसत प्रगति"
+  },
+  "hometown": {
+    "whereAreYou": "तपाईं नेपालको कहाँ हुनुहुन्छ?",
+    "selectDistrict": "जिल्ला छान्नुहोस् (ऐच्छिक)",
+    "chooseDistrict": "{province} — जिल्ला छान्नुहोस्",
+    "backToProvinces": "← प्रदेशहरूमा फर्कनुहोस्",
+    "skipUseProvince": "छोड्नुहोस् — प्रदेश मात्र प्रयोग गर्नुहोस्",
+    "maybeLater": "पछि गर्छु",
+    "setLocation": "स्थान तोक्नुहोस्"
+  },
+  "najarIndex": {
+    "title": "नेपाल नजर सूचकांक",
+    "score": "अंक",
+    "change": "यो हप्ता",
+    "grade": "श्रेणी",
+    "deliveryRate": "पूर्ति दर",
+    "avgProgress": "औसत प्रगति",
+    "trustScore": "विश्वसनीयता अंक",
+    "budgetUtilization": "बजेट उपयोग",
+    "citizenSentiment": "जनभावना",
+    "governanceScore": "शासन कार्यसम्पादन अंक"
+  },
+  "dailyStreak": {
+    "title": "दैनिक निगरानी",
+    "streakCount": "दिन लगातार",
+    "todaysPromise": "आजको वचन",
+    "doneForToday": "आजको पूरा भयो!",
+    "longestStreak": "सबैभन्दा लामो",
+    "days": "दिन",
+    "shareStreak": "आफ्नो लगातार साझा गर्नुहोस्",
+    "voteOnIt": "मतदान गर्नुहोस्",
+    "keepGoing": "आफ्नो लगातार जारी राख्नुहोस्!"
+  },
+  "watchlist": {
+    "title": "मेरो सूची",
+    "empty": "अझै कुनै वचन हेरिएको छैन। कुनै पनि वचनको बुकमार्क चिन्हमा थिच्नुहोस्।",
+    "clearAll": "सबै हटाउनुहोस्",
+    "unwatch": "हटाउनुहोस्",
+    "watchPromise": "हेर्नुहोस्",
+    "watching": "हेरिरहेको",
+    "manageWatchlist": "सूची व्यवस्थापन",
+    "promisesWatched": "वचन हेरिरहेको"
+  },
+  "reportCard": {
+    "title": "साप्ताहिक प्रतिवेदन",
+    "weeklyReport": "साप्ताहिक शासन प्रतिवेदन",
+    "shareTitle": "नेपाल नजर साप्ताहिक प्रतिवेदन",
+    "shareDesc": "यो हप्ता नेपालको शासन कसरी चलिरहेको छ हेर्नुहोस्",
+    "weekOf": "हप्ता",
+    "downloadImage": "तस्बिर डाउनलोड",
+    "shareReport": "प्रतिवेदन साझा गर्नुहोस्"
+  },
+  "meroWard": {
+    "title": "मेरो वार्ड स्कोर",
+    "yourScore": "तपाईंको अंक",
+    "ranked": "स्थान",
+    "outOf": "मध्ये",
+    "provinceLeaderboard": "प्रदेश वरीयता तालिका",
+    "districtDrilldown": "जिल्लाहरू",
+    "setLocation": "आफ्नो स्थान तोक्नुहोस्",
+    "changeLocation": "परिवर्तन",
+    "nationalAverage": "राष्ट्रिय औसत",
+    "projects": "आयोजना",
+    "delayed": "ढिला",
+    "budgetAllocated": "विनियोजित बजेट",
+    "viewDistricts": "जिल्लाहरू हेर्नुहोस्",
+    "yourProvince": "तपाईंको प्रदेश"
+  },
+  "common": {
+    "search": "खोज्नुहोस्",
+    "clear": "हटाउनुहोस्",
+    "share": "साझा गर्नुहोस्",
+    "copyLink": "लिङ्क प्रतिलिपि",
+    "loading": "लोड हुँदैछ...",
+    "noResults": "कुनै नतिजा छैन",
+    "back": "पछाडि"
+  }
+}

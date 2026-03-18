@@ -1,0 +1,19 @@
+{
+  "name": "@nepal-progress/db",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "seed": "ts-node --project tsconfig.json seed.ts",
+    "reset": "ts-node --project tsconfig.json reset.ts"
+  },
+  "dependencies": {
+    "pg": "^8.13.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0"
+  }
+}
