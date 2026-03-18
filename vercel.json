@@ -4,5 +4,5 @@
   "outputDirectory": "apps/admin-web/.next",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "ignoreCommand": "echo 'always deploy'"
+  "ignoreCommand": "exit 1"
 }
