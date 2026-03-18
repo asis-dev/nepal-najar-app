@@ -114,8 +114,8 @@ export async function GET() {
 
           {/* Stat cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>
-              {stats.total} PROMISES TRACKED
+            <div style={{ display: 'flex', fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>
+              <span>{stats.total} PROMISES TRACKED</span>
             </div>
             {statItems.map((item) => (
               <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -135,7 +135,7 @@ export async function GET() {
             </span>
             <span style={{ fontSize: '20px', fontWeight: 700, color: '#f59e0b' }}>{budgetUtil}%</span>
           </div>
-          <div style={{ width: '100%', height: '14px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', width: '100%', height: '14px', borderRadius: '7px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
             <div
               style={{
                 width: `${budgetUtil}%`, height: '100%', borderRadius: '7px',
