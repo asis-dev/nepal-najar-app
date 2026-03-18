@@ -244,3 +244,4 @@ This ensures:
 - **Push notifications**: Remind users to maintain their streak
 - **Report card customization**: Let users pick which stats to highlight
 - **District-level project mapping**: Real data per district instead of hash-derived scores
+
