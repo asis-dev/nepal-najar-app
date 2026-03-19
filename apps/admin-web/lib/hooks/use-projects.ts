@@ -1,8 +1,18 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../api';
+/**
+ * Project hooks — REWRITTEN to use Supabase instead of dead localhost:3001 backend.
+ *
+ * The old hooks called api.get('/projects') etc. which pointed to a backend
+ * that does not exist. These now either query Supabase directly or return
+ * empty/unavailable states.
+ */
+import { useQuery } from '@tanstack/react-query';
+import { hasPublicSupabaseConfig, supabasePublic } from '@/lib/supabase/client';
 
+/* ═══════════════════════════════════════════
+   TYPES (kept for backward compat)
+   ═══════════════════════════════════════════ */
 export interface GovernmentUnit {
   id: string;
   name: string;
@@ -68,15 +78,12 @@ export interface ProjectsResponse {
   };
 }
 
-/** Map raw API project entity to frontend Project shape */
-function mapProject(raw: any): Project {
-  return {
-    ...raw,
-    progress: Number(raw.current_progress_percent_cached ?? raw.progress ?? 0),
-  };
-}
+/* ═══════════════════════════════════════════
+   HOOKS — rewired to Supabase / stubs
+   ═══════════════════════════════════════════ */
 
-export function useProjects(params?: {
+/** Projects entity does not exist in Supabase — returns empty */
+export function useProjects(_params?: {
   status?: string;
   governmentUnitId?: string;
   regionId?: string;
@@ -85,85 +92,126 @@ export function useProjects(params?: {
   limit?: number;
 }) {
   return useQuery({
-    queryKey: ['projects', params],
-    queryFn: async () => {
-      const { data } = await api.get('/projects', { params });
-      return {
-        data: (data.data ?? []).map(mapProject),
-        meta: data.meta,
-      } as ProjectsResponse;
-    },
+    queryKey: ['projects', _params],
+    queryFn: async (): Promise<ProjectsResponse> => ({
+      data: [],
+      meta: { total: 0, page: 1, limit: 20, totalPages: 0 },
+    }),
   });
 }
 
-export function useProject(id: string) {
+/** Single project — not available */
+export function useProject(_id: string) {
   return useQuery({
-    queryKey: ['projects', id],
-    queryFn: async () => {
-      const { data } = await api.get(`/projects/${id}`);
-      return mapProject(data) as Project;
-    },
-    enabled: !!id,
+    queryKey: ['projects', _id],
+    queryFn: async (): Promise<Project | null> => null,
+    enabled: !!_id,
   });
 }
 
-export function useProjectMilestones(projectId: string) {
+export function useProjectMilestones(_projectId: string) {
   return useQuery({
-    queryKey: ['projects', projectId, 'milestones'],
-    queryFn: async () => {
-      const { data } = await api.get(`/projects/${projectId}/milestones`);
-      return data as Milestone[];
-    },
-    enabled: !!projectId,
+    queryKey: ['projects', _projectId, 'milestones'],
+    queryFn: async (): Promise<Milestone[]> => [],
+    enabled: !!_projectId,
   });
 }
 
-export function useProjectBlockers(projectId: string, params?: { status?: string; severity?: string }) {
+export function useProjectBlockers(_projectId: string, _params?: { status?: string; severity?: string }) {
   return useQuery({
-    queryKey: ['projects', projectId, 'blockers', params],
-    queryFn: async () => {
-      const { data } = await api.get(`/projects/${projectId}/blockers`, { params });
-      return data as Blocker[];
-    },
-    enabled: !!projectId,
+    queryKey: ['projects', _projectId, 'blockers', _params],
+    queryFn: async (): Promise<Blocker[]> => [],
+    enabled: !!_projectId,
   });
 }
 
+/** Dashboard overview — now reads from Supabase promises table */
 export function useDashboardOverview() {
   return useQuery({
     queryKey: ['dashboards', 'overview'],
     queryFn: async () => {
-      const { data } = await api.get('/dashboards/overview');
-      return data as {
-        totalProjects: number;
-        totalActive: number;
-        totalCompleted: number;
-        overallProgress: number;
-        totalBlockers: number;
+      if (!hasPublicSupabaseConfig || !supabasePublic) {
+        return {
+          totalProjects: 0,
+          totalActive: 0,
+          totalCompleted: 0,
+          overallProgress: 0,
+          totalBlockers: 0,
+        };
+      }
+
+      const { data, error } = await supabasePublic
+        .from('promises')
+        .select('status, progress');
+
+      if (error || !data) {
+        return {
+          totalProjects: 0,
+          totalActive: 0,
+          totalCompleted: 0,
+          overallProgress: 0,
+          totalBlockers: 0,
+        };
+      }
+
+      const total = data.length;
+      const active = data.filter((p) => p.status === 'in_progress').length;
+      const completed = data.filter((p) => p.status === 'delivered').length;
+      const avgProgress = total > 0
+        ? Math.round(data.reduce((sum, p) => sum + (p.progress || 0), 0) / total)
+        : 0;
+
+      return {
+        totalProjects: total,
+        totalActive: active,
+        totalCompleted: completed,
+        overallProgress: avgProgress,
+        totalBlockers: data.filter((p) => p.status === 'stalled').length,
       };
     },
   });
 }
 
+/** National dashboard — reads promise category breakdown from Supabase */
 export function useNationalDashboard() {
   return useQuery({
     queryKey: ['dashboards', 'national'],
     queryFn: async () => {
-      const { data } = await api.get('/dashboards/national');
-      return data;
+      if (!hasPublicSupabaseConfig || !supabasePublic) return null;
+
+      const { data, error } = await supabasePublic
+        .from('promises')
+        .select('category, status, progress');
+
+      if (error || !data) return null;
+
+      // Group by category
+      const categories: Record<string, { total: number; inProgress: number; delivered: number; stalled: number }> = {};
+      for (const p of data) {
+        const cat = p.category as string;
+        if (!categories[cat]) categories[cat] = { total: 0, inProgress: 0, delivered: 0, stalled: 0 };
+        categories[cat].total++;
+        if (p.status === 'in_progress') categories[cat].inProgress++;
+        if (p.status === 'delivered') categories[cat].delivered++;
+        if (p.status === 'stalled') categories[cat].stalled++;
+      }
+
+      return {
+        categoryBreakdown: Object.entries(categories).map(([name, stats]) => ({ name, ...stats })),
+        totalPromises: data.length,
+      };
     },
   });
 }
 
+/** Project updates — not available without backend */
 export function useUpdateProject() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Project> & { id: string }) => {
-      const { data } = await api.patch(`/projects/${id}`, updates);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-    },
-  });
+  return {
+    mutate: () => console.warn('[useUpdateProject] No backend available'),
+    mutateAsync: async () => { throw new Error('No backend available'); },
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    error: null,
+  };
 }
