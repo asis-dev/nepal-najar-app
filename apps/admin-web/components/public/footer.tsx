@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Eye, Users } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
-import { NepalFlagIcon } from '@/components/ui/nepal-flag-icon';
+import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
 
 const quickLinkKeys = [
   { href: '/explore', labelKey: 'nav.home' },
@@ -20,19 +20,10 @@ export function Footer() {
       {/* Crimson accent at top of footer */}
       <div className="accent-crimson" />
 
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="public-shell py-10 sm:py-12">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-          {/* Left — Branding */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2.5 text-white">
-              <NepalFlagIcon size={20} />
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-base font-semibold tracking-tight">
-                  Nepal <span className="text-nepal-red">Najar</span>
-                </span>
-                <span className="text-xs font-nepali text-gray-500">नजर</span>
-              </div>
-            </div>
+            <NepalNajarMark />
             <p className="text-sm leading-relaxed text-gray-500">
               {t('footer.brandDesc')}
             </p>
@@ -81,7 +72,7 @@ export function Footer() {
             <div className="flex items-center gap-1.5 mt-2">
               <Eye className="h-3.5 w-3.5 text-nepal-red" />
               <span className="text-xs text-gray-600 italic">
-                High-altitude civic intelligence
+                Modern Nepali civic clarity
               </span>
             </div>
           </div>
@@ -90,7 +81,7 @@ export function Footer() {
 
       {/* Bottom bar */}
       <div className="border-t border-white/[0.04] bg-np-base/50">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="public-shell py-4">
           <p className="text-center text-xs text-gray-600">
             &copy; {t('footer.copyright')}
           </p>

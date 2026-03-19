@@ -148,17 +148,14 @@ export default function MeroWardPage() {
 
   return (
     <div className="min-h-screen bg-np-base">
-      {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary-500/[0.05] rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/[0.05] rounded-full blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary-600/[0.03] rounded-full blur-[150px]" />
+        <div className="absolute top-0 left-1/4 h-[520px] w-[520px] rounded-full bg-primary-500/[0.045] blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 h-[420px] w-[420px] rounded-full bg-cyan-500/[0.04] blur-[100px]" />
       </div>
 
       <div className="relative z-10">
-        {/* Back link */}
-        <div className="px-4 sm:px-6 lg:px-8 pt-6">
-          <div className="max-w-4xl mx-auto">
+        <div className="public-shell pt-6">
+          <div className="mx-auto max-w-4xl">
             <Link
               href="/explore"
               className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-400 transition-colors"
@@ -169,42 +166,41 @@ export default function MeroWardPage() {
           </div>
         </div>
 
-        {/* Header */}
-        <section className="px-4 sm:px-6 lg:px-8 pt-8 pb-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">
-              <span className="bg-gradient-to-r from-primary-400 via-cyan-400 to-primary-300 bg-clip-text text-transparent">
+        <section className="public-section pt-6">
+          <div className="public-shell">
+            <div className="mx-auto max-w-4xl text-center">
+              <div className="section-kicker mb-4">{isNe ? 'मेरो क्षेत्र' : 'My area'}</div>
+              <h1 className="mb-2 text-3xl font-bold text-white sm:text-4xl lg:text-5xl">
                 {t('meroWard.title')}
-              </span>
-            </h1>
-            <p className="text-gray-400 text-sm sm:text-base mb-6">
-              {isNe
-                ? 'प्रदेश र जिल्लाको शासन स्कोर'
-                : 'Province & district governance scores'}
-            </p>
+              </h1>
+              <p className="mb-6 text-sm text-gray-400 sm:text-base">
+                {isNe
+                  ? 'प्रदेश र जिल्लाको शासन स्कोर'
+                  : 'Province & district governance scores'}
+              </p>
 
-            {/* User's score highlight */}
-            {userScore && (
-              <div className="inline-flex items-center gap-3 glass-card px-6 py-3 mb-6">
-                <MapPin className="w-4 h-4 text-primary-400" />
-                <span className="text-sm text-gray-300">
-                  {isNe ? userScore.province_ne : userScore.province}
-                </span>
-                <span className={`text-2xl font-bold ${getScoreColor(userScore.score)}`}>
-                  {userScore.score}
-                </span>
-                <span className="text-xs text-gray-500">
-                  #{userScore.rank}
-                </span>
-              </div>
-            )}
+              {userScore && (
+                <div className="mb-6 inline-flex items-center gap-3 glass-card px-6 py-3">
+                  <MapPin className="w-4 h-4 text-primary-400" />
+                  <span className="text-sm text-gray-300">
+                    {isNe ? userScore.province_ne : userScore.province}
+                  </span>
+                  <span className={`text-2xl font-bold ${getScoreColor(userScore.score)}`}>
+                    {userScore.score}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    #{userScore.rank}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* National Average + Summary Stats */}
-        <section className="px-4 sm:px-6 lg:px-8 pb-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <section className="public-section pt-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-4xl">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {/* National Average */}
               <div className="glass-card p-4 text-center">
                 <BarChart3 className="w-5 h-5 text-primary-400 mx-auto mb-2" />
@@ -247,6 +243,7 @@ export default function MeroWardPage() {
                 <div className="text-xs text-gray-500 mt-1">
                   {isNe ? 'ढिला भएका' : 'Delayed'}
                 </div>
+              </div>
               </div>
             </div>
           </div>

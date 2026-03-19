@@ -3,13 +3,21 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════
-   NEPAL NAJAR — LUXURY DESIGN SYSTEM
-   Dark mode, glass morphism, electric accents
+   NEPAL NAJAR — PUBLIC DESIGN SYSTEM
+   Calm civic clarity with mobile-first public surfaces
    ═══════════════════════════════════════════════ */
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-np-base text-gray-100 antialiased;
+    background-image:
+      radial-gradient(circle at top left, rgba(0, 56, 147, 0.12), transparent 24%),
+      radial-gradient(circle at top right, rgba(220, 20, 60, 0.07), transparent 22%),
+      linear-gradient(180deg, #07111f 0%, #0b1422 52%, #101a2b 100%);
   }
 
   /* Custom scrollbar */
@@ -38,8 +46,8 @@
 @layer components {
   /* ── Glass Cards ── */
   .glass-card {
-    @apply relative rounded-xl border border-np-border bg-np-surface/80 backdrop-blur-xl;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    @apply relative rounded-2xl border border-np-border bg-np-surface/80 backdrop-blur-xl;
+    box-shadow: 0 14px 36px rgba(2, 8, 20, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.045);
   }
 
   .glass-card-hover {
@@ -47,7 +55,7 @@
   }
   .glass-card-hover:hover {
     @apply border-np-border-bright;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: 0 18px 42px rgba(2, 8, 20, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     transform: translateY(-2px);
   }
 
@@ -56,7 +64,7 @@
   }
   .glass-card-interactive:hover {
     @apply border-primary-500/30;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 18px 44px rgba(2, 8, 20, 0.44), 0 0 20px rgba(59, 130, 246, 0.08);
   }
 
   /* ── Old card class (backwards compat) ── */
@@ -229,6 +237,28 @@
     @apply text-sm text-gray-400 mt-1;
   }
 
+  .public-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .public-section {
+    @apply py-8 sm:py-10 lg:py-12;
+  }
+
+  .section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] uppercase tracking-[0.22em] text-gray-400;
+  }
+
+  .metric-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm text-gray-300;
+  }
+
+  .public-gradient-panel {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02)),
+      radial-gradient(circle at top right, rgba(0,56,147,0.08), transparent 28%);
+  }
+
   /* ── Dividers ── */
   .divider {
     @apply border-t border-np-border;
@@ -300,7 +330,7 @@
 /* Safe area for notched phones */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.25rem);
   }
 }
 
@@ -316,6 +346,21 @@
 .accent-crimson {
   height: 1px;
   background: linear-gradient(90deg, transparent, #DC143C40, #DC143C60, #DC143C40, transparent);
+}
+
+.terrain-divider {
+  position: relative;
+  overflow: hidden;
+}
+
+.terrain-divider::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0)),
+    linear-gradient(90deg, transparent, rgba(220,20,60,0.18), transparent);
+  opacity: 0.35;
 }
 
 .nepal-hero-grid {
@@ -355,6 +400,31 @@
 /* ── Contour background texture ── */
 .contour-bg {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='100'%3E%3Cpath d='M0,50 Q50,20 100,45 T200,50' fill='none' stroke='%23DDE7F0' stroke-width='0.5' opacity='0.03'/%3E%3Cpath d='M0,70 Q60,40 120,65 T200,70' fill='none' stroke='%23DDE7F0' stroke-width='0.4' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+.nepal-najar-mark {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+  width: 22px;
+  height: 22px;
+}
+
+.nepal-najar-mark__bar {
+  display: block;
+  width: 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(220, 20, 60, 0.98) 0%, rgba(0, 56, 147, 0.95) 100%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 6px 16px rgba(0, 56, 147, 0.18);
+}
+
+.nepal-najar-mark__bar--short {
+  height: 13px;
+}
+
+.nepal-najar-mark__bar--tall {
+  height: 20px;
 }
 
 /* Reduce blur on mobile for performance */

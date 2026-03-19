@@ -143,38 +143,35 @@ export default function ExplorePage() {
 
   return (
     <div className="min-h-screen relative z-10">
-      <div className="mountain-ridge opacity-50" />
-      <div className="mountain-ridge-soft opacity-60" />
+      <div className="mountain-ridge opacity-35" />
+      <div className="mountain-ridge-soft opacity-45" />
 
       {/* ═══════════════════════════════════════
          SECTION 1: HERO
          ═══════════════════════════════════════ */}
-      <section className="relative pt-16 pb-10 px-4 sm:px-6 lg:px-8">
-        <div className="relative max-w-5xl mx-auto text-center">
+      <section className="public-section relative pt-12 sm:pt-16">
+        <div className="public-shell relative">
           <div className="animate-fade-in">
-            <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300 backdrop-blur-md">
+            <div className="section-kicker mb-5">
               Nepal Najar
               <span className="h-1 w-1 rounded-full bg-white/40" />
               <span className="text-gray-500">Track promises, projects, and updates</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight mb-4 text-white">
-              Nepal{' '}
-              <span className="text-white/90">Najar</span>
-              <span className="text-gray-500 font-nepali text-2xl sm:text-3xl ml-2">नजर</span>
+            <h1 className="max-w-4xl text-balance text-4xl font-display font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+              A clearer way to follow what is promised, what is moving, and what is stalled.
             </h1>
 
-            <p className="text-base sm:text-lg text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
-              A clearer way to follow what is being promised, what is moving, and what is stalled.
+            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-gray-400 sm:text-lg">
+              Browse Nepal by sector, signals, and local relevance. Official, discovered, public, and inferred data stay separate so trust stays visible.
             </p>
           </div>
 
-          <div className="mb-8">
+          <div className="mb-8 mt-8">
             <TrustLanes />
           </div>
 
-          {/* Live stats row — REAL DATA */}
-          <div className="animate-slide-up grid grid-cols-3 gap-4 max-w-lg mx-auto">
+          <div className="animate-slide-up grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
             <StatPill
               icon={<Eye className="w-4 h-4" />}
               label="Promises"
@@ -199,13 +196,15 @@ export default function ExplorePage() {
         </div>
       </section>
 
-      <div className="mx-8 h-px bg-white/[0.06] sm:mx-16 lg:mx-32" />
+      <div className="public-shell">
+        <div className="terrain-divider h-px bg-white/[0.06]" />
+      </div>
 
       {/* ═══════════════════════════════════════
          SECTION 2: LATEST SCRAPED ARTICLES (real data)
          ═══════════════════════════════════════ */}
-      <section className="px-4 sm:px-6 lg:px-8 py-12">
-        <div className="max-w-5xl mx-auto">
+      <section className="public-section">
+        <div className="public-shell">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">

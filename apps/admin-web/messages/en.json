@@ -1,6 +1,8 @@
 {
   "nav": {
     "home": "Home",
+    "daily": "Daily",
+    "myArea": "My Area",
     "government": "Government",
     "map": "Map",
     "projects": "Projects",

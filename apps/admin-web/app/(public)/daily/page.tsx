@@ -144,17 +144,14 @@ export default function DailyPage() {
 
   return (
     <div className="min-h-screen bg-np-base">
-      {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary-500/[0.05] rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/[0.05] rounded-full blur-[100px]" />
-        <div className="absolute top-1/3 right-1/3 w-[400px] h-[400px] bg-orange-500/[0.03] rounded-full blur-[100px]" />
+        <div className="absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full bg-primary-500/[0.04] blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 h-[420px] w-[420px] rounded-full bg-cyan-500/[0.04] blur-[100px]" />
       </div>
 
       <div className="relative z-10">
-        {/* Back link */}
-        <div className="px-4 sm:px-6 lg:px-8 pt-6">
-          <div className="max-w-2xl mx-auto">
+        <div className="public-shell pt-6">
+          <div className="mx-auto max-w-2xl">
             <Link
               href="/explore"
               className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-400 transition-colors"
@@ -165,56 +162,66 @@ export default function DailyPage() {
           </div>
         </div>
 
-        {/* Hero: Streak Counter */}
-        <section className="px-4 sm:px-6 lg:px-8 pt-8 pb-6">
-          <div className="max-w-2xl mx-auto">
-            <div className="glass-card p-8 sm:p-10 text-center relative overflow-hidden">
-              {/* Warm glow behind streak */}
-              {currentStreak >= 3 && (
-                <div className="absolute inset-0 bg-gradient-to-b from-orange-500/[0.06] via-transparent to-transparent pointer-events-none" />
-              )}
-
-              <div className="relative z-10">
-                {/* Flame + number */}
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <Flame
-                    className={`w-10 h-10 sm:w-12 sm:h-12 ${
-                      currentStreak >= 7
-                        ? 'text-orange-400'
-                        : currentStreak >= 3
-                          ? 'text-amber-400'
-                          : 'text-gray-500'
-                    }`}
-                  />
-                  <span className="text-6xl sm:text-7xl font-bold bg-gradient-to-b from-white to-gray-300 bg-clip-text text-transparent tabular-nums">
-                    {currentStreak}
-                  </span>
-                </div>
-
-                <p className="text-gray-400 text-sm sm:text-base mb-4">
-                  {isNe ? 'दिनको लगातार' : 'day streak'}
+        <section className="public-section pt-6">
+          <div className="public-shell">
+            <div className="mx-auto max-w-2xl">
+              <div className="mb-5 text-center sm:text-left">
+                <div className="section-kicker">{isNe ? 'दैनिक ट्रयाकर' : 'Daily tracker'}</div>
+                <h1 className="mt-4 text-3xl font-display font-bold text-white sm:text-4xl">
+                  {isNe ? 'हरेक दिन एउटा सार्वजनिक वचन' : 'One public promise, every day'}
+                </h1>
+                <p className="mt-3 text-sm leading-relaxed text-gray-400 sm:text-base">
+                  {isNe
+                    ? 'आजको मुख्य वाचा, यसको प्रगति, र तपाईँले निरन्तर पछ्याइरहनुभएको छ कि छैन हेर्नुहोस्।'
+                    : 'Check one important promise each day, see its progress, and build a habit around staying informed.'}
                 </p>
+              </div>
 
-                {/* Longest streak badge */}
-                {longestStreak > 0 && (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08]">
-                    <Trophy className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs text-gray-400">
-                      {isNe ? 'सबैभन्दा लामो:' : 'Longest:'}{' '}
-                      <span className="text-white font-semibold">{longestStreak}</span>{' '}
-                      {isNe ? 'दिन' : 'days'}
+              <div className="glass-card public-gradient-panel relative overflow-hidden p-7 text-center sm:p-10">
+                {currentStreak >= 3 && (
+                  <div className="absolute inset-0 bg-gradient-to-b from-orange-500/[0.06] via-transparent to-transparent pointer-events-none" />
+                )}
+
+                <div className="relative z-10">
+                  <div className="mb-3 flex items-center justify-center gap-3">
+                    <Flame
+                      className={`w-10 h-10 sm:w-12 sm:h-12 ${
+                        currentStreak >= 7
+                          ? 'text-orange-400'
+                          : currentStreak >= 3
+                            ? 'text-amber-400'
+                            : 'text-gray-500'
+                      }`}
+                    />
+                    <span className="bg-gradient-to-b from-white to-gray-300 bg-clip-text text-6xl font-bold text-transparent tabular-nums sm:text-7xl">
+                      {currentStreak}
                     </span>
                   </div>
-                )}
+
+                  <p className="mb-4 text-sm text-gray-400 sm:text-base">
+                    {isNe ? 'दिनको लगातार' : 'day streak'}
+                  </p>
+
+                  {longestStreak > 0 && (
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs text-gray-400">
+                        {isNe ? 'सबैभन्दा लामो:' : 'Longest:'}{' '}
+                        <span className="font-semibold text-white">{longestStreak}</span>{' '}
+                        {isNe ? 'दिन' : 'days'}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Today's Promise */}
-        <section className="px-4 sm:px-6 lg:px-8 pb-8">
-          <div className="max-w-2xl mx-auto">
-            <div className="glass-card p-6 sm:p-8">
+        <section className="public-section pt-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-2xl">
+              <div className="glass-card p-6 sm:p-8">
               <div className="flex items-center gap-2 mb-5">
                 <Target className="w-5 h-5 text-primary-400" />
                 <h2 className="text-lg font-semibold text-white">
@@ -282,8 +289,8 @@ export default function DailyPage() {
                 )}
               </div>
 
-              {/* Vote Widget */}
-              <VoteWidget promiseId={todayPromise.id} variant="full" />
+                <VoteWidget promiseId={todayPromise.id} variant="full" />
+              </div>
             </div>
           </div>
         </section>
