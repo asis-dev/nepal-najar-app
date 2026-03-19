@@ -2,198 +2,320 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Map, BarChart3, AlertTriangle, TrendingUp,
-  ArrowLeft, MapPin
+  Map, AlertTriangle, TrendingUp,
+  CheckCircle2, Eye,
+  Building2, Truck, Cpu, Heart, Zap,
+  GraduationCap, Leaf, Scale, Fingerprint,
+  Briefcase, Users,
 } from 'lucide-react';
-import { useNationalDashboard, useProjects } from '@/lib/hooks/use-projects';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
+import { useAllPromises, usePromiseStats } from '@/lib/hooks/use-promises';
+import { SignalBadge } from '@/components/public/signal-badge';
 
-const NepalDeckMap = dynamic(
-  () => import('@/components/map/nepal-deck-map').then(m => ({ default: m.NepalDeckMap })),
-  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center"><div className="skeleton w-full h-full" /></div> }
-);
+/* ═══════════════════════════════════════════
+   CATEGORY CONFIG
+   ═══════════════════════════════════════════ */
+const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  infrastructure: Building2,
+  transport: Truck,
+  technology: Cpu,
+  health: Heart,
+  energy: Zap,
+  education: GraduationCap,
+  environment: Leaf,
+  governance: Scale,
+  anti_corruption: Fingerprint,
+  economy: Briefcase,
+  social: Users,
+};
 
-const statusConfig: Record<string, { labelKey: string; className: string }> = {
-  active: { labelKey: 'status.active', className: 'badge-green' },
-  draft: { labelKey: 'status.draft', className: 'badge-gray' },
-  suspended: { labelKey: 'status.suspended', className: 'badge-yellow' },
-  completed: { labelKey: 'status.completed', className: 'badge-blue' },
-  cancelled: { labelKey: 'status.cancelled', className: 'badge-red' },
+const categoryColors: Record<string, string> = {
+  infrastructure: 'text-amber-400 bg-amber-500/15',
+  transport: 'text-blue-400 bg-blue-500/15',
+  technology: 'text-cyan-400 bg-cyan-500/15',
+  health: 'text-red-400 bg-red-500/15',
+  energy: 'text-yellow-400 bg-yellow-500/15',
+  education: 'text-purple-400 bg-purple-500/15',
+  environment: 'text-emerald-400 bg-emerald-500/15',
+  governance: 'text-indigo-400 bg-indigo-500/15',
+  anti_corruption: 'text-pink-400 bg-pink-500/15',
+  economy: 'text-orange-400 bg-orange-500/15',
+  social: 'text-teal-400 bg-teal-500/15',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  in_progress: 'In Progress',
+  delivered: 'Delivered',
+  stalled: 'Stalled',
+  not_started: 'Not Started',
+};
+
+const STATUS_DOT_COLORS: Record<string, string> = {
+  in_progress: 'bg-emerald-400',
+  delivered: 'bg-blue-400',
+  stalled: 'bg-red-400',
+  not_started: 'bg-gray-400',
 };
 
 export default function PublicMapPage() {
-  const { data: national } = useNationalDashboard();
-  const { data: projectsResponse } = useProjects({ limit: 100 });
-  const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const { data: promises, isLoading } = useAllPromises();
+  const { stats } = usePromiseStats();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const allProjects = useMemo(() => projectsResponse?.data ?? [], [projectsResponse]);
+  // Build category breakdown
+  type CatEntry = { name: string; total: number; inProgress: number; delivered: number; stalled: number; notStarted: number; avgProgress: number };
 
-  const regionData = useMemo(() => {
-    return Array.isArray(national?.regionBreakdown)
-      ? (national.regionBreakdown as Array<{
-          name: string;
-          total: number;
-          delayed: number;
-          severity: string;
-        }>)
-      : [];
-  }, [national]);
+  const categoryBreakdown = useMemo(() => {
+    if (!promises) return [] as CatEntry[];
+    const record: Record<string, CatEntry> = {};
 
-  const filteredProjects = useMemo(() => {
-    if (!selectedProvince) return allProjects;
-    return allProjects.filter((p) => p.region?.name === selectedProvince);
-  }, [allProjects, selectedProvince]);
+    for (const p of promises) {
+      if (!record[p.category]) {
+        record[p.category] = { name: p.category, total: 0, inProgress: 0, delivered: 0, stalled: 0, notStarted: 0, avgProgress: 0 };
+      }
+      const existing = record[p.category];
+      existing.total++;
+      if (p.status === 'in_progress') existing.inProgress++;
+      if (p.status === 'delivered') existing.delivered++;
+      if (p.status === 'stalled') existing.stalled++;
+      if (p.status === 'not_started') existing.notStarted++;
+      existing.avgProgress += p.progress;
+    }
 
-  const selectedData = regionData.find(r => r.name === selectedProvince);
+    return Object.values(record)
+      .map((c) => ({
+        ...c,
+        avgProgress: c.total > 0 ? Math.round(c.avgProgress / c.total) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [promises]);
 
-  const totalInView = selectedProvince ? (selectedData?.total ?? 0) : regionData.reduce((s, r) => s + r.total, 0);
-  const delayedInView = selectedProvince ? (selectedData?.delayed ?? 0) : regionData.reduce((s, r) => s + r.delayed, 0);
+  // Filter promises by selected category
+  const filteredPromises = useMemo(() => {
+    if (!promises) return [];
+    if (!selectedCategory) return promises;
+    return promises.filter((p) => p.category === selectedCategory);
+  }, [promises, selectedCategory]);
 
-  const riskLevels = [
-    { labelKey: 'map.low', color: 'bg-emerald-500' },
-    { labelKey: 'map.medium', color: 'bg-amber-500' },
-    { labelKey: 'map.high', color: 'bg-orange-500' },
-    { labelKey: 'map.critical', color: 'bg-red-500' },
-  ];
+  const selectedCatData = categoryBreakdown.find((c) => c.name === selectedCategory);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-white flex items-center gap-3">
-            <Map className="w-7 h-7 text-primary-400" />
-            {t('map.nationalMap')}
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            {t('map.mapDesc')}
-          </p>
-        </div>
-        {selectedProvince && (
-          <button
-            onClick={() => setSelectedProvince(null)}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {t('map.allProvinces')}
-          </button>
-        )}
-      </div>
-
-      {/* Stats Bar */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="glass-card p-4 flex items-center gap-3">
-          <div className="stat-icon !w-8 !h-8 !mb-0">
-            <BarChart3 className="w-4 h-4 text-primary-400" />
-          </div>
+    <div className="min-h-screen relative z-10 space-y-6 px-4 py-8 sm:px-6 lg:px-8 animate-fade-in">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
           <div>
-            <p className="text-xs text-gray-400">{t('map.projectsInView')}</p>
-            <p className="text-xl font-bold text-white">{totalInView}</p>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-white flex items-center gap-3">
+              <Map className="w-7 h-7 text-primary-400" />
+              Promise Landscape
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">
+              Explore {stats?.total ?? '--'} government promises across {categoryBreakdown.length} sectors
+            </p>
           </div>
+          {selectedCategory && (
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              ← All Sectors
+            </button>
+          )}
         </div>
-        <div className="glass-card p-4 flex items-center gap-3">
-          <div className="stat-icon !w-8 !h-8 !mb-0" style={{ background: 'rgba(16,185,129,0.15)' }}>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400">{t('map.onTrack')}</p>
-            <p className="text-xl font-bold text-white">{totalInView - delayedInView}</p>
-          </div>
-        </div>
-        <div className="glass-card p-4 flex items-center gap-3">
-          <div className="stat-icon !w-8 !h-8 !mb-0" style={{ background: 'rgba(239,68,68,0.15)' }}>
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400">{t('map.delayed')}</p>
-            <p className="text-xl font-bold text-white">{delayedInView}</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Map + Side Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Map */}
-        <div className="lg:col-span-2 glass-card overflow-hidden">
-          <div
-            className="relative h-[560px]"
-            style={{
-              background: 'radial-gradient(ellipse at center, rgba(15,22,41,1) 0%, rgba(10,14,26,1) 100%)',
-            }}
-          >
-            <NepalDeckMap
-              regionData={regionData}
-              selectedProvince={selectedProvince}
-              onProvinceClick={(name) => setSelectedProvince(name === selectedProvince ? null : name)}
-            />
-
-            {/* Map legend */}
-            <div className="absolute bottom-4 left-4 glass-card px-4 py-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('map.riskLevel')}</p>
-              <div className="flex items-center gap-3 text-xs">
-                {riskLevels.map(item => (
-                  <div key={item.labelKey} className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                    <span className="text-gray-400">{t(item.labelKey)}</span>
-                  </div>
-                ))}
-              </div>
+        {/* Stats Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          <div className="glass-card p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary-500/15 flex items-center justify-center">
+              <Eye className="w-4 h-4 text-primary-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Total Promises</p>
+              <p className="text-xl font-bold text-white">{stats?.total ?? '--'}</p>
+            </div>
+          </div>
+          <div className="glass-card p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">In Progress</p>
+              <p className="text-xl font-bold text-white">{stats?.inProgress ?? '--'}</p>
+            </div>
+          </div>
+          <div className="glass-card p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Delivered</p>
+              <p className="text-xl font-bold text-white">{stats?.delivered ?? '--'}</p>
+            </div>
+          </div>
+          <div className="glass-card p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Stalled</p>
+              <p className="text-xl font-bold text-white">{stats?.stalled ?? '--'}</p>
             </div>
           </div>
         </div>
 
-        {/* Side Panel — Province Projects */}
-        <div className="glass-card overflow-hidden flex flex-col">
-          <div className="px-4 py-3 border-b border-np-border">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary-400" />
-              {selectedProvince ?? t('map.allProvinces')} — {filteredProjects.length} {t('province.projects')}
-            </h3>
-          </div>
-          <div className="flex-1 divide-y divide-np-border/50 overflow-y-auto max-h-[460px]">
-            {filteredProjects.length > 0 ? filteredProjects.slice(0, 20).map((project) => {
-              const status = statusConfig[project.status] ?? statusConfig.draft;
-              const progress = project.progress ?? 0;
-              return (
-                <Link
-                  key={project.id}
-                  href={`/explore/projects/${project.id}`}
-                  className="block p-4 hover:bg-white/[0.02] transition-colors group"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-200 truncate group-hover:text-white transition-colors">
-                        {project.title}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {project.region?.name ?? 'Unknown'} · {project.government_unit?.name ?? ''}
-                      </p>
+        {/* Main grid: Category tiles + Promise list */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: Category Tiles */}
+          <div className="lg:col-span-1 space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-3">
+              Sectors
+            </h2>
+
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="glass-card p-4 animate-pulse">
+                  <div className="h-4 bg-white/5 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-white/5 rounded w-1/2" />
+                </div>
+              ))
+            ) : (
+              categoryBreakdown.map((cat) => {
+                const Icon = categoryIcons[cat.name] || Building2;
+                const colorClass = categoryColors[cat.name] || 'text-gray-400 bg-gray-500/15';
+                const isSelected = selectedCategory === cat.name;
+                const progressColor =
+                  cat.avgProgress >= 60
+                    ? 'bg-emerald-500'
+                    : cat.avgProgress >= 30
+                      ? 'bg-amber-500'
+                      : 'bg-red-500';
+
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => setSelectedCategory(isSelected ? null : cat.name)}
+                    className={`w-full text-left glass-card p-4 transition-all duration-200 ${
+                      isSelected
+                        ? 'border-primary-500/40 bg-primary-500/10'
+                        : 'hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${colorClass}`}>
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-200 capitalize">
+                          {cat.name.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500">{cat.total}</span>
                     </div>
-                    <span className={`${status.className} flex-shrink-0 text-[10px]`}>
-                      {t(status.labelKey)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="progress-bar flex-1">
-                      <div
-                        className={`progress-bar-fill ${
-                          progress >= 70 ? 'success' : progress >= 40 ? 'warning' : 'danger'
-                        }`}
-                        style={{ width: `${progress}%` }}
-                      />
+
+                    {/* Promises count */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-500">{cat.total} promises tracked</span>
                     </div>
-                    <span className="text-xs text-gray-400 w-8 text-right">{progress}%</span>
-                  </div>
-                </Link>
-              );
-            }) : (
-              <div className="p-8 text-center text-gray-500 text-sm">
-                {selectedProvince ? t('map.noProjectsProvince') : t('map.noProjects')}
-              </div>
+
+                    {/* Status dots */}
+                    <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500">
+                      {cat.delivered > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                          {cat.delivered} done
+                        </span>
+                      )}
+                      {cat.inProgress > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          {cat.inProgress} active
+                        </span>
+                      )}
+                      {cat.stalled > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                          {cat.stalled} stalled
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
             )}
+          </div>
+
+          {/* Right: Promise List */}
+          <div className="lg:col-span-2 glass-card overflow-hidden flex flex-col">
+            <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Eye className="w-4 h-4 text-primary-400" />
+                {selectedCategory
+                  ? `${selectedCategory.replace(/_/g, ' ')} Promises`
+                  : 'All Promises'}{' '}
+                — {filteredPromises.length}
+              </h3>
+              {selectedCatData && (
+                <span className="text-xs text-gray-500">
+                  {selectedCatData.total} promises
+                </span>
+              )}
+            </div>
+
+            <div className="flex-1 divide-y divide-white/[0.04] overflow-y-auto max-h-[700px]">
+              {isLoading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="p-4 animate-pulse flex items-center gap-4">
+                    <div className="h-4 bg-white/5 rounded w-3/4" />
+                    <div className="h-3 bg-white/5 rounded w-16" />
+                  </div>
+                ))
+              ) : filteredPromises.length > 0 ? (
+                filteredPromises.map((promise) => {
+                  const dotColor = STATUS_DOT_COLORS[promise.status] ?? 'bg-gray-400';
+
+                  return (
+                    <Link
+                      key={promise.id}
+                      href={`/explore/first-100-days/${promise.slug}`}
+                      className="block p-4 hover:bg-white/[0.02] transition-colors group"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-1">
+                            {locale === 'ne' && promise.title_ne
+                              ? promise.title_ne
+                              : promise.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                              <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                              {STATUS_LABELS[promise.status] ?? promise.status}
+                            </span>
+                            <SignalBadge type={promise.signalType} compact />
+                            <span className="text-[10px] text-gray-600 capitalize">
+                              {promise.category.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {promise.evidenceCount > 0 ? (
+                            <span className="text-[10px] text-cyan-500/70">{promise.evidenceCount} articles</span>
+                          ) : (
+                            <span className="text-[10px] text-gray-600 italic">No data</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="p-8 text-center text-gray-500 text-sm">
+                  No promises found for this category.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
