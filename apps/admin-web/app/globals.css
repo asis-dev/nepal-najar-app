@@ -304,6 +304,59 @@
   }
 }
 
+/* ── Mist drift animation ── */
+@keyframes mist-drift {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25% { transform: translateX(3%) translateY(-1%); }
+  50% { transform: translateX(-2%) translateY(1%); }
+  75% { transform: translateX(1%) translateY(-0.5%); }
+}
+
+/* ── Crimson accent divider ── */
+.accent-crimson {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #DC143C40, #DC143C60, #DC143C40, transparent);
+}
+
+.nepal-hero-grid {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(220, 20, 60, 0.10), transparent 28%),
+    radial-gradient(circle at 80% 0%, rgba(0, 56, 147, 0.14), transparent 35%),
+    linear-gradient(180deg, rgba(255,255,255,0.03), transparent 30%),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: auto, auto, auto, 32px 32px, 32px 32px;
+}
+
+.mountain-ridge,
+.mountain-ridge-soft {
+  position: fixed;
+  left: -5%;
+  right: -5%;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mountain-ridge {
+  height: 220px;
+  opacity: 0.18;
+  background: linear-gradient(180deg, rgba(9,16,32,0) 0%, rgba(11,18,33,0.95) 60%);
+  clip-path: polygon(0 100%, 0 72%, 8% 64%, 14% 70%, 22% 50%, 29% 64%, 37% 40%, 45% 60%, 54% 30%, 62% 58%, 70% 44%, 79% 66%, 86% 55%, 93% 73%, 100% 61%, 100% 100%);
+}
+
+.mountain-ridge-soft {
+  height: 170px;
+  opacity: 0.12;
+  background: linear-gradient(180deg, rgba(9,16,32,0) 0%, rgba(19,31,54,0.9) 65%);
+  clip-path: polygon(0 100%, 0 78%, 11% 68%, 20% 80%, 29% 56%, 40% 72%, 51% 50%, 60% 76%, 70% 62%, 82% 80%, 91% 69%, 100% 84%, 100% 100%);
+}
+
+/* ── Contour background texture ── */
+.contour-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='100'%3E%3Cpath d='M0,50 Q50,20 100,45 T200,50' fill='none' stroke='%23DDE7F0' stroke-width='0.5' opacity='0.03'/%3E%3Cpath d='M0,70 Q60,40 120,65 T200,70' fill='none' stroke='%23DDE7F0' stroke-width='0.4' opacity='0.025'/%3E%3C/svg%3E");
+}
+
 /* Reduce blur on mobile for performance */
 @media (max-width: 768px) {
   .glass-card,
