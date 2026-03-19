@@ -9,47 +9,47 @@ import {
   Check,
   Download,
   ExternalLink,
+  CheckCircle2,
+  AlertTriangle,
+  MessageCircle,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { useAccountability } from '@/lib/hooks/use-accountability';
+import { PublicPageHero } from '@/components/public/page-hero';
+import { TransparencyScoreSection } from '@/components/public/report-card/transparency-score';
+import { WhatsWorkingSection } from '@/components/public/report-card/whats-working';
+import { WhatsNotWorkingSection } from '@/components/public/report-card/whats-not-working';
+import { PublicVoiceSection } from '@/components/public/report-card/public-voice';
 
-/* ===================================================
-   REPORT CARD VIEWER + SHARE PAGE
-   =================================================== */
+/* ═══════════════════════════════════════════════
+   GOVERNMENT ACCOUNTABILITY REPORT CARD
+   ═══════════════════════════════════════════════ */
+
+type Tab = 'working' | 'not-working' | 'voice';
+
+const TABS: { id: Tab; icon: typeof CheckCircle2; labelKey: string }[] = [
+  { id: 'working', icon: CheckCircle2, labelKey: 'accountability.whatsWorking' },
+  { id: 'not-working', icon: AlertTriangle, labelKey: 'accountability.whatsNotWorking' },
+  { id: 'voice', icon: MessageCircle, labelKey: 'accountability.publicVoice' },
+];
 
 export default function ReportCardPage() {
   const { locale, t } = useI18n();
   const isNe = locale === 'ne';
 
+  const [activeTab, setActiveTab] = useState<Tab>('working');
   const [copied, setCopied] = useState(false);
 
-  // Cache-bust key so the image always shows the latest data (changes every 10 minutes)
+  const { data, isLoading } = useAccountability();
+
+  // Cache-bust key for OG image
   const cacheBust = typeof window !== 'undefined' ? Math.floor(Date.now() / 600_000) : 0;
-
   const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://nepalnajar.com/report-card';
-  const imageUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/report-card` : '/api/report-card';
 
-  const shareTitle = isNe
-    ? 'Nepal Najar - साप्ताहिक रिपोर्ट कार्ड'
-    : 'Nepal Najar - Weekly Report Card';
-
+  const shareTitle = `Nepal Najar - ${t('accountability.pageTitle')}`;
   const shareText = isNe
-    ? `Nepal Najar साप्ताहिक रिपोर्ट कार्ड हेर्नुहोस्! नेपालको विकास प्रगति ट्र्याक गर्नुहोस्। ${pageUrl}`
-    : `Check out Nepal Najar Weekly Report Card! Track Nepal's development progress. ${pageUrl}`;
-
-  /* ---- Share Handler ---- */
-  async function handleNativeShare() {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: pageUrl,
-        });
-      } catch {
-        // User cancelled or share failed — silently ignore
-      }
-    }
-  }
+    ? `Nepal Najar ${t('accountability.pageTitle')} हेर्नुहोस्! ${pageUrl}`
+    : `Check out Nepal Najar's ${t('accountability.pageTitle')}! ${pageUrl}`;
 
   function handleCopyLink() {
     if (typeof navigator !== 'undefined') {
@@ -59,10 +59,20 @@ export default function ReportCardPage() {
     }
   }
 
+  async function handleNativeShare() {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: shareTitle, text: shareText, url: pageUrl });
+      } catch {
+        /* cancelled */
+      }
+    }
+  }
+
   const supportsNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   return (
-    <div className="min-h-screen bg-np-base">
+    <div className="public-page">
       {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary-500/[0.05] rounded-full blur-[120px]" />
@@ -72,7 +82,7 @@ export default function ReportCardPage() {
       <div className="relative z-10">
         {/* Back link */}
         <div className="px-4 sm:px-6 lg:px-8 pt-6">
-          <div className="max-w-xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <Link
               href="/explore"
               className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-400 transition-colors"
@@ -83,115 +93,130 @@ export default function ReportCardPage() {
           </div>
         </div>
 
-        {/* Main content */}
-        <section className="px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-xl mx-auto">
-            {/* Title */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-                {t('reportCard.title')}
-              </h1>
-              <p className="text-gray-400 text-sm sm:text-base">
-                {t('reportCard.weeklyReport')}
-              </p>
-            </div>
+        <PublicPageHero
+          title={t('accountability.pageTitle')}
+          description={t('accountability.pageSubtitle')}
+          centered
+          stats={data ? <TransparencyScoreSection score={data.transparencyScore} /> : null}
+        />
 
-            {/* Report Card Image */}
-            <div className="glass-card p-3 sm:p-4 mb-8">
-              <img
-                src={`/api/report-card?v=${cacheBust}`}
-                alt="Report Card"
-                className="w-full rounded-xl shadow-lg shadow-black/30"
-              />
-            </div>
-
-            {/* Share Section */}
-            <div className="glass-card p-6 sm:p-8">
-              <div className="flex items-center justify-center gap-2 mb-6">
-                <Share2 className="w-5 h-5 text-primary-400" />
-                <h2 className="text-lg font-semibold text-white">
-                  {isNe ? 'साझा गर्नुहोस्' : 'Share'}
-                </h2>
-              </div>
-
-              <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
-                {/* Native Share (if supported) */}
-                {supportsNativeShare && (
-                  <button
-                    onClick={handleNativeShare}
-                    className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200 shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_25px_rgba(59,130,246,0.25)] flex items-center justify-center gap-2"
+        <section className="public-section pt-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-4xl">
+              <details className="glass-card overflow-hidden">
+              <summary className="flex items-center gap-2 p-4 cursor-pointer text-sm font-medium text-gray-400 hover:text-gray-200 transition-colors">
+                <Download className="w-4 h-4" />
+                {t('accountability.weeklyImage')}
+              </summary>
+              <div className="p-4 pt-0">
+                <img
+                  src={`/api/report-card?v=${cacheBust}`}
+                  alt={t('accountability.pageTitle')}
+                  className="w-full max-w-md mx-auto rounded-xl shadow-lg shadow-black/30"
+                />
+                {/* Share buttons */}
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                  {supportsNativeShare && (
+                    <button
+                      onClick={handleNativeShare}
+                      className="px-4 py-2 rounded-xl text-xs font-medium text-white bg-primary-500/20 border border-primary-500/30 hover:bg-primary-500/30 transition-all flex items-center gap-1.5"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      {t('accountability.share')}
+                    </button>
+                  )}
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 rounded-xl text-xs font-medium text-white bg-[#25D366]/20 border border-[#25D366]/30 hover:bg-[#25D366]/30 transition-all flex items-center gap-1.5"
                   >
-                    <Share2 className="w-4 h-4" />
-                    {isNe ? 'साझा गर्नुहोस्' : 'Share'}
+                    <ExternalLink className="w-3 h-3" />
+                    WhatsApp
+                  </a>
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 rounded-xl text-xs font-medium text-white bg-[#1877F2]/20 border border-[#1877F2]/30 hover:bg-[#1877F2]/30 transition-all flex items-center gap-1.5"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Facebook
+                  </a>
+                  <button
+                    onClick={handleCopyLink}
+                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      copied
+                        ? 'text-emerald-300 bg-emerald-500/20 border border-emerald-500/30'
+                        : 'text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copied ? t('accountability.copied') : t('accountability.copyLink')}
                   </button>
-                )}
+                  <a
+                    href="/api/report-card"
+                    download="nepal-najar-report-card.png"
+                    className="px-4 py-2 rounded-xl text-xs font-medium text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-all flex items-center gap-1.5"
+                  >
+                    <Download className="w-3 h-3" />
+                    {t('accountability.download')}
+                  </a>
+                </div>
+              </div>
+              </details>
+            </div>
+          </div>
+        </section>
 
-                {/* WhatsApp */}
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-[#25D366]/20 border border-[#25D366]/30 hover:bg-[#25D366]/30 transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  WhatsApp
-                </a>
-
-                {/* Facebook */}
-                <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-[#1877F2]/20 border border-[#1877F2]/30 hover:bg-[#1877F2]/30 transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Facebook
-                </a>
-
-                {/* X / Twitter */}
-                <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.08] border border-white/[0.12] hover:bg-white/[0.14] transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  X / Twitter
-                </a>
-
-                {/* Copy Link */}
+        {/* Tabs */}
+        <section className="px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] mb-6">
+              {TABS.map(({ id, icon: Icon, labelKey }) => (
                 <button
-                  onClick={handleCopyLink}
-                  className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                    copied
-                      ? 'text-emerald-300 bg-emerald-500/20 border border-emerald-500/30'
-                      : 'text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08]'
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    activeTab === id
+                      ? 'bg-white/[0.08] text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
                   }`}
                 >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      {isNe ? 'कपी भयो!' : 'Copied!'}
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      {isNe ? 'लिंक कपी' : 'Copy Link'}
-                    </>
-                  )}
+                  <Icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t(labelKey)}</span>
                 </button>
-
-                {/* Download */}
-                <a
-                  href="/api/report-card"
-                  download="nepal-najar-report-card.png"
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  {isNe ? 'डाउनलोड' : 'Download'}
-                </a>
-              </div>
+              ))}
             </div>
+          </div>
+        </section>
+
+        {/* Tab Content */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-12">
+          <div className="max-w-4xl mx-auto">
+            {isLoading ? (
+              <div className="glass-card p-12 text-center">
+                <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-400 rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm text-gray-500">
+                  {t('accountability.loading')}
+                </p>
+              </div>
+            ) : data ? (
+              <>
+                {activeTab === 'working' && (
+                  <WhatsWorkingSection promises={data.whatsWorking} />
+                )}
+                {activeTab === 'not-working' && (
+                  <WhatsNotWorkingSection
+                    downSources={data.whatsNotWorking.downSources}
+                    silentPromises={data.whatsNotWorking.silentPromises}
+                  />
+                )}
+                {activeTab === 'voice' && (
+                  <PublicVoiceSection voteAggregates={data.voteAggregates} />
+                )}
+              </>
+            ) : null}
           </div>
         </section>
 

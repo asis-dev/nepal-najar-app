@@ -14,6 +14,7 @@ import { useI18n } from '@/lib/i18n';
 import { useEngagementStore } from '@/lib/stores/engagement';
 import { getDailyPromise, getDailyPromiseHistory } from '@/lib/data/daily-promise';
 import { VoteWidget } from '@/components/public/vote-widget';
+import { PublicPageHero } from '@/components/public/page-hero';
 
 /* ===================================================
    STATUS CONFIG (mirrors first-100-days)
@@ -143,7 +144,7 @@ export default function DailyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-np-base">
+    <div className="public-page">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full bg-primary-500/[0.04] blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 h-[420px] w-[420px] rounded-full bg-cyan-500/[0.04] blur-[100px]" />
@@ -162,21 +163,20 @@ export default function DailyPage() {
           </div>
         </div>
 
-        <section className="public-section pt-6">
+        <PublicPageHero
+          eyebrow={isNe ? 'दैनिक ट्रयाकर' : 'Daily tracker'}
+          title={isNe ? 'हरेक दिन एउटा सार्वजनिक वचन' : 'One public promise, every day'}
+          description={
+            isNe
+              ? 'आजको मुख्य वाचा, यसको प्रगति, र तपाईँले निरन्तर पछ्याइरहनुभएको छ कि छैन हेर्नुहोस्।'
+              : 'Check one important promise each day, see its progress, and build a habit around staying informed.'
+          }
+          centered
+        />
+
+        <section className="public-section pt-0">
           <div className="public-shell">
             <div className="mx-auto max-w-2xl">
-              <div className="mb-5 text-center sm:text-left">
-                <div className="section-kicker">{isNe ? 'दैनिक ट्रयाकर' : 'Daily tracker'}</div>
-                <h1 className="mt-4 text-[2.2rem] font-sans font-semibold leading-tight tracking-[-0.03em] text-white sm:text-[3rem]">
-                  {isNe ? 'हरेक दिन एउटा सार्वजनिक वचन' : 'One public promise, every day'}
-                </h1>
-                <p className="mt-3 text-base leading-relaxed text-gray-300">
-                  {isNe
-                    ? 'आजको मुख्य वाचा, यसको प्रगति, र तपाईँले निरन्तर पछ्याइरहनुभएको छ कि छैन हेर्नुहोस्।'
-                    : 'Check one important promise each day, see its progress, and build a habit around staying informed.'}
-                </p>
-              </div>
-
               <div className="glass-card public-gradient-panel relative overflow-hidden p-7 text-center sm:p-10">
                 {currentStreak >= 3 && (
                   <div className="absolute inset-0 bg-gradient-to-b from-orange-500/[0.06] via-transparent to-transparent pointer-events-none" />

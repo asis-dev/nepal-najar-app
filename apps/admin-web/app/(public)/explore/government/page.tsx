@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAllPromises, usePromiseStats } from '@/lib/hooks/use-promises';
 import { useGovernmentStructure } from '@/lib/hooks/use-government-structure';
+import { PublicPageHero } from '@/components/public/page-hero';
 import type { PublicGovSnapshotUnit } from '@/lib/org-structure/engine';
 import type { PublicGovUnitType } from '@/lib/data/government-accountability';
 
@@ -162,46 +163,48 @@ export default function GovernmentPublicPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <div className="max-w-3xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300">
+    <div className="public-page">
+      <PublicPageHero
+        eyebrow={
+          <>
             <ShieldCheck className="h-4 w-4" />
             Who&apos;s Responsible
-          </div>
-          <h1 className="text-4xl font-display font-bold tracking-tight text-white sm:text-5xl">
-            Government structure, roles, and public delivery
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-400 sm:text-lg">
-            See which ministry, department, division, or office owns each part of delivery, what they are responsible for, and what outcomes are already visible in public.
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-400">
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-              Last checked{' '}
-              <span className="font-medium text-white">
-                {new Date(
-                  governmentData?.checkedAt ??
-                    selectedUnit.sourceMeta.checkedAt ??
-                    new Date().toISOString()
-                ).toLocaleString()}
+          </>
+        }
+        title="Government structure, roles, and public delivery"
+        description="See which ministry, department, division, or office owns each part of delivery, what they are responsible for, and what outcomes are already visible in public."
+        aside={
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Verification status</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                Last checked{' '}
+                <span className="font-medium text-white">
+                  {new Date(
+                    governmentData?.checkedAt ??
+                      selectedUnit.sourceMeta.checkedAt ??
+                      new Date().toISOString()
+                  ).toLocaleString()}
+                </span>
               </span>
-            </span>
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-              {verifiedCount} of {units.length} sources verified from official pages
-            </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                {verifiedCount} of {units.length} sources verified from official pages
+              </span>
+            </div>
           </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {publicStats.map((stat) => (
+        }
+        stats={
+          publicStats.map((stat) => (
             <div key={stat.label} className="glass-card px-5 py-4">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{stat.label}</p>
               <p className="mt-2 text-3xl font-bold text-white">{stat.value}</p>
             </div>
-          ))}
-        </div>
+          ))
+        }
+      />
 
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.35fr]">
+      <div className="public-shell space-y-8">
+        <div className="public-panel-grid">
           <div className="glass-card p-4">
             <div className="mb-3 px-2">
               <h2 className="text-lg font-semibold text-white">Institution tree</h2>

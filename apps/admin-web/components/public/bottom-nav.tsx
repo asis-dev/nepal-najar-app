@@ -18,8 +18,8 @@ export function BottomNav() {
   const t = useTranslation();
 
   return (
-    <nav className="safe-bottom fixed bottom-0 inset-x-0 z-50 border-t border-np-border bg-np-surface/92 backdrop-blur-xl md:hidden">
-      <div className="flex items-center justify-around h-16">
+    <nav className="safe-bottom fixed inset-x-0 bottom-0 z-50 px-4 pb-2 md:hidden">
+      <div className="mx-auto flex h-16 max-w-md items-center justify-around rounded-[1.4rem] border border-white/[0.08] bg-np-surface/92 shadow-[0_-12px_30px_rgba(3,8,20,0.35)] backdrop-blur-xl">
         {navItems.map(({ href, labelKey, icon: Icon }) => {
           const isActive =
             href === '/explore'
@@ -30,15 +30,13 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative"
+              className="relative flex h-full flex-1 flex-col items-center justify-center gap-1"
             >
-              <div className="relative">
-                <Icon
-                  className={`w-5 h-5 transition-colors ${
-                    isActive ? 'text-white' : 'text-gray-500'
-                  }`}
-                />
-              </div>
+              <Icon
+                className={`h-5 w-5 transition-colors ${
+                  isActive ? 'text-white' : 'text-gray-500'
+                }`}
+              />
               <span
                 className={`text-[10px] font-medium transition-colors ${
                   isActive ? 'text-white' : 'text-gray-500'
@@ -46,10 +44,9 @@ export function BottomNav() {
               >
                 {t(labelKey)}
               </span>
-              {/* Active glow dot */}
               {isActive && (
                 <span
-                  className="absolute bottom-1.5 w-1 h-1 rounded-full bg-primary-400"
+                  className="absolute bottom-1.5 h-1 w-1 rounded-full bg-primary-400"
                   style={{ boxShadow: '0 0 6px rgba(96,165,250,0.6)' }}
                 />
               )}

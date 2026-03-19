@@ -15,6 +15,7 @@ import {
 import { useI18n } from '@/lib/i18n';
 import { SignalBadge } from '@/components/public/signal-badge';
 import { TrustLanes } from '@/components/public/trust-lanes';
+import { PublicPageHero } from '@/components/public/page-hero';
 import { usePreferencesStore } from '@/lib/stores/preferences';
 import {
   useAllPromises,
@@ -142,57 +143,91 @@ export default function ExplorePage() {
     .sort((a, b) => b.total - a.total);
 
   return (
-    <div className="min-h-screen relative z-10">
+    <div className="public-page">
       <div className="mountain-ridge opacity-35" />
       <div className="mountain-ridge-soft opacity-45" />
 
-      {/* ═══════════════════════════════════════
-         SECTION 1: HERO
-         ═══════════════════════════════════════ */}
-      <section className="public-section relative pt-12 sm:pt-16">
-        <div className="public-shell relative">
-          <div className="animate-fade-in">
-            <div className="section-kicker mb-5">
-              Nepal Najar
-              <span className="h-1 w-1 rounded-full bg-white/40" />
-              <span className="text-gray-500">Track promises, projects, and updates</span>
+      <PublicPageHero
+        eyebrow={
+          <>
+            Nepal Najar
+            <span className="h-1 w-1 rounded-full bg-white/40" />
+            <span className="text-gray-500">Track promises, projects, and updates</span>
+          </>
+        }
+        title="See what Nepal is building, what is moving, and what is stuck."
+        description="Browse Nepal by sector, signals, and local relevance. Official, discovered, public, and inferred data stay separate so trust stays visible."
+        aside={
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Right now</p>
+              <p className="mt-2 text-sm leading-6 text-gray-400">
+                Start with the biggest changes, then set your area so the rest of Nepal Najar feels personal.
+              </p>
             </div>
-
-            <h1 className="max-w-4xl text-balance font-sans text-[2.6rem] font-semibold leading-[0.95] tracking-[-0.035em] text-white sm:text-[3.35rem] lg:text-[4.1rem]">
-              A clearer way to follow what is promised, what is moving, and what is stalled.
-            </h1>
-
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-300 sm:text-lg">
-              Browse Nepal by sector, signals, and local relevance. Official, discovered, public, and inferred data stay separate so trust stays visible.
-            </p>
+            <div className="grid grid-cols-3 gap-3">
+              <StatPill
+                icon={<Eye className="w-4 h-4" />}
+                label="Promises"
+                value={stats?.total ?? '--'}
+                loading={statsLoading}
+              />
+              <StatPill
+                icon={<Newspaper className="w-4 h-4" />}
+                label="Articles"
+                value={articleCount ?? 0}
+                loading={false}
+                accent="cyan"
+              />
+              <StatPill
+                icon={<Users className="w-4 h-4" />}
+                label="Delivered"
+                value={stats?.delivered ?? '--'}
+                loading={statsLoading}
+                accent="emerald"
+              />
+            </div>
+            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Local pulse</p>
+              <p className="mt-2 text-base font-medium text-white">
+                {district ? `${district}, ${province}` : 'Choose your district'}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-gray-400">
+                {district
+                  ? 'Use My Area to keep this district at the center of your feed, scores, and accountability pages.'
+                  : 'Choose a province and district to make daily updates and local scorecards feel more relevant.'}
+              </p>
+            </div>
           </div>
+        }
+        stats={
+          <>
+            <Link href="/daily" className="metric-chip justify-center hover:bg-white/[0.07]">
+              <CalendarDays className="h-4 w-4 text-primary-300" />
+              What changed today
+            </Link>
+            <button
+              onClick={() => setShowPicker(true)}
+              className="metric-chip justify-center hover:bg-white/[0.07]"
+            >
+              <MapPin className="h-4 w-4 text-cyan-300" />
+              {district ? `${district}, ${province}` : 'Set my area'}
+            </button>
+            <Link href="/explore/government" className="metric-chip justify-center hover:bg-white/[0.07]">
+              <Sparkles className="h-4 w-4 text-nepal-red" />
+              Who owns delivery
+            </Link>
+            <Link href="/report-card" className="metric-chip justify-center hover:bg-white/[0.07]">
+              <ArrowRight className="h-4 w-4 text-emerald-300" />
+              Weekly report card
+            </Link>
+          </>
+        }
+      />
 
-          <div className="mb-8 mt-8">
-            <TrustLanes />
-          </div>
-
-          <div className="animate-slide-up grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
-            <StatPill
-              icon={<Eye className="w-4 h-4" />}
-              label="Promises"
-              value={stats?.total ?? '--'}
-              loading={statsLoading}
-            />
-            <StatPill
-              icon={<Newspaper className="w-4 h-4" />}
-              label="Articles Scanned"
-              value={articleCount ?? 0}
-              loading={false}
-              accent="cyan"
-            />
-            <StatPill
-              icon={<Users className="w-4 h-4" />}
-              label="Delivered"
-              value={stats?.delivered ?? '--'}
-              loading={statsLoading}
-              accent="emerald"
-            />
-          </div>
+      <section className="public-section pt-0">
+        <div className="public-shell">
+          <TrustLanes />
         </div>
       </section>
 

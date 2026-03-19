@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Search, ArrowRight, Eye, FileText } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAllPromises } from '@/lib/hooks/use-promises';
+import { PublicPageHero } from '@/components/public/page-hero';
 import { SignalBadge } from '@/components/public/signal-badge';
 import { formatNPR } from '@/lib/data/promises';
 import type { GovernmentPromise, PromiseStatus } from '@/lib/data/promises';
@@ -151,20 +152,30 @@ export default function ExploreProjectsPage() {
   }, [promises, statusFilter, categoryFilter, search]);
 
   return (
-    <div className="min-h-screen px-4 py-12 sm:px-6 lg:px-8 relative z-10">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-10 text-center">
-          <h1 className="text-4xl font-display font-bold tracking-tight text-white sm:text-5xl">
-            Government Promises
-          </h1>
-          <p className="mt-3 text-lg text-gray-400">
-            {promises?.length ?? '--'} tracked promises from PM Balen&apos;s government
-          </p>
-        </div>
+    <div className="public-page">
+      <PublicPageHero
+        eyebrow={
+          <>
+            <Eye className="h-4 w-4" />
+            Tracked delivery
+          </>
+        }
+        title="Government promises and linked delivery"
+        description={`${promises?.length ?? '--'} tracked promises from PM Balen's government. Filter by status or sector, then open a promise to see linked evidence, progress, and who owns delivery.`}
+        aside={
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">How to use this page</p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-400">
+              Start broad, then narrow by status or sector. The strongest cards are the ones with evidence, recent updates, and accountable institutions attached.
+            </p>
+          </div>
+        }
+      />
 
-        {/* Search */}
-        <div className="relative mx-auto mb-6 max-w-xl">
+      <div className="public-shell">
+        <div className="glass-card mb-6 p-4 sm:p-5">
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div className="relative">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
           <input
             type="text"
@@ -173,10 +184,15 @@ export default function ExploreProjectsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-12 pr-4 text-white placeholder-white/30 backdrop-blur-md transition-colors focus:border-primary-500/50 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
           />
+            </div>
+
+            <p className="text-sm leading-6 text-gray-400">
+              Search by sector, keyword, or promise title. Filters below update the grid immediately.
+            </p>
+          </div>
         </div>
 
-        {/* Status filter pills */}
-        <div className="mb-4 flex flex-wrap justify-center gap-2">
+        <div className="mb-4 public-filter-row justify-center lg:justify-start">
           {STATUS_FILTERS.map((s) => (
             <button
               key={s}
@@ -192,8 +208,7 @@ export default function ExploreProjectsPage() {
           ))}
         </div>
 
-        {/* Category filter */}
-        <div className="mb-8 flex flex-wrap justify-center gap-2">
+        <div className="mb-8 public-filter-row justify-center lg:justify-start">
           {CATEGORY_FILTERS.map((c) => (
             <button
               key={c}

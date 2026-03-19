@@ -241,8 +241,12 @@
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
+  .public-page {
+    @apply relative z-10 min-h-screen pb-10 sm:pb-14;
+  }
+
   .public-section {
-    @apply py-8 sm:py-10 lg:py-12;
+    @apply py-7 sm:py-9 lg:py-11;
   }
 
   .section-kicker {
@@ -251,6 +255,66 @@
 
   .metric-chip {
     @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm text-gray-300;
+  }
+
+  .public-page-hero {
+    @apply grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-end;
+  }
+
+  .public-page-hero--centered {
+    @apply lg:grid-cols-1;
+  }
+
+  .public-page-hero--centered .public-page-hero__copy {
+    @apply mx-auto max-w-3xl text-center;
+  }
+
+  .public-page-hero__copy {
+    @apply max-w-3xl;
+  }
+
+  .public-page-hero__aside {
+    @apply glass-card p-5 sm:p-6;
+  }
+
+  .public-page-eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-400;
+  }
+
+  .public-page-title {
+    @apply mt-4 text-balance font-sans text-[2rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white sm:text-[2.8rem] lg:text-[3.4rem];
+  }
+
+  .public-page-description {
+    @apply mt-4 max-w-2xl text-sm leading-7 text-gray-300 sm:text-base;
+  }
+
+  .public-page-hero--centered .public-page-description {
+    @apply mx-auto;
+  }
+
+  .public-page-stats {
+    @apply mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .public-panel-grid {
+    @apply grid gap-6 lg:grid-cols-[0.95fr_1.35fr];
+  }
+
+  .public-card-grid {
+    @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .public-filter-row {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .public-section-title {
+    @apply text-lg font-semibold text-white sm:text-xl;
+  }
+
+  .public-section-copy {
+    @apply mt-1 text-sm leading-6 text-gray-400;
   }
 
   .public-gradient-panel {
@@ -417,6 +481,25 @@
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(220, 20, 60, 0.98) 0%, rgba(0, 56, 147, 0.95) 100%);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 6px 16px rgba(0, 56, 147, 0.18);
+}
+
+@media (max-width: 767px) {
+  .public-shell {
+    @apply px-4;
+  }
+
+  .public-page-title {
+    font-size: 1.9rem;
+    line-height: 1.04;
+  }
+
+  .public-page-description {
+    @apply text-[15px] leading-7;
+  }
+
+  .metric-chip {
+    @apply w-full justify-center text-sm;
+  }
 }
 
 .nepal-najar-mark__bar--short {

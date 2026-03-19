@@ -21,6 +21,7 @@ import {
   getNationalAverage,
   type RegionScore,
 } from '@/lib/data/ward-scores';
+import { PublicPageHero } from '@/components/public/page-hero';
 import { usePreferencesStore } from '@/lib/stores/preferences';
 import { formatNPR } from '@/lib/data/promises';
 import { NEPAL_PROVINCES } from '@/lib/stores/preferences';
@@ -147,7 +148,7 @@ export default function MeroWardPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-np-base">
+    <div className="public-page">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-1/4 h-[520px] w-[520px] rounded-full bg-primary-500/[0.045] blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 h-[420px] w-[420px] rounded-full bg-cyan-500/[0.04] blur-[100px]" />
@@ -166,36 +167,28 @@ export default function MeroWardPage() {
           </div>
         </div>
 
-        <section className="public-section pt-6">
-          <div className="public-shell">
-            <div className="mx-auto max-w-4xl text-center">
-              <div className="section-kicker mb-4">{isNe ? 'मेरो क्षेत्र' : 'My area'}</div>
-              <h1 className="mb-2 text-[2.3rem] font-sans font-semibold leading-tight tracking-[-0.03em] text-white sm:text-[3rem] lg:text-[3.6rem]">
-                {t('meroWard.title')}
-              </h1>
-              <p className="mb-6 text-base text-gray-300">
-                {isNe
-                  ? 'प्रदेश र जिल्लाको शासन स्कोर'
-                  : 'Province & district governance scores'}
-              </p>
-
-              {userScore && (
-                <div className="mb-6 inline-flex items-center gap-3 glass-card px-6 py-3">
-                  <MapPin className="w-4 h-4 text-primary-400" />
-                  <span className="text-sm text-gray-300">
-                    {isNe ? userScore.province_ne : userScore.province}
-                  </span>
-                  <span className={`text-2xl font-bold ${getScoreColor(userScore.score)}`}>
-                    {userScore.score}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    #{userScore.rank}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+        <PublicPageHero
+          eyebrow={isNe ? 'मेरो क्षेत्र' : 'My area'}
+          title={t('meroWard.title')}
+          description={
+            isNe ? 'प्रदेश र जिल्लाको शासन स्कोर' : 'Province and district governance scores'
+          }
+          centered
+          stats={
+            userScore ? (
+              <div className="glass-card mx-auto flex w-full max-w-sm items-center justify-center gap-3 px-5 py-3">
+                <MapPin className="h-4 w-4 text-primary-400" />
+                <span className="text-sm text-gray-300">
+                  {isNe ? userScore.province_ne : userScore.province}
+                </span>
+                <span className={`text-2xl font-bold ${getScoreColor(userScore.score)}`}>
+                  {userScore.score}
+                </span>
+                <span className="text-xs text-gray-500">#{userScore.rank}</span>
+              </div>
+            ) : null
+          }
+        />
 
         <section className="public-section pt-0">
           <div className="public-shell">
