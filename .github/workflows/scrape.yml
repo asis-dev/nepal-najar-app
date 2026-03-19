@@ -4,113 +4,118 @@ on:
   schedule:
     # Twice daily: ~8:45 AM and ~8:45 PM Nepal Time (UTC+5:45)
     - cron: '0 3,15 * * *'
-  workflow_dispatch: # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Scraping mode'
+        required: false
+        default: 'deep'
+        type: choice
+        options:
+          - deep
+          - headlines-only
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       API_URL: ${{ secrets.VERCEL_URL }}
       AUTH: "Bearer ${{ secrets.SCRAPE_SECRET }}"
+      # Use /api/scrape/deep for AI-powered full analysis
+      # Falls back to keyword matching if AI_BASE_URL not set in Vercel
+      ENDPOINT: "/api/scrape/deep"
 
     steps:
-      - name: Scrape Kathmandu Post
+      - name: Deep Scrape — Kathmandu Post
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "kathmandu-post", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ kathmandu-post failed"
-          sleep 2
+            -d '{"source": "kathmandu-post", "trigger": "github_actions", "maxArticles": 5}' \
+            --max-time 60 || echo "⚠️ kathmandu-post failed"
+          sleep 3
 
-      - name: Scrape Online Khabar
+      - name: Deep Scrape — Online Khabar
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "online-khabar", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ online-khabar failed"
-          sleep 2
+            -d '{"source": "online-khabar", "trigger": "github_actions", "maxArticles": 5}' \
+            --max-time 60 || echo "⚠️ online-khabar failed"
+          sleep 3
 
-      - name: Scrape MyRepublica
+      - name: Deep Scrape — MyRepublica
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "republica", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ republica failed"
-          sleep 2
+            -d '{"source": "republica", "trigger": "github_actions", "maxArticles": 5}' \
+            --max-time 60 || echo "⚠️ republica failed"
+          sleep 3
 
-      - name: Scrape Himalayan Times
+      - name: Deep Scrape — Himalayan Times
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "himalayan-times", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ himalayan-times failed"
-          sleep 2
+            -d '{"source": "himalayan-times", "trigger": "github_actions", "maxArticles": 5}' \
+            --max-time 60 || echo "⚠️ himalayan-times failed"
+          sleep 3
 
-      - name: Scrape Nepali Times
+      - name: Deep Scrape — Nepali Times
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "nepali-times", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ nepali-times failed"
-          sleep 2
+            -d '{"source": "nepali-times", "trigger": "github_actions", "maxArticles": 5}' \
+            --max-time 60 || echo "⚠️ nepali-times failed"
+          sleep 3
 
-      - name: Scrape Ministry of Finance
+      - name: Deep Scrape — Ministry of Finance
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "mof-gov", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ mof-gov failed"
-          sleep 2
+            -d '{"source": "mof-gov", "trigger": "github_actions", "maxArticles": 3}' \
+            --max-time 60 || echo "⚠️ mof-gov failed"
+          sleep 3
 
-      - name: Scrape Ministry of Infrastructure
+      - name: Deep Scrape — Ministry of Infrastructure
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "mopit-gov", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ mopit-gov failed"
-          sleep 2
+            -d '{"source": "mopit-gov", "trigger": "github_actions", "maxArticles": 3}' \
+            --max-time 60 || echo "⚠️ mopit-gov failed"
+          sleep 3
 
-      - name: Scrape Ministry of Urban Development
+      - name: Deep Scrape — Ministry of Urban Development
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "moud-gov", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ moud-gov failed"
-          sleep 2
+            -d '{"source": "moud-gov", "trigger": "github_actions", "maxArticles": 3}' \
+            --max-time 60 || echo "⚠️ moud-gov failed"
+          sleep 3
 
-      - name: Scrape Ministry of Energy
+      - name: Deep Scrape — Ministry of Energy
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "moewri-gov", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ moewri-gov failed"
-          sleep 2
+            -d '{"source": "moewri-gov", "trigger": "github_actions", "maxArticles": 3}' \
+            --max-time 60 || echo "⚠️ moewri-gov failed"
+          sleep 3
 
-      - name: Scrape Ministry of Home Affairs
+      - name: Deep Scrape — Ministry of Home Affairs
         run: |
-          curl -sf -X POST "$API_URL/api/scrape/source" \
+          curl -sf -X POST "$API_URL$ENDPOINT" \
             -H "Authorization: $AUTH" \
             -H "Content-Type: application/json" \
-            -d '{"source": "moha-gov", "trigger": "github_actions"}' \
-            --max-time 15 || echo "⚠️ moha-gov failed"
+            -d '{"source": "moha-gov", "trigger": "github_actions", "maxArticles": 3}' \
+            --max-time 60 || echo "⚠️ moha-gov failed"
           sleep 2
-
-      - name: Run Promise Matcher
-        run: |
-          curl -sf -X POST "$API_URL/api/scrape/match" \
-            -H "Authorization: $AUTH" \
-            -H "Content-Type: application/json" \
-            --max-time 30 || echo "⚠️ matcher failed"
 
       - name: Revalidate Frontend Cache
         run: |
@@ -122,5 +127,5 @@ jobs:
 
       - name: Summary
         run: |
-          echo "✅ Scraping pipeline complete"
+          echo "✅ Deep scraping pipeline complete"
           echo "🕐 $(date -u '+%Y-%m-%d %H:%M UTC')"
