@@ -18,7 +18,7 @@ export function NepalNajarMark({
           Nepal <span className="text-nepal-red">Najar</span>
         </span>
         {!compact && (
-          <span className="mt-1 text-[10px] uppercase tracking-[0.24em] text-gray-500">
+          <span className="mt-1 text-[10px] uppercase tracking-[0.16em] text-gray-500">
             Public Development Watch
           </span>
         )}

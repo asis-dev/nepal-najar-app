@@ -170,10 +170,10 @@ export default function MeroWardPage() {
           <div className="public-shell">
             <div className="mx-auto max-w-4xl text-center">
               <div className="section-kicker mb-4">{isNe ? 'मेरो क्षेत्र' : 'My area'}</div>
-              <h1 className="mb-2 text-3xl font-bold text-white sm:text-4xl lg:text-5xl">
+              <h1 className="mb-2 text-[2.3rem] font-sans font-semibold leading-tight tracking-[-0.03em] text-white sm:text-[3rem] lg:text-[3.6rem]">
                 {t('meroWard.title')}
               </h1>
-              <p className="mb-6 text-sm text-gray-400 sm:text-base">
+              <p className="mb-6 text-base text-gray-300">
                 {isNe
                   ? 'प्रदेश र जिल्लाको शासन स्कोर'
                   : 'Province & district governance scores'}

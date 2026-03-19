@@ -43,9 +43,9 @@ export function TrustLanes() {
               <div className="rounded-xl bg-white/5 p-2">
                 <Icon className="h-4 w-4" />
               </div>
-              <p className="text-sm font-semibold tracking-wide text-white">{lane.title}</p>
+              <p className="text-base font-semibold tracking-tight text-white">{lane.title}</p>
             </div>
-            <p className="text-sm leading-relaxed text-gray-300">{lane.description}</p>
+            <p className="text-[15px] leading-7 text-gray-300">{lane.description}</p>
           </div>
         );
       })}

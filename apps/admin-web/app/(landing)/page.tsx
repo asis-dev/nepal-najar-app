@@ -45,14 +45,14 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <h1 className="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-7xl">
+            <h1 className="max-w-5xl text-balance font-sans text-[3.3rem] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:text-[4.5rem] lg:text-[5.4rem]">
               See what Nepal is building, what is delayed, and what changed today.
             </h1>
 
-            <p className="mt-5 max-w-2xl text-lg font-display text-gray-100/95 sm:text-xl">
+            <p className="mt-5 max-w-2xl text-lg font-medium text-gray-100/95 sm:text-[1.35rem]">
               Track promises, projects, government accountability, and source-backed updates in one place.
             </p>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gray-400 sm:text-lg">
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-300 sm:text-lg">
               Nepal Najar is designed for people who want a clearer public view of what is moving, what is stalled, and who owns delivery.
             </p>
 
@@ -97,7 +97,7 @@ export default function LandingPage() {
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Why it matters</p>
-                  <h2 className="mt-1 text-2xl font-semibold text-white">Clearer than scattered updates</h2>
+                  <h2 className="mt-2 text-xl font-semibold leading-tight text-white sm:text-[1.8rem]">Clearer than scattered updates</h2>
                 </div>
                 <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-gray-300">
                   Public platform

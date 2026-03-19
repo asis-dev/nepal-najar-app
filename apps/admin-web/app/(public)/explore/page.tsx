@@ -158,11 +158,11 @@ export default function ExplorePage() {
               <span className="text-gray-500">Track promises, projects, and updates</span>
             </div>
 
-            <h1 className="max-w-4xl text-balance text-4xl font-display font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="max-w-4xl text-balance font-sans text-[2.6rem] font-semibold leading-[0.95] tracking-[-0.035em] text-white sm:text-[3.35rem] lg:text-[4.1rem]">
               A clearer way to follow what is promised, what is moving, and what is stalled.
             </h1>
 
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-gray-400 sm:text-lg">
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-300 sm:text-lg">
               Browse Nepal by sector, signals, and local relevance. Official, discovered, public, and inferred data stay separate so trust stays visible.
             </p>
           </div>

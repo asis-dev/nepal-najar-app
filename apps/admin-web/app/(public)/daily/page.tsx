@@ -167,10 +167,10 @@ export default function DailyPage() {
             <div className="mx-auto max-w-2xl">
               <div className="mb-5 text-center sm:text-left">
                 <div className="section-kicker">{isNe ? 'दैनिक ट्रयाकर' : 'Daily tracker'}</div>
-                <h1 className="mt-4 text-3xl font-display font-bold text-white sm:text-4xl">
+                <h1 className="mt-4 text-[2.2rem] font-sans font-semibold leading-tight tracking-[-0.03em] text-white sm:text-[3rem]">
                   {isNe ? 'हरेक दिन एउटा सार्वजनिक वचन' : 'One public promise, every day'}
                 </h1>
-                <p className="mt-3 text-sm leading-relaxed text-gray-400 sm:text-base">
+                <p className="mt-3 text-base leading-relaxed text-gray-300">
                   {isNe
                     ? 'आजको मुख्य वाचा, यसको प्रगति, र तपाईँले निरन्तर पछ्याइरहनुभएको छ कि छैन हेर्नुहोस्।'
                     : 'Check one important promise each day, see its progress, and build a habit around staying informed.'}
