@@ -8,6 +8,7 @@ import {
   FolderKanban,
   MessageCircle,
   Calendar,
+  Landmark,
   Globe,
   Menu,
   X,
@@ -20,6 +21,7 @@ import { NepalFlagIcon } from '@/components/ui/nepal-flag-icon';
 
 const navLinks = [
   { href: '/explore', labelKey: 'nav.home', icon: Eye },
+  { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
   { href: '/explore/map', labelKey: 'nav.map', icon: Map },
   { href: '/explore/projects', labelKey: 'nav.projects', icon: FolderKanban },
   { href: '/explore/chat', labelKey: 'nav.chat', icon: MessageCircle, experimental: true },

@@ -2,15 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Eye, Map, FolderKanban, MessageCircle, Menu } from 'lucide-react';
+import { Eye, Landmark, Map, FolderKanban, MessageCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
 const navItems = [
   { href: '/explore', labelKey: 'nav.home', icon: Eye },
+  { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
   { href: '/explore/map', labelKey: 'nav.map', icon: Map },
   { href: '/explore/projects', labelKey: 'nav.projects', icon: FolderKanban },
   { href: '/explore/chat', labelKey: 'nav.chat', icon: MessageCircle, experimental: true },
-  { href: '/explore/first-100-days', labelKey: 'nav.more', icon: Menu },
 ];
 
 export function BottomNav() {
