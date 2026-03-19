@@ -1,100 +1,75 @@
 'use client';
 
 import {
-  BarChart3, FolderKanban, AlertTriangle, TrendingUp, Loader2
+  BarChart3, Eye, AlertTriangle, TrendingUp, Loader2,
+  Newspaper, Clock, CheckCircle2,
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
-  Tooltip, CartesianGrid
+  Tooltip, CartesianGrid,
 } from 'recharts';
-import { useDashboardOverview, useNationalDashboard } from '@/lib/hooks/use-projects';
+import { usePromiseStats, useAllPromises } from '@/lib/hooks/use-promises';
+import { useScrapingStatus } from '@/lib/hooks/use-scraping';
 
-const statusColorMap: Record<string, string> = {
-  active: '#10b981',
-  draft: '#6b7280',
-  suspended: '#f59e0b',
-  completed: '#3b82f6',
-  cancelled: '#ef4444',
+const STATUS_COLORS: Record<string, string> = {
+  not_started: '#6b7280',
+  in_progress: '#10b981',
+  delivered: '#3b82f6',
+  stalled: '#ef4444',
 };
 
-const statusLabelMap: Record<string, string> = {
-  active: 'Active',
-  draft: 'Draft',
-  suspended: 'Suspended',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-};
-
-const severityConfig: Record<string, { bg: string; border: string; text: string; glow: string }> = {
-  low: {
-    bg: 'rgba(16,185,129,0.08)',
-    border: 'rgba(16,185,129,0.2)',
-    text: 'text-emerald-400',
-    glow: '0 0 15px rgba(16,185,129,0.1)',
-  },
-  medium: {
-    bg: 'rgba(245,158,11,0.08)',
-    border: 'rgba(245,158,11,0.2)',
-    text: 'text-amber-400',
-    glow: '0 0 15px rgba(245,158,11,0.1)',
-  },
-  high: {
-    bg: 'rgba(249,115,22,0.08)',
-    border: 'rgba(249,115,22,0.2)',
-    text: 'text-orange-400',
-    glow: '0 0 15px rgba(249,115,22,0.1)',
-  },
-  critical: {
-    bg: 'rgba(239,68,68,0.1)',
-    border: 'rgba(239,68,68,0.3)',
-    text: 'text-red-400',
-    glow: '0 0 20px rgba(239,68,68,0.15)',
-  },
+const STATUS_LABELS: Record<string, string> = {
+  not_started: 'Not Started',
+  in_progress: 'In Progress',
+  delivered: 'Delivered',
+  stalled: 'Stalled',
 };
 
 export default function DashboardPage() {
-  const { data: overview, isLoading: overviewLoading } = useDashboardOverview();
-  const { data: national, isLoading: nationalLoading } = useNationalDashboard();
+  const { stats, isLoading: statsLoading } = usePromiseStats();
+  const { data: allPromises, isLoading: promisesLoading } = useAllPromises();
+  const { data: scrapingStatus } = useScrapingStatus();
 
-  const isLoading = overviewLoading || nationalLoading;
+  const isLoading = statsLoading || promisesLoading;
 
-  const statusData = national?.statusBreakdown
-    ? Object.entries(national.statusBreakdown).map(([key, value]) => ({
-        name: statusLabelMap[key] || key,
-        value: value as number,
-        color: statusColorMap[key] || '#6b7280',
-      }))
+  // Compute status pie data from real stats
+  const statusData = stats
+    ? [
+        { name: 'Not Started', value: stats.notStarted, color: STATUS_COLORS.not_started },
+        { name: 'In Progress', value: stats.inProgress, color: STATUS_COLORS.in_progress },
+        { name: 'Delivered', value: stats.delivered, color: STATUS_COLORS.delivered },
+        { name: 'Stalled', value: stats.stalled, color: STATUS_COLORS.stalled },
+      ].filter((d) => d.value > 0)
     : [];
 
-  const ministryData = Array.isArray(national?.ministryBreakdown)
-    ? (national.ministryBreakdown as Array<{ name: string; projects: number; progress: number }>).slice(0, 8)
-    : [];
+  // Compute category breakdown from real promises
+  const categoryData = (() => {
+    if (!allPromises) return [];
+    const cats: Record<string, number> = {};
+    for (const p of allPromises) {
+      const cat = p.category?.replace(/_/g, ' ') || 'uncategorized';
+      cats[cat] = (cats[cat] || 0) + 1;
+    }
+    return Object.entries(cats)
+      .map(([name, count]) => ({ name, promises: count }))
+      .sort((a, b) => b.promises - a.promises)
+      .slice(0, 8);
+  })();
 
-  const delayedProjects = Array.isArray(national?.delayedProjects)
-    ? (national.delayedProjects as Array<{
-        id: string;
-        title: string;
-        government_unit?: { name: string };
-        progress: number;
-        days_delayed: number;
-      }>).slice(0, 5)
-    : [];
-
-  const provinceData = Array.isArray(national?.regionBreakdown)
-    ? (national.regionBreakdown as Array<{
-        name: string;
-        total: number;
-        delayed: number;
-        severity: string;
-      }>)
-    : [];
+  // Count promises with real evidence
+  const promisesWithEvidence = allPromises
+    ? allPromises.filter((p) => p.evidenceCount > 0).length
+    : 0;
+  const totalArticles = allPromises
+    ? allPromises.reduce((sum, p) => sum + p.evidenceCount, 0)
+    : 0;
 
   if (isLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
           <h1 className="section-title">Dashboard</h1>
-          <p className="section-subtitle">National development overview</p>
+          <p className="section-subtitle">Promise tracking overview</p>
         </div>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
@@ -107,42 +82,42 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="section-title">Dashboard</h1>
-        <p className="section-subtitle">National development overview</p>
+        <p className="section-subtitle">Promise tracking overview — all data from verified sources</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={<FolderKanban className="w-5 h-5 text-primary-400" />}
-          label="Total Projects"
-          value={overview?.totalProjects?.toString() ?? '—'}
+          icon={<Eye className="w-5 h-5 text-primary-400" />}
+          label="Total Promises"
+          value={stats?.total?.toString() ?? '—'}
           accentColor="blue"
         />
         <StatCard
           icon={<TrendingUp className="w-5 h-5 text-emerald-400" />}
-          label="Active Projects"
-          value={overview?.totalActive?.toString() ?? '—'}
+          label="In Progress"
+          value={stats?.inProgress?.toString() ?? '—'}
           accentColor="emerald"
         />
         <StatCard
-          icon={<BarChart3 className="w-5 h-5 text-cyan-400" />}
-          label="Overall Progress"
-          value={overview?.overallProgress != null ? `${Math.round(overview.overallProgress)}%` : '—'}
+          icon={<Newspaper className="w-5 h-5 text-cyan-400" />}
+          label="Articles Matched"
+          value={totalArticles.toString()}
           accentColor="cyan"
         />
         <StatCard
           icon={<AlertTriangle className="w-5 h-5 text-red-400" />}
-          label="Open Blockers"
-          value={overview?.totalBlockers?.toString() ?? '—'}
+          label="Stalled"
+          value={stats?.stalled?.toString() ?? '—'}
           accentColor="red"
         />
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Projects by Status Donut */}
+        {/* Promises by Status Pie */}
         <div className="glass-card p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Projects by Status</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Promises by Status</h2>
           {statusData.length > 0 ? (
             <>
               <div className="h-64">
@@ -164,7 +139,7 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number, name: string) => [`${value} projects`, name]}
+                      formatter={(value: number, name: string) => [`${value} promises`, name]}
                       contentStyle={{
                         background: '#151d35',
                         border: '1px solid rgba(255,255,255,0.1)',
@@ -199,13 +174,13 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Ministry Comparison */}
+        {/* Promises by Category */}
         <div className="glass-card p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Ministry Comparison</h2>
-          {ministryData.length > 0 ? (
+          <h2 className="text-lg font-semibold text-white mb-4">Promises by Sector</h2>
+          {categoryData.length > 0 ? (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={ministryData} layout="vertical" margin={{ left: 20 }}>
+                <BarChart data={categoryData} layout="vertical" margin={{ left: 20 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     horizontal={false}
@@ -213,20 +188,18 @@ export default function DashboardPage() {
                   />
                   <XAxis
                     type="number"
-                    domain={[0, 100]}
-                    tickFormatter={(v) => `${v}%`}
                     tick={{ fill: '#6b7280', fontSize: 11 }}
                     axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                   />
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={140}
+                    width={120}
                     tick={{ fill: '#9ca3af', fontSize: 11 }}
                     axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`${value}%`, 'Avg Progress']}
+                    formatter={(value: number) => [`${value}`, 'Promises']}
                     contentStyle={{
                       background: '#151d35',
                       border: '1px solid rgba(255,255,255,0.1)',
@@ -235,8 +208,8 @@ export default function DashboardPage() {
                       boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
                     }}
                   />
-                  <Bar dataKey="progress" radius={[0, 6, 6, 0]} barSize={16}>
-                    {ministryData.map((_, idx) => (
+                  <Bar dataKey="promises" radius={[0, 6, 6, 0]} barSize={16}>
+                    {categoryData.map((_, idx) => (
                       <Cell key={idx} fill="url(#blueGradient)" />
                     ))}
                   </Bar>
@@ -251,84 +224,86 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="h-72 flex items-center justify-center text-gray-500">
-              No ministry data available
+              No category data available
             </div>
           )}
         </div>
       </div>
 
-      {/* Delayed Projects */}
-      <div className="glass-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-np-border">
-          <h2 className="text-lg font-semibold text-white">Top Delayed Projects</h2>
-        </div>
-        {delayedProjects.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="table-dark">
-              <thead>
-                <tr>
-                  <th>Project</th>
-                  <th>Ministry</th>
-                  <th>Progress</th>
-                  <th>Days Delayed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {delayedProjects.map((p) => (
-                  <tr key={p.id}>
-                    <td className="font-medium text-gray-200">{p.title}</td>
-                    <td>{p.government_unit?.name ?? '—'}</td>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div className="progress-bar w-20">
-                          <div
-                            className="progress-bar-fill danger"
-                            style={{ width: `${p.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-gray-400 text-xs">{p.progress}%</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge-red">{p.days_delayed}d</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="p-12 text-center text-gray-500">No delayed projects</div>
-        )}
-      </div>
-
-      {/* Province Heatmap */}
-      {provinceData.length > 0 && (
+      {/* Data Health Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Evidence Coverage */}
         <div className="glass-card p-6">
-          <h2 className="text-lg font-semibold text-white mb-5">Region Delay Heatmap</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-            {provinceData.map((prov) => {
-              const sev = severityConfig[prov.severity] ?? severityConfig.low;
-              return (
-                <div
-                  key={prov.name}
-                  className="rounded-xl p-4 text-center transition-all duration-300 cursor-pointer hover:-translate-y-1"
-                  style={{
-                    background: sev.bg,
-                    border: `1px solid ${sev.border}`,
-                    boxShadow: sev.glow,
-                  }}
-                >
-                  <p className={`font-semibold text-sm ${sev.text}`}>{prov.name}</p>
-                  <p className={`text-2xl font-bold mt-1 ${sev.text}`}>{prov.delayed}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">of {prov.total} delayed</p>
-                  <p className={`text-xs font-semibold mt-1 capitalize ${sev.text}`}>{prov.severity}</p>
-                </div>
-              );
-            })}
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Newspaper className="w-5 h-5 text-cyan-400" />
+            Evidence Coverage
+          </h2>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Promises with article matches</span>
+              <span className="text-sm font-bold text-white">
+                {promisesWithEvidence} / {stats?.total ?? 0}
+              </span>
+            </div>
+            <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-500"
+                style={{
+                  width: `${stats?.total ? Math.round((promisesWithEvidence / stats.total) * 100) : 0}%`,
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>{totalArticles} total articles matched</span>
+              <span>
+                {stats?.total
+                  ? `${Math.round((promisesWithEvidence / stats.total) * 100)}% coverage`
+                  : '—'}
+              </span>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Scraping Health */}
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-400" />
+            Scraping Status
+          </h2>
+          {scrapingStatus ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Total articles scraped</span>
+                <span className="text-sm font-bold text-white">
+                  {scrapingStatus.total ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Completed runs</span>
+                <span className="text-sm font-bold text-white">
+                  {scrapingStatus.completed ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Last scrape</span>
+                <span className="text-sm text-gray-300">
+                  {scrapingStatus.last_run_at
+                    ? new Date(scrapingStatus.last_run_at).toLocaleString()
+                    : 'Never'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs text-emerald-400">Cron: every 6 hours</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              Scraping status unavailable
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
