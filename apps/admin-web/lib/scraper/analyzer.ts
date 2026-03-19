@@ -142,10 +142,10 @@ export async function analyzeArticle(article: {
           { role: 'user', content: buildUserPrompt(article) },
         ],
         temperature: 0.1, // Low temp for factual extraction
-        max_tokens: 1500,
+        max_tokens: 2500,
         response_format: { type: 'json_object' },
       }),
-      signal: AbortSignal.timeout(30000), // 30s timeout for AI
+      signal: AbortSignal.timeout(120000), // 120s timeout for local AI model
     });
 
     if (!response.ok) {

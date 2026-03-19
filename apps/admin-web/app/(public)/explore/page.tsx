@@ -12,7 +12,6 @@ import {
   Newspaper,
   ExternalLink,
 } from 'lucide-react';
-import { useState } from 'react';
 import { useI18n } from '@/lib/i18n';
 import { SignalBadge } from '@/components/public/signal-badge';
 import { TrustLanes } from '@/components/public/trust-lanes';
@@ -23,7 +22,6 @@ import {
   useLatestArticles,
   useArticleCount,
 } from '@/lib/hooks/use-promises';
-import { formatNPR } from '@/lib/data/promises';
 
 /* ═══════════════════════════════════════════
    STATUS BADGE CONFIG
@@ -126,22 +124,20 @@ export default function ExplorePage() {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const isBeforeInauguration = diffDays > 0;
 
-  // Featured promises — pick 4 in_progress ones with highest progress
+  // Featured promises — pick 4 with most evidence (real article matches)
   const featuredPromises = (allPromises ?? [])
-    .filter((p) => p.status === 'in_progress' || p.status === 'delivered')
-    .sort((a, b) => b.progress - a.progress)
+    .sort((a, b) => b.evidenceCount - a.evidenceCount)
     .slice(0, 4);
 
-  // Category summary for "provinces" section replacement
-  const categoryMap = new Map<string, { total: number; inProgress: number; stalled: number }>();
+  // Category summary for "sectors" section
+  const catRecord: Record<string, { total: number; inProgress: number; stalled: number }> = {};
   for (const p of allPromises ?? []) {
-    const existing = categoryMap.get(p.category) || { total: 0, inProgress: 0, stalled: 0 };
-    existing.total++;
-    if (p.status === 'in_progress') existing.inProgress++;
-    if (p.status === 'stalled') existing.stalled++;
-    categoryMap.set(p.category, existing);
+    if (!catRecord[p.category]) catRecord[p.category] = { total: 0, inProgress: 0, stalled: 0 };
+    catRecord[p.category].total++;
+    if (p.status === 'in_progress') catRecord[p.category].inProgress++;
+    if (p.status === 'stalled') catRecord[p.category].stalled++;
   }
-  const categories = Array.from(categoryMap.entries())
+  const categories = Object.entries(catRecord)
     .map(([name, data]) => ({ name, ...data }))
     .sort((a, b) => b.total - a.total);
 
@@ -463,9 +459,9 @@ export default function ExplorePage() {
                         </span>
                         <SignalBadge type={promise.signalType} compact />
                       </div>
-                      {promise.progress > 0 && (
-                        <span className="text-xs text-gray-600">
-                          {Math.round(promise.progress)}%
+                      {promise.evidenceCount > 0 && (
+                        <span className="text-xs text-cyan-500/70">
+                          {promise.evidenceCount} articles
                         </span>
                       )}
                     </div>
@@ -478,27 +474,26 @@ export default function ExplorePage() {
                     {/* Category */}
                     <p className="text-xs text-gray-500 mb-3">{promise.category}</p>
 
-                    {/* Progress bar */}
-                    {promise.progress > 0 && (
+                    {/* Evidence indicator (replaces fake progress bar) */}
+                    {promise.evidenceCount > 0 ? (
                       <div className="mb-4">
-                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${promise.progress}%`,
-                              background: 'linear-gradient(90deg, #DC143C, #3b82f6)',
-                            }}
-                          />
+                        <div className="flex items-center gap-1.5 text-[10px] text-cyan-500/60">
+                          <div className="w-1.5 h-1.5 rounded-full bg-cyan-500/40" />
+                          {promise.evidenceCount} article{promise.evidenceCount !== 1 ? 's' : ''} matched
                         </div>
+                      </div>
+                    ) : (
+                      <div className="mb-4">
+                        <span className="text-[10px] text-gray-600 italic">Awaiting evidence</span>
                       </div>
                     )}
 
                     {/* Meta */}
                     <div className="mt-auto flex items-center justify-between text-xs text-gray-500">
-                      <span>{promise.lastUpdate}</span>
-                      {promise.evidenceCount > 0 && (
-                        <span>{promise.evidenceCount} evidence</span>
-                      )}
+                      <span>{promise.category}</span>
+                      <span className={promise.status === 'not_started' ? 'text-gray-600 italic' : ''}>
+                        {promise.status === 'not_started' ? 'Not yet tracked' : style.label}
+                      </span>
                     </div>
                   </Link>
                 );

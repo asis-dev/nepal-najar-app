@@ -1,9 +1,9 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../api';
-
-// ── Types ───────────────────────────────────────────────────────────────────
+/**
+ * Evidence hooks — STUBBED. No evidence/file upload backend exists.
+ */
+import { useQuery } from '@tanstack/react-query';
 
 export type FileType = 'image' | 'video' | 'document' | 'pdf';
 
@@ -55,79 +55,47 @@ export interface UploadEvidencePayload {
   visibility?: string;
 }
 
-// ── Hooks ───────────────────────────────────────────────────────────────────
-
-export function useEvidence(projectId: string, page = 1, limit = 20) {
+export function useEvidence(_projectId: string, _page = 1, _limit = 20) {
   return useQuery({
-    queryKey: ['evidence', projectId, page, limit],
-    queryFn: async () => {
-      const { data } = await api.get<EvidenceListResponse>(
-        `/projects/${projectId}/evidence`,
-        { params: { page, limit } },
-      );
-      return data;
-    },
-    enabled: !!projectId,
+    queryKey: ['evidence', _projectId, _page, _limit],
+    queryFn: async (): Promise<EvidenceListResponse> => ({
+      data: [],
+      meta: { total: 0, page: 1, limit: 20, totalPages: 0 },
+    }),
+    enabled: !!_projectId,
   });
 }
 
-export function useEvidenceStats(projectId: string) {
+export function useEvidenceStats(_projectId: string) {
   return useQuery({
-    queryKey: ['evidence', projectId, 'stats'],
-    queryFn: async () => {
-      const { data } = await api.get<EvidenceStat[]>(
-        `/projects/${projectId}/evidence/stats`,
-      );
-      return data;
-    },
-    enabled: !!projectId,
+    queryKey: ['evidence', _projectId, 'stats'],
+    queryFn: async (): Promise<EvidenceStat[]> => [],
+    enabled: !!_projectId,
   });
 }
 
 export function useUploadEvidence() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (payload: UploadEvidencePayload) => {
-      const formData = new FormData();
-      formData.append('file', payload.file);
-      formData.append('projectId', payload.projectId);
-      formData.append('sourceType', payload.sourceType);
-      if (payload.milestoneId) formData.append('milestoneId', payload.milestoneId);
-      if (payload.taskId) formData.append('taskId', payload.taskId);
-      if (payload.caption) formData.append('caption', payload.caption);
-      if (payload.geoLat != null) formData.append('geoLat', String(payload.geoLat));
-      if (payload.geoLng != null) formData.append('geoLng', String(payload.geoLng));
-      if (payload.capturedAt) formData.append('capturedAt', payload.capturedAt);
-      if (payload.visibility) formData.append('visibility', payload.visibility);
-
-      const { data } = await api.post<EvidenceAttachment>('/evidence/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return data;
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['evidence', variables.projectId] });
-    },
-  });
+  return {
+    mutate: (_payload?: UploadEvidencePayload) => console.warn('[useUploadEvidence] No backend available'),
+    mutateAsync: async (_payload?: UploadEvidencePayload) => { throw new Error('No backend available'); },
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    error: null,
+  };
 }
 
 export function useDeleteEvidence() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/evidence/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['evidence'] });
-    },
-  });
+  return {
+    mutate: (_id?: string) => console.warn('[useDeleteEvidence] No backend available'),
+    mutateAsync: async (_id?: string) => { throw new Error('No backend available'); },
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    error: null,
+  };
 }
 
-export async function fetchDownloadUrl(id: string): Promise<string> {
-  const { data } = await api.get<{ url: string; expiresIn: number }>(
-    `/evidence/${id}/download`,
-  );
-  return data.url;
+export async function fetchDownloadUrl(_id: string): Promise<string> {
+  throw new Error('Evidence download not available — no backend');
 }

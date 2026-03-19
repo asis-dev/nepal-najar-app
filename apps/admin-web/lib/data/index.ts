@@ -26,6 +26,23 @@ export async function getPromises(): Promise<GovernmentPromise[]> {
       return staticPromises;
     }
 
+    // Compute REAL evidence counts from scraped_articles
+    const evidenceCountMap: Record<string, number> = {};
+    try {
+      const { data: articles } = await supabase
+        .from('scraped_articles')
+        .select('promise_ids');
+      for (const a of articles || []) {
+        const pids = a.promise_ids as string[] | null;
+        if (!pids) continue;
+        for (const pid of pids) {
+          evidenceCountMap[pid] = (evidenceCountMap[pid] || 0) + 1;
+        }
+      }
+    } catch {
+      console.warn('[data] Failed to compute evidence counts');
+    }
+
     // Map Supabase snake_case to GovernmentPromise camelCase
     return data.map((p: Record<string, unknown>) => ({
       id: p.id as string,
@@ -37,11 +54,12 @@ export async function getPromises(): Promise<GovernmentPromise[]> {
       status: p.status as GovernmentPromise['status'],
       progress: p.progress as number,
       linkedProjects: p.linked_projects as number,
-      evidenceCount: p.evidence_count as number,
+      evidenceCount: evidenceCountMap[p.id as string] || 0, // REAL count from articles
       lastUpdate: p.last_update as string,
       description: p.description as string,
       description_ne: p.description_ne as string,
       trustLevel: p.trust_level as GovernmentPromise['trustLevel'],
+      signalType: (p.signal_type || 'inferred') as GovernmentPromise['signalType'],
       deadline: p.deadline as string | undefined,
       estimatedBudgetNPR: p.estimated_budget_npr as number | undefined,
       spentNPR: p.spent_npr as number | undefined,

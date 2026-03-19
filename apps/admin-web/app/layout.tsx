@@ -22,7 +22,7 @@ const mukta = Mukta({
 });
 
 export const viewport: Viewport = {
-  themeColor: '#0a0e1a',
+  themeColor: '#07111F',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

@@ -22,7 +22,7 @@ export default function ScrapingPage() {
   const [activeTab, setActiveTab] = useState<'findings' | 'potential'>('findings');
 
   const handleTrigger = () => {
-    triggerMutation.mutate({ job_type: 'discovery' });
+    triggerMutation.mutate({ source: 'kathmandu-post' });
   };
 
   return (

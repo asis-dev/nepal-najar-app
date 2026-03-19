@@ -1,7 +1,10 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../api';
+/**
+ * Blockers hooks — STUBBED. No blockers table exists in Supabase.
+ * Returns empty states to prevent runtime errors.
+ */
+import { useQuery } from '@tanstack/react-query';
 
 export interface Blocker {
   id: string;
@@ -17,44 +20,33 @@ export interface Blocker {
   resolved_at?: string;
 }
 
-export function useBlockers(params?: {
+export function useBlockers(_params?: {
   status?: string;
   severity?: string;
   page?: number;
   limit?: number;
 }) {
   return useQuery({
-    queryKey: ['blockers', params],
-    queryFn: async () => {
-      // Use the projects blockers or a global blockers listing
-      // The API exposes /projects/:projectId/blockers, but for a global view
-      // we fetch all projects and collect blockers, or use national dashboard
-      const { data } = await api.get('/dashboards/national');
-      return data;
-    },
+    queryKey: ['blockers', _params],
+    queryFn: async () => ({ data: [] as Blocker[], unavailable: true }),
   });
 }
 
-export function useBlocker(id: string) {
+export function useBlocker(_id: string) {
   return useQuery({
-    queryKey: ['blockers', id],
-    queryFn: async () => {
-      const { data } = await api.get(`/blockers/${id}`);
-      return data as Blocker;
-    },
-    enabled: !!id,
+    queryKey: ['blockers', _id],
+    queryFn: async (): Promise<Blocker | null> => null,
+    enabled: !!_id,
   });
 }
 
 export function useUpdateBlocker() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Blocker> & { id: string }) => {
-      const { data } = await api.patch(`/blockers/${id}`, updates);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['blockers'] });
-    },
-  });
+  return {
+    mutate: () => console.warn('[useUpdateBlocker] No backend available'),
+    mutateAsync: async () => { throw new Error('No backend available'); },
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    error: null,
+  };
 }

@@ -1,12 +1,9 @@
 /**
  * Nepal Najar Index — Single 0-100 governance performance score
  *
- * Composite of 5 sub-scores:
- *   - Delivery Rate (25%): % of promises delivered
- *   - Average Progress (30%): mean progress across all promises
- *   - Trust Score (15%): % of promises verified or partially verified
- *   - Budget Utilization (20%): spent / estimated across budgeted promises
- *   - Citizen Sentiment (10%): approval ratio from voting aggregates
+ * IMPORTANT: Includes data confidence gating. When insufficient verified data
+ * exists, the index reports 'insufficient' confidence rather than showing
+ * a misleading number computed from unverified or empty data.
  */
 
 import { promises, computeStats } from './promises';
@@ -16,6 +13,7 @@ import { promises, computeStats } from './promises';
    ═══════════════════════════════════════════════ */
 
 export type NajarGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+export type DataConfidence = 'insufficient' | 'partial' | 'sufficient';
 
 export interface NajarSubScores {
   deliveryRate: number;
@@ -27,9 +25,13 @@ export interface NajarSubScores {
 
 export interface NajarIndex {
   score: number;        // 0-100
-  change: number;       // mock weekly change (-3 to +3)
+  change: number;       // weekly change
   grade: NajarGrade;
   subScores: NajarSubScores;
+  /** Data confidence level — UI should NOT show score when 'insufficient' */
+  dataConfidence: DataConfidence;
+  /** Number of promises with verified/partial trust level */
+  verifiedDataPoints: number;
 }
 
 /* ═══════════════════════════════════════════════
@@ -49,10 +51,6 @@ const WEIGHTS = {
    ═══════════════════════════════════════════════ */
 
 function computeTrustScore(): number {
-  const trusted = promises.filter(
-    (p) => p.trustLevel === 'verified' || p.trustLevel === 'partial',
-  );
-  // Verified = 100%, partial = 50%
   const score = promises.reduce((sum, p) => {
     if (p.trustLevel === 'verified') return sum + 100;
     if (p.trustLevel === 'partial') return sum + 50;
@@ -68,21 +66,13 @@ function computeBudgetUtilization(): number {
   if (withBudget.length === 0) return 0;
   const totalEstimated = withBudget.reduce((s, p) => s + (p.estimatedBudgetNPR ?? 0), 0);
   const totalSpent = withBudget.reduce((s, p) => s + (p.spentNPR ?? 0), 0);
-  // Cap at 100
   return totalEstimated > 0 ? Math.min(100, (totalSpent / totalEstimated) * 100) : 0;
 }
 
-/**
- * Compute citizen sentiment from vote aggregates.
- * Pass in aggregates map or defaults to a mock 62% approval.
- */
 function computeCitizenSentiment(
   voteAggregates?: Record<string, { up: number; down: number }>,
 ): number {
-  if (!voteAggregates) {
-    // Default mock: 62% approval (realistic starting point)
-    return 62;
-  }
+  if (!voteAggregates) return 0; // No fake default — return 0 when no real data
   let totalUp = 0;
   let totalDown = 0;
   Object.values(voteAggregates).forEach(({ up, down }) => {
@@ -90,18 +80,7 @@ function computeCitizenSentiment(
     totalDown += down;
   });
   const total = totalUp + totalDown;
-  return total > 0 ? Math.round((totalUp / total) * 100) : 50;
-}
-
-/** Deterministic mock "change" from date — makes it feel dynamic */
-function computeWeeklyChange(): number {
-  const now = new Date();
-  // Simple hash from week number
-  const weekNum = Math.floor(
-    (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (7 * 86400000),
-  );
-  const hash = ((weekNum * 2654435761) >>> 0) % 7;
-  return hash - 3; // range: -3 to +3
+  return total > 0 ? Math.round((totalUp / total) * 100) : 0;
 }
 
 function scoreToGrade(score: number): NajarGrade {
@@ -112,25 +91,25 @@ function scoreToGrade(score: number): NajarGrade {
   return 'F';
 }
 
+function computeDataConfidence(): { confidence: DataConfidence; count: number } {
+  const verified = promises.filter(
+    (p) => p.trustLevel === 'verified' || p.trustLevel === 'partial',
+  ).length;
+
+  if (verified >= 10) return { confidence: 'sufficient', count: verified };
+  if (verified >= 5) return { confidence: 'partial', count: verified };
+  return { confidence: 'insufficient', count: verified };
+}
+
 /* ═══════════════════════════════════════════════
    MAIN COMPUTATION
    ═══════════════════════════════════════════════ */
 
-/**
- * Compute the Nepal Najar Index — a single 0-100 governance score.
- *
- * Weighted formula:
- *   score = 0.25×deliveryRate + 0.30×avgProgress + 0.15×trustScore
- *         + 0.20×budgetUtilization + 0.10×citizenSentiment
- *
- * @param voteAggregates - Optional per-promise vote data ({ up, down } per promise ID).
- *   If omitted, uses a mock 62% approval rate.
- * @returns NajarIndex with score, grade, weekly change, and 5 sub-scores
- */
 export function computeNajarIndex(
   voteAggregates?: Record<string, { up: number; down: number }>,
 ): NajarIndex {
   const stats = computeStats();
+  const { confidence, count } = computeDataConfidence();
 
   const subScores: NajarSubScores = {
     deliveryRate: stats.deliveryRate,
@@ -150,9 +129,11 @@ export function computeNajarIndex(
 
   return {
     score,
-    change: computeWeeklyChange(),
+    change: 0, // No fake weekly change
     grade: scoreToGrade(score),
     subScores,
+    dataConfidence: confidence,
+    verifiedDataPoints: count,
   };
 }
 

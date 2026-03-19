@@ -42,6 +42,33 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
   const isNe = locale === 'ne';
 
   const index: NajarIndex = useMemo(() => computeNajarIndex(), []);
+
+  // Data confidence gate — show "insufficient data" instead of misleading score
+  if (index.dataConfidence === 'insufficient') {
+    return (
+      <div className="glass-card p-6 text-center">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+            {isNe ? 'नजर सूचकांक' : 'Najar Index'}
+          </h3>
+          <span className="text-[8px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400/80 border border-amber-500/20">
+            Beta
+          </span>
+        </div>
+        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <p className="text-sm text-gray-400 mb-1">
+            {isNe ? 'अपर्याप्त प्रमाणित डाटा' : 'Insufficient Verified Data'}
+          </p>
+          <p className="text-xs text-gray-600">
+            {isNe
+              ? `${index.verifiedDataPoints}/5 प्रमाणित डाटा बिन्दुहरू — स्कोर अर्थपूर्ण हुन कम्तिमा ५ चाहिन्छ`
+              : `${index.verifiedDataPoints}/5 verified data points — need at least 5 for a meaningful score`}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const gradeStyle = GRADE_COLORS[index.grade];
   const gradeLabel = isNe ? GRADE_LABELS[index.grade].ne : GRADE_LABELS[index.grade].en;
   const scoreColor = getScoreColor(index.score);
@@ -92,8 +119,9 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-0.5">
             {t('najarIndex.title')}
+            <span className="text-[7px] font-semibold px-1 py-px rounded bg-amber-500/15 text-amber-400/80 border border-amber-500/20">β</span>
           </div>
           <div className="flex items-center gap-2 mb-1">
             <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold ${gradeStyle.bg} ${gradeStyle.text}`}>
@@ -112,9 +140,14 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
   // Full variant
   return (
     <div className="glass-card p-6">
-      <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
-        {t('najarIndex.governanceScore')}
-      </h3>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+          {t('najarIndex.governanceScore')}
+        </h3>
+        <span className="text-[8px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400/80 border border-amber-500/20">
+          Beta
+        </span>
+      </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-6">
         {/* Ring */}

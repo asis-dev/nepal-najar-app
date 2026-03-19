@@ -1,7 +1,9 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../api';
+/**
+ * Milestones hooks — STUBBED. No milestones table exists in Supabase.
+ */
+import { useQuery } from '@tanstack/react-query';
 
 export interface Milestone {
   id: string;
@@ -16,42 +18,32 @@ export interface Milestone {
   created_at: string;
 }
 
-export function useMilestones(params?: {
+export function useMilestones(_params?: {
   status?: string;
   page?: number;
   limit?: number;
 }) {
   return useQuery({
-    queryKey: ['milestones', params],
-    queryFn: async () => {
-      // Milestones are project-scoped in the API, so we fetch from national dashboard
-      // or iterate projects. For the admin view we use the national dashboard data.
-      const { data } = await api.get('/dashboards/national');
-      return data;
-    },
+    queryKey: ['milestones', _params],
+    queryFn: async () => ({ data: [] as Milestone[], unavailable: true }),
   });
 }
 
-export function useProjectMilestones(projectId: string) {
+export function useProjectMilestones(_projectId: string) {
   return useQuery({
-    queryKey: ['projects', projectId, 'milestones'],
-    queryFn: async () => {
-      const { data } = await api.get(`/projects/${projectId}/milestones`);
-      return data as Milestone[];
-    },
-    enabled: !!projectId,
+    queryKey: ['projects', _projectId, 'milestones'],
+    queryFn: async (): Promise<Milestone[]> => [],
+    enabled: !!_projectId,
   });
 }
 
 export function useUpdateMilestone() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Milestone> & { id: string }) => {
-      const { data } = await api.patch(`/milestones/${id}`, updates);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['milestones'] });
-    },
-  });
+  return {
+    mutate: () => console.warn('[useUpdateMilestone] No backend available'),
+    mutateAsync: async () => { throw new Error('No backend available'); },
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    error: null,
+  };
 }

@@ -250,26 +250,36 @@ export default function DailyPage() {
                 {isNe ? todayPromise.description_ne : todayPromise.description}
               </p>
 
-              {/* Progress bar */}
+              {/* Progress — honest display */}
               <div className="mb-5">
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-gray-500">{t('commitment.progress')}</span>
-                  <span className="text-gray-300 font-medium">{todayPromise.progress}%</span>
-                </div>
-                <div className="h-2.5 rounded-full overflow-hidden bg-white/[0.06]">
-                  <div
-                    className="h-full rounded-full transition-all duration-1000 ease-out"
-                    style={{
-                      width: `${todayPromise.progress}%`,
-                      background:
-                        todayPromise.status === 'delivered'
-                          ? 'linear-gradient(90deg, #059669, #10b981, #34d399)'
-                          : todayPromise.status === 'stalled'
-                            ? 'linear-gradient(90deg, #dc2626, #ef4444)'
-                            : 'linear-gradient(90deg, #2563eb, #06b6d4)',
-                    }}
-                  />
-                </div>
+                {todayPromise.progress > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="text-gray-500">{t('commitment.progress')}</span>
+                      <span className="text-gray-300 font-medium">{todayPromise.progress}%</span>
+                    </div>
+                    <div className="h-2.5 rounded-full overflow-hidden bg-white/[0.06]">
+                      <div
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{
+                          width: `${todayPromise.progress}%`,
+                          background: 'linear-gradient(90deg, #2563eb, #06b6d4)',
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <p className="text-xs text-gray-500">
+                      {isNe ? 'प्रगति अझै प्रमाणित गरिएको छैन।' : 'No verified progress data yet.'}
+                    </p>
+                    {todayPromise.evidenceCount > 0 && (
+                      <p className="text-[10px] text-cyan-500/60 mt-1">
+                        {todayPromise.evidenceCount} article{todayPromise.evidenceCount !== 1 ? 's' : ''} mention this promise
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Vote Widget */}

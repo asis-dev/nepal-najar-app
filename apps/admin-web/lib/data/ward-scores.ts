@@ -181,82 +181,20 @@ function computeProvinceScore(provinceName: string): {
    EXPORTS
    ═══════════════════════════════════════════════ */
 
-/** Get scores for all 7 provinces, sorted by rank */
+/**
+ * DISABLED — All province scores were computed from fabricated data.
+ * Returns empty array until real per-region data is available.
+ */
 export function getProvinceScores(): RegionScore[] {
-  const scores = NEPAL_PROVINCES.map((prov) => {
-    const computed = computeProvinceScore(prov.name);
-    const projData = PROVINCE_PROJECTS[prov.name] ?? { projects: 30, delayed: 8 };
-
-    // Deterministic trend from province name hash
-    const hash = simpleHash(prov.name) % 3;
-    const trend: 'up' | 'down' | 'stable' = hash === 0 ? 'up' : hash === 1 ? 'down' : 'stable';
-
-    return {
-      province: prov.name,
-      province_ne: prov.name_ne,
-      score: computed.score,
-      rank: 0, // computed below
-      projectCount: projData.projects,
-      delayedCount: projData.delayed,
-      budgetAllocated: computed.budgetAllocated,
-      budgetSpent: computed.budgetSpent,
-      topPromiseIds: computed.topPromiseIds,
-      trend,
-    };
-  });
-
-  // Sort by score descending, assign ranks
-  scores.sort((a, b) => b.score - a.score);
-  scores.forEach((s, i) => { s.rank = i + 1; });
-
-  return scores;
+  return [];
 }
 
 /**
- * Get governance scores for all districts within a province.
- *
- * District scores are derived from the parent province score with
- * a hash-based variance of ±10 points. This creates realistic-looking
- * variation without actual per-district project data.
- *
- * @param provinceName - English province name
- * @returns Array of district scores sorted by rank (best first)
+ * DISABLED — District scores were derived from fabricated province data.
+ * Returns empty array until real per-district data is available.
  */
-export function getDistrictScores(provinceName: string): RegionScore[] {
-  const province = NEPAL_PROVINCES.find((p) => p.name === provinceName);
-  if (!province) return [];
-
-  const provScore = computeProvinceScore(provinceName);
-
-  const scores = province.districts.map((districtName) => {
-    // Derive district score around province score using hash
-    const hash = simpleHash(districtName);
-    const variance = ((hash % 21) - 10); // -10 to +10
-    const score = Math.min(100, Math.max(0, provScore.score + variance));
-
-    const projCount = 3 + (hash % 12); // 3-14 projects
-    const delayCount = Math.floor(projCount * (0.1 + (hash % 3) * 0.1));
-    const trend: 'up' | 'down' | 'stable' = hash % 3 === 0 ? 'up' : hash % 3 === 1 ? 'down' : 'stable';
-
-    return {
-      province: provinceName,
-      province_ne: province.name_ne,
-      district: districtName,
-      score,
-      rank: 0, // computed below
-      projectCount: projCount,
-      delayedCount: delayCount,
-      budgetAllocated: Math.round(provScore.budgetAllocated / province.districts.length * (0.7 + (hash % 6) * 0.1)),
-      budgetSpent: Math.round(provScore.budgetSpent / province.districts.length * (0.5 + (hash % 8) * 0.1)),
-      topPromiseIds: provScore.topPromiseIds,
-      trend,
-    };
-  });
-
-  scores.sort((a, b) => b.score - a.score);
-  scores.forEach((s, i) => { s.rank = i + 1; });
-
-  return scores;
+export function getDistrictScores(_provinceName: string): RegionScore[] {
+  return [];
 }
 
 /** Get score for a specific region */

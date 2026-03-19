@@ -1,7 +1,10 @@
 'use client';
 
+/**
+ * Budget hooks — STUBBED. No budget tables exist in Supabase.
+ * All budget data was fabricated. Returns null/empty states.
+ */
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../api';
 
 export interface BudgetSummary {
   total_allocated: number;
@@ -37,42 +40,30 @@ export interface BudgetAnomaly {
   value: number;
 }
 
-export function useBudgetSummary(params?: { ministry?: string; fiscal_year?: string }) {
+export function useBudgetSummary(_params?: { ministry?: string; fiscal_year?: string }) {
   return useQuery({
-    queryKey: ['budget', 'summary', params],
-    queryFn: async () => {
-      const { data } = await api.get('/api/budget/summary', { params });
-      return data as BudgetSummary;
-    },
+    queryKey: ['budget', 'summary', _params],
+    queryFn: async (): Promise<BudgetSummary | null> => null,
   });
 }
 
-export function useBudgetByMinistry(params?: { fiscal_year?: string }) {
+export function useBudgetByMinistry(_params?: { fiscal_year?: string }) {
   return useQuery({
-    queryKey: ['budget', 'by-ministry', params],
-    queryFn: async () => {
-      const { data } = await api.get('/api/budget/by-ministry', { params });
-      return data as BudgetByMinistry[];
-    },
+    queryKey: ['budget', 'by-ministry', _params],
+    queryFn: async (): Promise<BudgetByMinistry[]> => [],
   });
 }
 
-export function useBudgetProjects(params?: { ministry?: string; fiscal_year?: string; status?: string }) {
+export function useBudgetProjects(_params?: { ministry?: string; fiscal_year?: string; status?: string }) {
   return useQuery({
-    queryKey: ['budget', 'projects', params],
-    queryFn: async () => {
-      const { data } = await api.get('/api/budget/projects', { params });
-      return data as { data: BudgetProject[]; total: number };
-    },
+    queryKey: ['budget', 'projects', _params],
+    queryFn: async (): Promise<{ data: BudgetProject[]; total: number }> => ({ data: [], total: 0 }),
   });
 }
 
 export function useBudgetAnomalies() {
   return useQuery({
     queryKey: ['budget', 'anomalies'],
-    queryFn: async () => {
-      const { data } = await api.get('/api/budget/anomalies');
-      return data as BudgetAnomaly[];
-    },
+    queryFn: async (): Promise<BudgetAnomaly[]> => [],
   });
 }

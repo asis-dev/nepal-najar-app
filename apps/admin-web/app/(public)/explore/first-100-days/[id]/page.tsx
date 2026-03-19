@@ -30,18 +30,18 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { VoteWidget } from '@/components/public/vote-widget';
-import { NewsFeed } from '@/components/public/news-feed';
 import { BudgetBreakdownCard } from '@/components/budget/budget-breakdown-card';
+import { SignalBadge } from '@/components/public/signal-badge';
 import { useWatchlistStore } from '@/lib/stores/preferences';
 import {
   getPromiseBySlug,
   getPromiseById,
-  getNewsForPromise,
   timelineEvents,
   type PromiseStatus,
   type TrustLevel,
   type GovernmentPromise,
 } from '@/lib/data/promises';
+import { useLatestArticles } from '@/lib/hooks/use-promises';
 
 /* ═══════════════════════════════════════════════
    STATUS CONFIG
@@ -130,10 +130,8 @@ export default function PromiseDetailPage() {
     return getPromiseBySlug(idParam) ?? getPromiseById(idParam);
   }, [idParam]);
 
-  // Get related news
-  const relatedNews = useMemo(() => {
-    return promise ? getNewsForPromise(promise.id) : [];
-  }, [promise]);
+  // Get REAL related articles from Supabase (not mock data)
+  const { data: realArticles } = useLatestArticles(10, promise?.id);
 
   // Get related timeline events (by category match)
   const relatedEvents = useMemo(() => {
@@ -184,7 +182,7 @@ export default function PromiseDetailPage() {
   const CatIcon = categoryIcons[promise.category] ?? Building2;
   const catColor = categoryColors[promise.category] ?? 'text-gray-400';
 
-  const whatsappText = `${promise.title_ne}\n${promise.title}\n\nProgress: ${promise.progress}% | Status: ${t(statusLabelKeys[promise.status])}\n\n${pageUrl}`;
+  const whatsappText = `${promise.title_ne}\n${promise.title}\n\nStatus: ${t(statusLabelKeys[promise.status])}${promise.evidenceCount > 0 ? ` | ${promise.evidenceCount} articles` : ''}\n\n${pageUrl}`;
 
   return (
     <div className="min-h-screen bg-np-base">
@@ -216,43 +214,46 @@ export default function PromiseDetailPage() {
         <section className="px-4 sm:px-6 lg:px-8 pb-8">
           <div className="max-w-4xl mx-auto">
             <div className="glass-card p-6 sm:p-8">
-              {/* Status + Trust badges */}
-              <div className="flex items-center justify-between mb-5">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${style.bg} ${style.text} ${style.glow ?? ''}`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${style.dot}`} />
-                  {t(statusLabelKeys[promise.status])}
-                </span>
-
+              {/* Status + Trust + Signal badges */}
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${style.bg} ${style.text} ${style.glow ?? ''}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${style.dot}`} />
+                    {t(statusLabelKeys[promise.status])}
+                  </span>
                   <span
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border ${trust.bg} ${trust.color} ${trust.border} ${trust.glow}`}
                   >
                     <TrustIcon className="w-3.5 h-3.5" />
                     {t(trust.labelKey)}
                   </span>
-                  <button
-                    onClick={() => toggleWatch(promise.id)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
-                      isWatched(promise.id)
-                        ? 'bg-primary-500/15 text-primary-300 border-primary-500/30'
-                        : 'bg-white/[0.04] text-gray-400 border-white/[0.08] hover:border-primary-500/30 hover:text-primary-300'
-                    }`}
-                  >
-                    <Bookmark className={`w-3.5 h-3.5 ${isWatched(promise.id) ? 'fill-primary-400' : ''}`} />
-                    {isWatched(promise.id)
-                      ? (locale === 'ne' ? 'हेरिरहेको' : 'Watching')
-                      : (locale === 'ne' ? 'हेर्नुहोस्' : 'Watch')}
-                  </button>
+                  {promise.signalType && (
+                    <SignalBadge type={promise.signalType} locale={locale as 'en' | 'ne'} />
+                  )}
                 </div>
+
+                <button
+                  onClick={() => toggleWatch(promise.id)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                    isWatched(promise.id)
+                      ? 'bg-primary-500/15 text-primary-300 border-primary-500/30'
+                      : 'bg-white/[0.04] text-gray-400 border-white/[0.08] hover:border-primary-500/30 hover:text-primary-300'
+                  }`}
+                >
+                  <Bookmark className={`w-3.5 h-3.5 ${isWatched(promise.id) ? 'fill-primary-400' : ''}`} />
+                  {isWatched(promise.id)
+                    ? (locale === 'ne' ? 'हेरिरहेको' : 'Watching')
+                    : (locale === 'ne' ? 'हेर्नुहोस्' : 'Watch')}
+                </button>
               </div>
 
-              {/* Title (bilingual) */}
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              {/* Title (bilingual, editorial) */}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-white mb-1 tracking-tight">
                 {isNe ? promise.title_ne : promise.title}
               </h1>
-              <p className="text-lg text-gray-500 mb-4">
+              <p className="text-base sm:text-lg font-nepali text-gray-500 mb-4">
                 {isNe ? promise.title : promise.title_ne}
               </p>
 
@@ -272,32 +273,37 @@ export default function PromiseDetailPage() {
                 {isNe ? promise.description : promise.description_ne}
               </p>
 
-              {/* Large progress bar */}
+              {/* Progress — honest display */}
               <div className="mb-4">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-gray-400 font-medium">{t('commitment.progress')}</span>
-                  <span className="text-white font-bold text-lg">{promise.progress}%</span>
-                </div>
-                <div className="h-4 rounded-full overflow-hidden bg-white/[0.06]">
-                  <div
-                    className="h-full rounded-full transition-all duration-1000 ease-out"
-                    style={{
-                      width: `${promise.progress}%`,
-                      background:
-                        promise.status === 'delivered'
-                          ? 'linear-gradient(90deg, #059669, #10b981, #34d399)'
-                          : promise.status === 'stalled'
-                            ? 'linear-gradient(90deg, #dc2626, #ef4444)'
-                            : 'linear-gradient(90deg, #2563eb, #06b6d4)',
-                      boxShadow:
-                        promise.status === 'delivered'
-                          ? '0 0 14px rgba(16, 185, 129, 0.5)'
-                          : promise.status === 'stalled'
-                            ? '0 0 12px rgba(239, 68, 68, 0.3)'
-                            : '0 0 12px rgba(59, 130, 246, 0.3)',
-                    }}
-                  />
-                </div>
+                {promise.progress > 0 ? (
+                  <>
+                    <p className="text-sm text-gray-300 mb-2">
+                      <span className="text-white font-semibold">{promise.progress}% complete</span>
+                      <span className="text-gray-500"> as of {new Date(promise.lastUpdate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                    </p>
+                    <div className="h-4 rounded-full overflow-hidden bg-white/[0.06]">
+                      <div
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{
+                          width: `${promise.progress}%`,
+                          background: 'linear-gradient(90deg, #2563eb, #06b6d4)',
+                          boxShadow: '0 0 12px rgba(59, 130, 246, 0.3)',
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <p className="text-sm text-gray-400">
+                      {isNe ? 'प्रगति अझै प्रमाणित गरिएको छैन' : 'No verified progress data yet'}
+                    </p>
+                    {promise.evidenceCount > 0 && (
+                      <p className="text-xs text-cyan-500/60 mt-1">
+                        {promise.evidenceCount} article{promise.evidenceCount !== 1 ? 's' : ''} mention this promise
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Meta row */}
@@ -306,10 +312,12 @@ export default function PromiseDetailPage() {
                   <Link2 className="w-3 h-3" />
                   {promise.linkedProjects} {promise.linkedProjects !== 1 ? t('commitment.projectsPlural') : t('commitment.projects')}
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  <FileText className="w-3 h-3" />
-                  {promise.evidenceCount} {t('commitment.evidence')}
-                </span>
+                {promise.evidenceCount > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <FileText className="w-3 h-3" />
+                    {promise.evidenceCount} {t('commitment.evidence')}
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   {isNe ? 'अन्तिम अपडेट' : 'Last updated'}: {promise.lastUpdate}
@@ -320,9 +328,18 @@ export default function PromiseDetailPage() {
         </section>
 
         {/* ═══════════════════════════════════════
-           BUDGET SECTION
+           VOTE WIDGET (full) — above the fold
            ═══════════════════════════════════════ */}
-        {promise.estimatedBudgetNPR && (
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <VoteWidget promiseId={promise.id} variant="full" />
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════
+           BUDGET SECTION — only if data available
+           ═══════════════════════════════════════ */}
+        {promise.estimatedBudgetNPR && promise.estimatedBudgetNPR > 0 ? (
           <section className="px-4 sm:px-6 lg:px-8 pb-8">
             <div className="max-w-4xl mx-auto">
               <BudgetBreakdownCard
@@ -333,29 +350,66 @@ export default function PromiseDetailPage() {
               />
             </div>
           </section>
-        )}
+        ) : null}
 
         {/* ═══════════════════════════════════════
-           VOTE WIDGET (full)
+           REAL SCRAPED ARTICLES
            ═══════════════════════════════════════ */}
         <section className="px-4 sm:px-6 lg:px-8 pb-8">
           <div className="max-w-4xl mx-auto">
-            <VoteWidget promiseId={promise.id} variant="full" />
-          </div>
-        </section>
-
-        {/* ═══════════════════════════════════════
-           NEWS FEED
-           ═══════════════════════════════════════ */}
-        <section className="px-4 sm:px-6 lg:px-8 pb-8">
-          <div className="max-w-4xl mx-auto">
-            <NewsFeed
-              articles={relatedNews}
-              title={isNe ? 'सम्बन्धित समाचार' : 'Related News Coverage'}
-              emptyMessage={isNe ? 'यो वचनसँग सम्बन्धित कुनै समाचार छैन।' : 'No news articles found for this promise.'}
-              initialCount={5}
-              batchSize={5}
-            />
+            <div className="glass-card p-6">
+              <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-cyan-400" />
+                {isNe ? 'सम्बन्धित समाचार कभरेज' : 'Related News Coverage'}
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-semibold uppercase tracking-wider">
+                  Live
+                </span>
+              </h3>
+              {realArticles && realArticles.length > 0 ? (
+                <div className="divide-y divide-white/[0.04]">
+                  {realArticles.map((article) => (
+                    <a
+                      key={article.id}
+                      href={article.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-3 py-3 hover:bg-white/[0.02] transition-colors -mx-2 px-2 rounded-lg group"
+                    >
+                      <div className="w-6 h-6 rounded-md bg-white/[0.04] flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <ExternalLink className="w-3 h-3 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-gray-200 group-hover:text-white transition-colors line-clamp-2">
+                          {article.headline}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-gray-500">{article.source_name}</span>
+                          {article.published_at && (
+                            <span className="text-[10px] text-gray-600">
+                              {new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                          {article.confidence > 0.5 && (
+                            <span className="text-[9px] text-cyan-600">
+                              {Math.round(article.confidence * 100)}% match
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
+                  <p className="text-sm text-gray-500">
+                    {isNe ? 'यो वचनसँग सम्बन्धित कुनै समाचार छैन।' : 'No news coverage found yet for this promise.'}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {isNe ? 'स्क्र्यापर चलिरहेको छ।' : 'Our scraper checks news sources regularly.'}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
