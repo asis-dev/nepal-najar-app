@@ -139,3 +139,39 @@ CREATE POLICY "Service full access articles" ON scraped_articles FOR ALL USING (
 CREATE POLICY "Service full access runs" ON scrape_runs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Service full access sources" ON data_sources FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Service full access updates" ON promise_updates FOR ALL USING (true) WITH CHECK (true);
+
+-- ═══════════════════════════════════════════════
+-- 6. GOVERNMENT ORG UNITS — public accountability structure
+-- ═══════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS government_org_units (
+  unit_id TEXT PRIMARY KEY,
+  parent_id TEXT REFERENCES government_org_units(unit_id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  name_ne TEXT NOT NULL,
+  unit_type TEXT NOT NULL,
+  lead_title TEXT NOT NULL,
+  lead_name TEXT NOT NULL,
+  responsibility TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  source_status TEXT NOT NULL DEFAULT 'fallback',
+  source_title TEXT,
+  source_snippet TEXT,
+  source_checked_at TIMESTAMPTZ,
+  source_fetched_from TEXT,
+  source_matches TEXT[] NOT NULL DEFAULT '{}',
+  promise_categories TEXT[] NOT NULL DEFAULT '{}',
+  tracked_projects TEXT[] NOT NULL DEFAULT '{}',
+  achievements JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_government_org_units_parent ON government_org_units(parent_id);
+CREATE INDEX IF NOT EXISTS idx_government_org_units_type ON government_org_units(unit_type);
+CREATE INDEX IF NOT EXISTS idx_government_org_units_checked_at ON government_org_units(source_checked_at DESC);
+
+ALTER TABLE government_org_units ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read government org units" ON government_org_units FOR SELECT USING (true);
+CREATE POLICY "Service full access government org units" ON government_org_units FOR ALL USING (true) WITH CHECK (true);

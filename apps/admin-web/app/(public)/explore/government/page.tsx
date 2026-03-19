@@ -9,15 +9,15 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  CircleAlert,
+  ExternalLink,
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
 import { useAllPromises, usePromiseStats } from '@/lib/hooks/use-promises';
-import {
-  publicGovUnits,
-  type PublicGovUnit,
-  type PublicGovUnitType,
-} from '@/lib/data/government-accountability';
+import { useGovernmentStructure } from '@/lib/hooks/use-government-structure';
+import type { PublicGovSnapshotUnit } from '@/lib/org-structure/engine';
+import type { PublicGovUnitType } from '@/lib/data/government-accountability';
 
 const typeLabels: Record<PublicGovUnitType, string> = {
   country: 'Government',
@@ -48,10 +48,10 @@ function TreeNode({
   childrenByParent,
   level = 0,
 }: {
-  unit: PublicGovUnit;
+  unit: PublicGovSnapshotUnit;
   selectedId: string;
   onSelect: (id: string) => void;
-  childrenByParent: Record<string, PublicGovUnit[]>;
+  childrenByParent: Record<string, PublicGovSnapshotUnit[]>;
   level?: number;
 }) {
   const children = childrenByParent[unit.id] ?? [];
@@ -107,37 +107,59 @@ function TreeNode({
 export default function GovernmentPublicPage() {
   const { data: promises } = useAllPromises();
   const { stats } = usePromiseStats();
+  const { data: governmentData, isLoading: governmentLoading } = useGovernmentStructure();
   const [selectedUnitId, setSelectedUnitId] = useState('country-nepal');
+  const units = governmentData?.units ?? [];
 
   const selectedUnit =
-    publicGovUnits.find((unit) => unit.id === selectedUnitId) ?? publicGovUnits[0];
+    units.find((unit) => unit.id === selectedUnitId) ?? units[0];
 
   const childrenByParent = useMemo(() => {
-    const groups: Record<string, PublicGovUnit[]> = {};
-    for (const unit of publicGovUnits) {
+    const groups: Record<string, PublicGovSnapshotUnit[]> = {};
+    for (const unit of units) {
       if (!unit.parentId) continue;
       groups[unit.parentId] ??= [];
       groups[unit.parentId].push(unit);
     }
     return groups;
-  }, []);
+  }, [units]);
 
-  const topLevelUnits = publicGovUnits.filter((unit) => !unit.parentId);
+  const topLevelUnits = units.filter((unit) => !unit.parentId);
 
   const unitPromises = (promises ?? []).filter((promise) =>
-    selectedUnit.promiseCategories.includes(promise.category)
+    selectedUnit?.promiseCategories.includes(promise.category)
   );
 
   const deliveredCount = unitPromises.filter((promise) => promise.status === 'delivered').length;
   const inProgressCount = unitPromises.filter((promise) => promise.status === 'in_progress').length;
   const stalledCount = unitPromises.filter((promise) => promise.status === 'stalled').length;
+  const verifiedCount = units.filter((unit) => unit.sourceMeta.sourceStatus === 'verified').length;
 
   const publicStats = [
-    { label: 'Tracked offices', value: publicGovUnits.length.toString() },
+    { label: 'Tracked offices', value: units.length.toString() },
+    { label: 'Verified sources', value: verifiedCount.toString() },
     { label: 'Promises linked', value: unitPromises.length.toString() },
     { label: 'Delivered outcomes', value: deliveredCount.toString() },
-    { label: 'In progress', value: inProgressCount.toString() },
   ];
+
+  if (!selectedUnit) {
+    return (
+      <div className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="glass-card flex min-h-[320px] items-center justify-center p-8 text-center">
+            <div>
+              <p className="text-sm uppercase tracking-[0.18em] text-gray-500">
+                Government structure
+              </p>
+              <p className="mt-3 text-lg text-white">
+                {governmentLoading ? 'Loading verified government structure...' : 'No government structure data available yet.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
@@ -153,6 +175,21 @@ export default function GovernmentPublicPage() {
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-400 sm:text-lg">
             See which ministry, department, division, or office owns each part of delivery, what they are responsible for, and what outcomes are already visible in public.
           </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-400">
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+              Last checked{' '}
+              <span className="font-medium text-white">
+                {new Date(
+                  governmentData?.checkedAt ??
+                    selectedUnit.sourceMeta.checkedAt ??
+                    new Date().toISOString()
+                ).toLocaleString()}
+              </span>
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+              {verifiedCount} of {units.length} sources verified from official pages
+            </span>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -222,6 +259,61 @@ export default function GovernmentPublicPage() {
                   <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Delivered</p>
                   <p className="mt-2 text-2xl font-bold text-white">{deliveredCount}</p>
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Official source check</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      {selectedUnit.sourceMeta.sourceStatus === 'verified' ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      ) : (
+                        <CircleAlert className="h-4 w-4 text-amber-400" />
+                      )}
+                      <p className="text-sm font-medium text-white">
+                        {selectedUnit.sourceMeta.sourceStatus === 'verified'
+                          ? 'Verified against official public source'
+                          : 'Using curated fallback until source verification succeeds'}
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={selectedUnit.sourceMeta.fetchedFrom}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:bg-white/[0.08]"
+                  >
+                    Open source
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+                {(selectedUnit.sourceMeta.pageTitle || selectedUnit.sourceMeta.snippet) && (
+                  <div className="mt-3 space-y-2">
+                    {selectedUnit.sourceMeta.pageTitle && (
+                      <p className="text-sm font-medium text-white">
+                        {selectedUnit.sourceMeta.pageTitle}
+                      </p>
+                    )}
+                    {selectedUnit.sourceMeta.snippet && (
+                      <p className="text-sm leading-relaxed text-gray-400">
+                        {selectedUnit.sourceMeta.snippet}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {selectedUnit.sourceMeta.matchedTerms.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedUnit.sourceMeta.matchedTerms.map((term) => (
+                      <span
+                        key={term}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-gray-300"
+                      >
+                        {term}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

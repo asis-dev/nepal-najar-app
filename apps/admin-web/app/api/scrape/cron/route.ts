@@ -11,6 +11,7 @@ import { validateScrapeAuth } from '@/lib/scraper/auth';
 import { scrapers } from '@/lib/scraper';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/server';
 import { matchArticleToPromises } from '@/lib/scraper/matcher';
+import { buildGovernmentStructureSnapshot } from '@/lib/org-structure/engine';
 
 export const maxDuration = 300; // 5 min for full scrape cycle
 
@@ -146,12 +147,36 @@ export async function GET(request: Request) {
       .eq('id', runId);
   }
 
+  let orgRefresh:
+    | {
+        success: boolean;
+        unitsChecked: number;
+        verifiedSources: number;
+      }
+    | undefined;
+
+  try {
+    const units = await buildGovernmentStructureSnapshot();
+    orgRefresh = {
+      success: true,
+      unitsChecked: units.length,
+      verifiedSources: units.filter((unit) => unit.sourceMeta.sourceStatus === 'verified').length,
+    };
+  } catch {
+    orgRefresh = {
+      success: false,
+      unitsChecked: 0,
+      verifiedSources: 0,
+    };
+  }
+
   return NextResponse.json({
     success: true,
     sourcesAttempted: scraperEntries.length,
     sourcesSucceeded,
     articlesFound: totalFound,
     articlesNew: totalNew,
+    governmentStructure: orgRefresh,
     results,
   });
 }

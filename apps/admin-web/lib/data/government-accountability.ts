@@ -29,6 +29,8 @@ export interface PublicGovUnit {
   responsibilityNe: string;
   scope: string;
   scopeNe: string;
+  sourceUrl: string;
+  sourcePaths?: string[];
   promiseCategories: PromiseCategory[];
   trackedProjects: string[];
   achievements: PublicGovAchievement[];
@@ -48,6 +50,8 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'राष्ट्रिय प्राथमिकता तय गर्ने, मन्त्रालयहरू समन्वय गर्ने र सरकारव्यापी डेलिभरी लक्ष्यको स्वामित्व लिने।',
     scope: 'National',
     scopeNe: 'राष्ट्रिय',
+    sourceUrl: 'https://www.opmcm.gov.np/en/',
+    sourcePaths: ['/en/prime-minister/', '/en/'],
     promiseCategories: ['Governance', 'Anti-Corruption', 'Infrastructure', 'Transport', 'Energy', 'Health', 'Education', 'Economy', 'Social'],
     trackedProjects: ['National delivery scorecard', '100-day commitments', 'Cross-ministry review meetings'],
     achievements: [
@@ -81,6 +85,8 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'सडक, पुल, रेल, प्रमुख यातायात करिडोर र पुँजीगत पूर्वाधार डेलिभरी समन्वयको जिम्मेवारी।',
     scope: 'National transport and public works',
     scopeNe: 'राष्ट्रिय यातायात र सार्वजनिक पूर्वाधार',
+    sourceUrl: 'https://mopit.gov.np/',
+    sourcePaths: ['/about-us', '/department', '/'],
     promiseCategories: ['Infrastructure', 'Transport'],
     trackedProjects: ['Ring Road expansion', 'East-West corridor upgrades', 'Bridge strengthening'],
     achievements: [
@@ -114,6 +120,8 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'राष्ट्रिय राजमार्ग, रिङरोड र रणनीतिक सडक काम कार्यान्वयन गर्ने तथा प्रगति प्रतिवेदन दिने।',
     scope: 'Road network execution',
     scopeNe: 'सडक सञ्जाल कार्यान्वयन',
+    sourceUrl: 'https://dor.gov.np/',
+    sourcePaths: ['/home/publication', '/'],
     promiseCategories: ['Infrastructure', 'Transport'],
     trackedProjects: ['Kathmandu Ring Road', 'East-West Highway packages'],
     achievements: [
@@ -140,6 +148,7 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'लाइसेन्स, रुट प्रणाली र सार्वजनिक यातायात सेवा समन्वयको जिम्मा।',
     scope: 'Transport operations',
     scopeNe: 'यातायात सञ्चालन',
+    sourceUrl: 'https://mopit.gov.np/',
     promiseCategories: ['Transport', 'Technology'],
     trackedProjects: ['Digital permit systems', 'Fleet regulation updates'],
     achievements: [
@@ -166,6 +175,8 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'उत्पादन, प्रसारण विस्तार, सिँचाइ सुधार र ऊर्जा विश्वसनीयतासम्बन्धी प्रतिबद्धताको स्वामित्व।',
     scope: 'Energy and irrigation',
     scopeNe: 'ऊर्जा र सिँचाइ',
+    sourceUrl: 'https://moewri.gov.np/',
+    sourcePaths: ['/category/notice/', '/'],
     promiseCategories: ['Energy', 'Infrastructure', 'Environment'],
     trackedProjects: ['Transmission line upgrades', 'Hydro coordination', 'Irrigation modernization'],
     achievements: [
@@ -192,6 +203,8 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'वितरण विश्वसनीयता, आउटेज प्रतिक्रिया र विद्युत् डेलिभरी प्रतिवेदनको जिम्मा।',
     scope: 'Power delivery',
     scopeNe: 'विद्युत् डेलिभरी',
+    sourceUrl: 'https://www.nea.org.np/',
+    sourcePaths: ['/about', '/'],
     promiseCategories: ['Energy', 'Technology'],
     trackedProjects: ['Service reliability improvements', 'Outage monitoring'],
     achievements: [
@@ -218,6 +231,8 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'अस्पताल सुधार, सेवा पहुँच, स्वास्थ्य जनशक्ति र सार्वजनिक स्वास्थ्य प्रतिबद्धताको स्वामित्व।',
     scope: 'National health services',
     scopeNe: 'राष्ट्रिय स्वास्थ्य सेवा',
+    sourceUrl: 'https://mohp.gov.np/',
+    sourcePaths: ['/about-us', '/'],
     promiseCategories: ['Health', 'Social', 'Technology'],
     trackedProjects: ['Hospital service upgrades', 'Primary care modernization'],
     achievements: [
@@ -244,6 +259,8 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'विद्यालय सुधार, डिजिटल शिक्षा, शिक्षक प्रणाली र उच्च शिक्षासम्बन्धी प्रतिबद्धताको स्वामित्व।',
     scope: 'Education policy and delivery',
     scopeNe: 'शिक्षा नीति र डेलिभरी',
+    sourceUrl: 'https://moest.gov.np/',
+    sourcePaths: ['/about-us', '/'],
     promiseCategories: ['Education', 'Technology', 'Social'],
     trackedProjects: ['School infrastructure', 'Digital classroom programs'],
     achievements: [
@@ -270,6 +287,8 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'बजेट निकासा, सार्वजनिक खर्च प्राथमिकता र वित्तीय डेलिभरी अवरोधको नियन्त्रण।',
     scope: 'Budget and expenditure',
     scopeNe: 'बजेट र खर्च',
+    sourceUrl: 'https://mof.gov.np/',
+    sourcePaths: ['/about-us', '/'],
     promiseCategories: ['Economy', 'Governance', 'Anti-Corruption'],
     trackedProjects: ['Budget release monitoring', 'Capital expenditure discipline'],
     achievements: [
