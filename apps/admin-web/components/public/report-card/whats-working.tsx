@@ -66,7 +66,7 @@ export function WhatsWorkingSection({ promises }: WhatsWorkingProps) {
         {promises.map((p) => (
           <Link
             key={p.id}
-            href={`/explore/promises/${p.id}`}
+            href={`/explore/first-100-days/${p.id}`}
             className="glass-card group p-4 border-l-2 border-emerald-500/50 hover:border-emerald-400 transition-all duration-200 hover:bg-white/[0.03]"
           >
             {/* Header */}
