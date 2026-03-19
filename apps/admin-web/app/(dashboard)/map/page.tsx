@@ -31,14 +31,13 @@ export default function MapPage() {
   const allProjects = useMemo(() => projectsResponse?.data ?? [], [projectsResponse]);
 
   const regionData = useMemo(() => {
-    return Array.isArray(national?.regionBreakdown)
-      ? (national.regionBreakdown as Array<{
-          name: string;
-          total: number;
-          delayed: number;
-          severity: string;
-        }>)
-      : [];
+    // Regional data not yet available — project tracking by province coming soon
+    return [] as Array<{
+      name: string;
+      total: number;
+      delayed: number;
+      severity: string;
+    }>;
   }, [national]);
 
   // Filter projects by selected province
