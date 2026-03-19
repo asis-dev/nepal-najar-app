@@ -152,24 +152,20 @@ export default function ExplorePage() {
       <section className="relative pt-16 pb-10 px-4 sm:px-6 lg:px-8">
         <div className="relative max-w-5xl mx-auto text-center">
           <div className="animate-fade-in">
-            <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300 backdrop-blur-md">
+            <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300 backdrop-blur-md">
               Nepal Najar
-              <span className="h-1 w-1 rounded-full bg-red-400" />
-              <span className="text-gray-500">The public eye on Balen&apos;s Nepal</span>
+              <span className="h-1 w-1 rounded-full bg-white/40" />
+              <span className="text-gray-500">Track promises, projects, and updates</span>
             </div>
-
-            <p className="text-xs uppercase tracking-[0.3em] text-nepal-red/80 font-semibold mb-4">
-              High-Altitude Civic Intelligence
-            </p>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight mb-4 text-white">
               Nepal{' '}
-              <span className="text-nepal-red">Najar</span>
+              <span className="text-white/90">Najar</span>
               <span className="text-gray-500 font-nepali text-2xl sm:text-3xl ml-2">नजर</span>
             </h1>
 
             <p className="text-base sm:text-lg text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
-              Track every promise. See what changed. Hold power accountable.
+              A clearer way to follow what is being promised, what is moving, and what is stalled.
             </p>
           </div>
 
@@ -203,8 +199,7 @@ export default function ExplorePage() {
         </div>
       </section>
 
-      {/* Crimson divider */}
-      <div className="accent-crimson mx-8 sm:mx-16 lg:mx-32" />
+      <div className="mx-8 h-px bg-white/[0.06] sm:mx-16 lg:mx-32" />
 
       {/* ═══════════════════════════════════════
          SECTION 2: LATEST SCRAPED ARTICLES (real data)
@@ -217,10 +212,9 @@ export default function ExplorePage() {
                 <Clock className="w-5 h-5 text-primary-400" />
                 {t('section.latestUpdates')}
               </h2>
-              {/* LIVE indicator */}
-              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-nepal-red/10 border border-nepal-red/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-nepal-red animate-pulse" />
-                <span className="text-[9px] font-semibold uppercase tracking-wider text-nepal-red">Live</span>
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-300">Latest</span>
               </span>
             </div>
           </div>
