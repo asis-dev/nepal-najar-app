@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Map, config, MapStyle } from '@maptiler/sdk';
+import { Map, config } from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 
 interface ProvinceData {
@@ -66,7 +66,7 @@ export function NepalMapTilerMap({
 
     const map = new Map({
       container: containerRef.current,
-      style: MapStyle.BACKDROP.DARK,
+      style: `https://api.maptiler.com/maps/backdrop-v4-dark/style.json?key=${token}`,
       center: [84.12, 28.39],
       zoom: 6.5,
       pitch: 45,
