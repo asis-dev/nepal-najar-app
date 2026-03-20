@@ -2,15 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Eye, Landmark, Map, Calendar, MapPinHouse } from 'lucide-react';
+import { Eye, Map, Calendar, MapPinHouse, TimerReset } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
 const navItems = [
-  { href: '/explore', labelKey: 'nav.home', icon: Eye },
+  { href: '/', labelKey: 'nav.home', icon: Eye },
+  { href: '/explore/first-100-days', labelKey: 'nav.first100Days', icon: TimerReset },
+  { href: '/explore/map', labelKey: 'nav.map', icon: Map },
   { href: '/daily', labelKey: 'nav.daily', icon: Calendar },
   { href: '/mero-ward', labelKey: 'nav.myArea', icon: MapPinHouse },
-  { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
-  { href: '/explore/map', labelKey: 'nav.map', icon: Map },
 ];
 
 export function BottomNav() {
@@ -22,8 +22,8 @@ export function BottomNav() {
       <div className="mx-auto flex h-16 max-w-md items-center justify-around rounded-[1.4rem] border border-white/[0.08] bg-np-surface/92 shadow-[0_-12px_30px_rgba(3,8,20,0.35)] backdrop-blur-xl">
         {navItems.map(({ href, labelKey, icon: Icon }) => {
           const isActive =
-            href === '/explore'
-              ? pathname === '/explore'
+            href === '/'
+              ? pathname === '/'
               : pathname.startsWith(href);
 
           return (

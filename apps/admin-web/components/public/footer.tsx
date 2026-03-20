@@ -6,7 +6,7 @@ import { useI18n } from '@/lib/i18n';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
 
 const quickLinkKeys = [
-  { href: '/explore', labelKey: 'nav.home' },
+  { href: '/', labelKey: 'nav.home' },
   { href: '/explore/projects', labelKey: 'nav.projects' },
   { href: '/explore/map', labelKey: 'nav.map' },
   { href: '/explore/first-100-days', labelKey: 'nav.first100Days' },
