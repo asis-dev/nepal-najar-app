@@ -4,15 +4,23 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
   ArrowRight,
-  ShieldCheck,
+  CalendarDays,
+  Landmark,
   MapPinned,
   Newspaper,
-  Users,
-  CalendarDays,
+  ScanSearch,
+  ShieldCheck,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
 import { TrustLanes } from '@/components/public/trust-lanes';
+import { MeroWardCard } from '@/components/public/mero-ward-card';
+import { usePreferencesStore } from '@/lib/stores/preferences';
+import {
+  useArticleCount,
+  useLatestArticles,
+  usePromiseStats,
+} from '@/lib/hooks/use-promises';
 
 const NepalGlobe = dynamic(
   () => import('@/components/globe/nepal-globe').then((m) => ({ default: m.NepalGlobe })),
@@ -22,108 +30,236 @@ const NepalGlobe = dynamic(
   },
 );
 
+function LandingStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="glass-card px-4 py-4">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const { t } = useI18n();
+  const setShowPicker = usePreferencesStore((s) => s.setShowPicker);
+  const { stats, isLoading: statsLoading } = usePromiseStats();
+  const { data: latestArticles, isLoading: articlesLoading } = useLatestArticles(3);
+  const { data: articleCount } = useArticleCount();
+
+  const activityCards = [
+    {
+      title: 'Explore promises',
+      description: 'Browse the biggest public promises, linked evidence, and tracked progress across sectors.',
+      href: '/explore/projects',
+      icon: ScanSearch,
+      metric: statsLoading ? '--' : `${stats?.total ?? 0} tracked`,
+    },
+    {
+      title: 'Who owns delivery',
+      description: 'See which ministry, department, or office is responsible for moving work forward.',
+      href: '/explore/government',
+      icon: Landmark,
+      metric: 'Public accountability',
+    },
+    {
+      title: 'Report card',
+      description: 'See what is working, what is stuck, and what the public is signaling most strongly this week.',
+      href: '/report-card',
+      icon: ShieldCheck,
+      metric: 'Weekly score',
+    },
+  ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-np-void">
+    <div className="relative min-h-screen overflow-x-clip bg-np-void">
       <div className="absolute inset-0 z-0 nepal-hero-grid" />
-      <div className="mountain-ridge" />
-      <div className="mountain-ridge-soft" />
-      <div className="absolute inset-0 z-0 opacity-25">
+      <div className="mountain-ridge opacity-75" />
+      <div className="mountain-ridge-soft opacity-80" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-full max-w-5xl opacity-18 lg:block">
         <NepalGlobe />
       </div>
 
-      <div className="relative z-10 px-4 pb-12 pt-16 sm:px-6 lg:px-8 lg:pt-20">
-        <div className="public-shell grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
-          <div className="max-w-3xl">
-            <div className="mb-6">
-              <NepalNajarMark className="mb-4" />
-              <div className="section-kicker">
-                <CalendarDays className="h-3.5 w-3.5" />
-                The public eye on Balen&apos;s Nepal
+      <div className="relative z-10">
+        <section className="public-section pt-14 sm:pt-16 lg:pt-20">
+          <div className="public-shell">
+            <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr] xl:gap-8">
+              <div className="max-w-3xl">
+                <div className="mb-5">
+                  <NepalNajarMark className="mb-4" />
+                  <div className="section-kicker">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {t('landing.tagline')}
+                  </div>
+                </div>
+
+                <h1 className="max-w-4xl text-balance font-sans text-[2.65rem] font-semibold leading-[0.94] tracking-[-0.045em] text-white sm:text-[3.6rem] lg:text-[4.45rem]">
+                  See what Nepal is building, what is delayed, and what changed today.
+                </h1>
+
+                <p className="mt-5 max-w-2xl text-base leading-8 text-gray-200 sm:text-lg">
+                  Nepal Najar gives people one place to track promises, delivery, accountability, and source-backed updates without mixing official claims with public signals or discovered reporting.
+                </p>
+
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Link
+                    href="/explore"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary-400/20 bg-primary-600 px-6 py-4 text-base font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-500"
+                  >
+                    {t('landing.exploreNepal')}
+                    <ArrowRight className="h-5 w-5" />
+                  </Link>
+                  <Link
+                    href="/daily"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-gray-200 transition-all duration-300 hover:bg-white/[0.07]"
+                  >
+                    What changed today
+                  </Link>
+                  <button
+                    onClick={() => setShowPicker(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-gray-200 transition-all duration-300 hover:bg-white/[0.07]"
+                  >
+                    <MapPinned className="h-4 w-4 text-cyan-300" />
+                    Set my area
+                  </button>
+                </div>
+
+                <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                  <LandingStat
+                    label="Promises tracked"
+                    value={statsLoading ? '--' : stats?.total ?? 0}
+                  />
+                  <LandingStat
+                    label="Delivered"
+                    value={statsLoading ? '--' : stats?.delivered ?? 0}
+                  />
+                  <LandingStat
+                    label="Articles scanned"
+                    value={articleCount ?? 0}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                <div className="glass-card p-5 sm:p-6">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Today in Nepal</p>
+                      <h2 className="mt-2 text-2xl font-semibold leading-tight text-white">
+                        Fresh signals worth checking
+                      </h2>
+                    </div>
+                    <Link
+                      href="/daily"
+                      className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary-300 transition-colors hover:text-primary-200"
+                    >
+                      Daily
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+
+                  <div className="space-y-3">
+                    {articlesLoading ? (
+                      Array.from({ length: 3 }).map((_, index) => (
+                        <div key={index} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-4">
+                          <div className="h-3 w-24 animate-pulse rounded bg-white/[0.06]" />
+                          <div className="mt-3 h-4 w-full animate-pulse rounded bg-white/[0.06]" />
+                          <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-white/[0.06]" />
+                        </div>
+                      ))
+                    ) : latestArticles && latestArticles.length > 0 ? (
+                      latestArticles.map((article) => (
+                        <a
+                          key={article.id}
+                          href={article.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-4 transition-colors hover:bg-white/[0.05]"
+                        >
+                          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                            <Newspaper className="h-3.5 w-3.5 text-cyan-300" />
+                            <span className="truncate">{article.source_name}</span>
+                          </div>
+                          <p className="mt-3 text-sm font-medium leading-6 text-gray-100">
+                            {article.headline}
+                          </p>
+                          {article.content_excerpt ? (
+                            <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-400">
+                              {article.content_excerpt}
+                            </p>
+                          ) : null}
+                        </a>
+                      ))
+                    ) : (
+                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-5">
+                        <p className="text-sm text-gray-400">
+                          No fresh public signals have been loaded yet. The daily page will show them here once sources start flowing.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <MeroWardCard />
               </div>
             </div>
+          </div>
+        </section>
 
-            <h1 className="max-w-5xl text-balance font-sans text-[3.3rem] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:text-[4.5rem] lg:text-[5.4rem]">
-              See what Nepal is building, what is delayed, and what changed today.
-            </h1>
-
-            <p className="mt-5 max-w-2xl text-lg font-medium text-gray-100/95 sm:text-[1.35rem]">
-              Track promises, projects, government accountability, and source-backed updates in one place.
-            </p>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-300 sm:text-lg">
-              Nepal Najar is designed for people who want a clearer public view of what is moving, what is stalled, and who owns delivery.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-2.5 sm:gap-3">
-              {[
-                { icon: ShieldCheck, label: 'Official signals' },
-                { icon: Newspaper, label: 'Daily discoveries' },
-                { icon: MapPinned, label: 'District drilldown' },
-                { icon: Users, label: 'Public sentiment' },
-              ].map((item) => (
-                <div key={item.label} className="metric-chip">
-                  <item.icon className="h-4 w-4 text-gray-300" />
-                  {item.label}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
-              <Link
-                href="/explore"
-                className="inline-flex items-center justify-center gap-3 rounded-2xl px-6 py-4 text-base font-semibold text-white transition-all duration-300 hover:-translate-y-1 sm:px-8 sm:text-lg"
-                style={{
-                  background: 'linear-gradient(135deg, #174ea6 0%, #0f3d86 100%)',
-                  boxShadow: '0 8px 24px rgba(15,61,134,0.28)',
-                  border: '1px solid rgba(96,165,250,0.14)',
-                }}
-              >
-                {t('landing.exploreNepal')}
-                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Link>
-              <Link
-                href="/daily"
-                className="inline-flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-medium text-gray-200 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.06]"
-              >
-                What changed today
-              </Link>
+        <section className="public-section pt-4">
+          <div className="public-shell">
+            <div className="grid gap-4 lg:grid-cols-3">
+              {activityCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Link
+                    key={card.title}
+                    href={card.href}
+                    className="glass-card-hover block p-5 sm:p-6"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="rounded-2xl bg-white/[0.04] p-3">
+                        <Icon className="h-5 w-5 text-primary-300" />
+                      </div>
+                      <span className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                        {card.metric}
+                      </span>
+                    </div>
+                    <h3 className="mt-5 text-xl font-semibold text-white">{card.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-gray-400">{card.description}</p>
+                    <div className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary-300">
+                      Open
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
+        </section>
 
-          <div className="glass-card public-gradient-panel relative overflow-hidden p-5 sm:p-7">
-            <div className="relative">
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Why it matters</p>
-                  <h2 className="mt-2 text-xl font-semibold leading-tight text-white sm:text-[1.8rem]">Clearer than scattered updates</h2>
-                </div>
-                <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-gray-300">
-                  Public platform
-                </div>
+        <section className="public-section pt-2 pb-14">
+          <div className="public-shell">
+            <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+              <div className="glass-card p-6 sm:p-7">
+                <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Why people trust this</p>
+                <h2 className="mt-3 text-2xl font-semibold leading-tight text-white">
+                  Four separate signal lanes, not one blurred feed
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-gray-400">
+                  Nepal Najar works best when people can tell the difference between what the government officially says, what the internet is uncovering, what citizens are reporting, and what the system is only inferring.
+                </p>
               </div>
 
               <TrustLanes />
-
-              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {[
-                  { value: '7', label: 'Provinces under watch' },
-                  { value: '20+', label: 'Projects tracked now' },
-                  { value: 'Daily', label: 'Signal refresh rhythm' },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4 text-center"
-                  >
-                    <p className="text-2xl font-bold text-white">{stat.value}</p>
-                    <p className="mt-1 text-xs text-gray-500">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
