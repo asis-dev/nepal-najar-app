@@ -56,6 +56,7 @@ export const usePreferencesStore = create<HometownPreferences & PreferencesActio
     {
       name: 'nepal-najar-preferences',
       storage: createJSONStorage(() => localStorage),
+      skipHydration: true,
       partialize: (state) => ({
         province: state.province,
         district: state.district,
@@ -103,6 +104,7 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
     {
       name: 'nepal-najar-watchlist',
       storage: createJSONStorage(() => localStorage),
+      skipHydration: true,
     },
   ),
 );

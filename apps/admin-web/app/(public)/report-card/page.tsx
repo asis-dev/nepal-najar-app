@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -38,12 +38,15 @@ export default function ReportCardPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>('working');
   const [copied, setCopied] = useState(false);
+  const [cacheBust, setCacheBust] = useState(0);
 
   const { data, isLoading } = useAccountability();
 
-  // Cache-bust key for OG image
-  const cacheBust = typeof window !== 'undefined' ? Math.floor(Date.now() / 600_000) : 0;
   const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://nepalnajar.com/report-card';
+
+  useEffect(() => {
+    setCacheBust(Math.floor(Date.now() / 600_000));
+  }, []);
 
   const shareTitle = `Nepal Najar - ${t('accountability.pageTitle')}`;
   const shareText = isNe

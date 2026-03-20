@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { AlertTriangle, Globe, XCircle, Clock, AlertOctagon } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import type { DownSource, SilentPromise } from '@/lib/hooks/use-accountability';
@@ -40,10 +41,16 @@ function statusColors(status: DownSource['status']): string {
 export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNotWorkingProps) {
   const { locale, t } = useI18n();
   const isNe = locale === 'ne';
+  const [nowMs, setNowMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNowMs(Date.now());
+  }, []);
 
   function timeAgo(date: string | null): string {
     if (!date) return t('accountability.neverChecked');
-    const diff = Date.now() - new Date(date).getTime();
+    if (nowMs === null) return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const diff = nowMs - new Date(date).getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
     if (hours < 1) return t('accountability.checkedJustNow');
     if (hours < 24) return t('accountability.checkedHoursAgo').replace('{hours}', String(hours));

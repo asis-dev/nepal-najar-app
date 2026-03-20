@@ -128,6 +128,7 @@ export const useEngagementStore = create<EngagementState & EngagementActions>()(
     {
       name: 'nepal-najar-engagement',
       storage: createJSONStorage(() => localStorage),
+      skipHydration: true,
       partialize: (state) => ({
         currentStreak: state.currentStreak,
         longestStreak: state.longestStreak,

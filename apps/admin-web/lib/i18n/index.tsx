@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   ReactNode,
 } from 'react';
 import en from '@/messages/en.json';
@@ -24,12 +25,14 @@ interface I18nContextType {
 const I18nContext = createContext<I18nContextType | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('nepal-najar-locale') as Locale) || 'en';
+  const [locale, setLocaleState] = useState<Locale>('en');
+
+  useEffect(() => {
+    const storedLocale = localStorage.getItem('nepal-najar-locale') as Locale | null;
+    if (storedLocale === 'en' || storedLocale === 'ne') {
+      setLocaleState(storedLocale);
     }
-    return 'en';
-  });
+  }, []);
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);

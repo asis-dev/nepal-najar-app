@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   Clock,
@@ -27,11 +28,11 @@ import {
 /* ═══════════════════════════════════════════
    STATUS BADGE CONFIG
    ═══════════════════════════════════════════ */
-const statusStyles: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-  not_started: { bg: 'bg-gray-500/15', text: 'text-gray-400', dot: 'bg-gray-400', label: 'Not Started' },
-  in_progress: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', dot: 'bg-emerald-400', label: 'In Progress' },
-  delivered:   { bg: 'bg-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400', label: 'Delivered' },
-  stalled:     { bg: 'bg-red-500/15', text: 'text-red-400', dot: 'bg-red-400', label: 'Stalled' },
+const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
+  not_started: { bg: 'bg-gray-500/15', text: 'text-gray-400', dot: 'bg-gray-400' },
+  in_progress: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', dot: 'bg-emerald-400' },
+  delivered:   { bg: 'bg-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400' },
+  stalled:     { bg: 'bg-red-500/15', text: 'text-red-400', dot: 'bg-red-400' },
 };
 
 /* ═══════════════════════════════════════════
@@ -92,10 +93,12 @@ function StatPill({
 /* ═══════════════════════════════════════════
    TIME AGO HELPER
    ═══════════════════════════════════════════ */
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, nowMs: number | null): string {
+  if (nowMs === null) {
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
   const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+  const diffMs = nowMs - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   if (diffMins < 60) return `${diffMins}m ago`;
   const diffHours = Math.floor(diffMins / 60);
@@ -110,6 +113,7 @@ function timeAgo(dateStr: string): string {
    ═══════════════════════════════════════════ */
 export default function ExplorePage() {
   const { locale, t } = useI18n();
+  const [nowMs, setNowMs] = useState<number | null>(null);
   const { stats, isLoading: statsLoading } = usePromiseStats();
   const { data: allPromises, isLoading: promisesLoading } = useAllPromises();
   const { data: articles, isLoading: articlesLoading } = useLatestArticles(10);
@@ -118,11 +122,23 @@ export default function ExplorePage() {
   const district = usePreferencesStore((s) => s.district);
   const setShowPicker = usePreferencesStore((s) => s.setShowPicker);
 
-  // Balen countdown
-  const inaugurationDate = new Date('2026-04-01');
-  const today = new Date();
-  const diffTime = inaugurationDate.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // Translated status labels
+  const statusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      not_started: t('commitment.notStarted'),
+      in_progress: t('commitment.inProgress'),
+      delivered: t('commitment.delivered'),
+      stalled: t('commitment.stalled'),
+    };
+    return labels[status] ?? status;
+  };
+
+  useEffect(() => {
+    setNowMs(Date.now());
+  }, []);
+
+  const inaugurationTime = new Date('2026-04-01').getTime();
+  const diffDays = nowMs === null ? 0 : Math.ceil((inaugurationTime - nowMs) / (1000 * 60 * 60 * 24));
   const isBeforeInauguration = diffDays > 0;
 
   // Featured promises — pick 4 with most evidence (real article matches)
@@ -152,50 +168,50 @@ export default function ExplorePage() {
           <>
             Nepal Najar
             <span className="h-1 w-1 rounded-full bg-white/40" />
-            <span className="text-gray-500">Track promises, projects, and updates</span>
+            <span className="text-gray-500">{t('commitment.tagline')}</span>
           </>
         }
-        title="See what Nepal is building, what is moving, and what is stuck."
-        description="Browse Nepal by sector, signals, and local relevance. Official, discovered, public, and inferred data stay separate so trust stays visible."
+        title={t('explore.title')}
+        description={t('explore.description')}
         aside={
           <div className="space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Right now</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('explore.rightNow')}</p>
               <p className="mt-2 text-sm leading-6 text-gray-400">
-                Start with the biggest changes, then set your area so the rest of Nepal Najar feels personal.
+                {t('explore.startWith')}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <StatPill
                 icon={<Eye className="w-4 h-4" />}
-                label="Promises"
+                label={t('explore.promises')}
                 value={stats?.total ?? '--'}
                 loading={statsLoading}
               />
               <StatPill
                 icon={<Newspaper className="w-4 h-4" />}
-                label="Articles"
+                label={t('explore.articles')}
                 value={articleCount ?? 0}
                 loading={false}
                 accent="cyan"
               />
               <StatPill
                 icon={<Users className="w-4 h-4" />}
-                label="Delivered"
+                label={t('explore.delivered')}
                 value={stats?.delivered ?? '--'}
                 loading={statsLoading}
                 accent="emerald"
               />
             </div>
             <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Local pulse</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('explore.localPulse')}</p>
               <p className="mt-2 text-base font-medium text-white">
-                {district ? `${district}, ${province}` : 'Choose your district'}
+                {district ? `${district}, ${province}` : t('explore.chooseDistrict')}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-gray-400">
                 {district
-                  ? 'Use My Area to keep this district at the center of your feed, scores, and accountability pages.'
-                  : 'Choose a province and district to make daily updates and local scorecards feel more relevant.'}
+                  ? t('explore.useMyArea')
+                  : t('explore.chooseProvince')}
               </p>
             </div>
           </div>
@@ -204,22 +220,22 @@ export default function ExplorePage() {
           <>
             <Link href="/daily" className="metric-chip justify-center hover:bg-white/[0.07]">
               <CalendarDays className="h-4 w-4 text-primary-300" />
-              What changed today
+              {t('explore.whatChangedToday')}
             </Link>
             <button
               onClick={() => setShowPicker(true)}
               className="metric-chip justify-center hover:bg-white/[0.07]"
             >
               <MapPin className="h-4 w-4 text-cyan-300" />
-              {district ? `${district}, ${province}` : 'Set my area'}
+              {district ? `${district}, ${province}` : t('explore.setMyArea')}
             </button>
             <Link href="/explore/government" className="metric-chip justify-center hover:bg-white/[0.07]">
               <Sparkles className="h-4 w-4 text-nepal-red" />
-              Who owns delivery
+              {t('explore.whoOwns')}
             </Link>
             <Link href="/report-card" className="metric-chip justify-center hover:bg-white/[0.07]">
               <ArrowRight className="h-4 w-4 text-emerald-300" />
-              Weekly report card
+              {t('explore.weeklyReportCard')}
             </Link>
           </>
         }
@@ -248,7 +264,7 @@ export default function ExplorePage() {
               </h2>
               <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04]">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-300">Latest</span>
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-300">{t('explore.latest')}</span>
               </span>
             </div>
           </div>
@@ -270,10 +286,10 @@ export default function ExplorePage() {
                   article.source_type === 'government' ? 'Official' : 'Discovered';
                 const classLabel =
                   article.classification === 'confirms'
-                    ? 'Confirms'
+                    ? t('news.confirms')
                     : article.classification === 'contradicts'
-                      ? 'Contradicts'
-                      : 'Related';
+                      ? t('news.contradicts')
+                      : t('news.neutral');
 
                 return (
                   <div
@@ -301,7 +317,7 @@ export default function ExplorePage() {
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-gray-500">{article.source_name}</span>
                             <span className={`rounded-full border px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider ${laneBadgeStyles[lane]}`}>
-                              {lane}
+                              {t(`signal.${lane.toLowerCase()}`)}
                             </span>
                             {article.confidence > 0 && (
                               <span className="text-[10px] text-gray-600">
@@ -311,7 +327,7 @@ export default function ExplorePage() {
                           </div>
                         </div>
                         <span className="text-xs text-gray-600 whitespace-nowrap flex-shrink-0">
-                          {timeAgo(article.scraped_at)}
+                          {timeAgo(article.scraped_at, nowMs)}
                         </span>
                       </div>
                       {article.content_excerpt && (
@@ -325,7 +341,7 @@ export default function ExplorePage() {
               })
             ) : (
               <div className="p-8 text-center text-gray-500 text-sm">
-                No articles scraped yet. Run the scraper from the admin panel to populate real data.
+                {t('explore.noArticles')}
               </div>
             )}
           </div>
@@ -399,7 +415,7 @@ export default function ExplorePage() {
                       {district || province}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      See what&apos;s happening in your area
+                      {t('explore.seeWhatsHappening')}
                     </p>
                   </div>
                 </div>
@@ -415,15 +431,15 @@ export default function ExplorePage() {
                   </div>
                   <div>
                     <h3 className="text-base font-semibold text-white">
-                      What&apos;s happening in your district?
+                      {t('explore.whatsHappeningDistrict')}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Set your hometown to see local updates
+                      {t('explore.setHometown')}
                     </p>
                   </div>
                 </div>
                 <span className="text-xs font-medium text-primary-400 border border-primary-500/20 rounded-lg px-3 py-1.5">
-                  Set Location
+                  {t('explore.setLocation')}
                 </span>
               </div>
             </button>
@@ -483,13 +499,13 @@ export default function ExplorePage() {
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                          {style.label}
+                          {statusLabel(promise.status)}
                         </span>
                         <SignalBadge type={promise.signalType} compact />
                       </div>
                       {promise.evidenceCount > 0 && (
                         <span className="text-xs text-cyan-500/70">
-                          {promise.evidenceCount} articles
+                          {promise.evidenceCount} {t('explore.articles').toLowerCase()}
                         </span>
                       )}
                     </div>
@@ -507,12 +523,12 @@ export default function ExplorePage() {
                       <div className="mb-4">
                         <div className="flex items-center gap-1.5 text-[10px] text-cyan-500/60">
                           <div className="w-1.5 h-1.5 rounded-full bg-cyan-500/40" />
-                          {promise.evidenceCount} article{promise.evidenceCount !== 1 ? 's' : ''} matched
+                          {promise.evidenceCount} {t('explore.articlesMatched')}
                         </div>
                       </div>
                     ) : (
                       <div className="mb-4">
-                        <span className="text-[10px] text-gray-600 italic">Awaiting evidence</span>
+                        <span className="text-[10px] text-gray-600 italic">{t('explore.awaitingEvidence')}</span>
                       </div>
                     )}
 
@@ -520,7 +536,7 @@ export default function ExplorePage() {
                     <div className="mt-auto flex items-center justify-between text-xs text-gray-500">
                       <span>{promise.category}</span>
                       <span className={promise.status === 'not_started' ? 'text-gray-600 italic' : ''}>
-                        {promise.status === 'not_started' ? 'Not yet tracked' : style.label}
+                        {promise.status === 'not_started' ? t('explore.notYetTracked') : statusLabel(promise.status)}
                       </span>
                     </div>
                   </Link>
@@ -539,13 +555,13 @@ export default function ExplorePage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
               <MapPin className="w-5 h-5 text-cyan-400" />
-              Promises by Sector
+              {t('explore.promisesBySector')}
             </h2>
             <Link
               href="/explore/first-100-days"
               className="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1 transition-colors"
             >
-              View All
+              {t('explore.viewAll')}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -578,16 +594,16 @@ export default function ExplorePage() {
                     </span>
                     <div className="flex items-center gap-6 text-xs">
                       <span className="text-gray-400">
-                        {cat.total} promises
+                        {cat.total} {t('map.promises')}
                       </span>
                       {cat.inProgress > 0 && (
                         <span className="text-emerald-400">
-                          {cat.inProgress} active
+                          {cat.inProgress} {t('explore.active')}
                         </span>
                       )}
                       {cat.stalled > 0 && (
                         <span className="text-red-400">
-                          {cat.stalled} stalled
+                          {cat.stalled} {t('explore.stalled')}
                         </span>
                       )}
                       <ArrowRight className="w-3.5 h-3.5 text-gray-600" />
