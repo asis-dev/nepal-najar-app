@@ -181,7 +181,7 @@ export default function ExplorePage() {
                 {t('explore.startWith')}
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               <StatPill
                 icon={<Eye className="w-4 h-4" />}
                 label={t('explore.promises')}

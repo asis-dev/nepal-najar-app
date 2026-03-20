@@ -39,7 +39,7 @@ export function TransparencyScoreSection({ score }: TransparencyScoreProps) {
   const grade = getGradeConfig(score.overall);
 
   // SVG ring
-  const size = 160;
+  const size = 144;
   const strokeWidth = 10;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -47,18 +47,18 @@ export function TransparencyScoreSection({ score }: TransparencyScoreProps) {
   const dashOffset = circumference - progress;
 
   return (
-    <div className="glass-card p-6">
-      <div className="flex items-center gap-2 mb-5">
+    <div className="glass-card p-5 sm:p-6">
+      <div className="mb-5 flex items-center gap-2">
         <Shield className="w-5 h-5 text-primary-400" />
-        <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-300">
           {t('accountability.transparencyScore')}
         </h3>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-6">
-        {/* Ring */}
-        <div className="relative flex-shrink-0">
-          <svg width={size} height={size} className="transform -rotate-90">
+      <div className="grid gap-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
+        <div className="mx-auto w-full max-w-[144px]">
+          <div className="relative aspect-square">
+          <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full -rotate-90 transform">
             <circle
               cx={size / 2}
               cy={size / 2}
@@ -84,30 +84,31 @@ export function TransparencyScoreSection({ score }: TransparencyScoreProps) {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-bold text-white">{score.overall}</span>
+            <span className="text-3xl font-bold text-white sm:text-4xl">{score.overall}</span>
             <span className="text-xs text-gray-500">/100</span>
           </div>
         </div>
+        </div>
 
-        {/* Grade + Sub-scores */}
-        <div className="flex-1 w-full">
-          {/* Grade badge */}
-          <div className="flex items-center gap-2 mb-4">
-            <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold ${grade.bg} ${grade.text}`}>
-              {grade.letter} — {t(grade.labelKey)}
+        <div className="w-full min-w-0">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className={`inline-flex rounded-lg px-3 py-1 text-xs font-bold ${grade.bg} ${grade.text}`}>
+              {grade.letter}
+            </span>
+            <span className="text-sm font-medium text-gray-300">
+              {t(grade.labelKey)}
             </span>
           </div>
 
-          {/* Sub-scores */}
           <div className="space-y-2.5">
             {SUB_SCORES.map(({ key, color, labelKey }) => {
               const value = score[key];
               return (
-                <div key={key} className="flex items-center gap-3">
-                  <span className="text-[10px] text-gray-500 w-32 truncate uppercase tracking-wider">
+                <div key={key} className="grid gap-1.5 sm:grid-cols-[minmax(0,132px)_minmax(0,1fr)_36px] sm:items-center sm:gap-3">
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500 sm:truncate">
                     {t(labelKey)}
                   </span>
-                  <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
                     <div
                       className="h-full rounded-full transition-all duration-1000 ease-out"
                       style={{
@@ -117,7 +118,7 @@ export function TransparencyScoreSection({ score }: TransparencyScoreProps) {
                       }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-gray-400 w-8 text-right tabular-nums">
+                  <span className="text-xs font-medium text-gray-400 sm:text-right tabular-nums">
                     {value}
                   </span>
                 </div>

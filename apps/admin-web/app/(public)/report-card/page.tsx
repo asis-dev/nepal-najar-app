@@ -108,7 +108,7 @@ export default function ReportCardPage() {
                 <p className="text-xs uppercase tracking-[0.18em] text-gray-500">
                   {isNe ? 'यो हप्ता' : 'This week'}
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-3">
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-center">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
                       {t('accountability.whatsWorking')}
@@ -212,7 +212,7 @@ export default function ReportCardPage() {
         <section className="public-section pt-0">
           <div className="public-shell">
             <div className="mx-auto max-w-4xl">
-              <div className="mb-6 grid grid-cols-3 gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-1.5">
+              <div className="mb-6 grid gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-1.5 sm:grid-cols-3">
               {TABS.map(({ id, icon: Icon, labelKey }) => (
                 <button
                   key={id}

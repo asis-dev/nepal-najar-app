@@ -10,10 +10,12 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-np-base text-gray-100 antialiased;
+    overflow-x: hidden;
     background-image:
       radial-gradient(circle at top left, rgba(0, 56, 147, 0.12), transparent 24%),
       radial-gradient(circle at top right, rgba(220, 20, 60, 0.07), transparent 22%),
@@ -242,7 +244,7 @@
   }
 
   .public-page {
-    @apply relative z-10 min-h-screen pb-10 sm:pb-14;
+    @apply relative z-10 min-h-screen overflow-x-clip pb-10 sm:pb-14;
   }
 
   .public-section {
