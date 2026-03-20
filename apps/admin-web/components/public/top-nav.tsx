@@ -16,6 +16,8 @@ import {
   ClipboardCheck,
   FolderKanban,
   TimerReset,
+  BarChart3,
+  Search,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
@@ -26,12 +28,14 @@ const primaryNavLinks = [
   { href: '/explore/map', labelKey: 'nav.map', icon: Map },
   { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
   { href: '/daily', labelKey: 'nav.daily', icon: Calendar },
+  { href: '/explore/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
   { href: '/mero-ward', labelKey: 'nav.myArea', icon: MapPinHouse },
 ];
 
 const mobileOnlyLinks = [
   { href: '/explore/projects', labelKey: 'nav.projects', icon: FolderKanban },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
+  { href: '/search', labelKey: 'nav.search', icon: Search },
 ];
 
 export function TopNav() {
@@ -78,6 +82,13 @@ export function TopNav() {
           </div>
 
           <div className="hidden items-center justify-end gap-2 md:flex">
+            <Link
+              href="/search"
+              className="flex items-center justify-center rounded-xl border border-white/[0.08] p-2 text-gray-400 transition-colors hover:border-white/[0.15] hover:text-gray-200"
+              aria-label="Search"
+            >
+              <Search className="h-4 w-4" />
+            </Link>
             <button
               onClick={toggleLang}
               className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] px-3 py-1.5 text-sm text-gray-400 transition-colors hover:border-white/[0.15] hover:text-gray-200"

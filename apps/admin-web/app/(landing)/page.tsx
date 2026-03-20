@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import {
   ArrowRight,
@@ -32,8 +33,8 @@ const NepalGlobe = dynamic(
   },
 );
 
-const Nepal3DMap = dynamic(
-  () => import('@/components/map/nepal-3d-map').then((m) => ({ default: m.Nepal3DMap })),
+const MapFallback = dynamic(
+  () => import('@/components/map/map-fallback').then((m) => ({ default: m.MapFallback })),
   {
     ssr: false,
     loading: () => <div className="h-full w-full rounded-[1.75rem] bg-white/[0.03]" />,
@@ -141,6 +142,7 @@ function LandingStat({
 
 export default function LandingPage() {
   const { t } = useI18n();
+  const router = useRouter();
   const setShowPicker = usePreferencesStore((s) => s.setShowPicker);
   const { stats, isLoading: statsLoading } = usePromiseStats();
   const { data: latestArticles, isLoading: articlesLoading } = useLatestArticles(3);
@@ -319,7 +321,7 @@ export default function LandingPage() {
                 <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_270px]">
                   <div className="overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_45%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))]">
                     <div className="h-[360px] w-full">
-                      <Nepal3DMap
+                      <MapFallback
                         regionData={provinceOverview.map((province) => ({
                           name: province.name,
                           total: province.total,
@@ -328,7 +330,10 @@ export default function LandingPage() {
                           progress: province.progress,
                         }))}
                         selectedProvince={selectedProvince}
-                        onProvinceClick={setSelectedProvince}
+                        onProvinceClick={(name: string) => {
+                          setSelectedProvince(name);
+                          router.push(`/explore/map?province=${encodeURIComponent(name)}`);
+                        }}
                       />
                     </div>
                   </div>
@@ -366,12 +371,13 @@ export default function LandingPage() {
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         {selectedProvinceData.focus.map((item) => (
-                          <span
+                          <Link
                             key={item}
-                            className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs text-gray-300"
+                            href={`/explore/map?province=${encodeURIComponent(selectedProvince)}&category=${encodeURIComponent(item)}`}
+                            className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white hover:border-primary-500/30 transition-all cursor-pointer"
                           >
                             {item}
-                          </span>
+                          </Link>
                         ))}
                       </div>
                     </div>

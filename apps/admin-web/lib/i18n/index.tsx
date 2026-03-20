@@ -19,7 +19,7 @@ const messages: Record<Locale, Messages> = { en, ne };
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nContextType | null>(null);
@@ -42,14 +42,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string): string => {
+    (key: string, vars?: Record<string, string | number>): string => {
       const keys = key.split('.');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let value: any = messages[locale];
       for (const k of keys) {
         value = value?.[k];
       }
-      return typeof value === 'string' ? value : key;
+      if (typeof value !== 'string') return key;
+      if (vars) {
+        return value.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`));
+      }
+      return value;
     },
     [locale],
   );

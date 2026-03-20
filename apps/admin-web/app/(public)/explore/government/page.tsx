@@ -17,16 +17,9 @@ import {
 import { useAllPromises, usePromiseStats } from '@/lib/hooks/use-promises';
 import { useGovernmentStructure } from '@/lib/hooks/use-government-structure';
 import { PublicPageHero } from '@/components/public/page-hero';
+import { useI18n } from '@/lib/i18n';
 import type { PublicGovSnapshotUnit } from '@/lib/org-structure/engine';
 import type { PublicGovUnitType } from '@/lib/data/government-accountability';
-
-const typeLabels: Record<PublicGovUnitType, string> = {
-  country: 'Government',
-  ministry: 'Ministry',
-  department: 'Department',
-  division: 'Division',
-  office: 'Office',
-};
 
 const typeStyles: Record<PublicGovUnitType, string> = {
   country: 'border-blue-500/20 bg-blue-500/10 text-blue-300',
@@ -48,12 +41,18 @@ function TreeNode({
   onSelect,
   childrenByParent,
   level = 0,
+  locale,
+  t,
+  typeLabels,
 }: {
   unit: PublicGovSnapshotUnit;
   selectedId: string;
   onSelect: (id: string) => void;
   childrenByParent: Record<string, PublicGovSnapshotUnit[]>;
   level?: number;
+  locale: string;
+  t: (key: string) => string;
+  typeLabels: Record<PublicGovUnitType, string>;
 }) {
   const children = childrenByParent[unit.id] ?? [];
   const [expanded, setExpanded] = useState(level < 1);
@@ -82,8 +81,8 @@ function TreeNode({
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{unit.name}</p>
-          <p className="truncate text-xs text-gray-500">{unit.leadTitle}</p>
+          <p className="truncate text-sm font-medium">{locale === 'ne' ? unit.nameNe : unit.name}</p>
+          <p className="truncate text-xs text-gray-500">{locale === 'ne' ? unit.leadTitleNe : unit.leadTitle}</p>
         </div>
         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${typeStyles[unit.type]}`}>
           {typeLabels[unit.type]}
@@ -99,6 +98,9 @@ function TreeNode({
             onSelect={onSelect}
             childrenByParent={childrenByParent}
             level={level + 1}
+            locale={locale}
+            t={t}
+            typeLabels={typeLabels}
           />
         ))}
     </div>
@@ -106,11 +108,20 @@ function TreeNode({
 }
 
 export default function GovernmentPublicPage() {
+  const { locale, t } = useI18n();
   const { data: promises } = useAllPromises();
   const { stats } = usePromiseStats();
   const { data: governmentData, isLoading: governmentLoading } = useGovernmentStructure();
   const [selectedUnitId, setSelectedUnitId] = useState('country-nepal');
   const units = governmentData?.units ?? [];
+
+  const typeLabels: Record<PublicGovUnitType, string> = {
+    country: t('gov.typeCountry'),
+    ministry: t('gov.typeMinistry'),
+    department: t('gov.typeDepartment'),
+    division: t('gov.typeDivision'),
+    office: t('gov.typeOffice'),
+  };
 
   const selectedUnit =
     units.find((unit) => unit.id === selectedUnitId) ?? units[0];
@@ -137,10 +148,10 @@ export default function GovernmentPublicPage() {
   const verifiedCount = units.filter((unit) => unit.sourceMeta.sourceStatus === 'verified').length;
 
   const publicStats = [
-    { label: 'Tracked offices', value: units.length.toString() },
-    { label: 'Verified sources', value: verifiedCount.toString() },
-    { label: 'Promises linked', value: unitPromises.length.toString() },
-    { label: 'Delivered outcomes', value: deliveredCount.toString() },
+    { label: t('gov.trackedOffices'), value: units.length.toString() },
+    { label: t('gov.verifiedSources'), value: verifiedCount.toString() },
+    { label: t('gov.promisesLinked'), value: unitPromises.length.toString() },
+    { label: t('gov.deliveredOutcomes'), value: deliveredCount.toString() },
   ];
 
   if (!selectedUnit) {
@@ -150,10 +161,10 @@ export default function GovernmentPublicPage() {
           <div className="glass-card flex min-h-[320px] items-center justify-center p-8 text-center">
             <div>
               <p className="text-sm uppercase tracking-[0.18em] text-gray-500">
-                Government structure
+                {t('gov.govStructure')}
               </p>
               <p className="mt-3 text-lg text-white">
-                {governmentLoading ? 'Loading verified government structure...' : 'No government structure data available yet.'}
+                {governmentLoading ? t('gov.loading') : t('gov.noData')}
               </p>
             </div>
           </div>
@@ -168,17 +179,17 @@ export default function GovernmentPublicPage() {
         eyebrow={
           <>
             <ShieldCheck className="h-4 w-4" />
-            Who&apos;s Responsible
+            {t('gov.whosResponsible')}
           </>
         }
-        title="Government structure, roles, and public delivery"
-        description="See which ministry, department, division, or office owns each part of delivery, what they are responsible for, and what outcomes are already visible in public."
+        title={t('gov.pageTitle')}
+        description={t('gov.pageDesc')}
         aside={
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Verification status</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.verificationStatus')}</p>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-                Last checked{' '}
+                {t('gov.lastChecked')}{' '}
                 <span className="font-medium text-white">
                   {new Date(
                     governmentData?.checkedAt ??
@@ -188,7 +199,7 @@ export default function GovernmentPublicPage() {
                 </span>
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-                {verifiedCount} of {units.length} sources verified from official pages
+                {verifiedCount} of {units.length} {t('gov.sourcesVerified')}
               </span>
             </div>
           </div>
@@ -207,8 +218,8 @@ export default function GovernmentPublicPage() {
         <div className="public-panel-grid">
           <div className="glass-card p-4">
             <div className="mb-3 px-2">
-              <h2 className="text-lg font-semibold text-white">Institution tree</h2>
-              <p className="mt-1 text-sm text-gray-500">Browse from government level down to office ownership.</p>
+              <h2 className="text-lg font-semibold text-white">{t('gov.institutionTree')}</h2>
+              <p className="mt-1 text-sm text-gray-500">{t('gov.browseDesc')}</p>
             </div>
 
             <div className="space-y-1">
@@ -219,6 +230,9 @@ export default function GovernmentPublicPage() {
                   selectedId={selectedUnit.id}
                   onSelect={setSelectedUnitId}
                   childrenByParent={childrenByParent}
+                  locale={locale}
+                  t={t}
+                  typeLabels={typeLabels}
                 />
               ))}
             </div>
@@ -232,34 +246,34 @@ export default function GovernmentPublicPage() {
                     {typeLabels[selectedUnit.type]}
                   </div>
                   <h2 className="mt-3 text-3xl font-display font-bold text-white">
-                    {selectedUnit.name}
+                    {locale === 'ne' ? selectedUnit.nameNe : selectedUnit.name}
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-400">
-                    {selectedUnit.responsibility}
+                    {locale === 'ne' ? selectedUnit.responsibilityNe : selectedUnit.responsibility}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-gray-300">
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Lead responsibility</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.leadResponsibility')}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <UserRound className="h-4 w-4 text-gray-400" />
-                    <span>{selectedUnit.leadTitle}</span>
+                    <span>{locale === 'ne' ? selectedUnit.leadTitleNe : selectedUnit.leadTitle}</span>
                   </div>
-                  <p className="mt-1 font-medium text-white">{selectedUnit.leadName}</p>
+                  <p className="mt-1 font-medium text-white">{locale === 'ne' ? selectedUnit.leadNameNe : selectedUnit.leadName}</p>
                 </div>
               </div>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Scope</p>
-                  <p className="mt-2 text-sm text-white">{selectedUnit.scope}</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.scope')}</p>
+                  <p className="mt-2 text-sm text-white">{locale === 'ne' ? selectedUnit.scopeNe : selectedUnit.scope}</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Promises linked</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.promisesLinked')}</p>
                   <p className="mt-2 text-2xl font-bold text-white">{unitPromises.length}</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Delivered</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.delivered')}</p>
                   <p className="mt-2 text-2xl font-bold text-white">{deliveredCount}</p>
                 </div>
               </div>
@@ -267,7 +281,7 @@ export default function GovernmentPublicPage() {
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Official source check</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.sourceCheck')}</p>
                     <div className="mt-2 flex items-center gap-2">
                       {selectedUnit.sourceMeta.sourceStatus === 'verified' ? (
                         <CheckCircle2 className="h-4 w-4 text-emerald-400" />
@@ -276,8 +290,8 @@ export default function GovernmentPublicPage() {
                       )}
                       <p className="text-sm font-medium text-white">
                         {selectedUnit.sourceMeta.sourceStatus === 'verified'
-                          ? 'Verified against official public source'
-                          : 'Using curated fallback until source verification succeeds'}
+                          ? t('gov.verified')
+                          : t('gov.fallback')}
                       </p>
                     </div>
                   </div>
@@ -287,7 +301,7 @@ export default function GovernmentPublicPage() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:bg-white/[0.08]"
                   >
-                    Open source
+                    {t('gov.openSource')}
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </div>
@@ -324,11 +338,11 @@ export default function GovernmentPublicPage() {
               <div className="glass-card p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-white">Owned work</h3>
-                    <p className="mt-1 text-sm text-gray-500">Promises and tracked work currently tied to this institution.</p>
+                    <h3 className="text-lg font-semibold text-white">{t('gov.ownedWork')}</h3>
+                    <p className="mt-1 text-sm text-gray-500">{t('gov.ownedWorkDesc')}</p>
                   </div>
                   <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-gray-300">
-                    {unitPromises.length} items
+                    {unitPromises.length} {t('gov.items')}
                   </span>
                 </div>
 
@@ -342,7 +356,7 @@ export default function GovernmentPublicPage() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-white">{promise.title}</p>
                         <p className="mt-1 text-xs text-gray-500">
-                          {promise.category} · {promise.progress}% progress
+                          {promise.category} · {promise.progress}% {t('gov.progress')}
                         </p>
                       </div>
                       <ArrowRight className="h-4 w-4 flex-shrink-0 text-gray-500" />
@@ -351,7 +365,7 @@ export default function GovernmentPublicPage() {
 
                   {unitPromises.length === 0 && (
                     <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-5 text-sm text-gray-500">
-                      No linked public promises are mapped to this office yet.
+                      {t('gov.noLinkedPromises')}
                     </div>
                   )}
                 </div>
@@ -360,7 +374,7 @@ export default function GovernmentPublicPage() {
               <div className="glass-card p-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                  <h3 className="text-lg font-semibold text-white">What this office has achieved</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('gov.achievements')}</h3>
                 </div>
 
                 <div className="mt-5 space-y-3">
@@ -386,7 +400,7 @@ export default function GovernmentPublicPage() {
               <div className="glass-card p-6">
                 <div className="flex items-center gap-2">
                   <BriefcaseBusiness className="h-5 w-5 text-gray-300" />
-                  <h3 className="text-lg font-semibold text-white">Tracked responsibilities</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('gov.trackedResponsibilities')}</h3>
                 </div>
                 <ul className="mt-4 space-y-3 text-sm text-gray-400">
                   {selectedUnit.trackedProjects.map((item) => (
@@ -400,26 +414,26 @@ export default function GovernmentPublicPage() {
               <div className="glass-card p-6">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-gray-300" />
-                  <h3 className="text-lg font-semibold text-white">Delivery summary</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('gov.deliverySummary')}</h3>
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4 text-center">
-                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Delivered</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.delivered')}</p>
                     <p className="mt-2 text-3xl font-bold text-white">{deliveredCount}</p>
                   </div>
                   <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4 text-center">
-                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">In progress</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.inProgress')}</p>
                     <p className="mt-2 text-3xl font-bold text-white">{inProgressCount}</p>
                   </div>
                   <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4 text-center">
-                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Stalled</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('gov.stalled')}</p>
                     <p className="mt-2 text-3xl font-bold text-white">{stalledCount}</p>
                   </div>
                 </div>
 
                 <p className="mt-5 text-sm leading-relaxed text-gray-500">
-                  Public responsibility is shown by institution, not as a personal score. This page is meant to clarify ownership, ongoing work, and visible outcomes.
+                  {t('gov.publicResponsibility')}
                 </p>
               </div>
             </div>
@@ -428,7 +442,7 @@ export default function GovernmentPublicPage() {
 
         <div className="glass-card px-6 py-5">
           <p className="text-sm text-gray-400">
-            Total public promises currently tracked across Nepal Najar:
+            {t('gov.totalPromisesTracked')}
             <span className="ml-2 font-semibold text-white">{stats?.total ?? 0}</span>
           </p>
         </div>

@@ -57,7 +57,7 @@ Your job:
 4. Provide a brief 1-2 sentence summary
 5. Assign confidence scores (0-1) based on source reliability and specificity
 
-Respond in valid JSON only. No markdown, no explanation outside JSON.`;
+CRITICAL: Respond with ONLY valid JSON. No thinking, no explanation, no markdown. Just the raw JSON object. /no_think`;
 }
 
 /** Build the user prompt for a specific article */
@@ -142,7 +142,7 @@ export async function analyzeArticle(article: {
           { role: 'user', content: buildUserPrompt(article) },
         ],
         temperature: 0.1, // Low temp for factual extraction
-        max_tokens: 2500,
+        max_tokens: 4000, // Needs to be high for Qwen thinking + JSON output
         response_format: { type: 'json_object' },
       }),
       signal: AbortSignal.timeout(120000), // 120s timeout for local AI model
@@ -160,10 +160,18 @@ export async function analyzeArticle(article: {
       throw new Error('Empty AI response');
     }
 
-    // Parse JSON response — handle potential markdown wrapping
+    // Parse JSON response — handle markdown wrapping and Qwen thinking tags
     let jsonStr = content.trim();
+    // Strip Qwen thinking blocks: <think>...</think>
+    jsonStr = jsonStr.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    // Strip markdown code blocks
     if (jsonStr.startsWith('```')) {
       jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+    // Find JSON object if there's extra text
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
     }
 
     const parsed = JSON.parse(jsonStr) as ArticleAnalysis;

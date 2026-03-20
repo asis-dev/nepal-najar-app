@@ -1,12 +1,12 @@
 /**
  * Data access layer — abstracts static vs live data.
  *
- * Toggle: NEXT_PUBLIC_USE_LIVE_DATA=true in Vercel env vars to switch
- * from static TypeScript data to Supabase live data.
+ * Default: Supabase is used when NEXT_PUBLIC_SUPABASE_URL is configured.
+ * Set NEXT_PUBLIC_USE_LIVE_DATA=false to force static data (for local dev without Supabase).
  */
 import { promises as staticPromises, type GovernmentPromise } from './promises';
 
-const USE_LIVE_DATA = process.env.NEXT_PUBLIC_USE_LIVE_DATA === 'true';
+const USE_LIVE_DATA = process.env.NEXT_PUBLIC_USE_LIVE_DATA !== 'false';
 
 /**
  * Get all promises — from Supabase if live data is enabled, static fallback otherwise.

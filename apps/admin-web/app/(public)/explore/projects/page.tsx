@@ -12,11 +12,11 @@ import type { GovernmentPromise, PromiseStatus } from '@/lib/data/promises';
 
 const STATUS_FILTERS = ['all', 'in_progress', 'delivered', 'stalled', 'not_started'] as const;
 
-const STATUS_LABELS: Record<string, string> = {
-  in_progress: 'In Progress',
-  delivered: 'Delivered',
-  stalled: 'Stalled',
-  not_started: 'Not Started',
+const STATUS_KEYS: Record<string, string> = {
+  in_progress: 'commitment.inProgress',
+  delivered: 'commitment.delivered',
+  stalled: 'commitment.stalled',
+  not_started: 'commitment.notStarted',
 };
 
 const STATUS_STYLES: Record<string, { pill: string; bar: string }> = {
@@ -53,9 +53,10 @@ const CATEGORY_FILTERS = [
   'social',
 ] as const;
 
-function PromiseCard({ promise, locale }: { promise: GovernmentPromise; locale: string }) {
+function PromiseCard({ promise, locale, t }: { promise: GovernmentPromise; locale: string; t: (key: string, vars?: Record<string, string | number>) => string }) {
   const style = STATUS_STYLES[promise.status] ?? STATUS_STYLES.not_started;
   const progress = Math.round(promise.progress ?? 0);
+  const statusKey = STATUS_KEYS[promise.status];
 
   return (
     <Link
@@ -70,14 +71,14 @@ function PromiseCard({ promise, locale }: { promise: GovernmentPromise; locale: 
         <span
           className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${style.pill}`}
         >
-          {STATUS_LABELS[promise.status] ?? promise.status}
+          {statusKey ? t(statusKey) : promise.status}
         </span>
       </div>
 
       {/* Signal + category */}
       <div className="flex items-center gap-2 mb-4">
         <SignalBadge type={promise.signalType} compact />
-        <span className="text-xs text-gray-500 capitalize">{promise.category.replace(/_/g, ' ')}</span>
+        <span className="text-xs text-gray-500 capitalize">{t(`categoryName.${promise.category}`)}</span>
       </div>
 
       {/* Progress bar */}
@@ -118,7 +119,7 @@ function PromiseCard({ promise, locale }: { promise: GovernmentPromise; locale: 
       </div>
 
       <div className="mt-4 pt-4 border-t border-white/5 text-sm font-medium text-primary-400 group-hover:text-primary-300 transition-colors flex items-center gap-1">
-        View details <ArrowRight className="w-3.5 h-3.5" />
+        {t('projects.viewDetails')} <ArrowRight className="w-3.5 h-3.5" />
       </div>
     </Link>
   );
@@ -157,16 +158,16 @@ export default function ExploreProjectsPage() {
         eyebrow={
           <>
             <Eye className="h-4 w-4" />
-            Tracked delivery
+            {t('projects.trackedDelivery')}
           </>
         }
-        title="Government promises and linked delivery"
-        description={`${promises?.length ?? '--'} tracked promises from PM Balen's government. Filter by status or sector, then open a promise to see linked evidence, progress, and who owns delivery.`}
+        title={t('projects.title')}
+        description={t('projects.description')}
         aside={
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">How to use this page</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('projects.howToUse')}</p>
             <p className="mt-2 text-sm leading-relaxed text-gray-400">
-              Start broad, then narrow by status or sector. The strongest cards are the ones with evidence, recent updates, and accountable institutions attached.
+              {t('projects.howToUseDesc')}
             </p>
           </div>
         }
@@ -179,7 +180,7 @@ export default function ExploreProjectsPage() {
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
           <input
             type="text"
-            placeholder="Search promises..."
+            placeholder={t('projects.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-12 pr-4 text-white placeholder-white/30 backdrop-blur-md transition-colors focus:border-primary-500/50 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
@@ -187,7 +188,7 @@ export default function ExploreProjectsPage() {
             </div>
 
             <p className="text-sm leading-6 text-gray-400">
-              Search by sector, keyword, or promise title. Filters below update the grid immediately.
+              {t('projects.searchHint')}
             </p>
           </div>
         </div>
@@ -203,7 +204,7 @@ export default function ExploreProjectsPage() {
                   : 'border border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
               }`}
             >
-              {s === 'all' ? 'All' : STATUS_LABELS[s] ?? s}
+              {s === 'all' ? t('projects.allSectors') : (STATUS_KEYS[s] ? t(STATUS_KEYS[s]) : s)}
             </button>
           ))}
         </div>
@@ -219,7 +220,7 @@ export default function ExploreProjectsPage() {
                   : 'border border-white/8 text-gray-500 hover:text-gray-300'
               }`}
             >
-              {c === 'all' ? 'All Sectors' : c.replace(/_/g, ' ')}
+              {c === 'all' ? t('projects.allSectors') : t(`categoryName.${c}`)}
             </button>
           ))}
         </div>
@@ -234,14 +235,14 @@ export default function ExploreProjectsPage() {
         {/* Error */}
         {isError && (
           <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-6 text-center text-red-300">
-            Failed to load promises. Check your Supabase configuration.
+            {t('projects.loadError')}
           </div>
         )}
 
         {/* Empty state */}
         {!isLoading && !isError && filtered.length === 0 && (
           <div className="py-20 text-center text-white/40">
-            No promises match your filters.
+            {t('projects.noMatches')}
           </div>
         )}
 
@@ -249,11 +250,11 @@ export default function ExploreProjectsPage() {
         {!isLoading && filtered.length > 0 && (
           <>
             <p className="text-xs text-gray-500 mb-4 text-center">
-              Showing {filtered.length} of {promises?.length ?? 0} promises
+              {t('projects.showingCount', { count: filtered.length, total: promises?.length ?? 0 })}
             </p>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((promise) => (
-                <PromiseCard key={promise.id} promise={promise} locale={locale} />
+                <PromiseCard key={promise.id} promise={promise} locale={locale} t={t} />
               ))}
             </div>
           </>

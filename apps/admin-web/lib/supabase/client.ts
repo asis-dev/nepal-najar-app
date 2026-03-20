@@ -1,18 +1,29 @@
 /**
- * Supabase browser-safe client (anon key — read-only via RLS)
- * Safe to use in client components.
+ * Supabase browser client — cookie-based auth via @supabase/ssr.
+ * Safe to use in client components. Handles auth session automatically.
  */
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const hasPublicSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
-let supabasePublic: SupabaseClient | null = null;
+let _browserClient: SupabaseClient | null = null;
 
-if (hasPublicSupabaseConfig) {
-  supabasePublic = createClient(supabaseUrl!, supabaseAnonKey!);
+/** Get the singleton browser Supabase client (cookie-based auth) */
+export function createSupabaseBrowserClient(): SupabaseClient | null {
+  if (!hasPublicSupabaseConfig) return null;
+  if (_browserClient) return _browserClient;
+  _browserClient = createBrowserClient(supabaseUrl!, supabaseAnonKey!);
+  return _browserClient;
 }
 
-export { supabasePublic };
+/**
+ * Backwards-compatible export — used by hooks that read public data.
+ * This is the same client but accessible as a direct import.
+ */
+export const supabasePublic: SupabaseClient | null = hasPublicSupabaseConfig
+  ? createBrowserClient(supabaseUrl!, supabaseAnonKey!)
+  : null;

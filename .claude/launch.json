@@ -6,6 +6,8 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "-w", "@nepal-progress/admin-web", "dev"],
       "port": 3000,
+      "autoPort": true,
+      "cwd": "/Users/priyanka.shrestha/Desktop/nepal-progress",
       "env": {
         "PATH": "/Users/priyanka.shrestha/.nvm/versions/node/v20.20.0/bin:/usr/bin:/bin:/usr/sbin:/sbin"
       }

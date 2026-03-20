@@ -164,13 +164,9 @@ export default function DailyPage() {
         </div>
 
         <PublicPageHero
-          eyebrow={isNe ? 'दैनिक ट्रयाकर' : 'Daily tracker'}
-          title={isNe ? 'हरेक दिन एउटा सार्वजनिक वचन' : 'One public promise, every day'}
-          description={
-            isNe
-              ? 'आजको मुख्य वाचा, यसको प्रगति, र तपाईँले निरन्तर पछ्याइरहनुभएको छ कि छैन हेर्नुहोस्।'
-              : 'Check one important promise each day, see its progress, and build a habit around staying informed.'
-          }
+          eyebrow={t('dailyStreak.tracker')}
+          title={t('dailyStreak.onePromise')}
+          description={t('dailyStreak.description')}
           centered
         />
 
@@ -199,16 +195,16 @@ export default function DailyPage() {
                   </div>
 
                   <p className="mb-4 text-sm text-gray-400 sm:text-base">
-                    {isNe ? 'दिनको लगातार' : 'day streak'}
+                    {t('dailyStreak.streakCount')}
                   </p>
 
                   {longestStreak > 0 && (
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2">
                       <Trophy className="w-4 h-4 text-amber-400" />
                       <span className="text-xs text-gray-400">
-                        {isNe ? 'सबैभन्दा लामो:' : 'Longest:'}{' '}
+                        {t('dailyStreak.longest')}{' '}
                         <span className="font-semibold text-white">{longestStreak}</span>{' '}
-                        {isNe ? 'दिन' : 'days'}
+                        {t('dailyStreak.days')}
                       </span>
                     </div>
                   )}
@@ -225,7 +221,7 @@ export default function DailyPage() {
               <div className="flex items-center gap-2 mb-5">
                 <Target className="w-5 h-5 text-primary-400" />
                 <h2 className="text-lg font-semibold text-white">
-                  {isNe ? "आजको वचन" : "Today's Promise"}
+                  {t('dailyStreak.todaysPromise')}
                 </h2>
               </div>
 
@@ -278,11 +274,11 @@ export default function DailyPage() {
                 ) : (
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <p className="text-xs text-gray-500">
-                      {isNe ? 'प्रगति अझै प्रमाणित गरिएको छैन।' : 'No verified progress data yet.'}
+                      {t('dailyStreak.noProgress')}
                     </p>
                     {todayPromise.evidenceCount > 0 && (
                       <p className="text-[10px] text-cyan-500/60 mt-1">
-                        {todayPromise.evidenceCount} article{todayPromise.evidenceCount !== 1 ? 's' : ''} mention this promise
+                        {todayPromise.evidenceCount} {t('dailyStreak.articlesMention')}
                       </p>
                     )}
                   </div>
@@ -302,7 +298,7 @@ export default function DailyPage() {
               <div className="flex items-center gap-2 mb-5">
                 <Calendar className="w-5 h-5 text-cyan-400" />
                 <h2 className="text-base font-semibold text-white">
-                  {isNe ? '७ दिनको क्यालेन्डर' : '7-Day Calendar'}
+                  {t('dailyStreak.sevenDayCalendar')}
                 </h2>
               </div>
 
@@ -311,12 +307,19 @@ export default function DailyPage() {
                   const dayLabel = formatDateLabel(entry.date, isNe);
                   const isToday = entry.date === todayDateStr;
                   const isVisited = entry.date === lastVisitDate || isToday;
+                  // Format date for URL: ensure YYYY-MM-DD with zero-padded values
+                  const parts = entry.date.split('-').map(Number);
+                  const linkDate = `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
 
                   return (
-                    <div key={idx} className="flex flex-col items-center gap-1.5">
+                    <Link
+                      key={idx}
+                      href={isToday ? '/daily' : `/daily/${linkDate}`}
+                      className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                    >
                       <span className="text-[10px] text-gray-500">{dayLabel}</span>
                       <div
-                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 group-hover:border-primary-400 ${
                           isVisited
                             ? 'bg-emerald-500/20 border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                             : 'bg-white/[0.04] border-2 border-white/[0.08]'
@@ -330,10 +333,10 @@ export default function DailyPage() {
                       </div>
                       {isToday && (
                         <span className="text-[9px] text-primary-400 font-medium">
-                          {isNe ? 'आज' : 'Today'}
+                          {t('dailyStreak.today')}
                         </span>
                       )}
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -349,7 +352,7 @@ export default function DailyPage() {
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200 shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_25px_rgba(59,130,246,0.25)]"
             >
               <Share2 className="w-4 h-4" />
-              {isNe ? 'आफ्नो स्ट्रीक साझा गर्नुहोस्' : 'Share your streak'}
+              {t('dailyStreak.shareStreak')}
             </button>
           </div>
         </section>

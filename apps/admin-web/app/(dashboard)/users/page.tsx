@@ -1,138 +1,151 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Users, Search, Plus, Shield, X, ChevronRight,
-  Mail, Phone, Building2, Clock, CheckCircle, XCircle
+  Users, Search, Plus, Shield, X,
+  Mail, Phone, MapPin, Clock, Trash2, ShieldCheck, ShieldOff, Loader2,
 } from 'lucide-react';
 
-// --- Mock data ---
-interface UserRecord {
+// --- Types ---
+interface UserProfile {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
-  roles: string[];
-  govt_unit: string;
-  status: 'active' | 'inactive' | 'suspended';
-  verified: boolean;
+  display_name: string;
+  email: string | null;
+  phone: string | null;
+  role: 'citizen' | 'admin';
+  province: string | null;
+  district: string | null;
   created_at: string;
-  last_login: string;
-  activity: { action: string; date: string }[];
-  role_history: { role: string; assigned_at: string; assigned_by: string }[];
 }
 
-const mockUsers: UserRecord[] = [
-  {
-    id: '1', name: 'Ram Shrestha', email: 'ram.shrestha@gov.np', phone: '+977-9841234567',
-    roles: ['District Engineer', 'Project Manager'], govt_unit: 'District Engineering Office, Kathmandu',
-    status: 'active', verified: true, created_at: '2025-06-15', last_login: '2026-03-16',
-    activity: [
-      { action: 'Uploaded evidence for Kathmandu Expressway', date: '2026-03-14' },
-      { action: 'Updated milestone progress', date: '2026-03-12' },
-      { action: 'Submitted verification response', date: '2026-03-10' },
-    ],
-    role_history: [
-      { role: 'Project Manager', assigned_at: '2026-01-15', assigned_by: 'Admin User' },
-      { role: 'District Engineer', assigned_at: '2025-06-15', assigned_by: 'System' },
-    ],
-  },
-  {
-    id: '2', name: 'Sita Gurung', email: 'sita.gurung@mof.gov.np', phone: '+977-9852345678',
-    roles: ['Budget Officer'], govt_unit: 'Budget Division, MoF',
-    status: 'active', verified: true, created_at: '2025-08-22', last_login: '2026-03-15',
-    activity: [
-      { action: 'Released NPR 120M for Rural Electrification', date: '2026-03-13' },
-      { action: 'Updated FY 2082/83 allocations', date: '2026-03-08' },
-    ],
-    role_history: [
-      { role: 'Budget Officer', assigned_at: '2025-08-22', assigned_by: 'Admin User' },
-    ],
-  },
-  {
-    id: '3', name: 'Deepak Rai', email: 'deepak.rai@mopit.gov.np', phone: '+977-9863456789',
-    roles: ['Field Inspector'], govt_unit: 'Ministry of Physical Infrastructure',
-    status: 'active', verified: true, created_at: '2025-09-10', last_login: '2026-03-14',
-    activity: [
-      { action: 'Submitted inspection report for Koshi Bridge', date: '2026-03-10' },
-    ],
-    role_history: [
-      { role: 'Field Inspector', assigned_at: '2025-09-10', assigned_by: 'Admin User' },
-    ],
-  },
-  {
-    id: '4', name: 'Hari Thapa', email: 'hari.thapa@energy.gov.np', phone: '+977-9874567890',
-    roles: ['Project Manager'], govt_unit: 'Renewable Energy Authority',
-    status: 'active', verified: false, created_at: '2026-01-05', last_login: '2026-03-12',
-    activity: [],
-    role_history: [
-      { role: 'Project Manager', assigned_at: '2026-01-05', assigned_by: 'System' },
-    ],
-  },
-  {
-    id: '5', name: 'Anita Maharjan', email: 'anita.m@mopit.gov.np', phone: '+977-9885678901',
-    roles: ['Legal Advisor'], govt_unit: 'Ministry of Physical Infrastructure',
-    status: 'inactive', verified: true, created_at: '2025-07-20', last_login: '2026-02-01',
-    activity: [],
-    role_history: [
-      { role: 'Legal Advisor', assigned_at: '2025-07-20', assigned_by: 'Admin User' },
-    ],
-  },
-  {
-    id: '6', name: 'Binod KC', email: 'binod.kc@pmu.gov.np', phone: '+977-9896789012',
-    roles: ['Project Manager', 'District Engineer'], govt_unit: 'Project Management Unit',
-    status: 'active', verified: true, created_at: '2025-05-01', last_login: '2026-03-16',
-    activity: [
-      { action: 'Completed milestone for School Reconstruction', date: '2026-03-11' },
-      { action: 'Uploaded completion certificate', date: '2026-03-11' },
-    ],
-    role_history: [
-      { role: 'District Engineer', assigned_at: '2025-11-01', assigned_by: 'Admin User' },
-      { role: 'Project Manager', assigned_at: '2025-05-01', assigned_by: 'System' },
-    ],
-  },
-  {
-    id: '7', name: 'Sarita Lama', email: 'sarita.lama@env.gov.np', phone: '+977-9807890123',
-    roles: ['Environmental Officer'], govt_unit: 'Environmental Division',
-    status: 'suspended', verified: true, created_at: '2025-10-15', last_login: '2026-01-20',
-    activity: [],
-    role_history: [
-      { role: 'Environmental Officer', assigned_at: '2025-10-15', assigned_by: 'Admin User' },
-    ],
-  },
-];
+// --- API helpers ---
+async function fetchUsers(): Promise<UserProfile[]> {
+  const res = await fetch('/api/users');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Failed to fetch users');
+  }
+  return res.json();
+}
 
-const allRoles = ['Super Admin', 'Project Manager', 'District Engineer', 'Budget Officer', 'Field Inspector', 'Legal Advisor', 'Environmental Officer', 'Data Entry'];
+async function inviteUser(payload: { email: string; display_name: string }) {
+  const res = await fetch('/api/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Failed to invite user');
+  }
+  return res.json();
+}
 
-const statusBadge: Record<string, string> = {
-  active: 'badge-green',
-  inactive: 'badge-gray',
-  suspended: 'badge-red',
-};
+async function updateUserRole(id: string, role: 'citizen' | 'admin') {
+  const res = await fetch(`/api/users/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Failed to update role');
+  }
+  return res.json();
+}
 
+async function deleteUser(id: string) {
+  const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Failed to delete user');
+  }
+  return res.json();
+}
+
+// --- Page ---
 export default function UsersPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [roleTarget, setRoleTarget] = useState<UserRecord | null>(null);
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'citizen'>('all');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const filtered = mockUsers.filter((u) => {
-    if (search && !u.name.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false;
-    if (roleFilter !== 'all' && !u.roles.includes(roleFilter)) return false;
-    if (statusFilter !== 'all' && u.status !== statusFilter) return false;
+  // Fetch users
+  const { data: users = [], isLoading, error } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: fetchUsers,
+  });
+
+  // Mutations
+  const inviteMutation = useMutation({
+    mutationFn: inviteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setShowInviteModal(false);
+      setInviteEmail('');
+      setInviteName('');
+    },
+  });
+
+  const roleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: 'citizen' | 'admin' }) =>
+      updateUserRole(id, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setConfirmDelete(null);
+    },
+  });
+
+  // Filter
+  const filtered = users.filter((u) => {
+    if (search) {
+      const q = search.toLowerCase();
+      const matchesName = u.display_name?.toLowerCase().includes(q);
+      const matchesEmail = u.email?.toLowerCase().includes(q);
+      if (!matchesName && !matchesEmail) return false;
+    }
+    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
     return true;
   });
 
+  function formatDate(iso: string) {
+    try {
+      return new Date(iso).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return iso;
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-          <p className="text-gray-500 mt-1">Manage platform users, roles, and permissions</p>
+          <p className="text-gray-500 mt-1">
+            Manage platform users and roles
+            {!isLoading && <span className="ml-2 text-xs text-gray-400">({users.length} total)</span>}
+          </p>
         </div>
-        <button className="btn-primary flex items-center gap-2">
+        <button
+          className="btn-primary flex items-center gap-2"
+          onClick={() => setShowInviteModal(true)}
+        >
           <Plus className="w-4 h-4" />
           Invite User
         </button>
@@ -150,211 +163,275 @@ export default function UsersPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select className="input w-auto text-sm" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+        <select
+          className="input w-auto text-sm"
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value as 'all' | 'admin' | 'citizen')}
+        >
           <option value="all">All Roles</option>
-          {allRoles.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
-        <select className="input w-auto text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="all">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="suspended">Suspended</option>
+          <option value="admin">Admin</option>
+          <option value="citizen">Citizen</option>
         </select>
       </div>
+
+      {/* Error */}
+      {error && (
+        <div className="card p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+          {(error as Error).message}
+        </div>
+      )}
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="card p-12 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          <span className="ml-3 text-gray-500">Loading users...</span>
+        </div>
+      )}
 
       {/* Users Table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-6 py-3 font-medium text-gray-500">Name</th>
-                <th className="px-6 py-3 font-medium text-gray-500">Email</th>
-                <th className="px-6 py-3 font-medium text-gray-500">Phone</th>
-                <th className="px-6 py-3 font-medium text-gray-500">Roles</th>
-                <th className="px-6 py-3 font-medium text-gray-500">Govt Unit</th>
-                <th className="px-6 py-3 font-medium text-gray-500">Status</th>
-                <th className="px-6 py-3 font-medium text-gray-500">Verified</th>
-                <th className="px-6 py-3 font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-3">
-                    <button
-                      className="font-medium text-gray-900 hover:text-primary-600 transition-colors"
-                      onClick={() => setSelectedUser(user)}
-                    >
-                      {user.name}
-                    </button>
-                  </td>
-                  <td className="px-6 py-3 text-gray-600">{user.email}</td>
-                  <td className="px-6 py-3 text-gray-600">{user.phone}</td>
-                  <td className="px-6 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {user.roles.map((r) => (
-                        <span key={r} className="badge-blue text-[10px]">{r}</span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-3 text-gray-600 max-w-[200px] truncate">{user.govt_unit}</td>
-                  <td className="px-6 py-3">
-                    <span className={statusBadge[user.status]}>{user.status}</span>
-                  </td>
-                  <td className="px-6 py-3">
-                    {user.verified ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-gray-400" />
-                    )}
-                  </td>
-                  <td className="px-6 py-3">
-                    <button
-                      className="text-sm text-primary-600 hover:underline font-medium"
-                      onClick={() => { setRoleTarget(user); setShowRoleModal(true); }}
-                    >
-                      Assign Role
-                    </button>
-                  </td>
+      {!isLoading && (
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-left">
+                  <th className="px-6 py-3 font-medium text-gray-500">Name</th>
+                  <th className="px-6 py-3 font-medium text-gray-500">Email / Phone</th>
+                  <th className="px-6 py-3 font-medium text-gray-500">Role</th>
+                  <th className="px-6 py-3 font-medium text-gray-500">Province</th>
+                  <th className="px-6 py-3 font-medium text-gray-500">Joined</th>
+                  <th className="px-6 py-3 font-medium text-gray-500">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* User Detail Drawer */}
-      {selectedUser && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-          <div className="w-full max-w-md bg-white shadow-xl overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h3 className="text-lg font-semibold">User Details</h3>
-              <button onClick={() => setSelectedUser(null)} className="p-1 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Profile */}
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary-700">
-                    {selectedUser.name.split(' ').map((n) => n[0]).join('')}
-                  </span>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{selectedUser.name}</p>
-                  <span className={statusBadge[selectedUser.status]}>{selectedUser.status}</span>
-                </div>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-3 text-gray-600">
-                  <Mail className="w-4 h-4" />
-                  <span>{selectedUser.email}</span>
-                </div>
-                <div className="flex items-center gap-3 text-gray-600">
-                  <Phone className="w-4 h-4" />
-                  <span>{selectedUser.phone}</span>
-                </div>
-                <div className="flex items-center gap-3 text-gray-600">
-                  <Building2 className="w-4 h-4" />
-                  <span>{selectedUser.govt_unit}</span>
-                </div>
-                <div className="flex items-center gap-3 text-gray-600">
-                  <Clock className="w-4 h-4" />
-                  <span>Last login: {selectedUser.last_login}</span>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">Roles</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedUser.roles.map((r) => (
-                    <span key={r} className="badge-blue">{r}</span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Role History */}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">Role History</p>
-                <div className="space-y-2">
-                  {selectedUser.role_history.map((rh, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded-lg">
-                      <div>
-                        <span className="font-medium text-gray-900">{rh.role}</span>
-                        <p className="text-xs text-gray-500">by {rh.assigned_by}</p>
-                      </div>
-                      <span className="text-xs text-gray-400">{rh.assigned_at}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Activity Log */}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">Recent Activity</p>
-                {selectedUser.activity.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedUser.activity.map((a, i) => (
-                      <div key={i} className="flex items-start gap-3 text-sm">
-                        <div className="w-1.5 h-1.5 bg-primary-400 rounded-full mt-1.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-gray-700">{a.action}</p>
-                          <p className="text-xs text-gray-400">{a.date}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                      <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      {search || roleFilter !== 'all'
+                        ? 'No users match your filters'
+                        : 'No users yet'}
+                    </td>
+                  </tr>
                 ) : (
-                  <p className="text-sm text-gray-400">No recent activity</p>
+                  filtered.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-primary-700">
+                              {(user.display_name || '?')
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="font-medium text-gray-900">
+                            {user.display_name || '(no name)'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="space-y-0.5">
+                          {user.email && (
+                            <div className="flex items-center gap-1.5 text-gray-600">
+                              <Mail className="w-3.5 h-3.5" />
+                              <span>{user.email}</span>
+                            </div>
+                          )}
+                          {user.phone && (
+                            <div className="flex items-center gap-1.5 text-gray-600">
+                              <Phone className="w-3.5 h-3.5" />
+                              <span>{user.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        {user.role === 'admin' ? (
+                          <span className="badge-blue flex items-center gap-1 w-fit">
+                            <Shield className="w-3 h-3" />
+                            Admin
+                          </span>
+                        ) : (
+                          <span className="badge-green w-fit">Citizen</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3">
+                        {user.province ? (
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <MapPin className="w-3.5 h-3.5" />
+                            <span>
+                              {user.province}
+                              {user.district ? `, ${user.district}` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">--</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-1.5 text-gray-500">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{formatDate(user.created_at)}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          {/* Toggle role */}
+                          {user.role === 'citizen' ? (
+                            <button
+                              className="text-xs font-medium text-primary-600 hover:text-primary-800 flex items-center gap-1 disabled:opacity-50"
+                              title="Promote to admin"
+                              disabled={roleMutation.isPending}
+                              onClick={() => roleMutation.mutate({ id: user.id, role: 'admin' })}
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              Promote
+                            </button>
+                          ) : (
+                            <button
+                              className="text-xs font-medium text-amber-600 hover:text-amber-800 flex items-center gap-1 disabled:opacity-50"
+                              title="Demote to citizen"
+                              disabled={roleMutation.isPending}
+                              onClick={() => roleMutation.mutate({ id: user.id, role: 'citizen' })}
+                            >
+                              <ShieldOff className="w-3.5 h-3.5" />
+                              Demote
+                            </button>
+                          )}
+
+                          {/* Delete */}
+                          {confirmDelete === user.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                className="text-xs font-medium text-red-600 hover:text-red-800 disabled:opacity-50"
+                                disabled={deleteMutation.isPending}
+                                onClick={() => deleteMutation.mutate(user.id)}
+                              >
+                                {deleteMutation.isPending ? 'Deleting...' : 'Confirm'}
+                              </button>
+                              <button
+                                className="text-xs text-gray-400 hover:text-gray-600"
+                                onClick={() => setConfirmDelete(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              className="text-xs font-medium text-red-500 hover:text-red-700 flex items-center gap-1"
+                              title="Delete user"
+                              onClick={() => setConfirmDelete(user.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Assign Role Modal */}
-      {showRoleModal && roleTarget && (
+      {/* Invite User Modal */}
+      {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Assign Role</h3>
-              <button onClick={() => { setShowRoleModal(false); setRoleTarget(null); }} className="p-1 hover:bg-gray-100 rounded-lg">
+              <h3 className="text-lg font-semibold">Invite User</h3>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setInviteEmail('');
+                  setInviteName('');
+                  inviteMutation.reset();
+                }}
+                className="p-1 hover:bg-gray-100 rounded-lg"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <p className="text-sm text-gray-600 mb-4">
-              Assign a role to <span className="font-medium text-gray-900">{roleTarget.name}</span>
+              Create a new user account. They will receive a confirmation email.
             </p>
 
-            <div className="space-y-2 mb-6">
-              {allRoles.map((role) => {
-                const hasRole = roleTarget.roles.includes(role);
-                return (
-                  <label
-                    key={role}
-                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      hasRole ? 'border-primary-300 bg-primary-50' : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input type="checkbox" defaultChecked={hasRole} className="w-4 h-4 accent-primary-600" />
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-900">{role}</span>
-                    </div>
-                  </label>
-                );
-              })}
+            {inviteMutation.isError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                {(inviteMutation.error as Error).message}
+              </div>
+            )}
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  className="input w-full"
+                  placeholder="user@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  className="input w-full"
+                  placeholder="Full name"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="btn-primary flex-1">Save Roles</button>
-              <button className="btn-secondary flex-1" onClick={() => { setShowRoleModal(false); setRoleTarget(null); }}>Cancel</button>
+              <button
+                className="btn-primary flex-1 flex items-center justify-center gap-2"
+                disabled={!inviteEmail || inviteMutation.isPending}
+                onClick={() =>
+                  inviteMutation.mutate({
+                    email: inviteEmail,
+                    display_name: inviteName,
+                  })
+                }
+              >
+                {inviteMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Create User
+                  </>
+                )}
+              </button>
+              <button
+                className="btn-secondary flex-1"
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setInviteEmail('');
+                  setInviteName('');
+                  inviteMutation.reset();
+                }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

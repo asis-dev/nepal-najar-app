@@ -1,143 +1,160 @@
 'use client';
 
-import { Mountain } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { Mountain, Mail, Phone, ArrowRight, ArrowLeft } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const { requestOtp, verifyOtp, isLoading, error, clearError } = useAuth();
+  const searchParams = useSearchParams();
+  const { signInWithOtp, verifyOtp, isLoading, error, clearError } = useAuth();
 
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState('');
+  const from = searchParams.get('from') || '/explore';
+  const callbackError = searchParams.get('error');
+
+  const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
+  const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
-  const [devOtp, setDevOtp] = useState<string | null>(null);
 
-  async function handleRequestOtp() {
+  const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+  const isPhoneInput = /^\+?\d{7,15}$/.test(identifier.replace(/\s/g, ''));
+  const isValid = isEmailInput || isPhoneInput;
+
+  async function handleSendOtp() {
     clearError();
     try {
-      const result = await requestOtp(phone);
-      // In dev mode the API returns the OTP so testers can log in
-      // without SMS/email. Auto-fill it for convenience.
-      if (result.devOtp) {
-        setOtp(result.devOtp);
-        setDevOtp(result.devOtp);
-      }
+      await signInWithOtp(identifier);
       setStep('otp');
-    } catch {
-      // error state is set inside the store
-    }
+    } catch { /* error set in store */ }
   }
 
-  async function handleVerifyOtp() {
+  async function handleVerify() {
     clearError();
     try {
-      await verifyOtp(phone, otp);
-      router.push('/');
-    } catch {
-      // error state is set inside the store
-    }
-  }
-
-  function handleBackToPhone() {
-    clearError();
-    setOtp('');
-    setStep('phone');
+      await verifyOtp(identifier, otp);
+      router.push(from);
+      router.refresh();
+    } catch { /* error set in store */ }
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-white rounded-2xl shadow-2xl p-8">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Mountain className="w-8 h-8 text-primary-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Nepal Najar</h1>
-          <p className="text-gray-500 mt-1">Admin Dashboard</p>
-        </div>
-
-        {/* Error banner */}
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        {step === 'phone' ? (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number or Email
-              </label>
-              <input
-                id="phone"
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && phone && handleRequestOtp()}
-                placeholder="+977 98XXXXXXXX or email@gov.np"
-                className="input"
-                disabled={isLoading}
-              />
-            </div>
-            <button
-              onClick={handleRequestOtp}
-              disabled={!phone || isLoading}
-              className="btn-primary w-full"
-            >
-              {isLoading ? 'Sending...' : 'Send OTP'}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 text-center">
-              Enter the code sent to <span className="font-medium">{phone}</span>
-            </p>
-            {devOtp && (
-              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm text-center">
-                <span className="font-medium">Dev Mode:</span> OTP auto-filled →{' '}
-                <span className="font-mono font-bold tracking-widest">{devOtp}</span>
-              </div>
-            )}
-            <div>
-              <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">
-                Verification Code
-              </label>
-              <input
-                id="otp"
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                onKeyDown={(e) => e.key === 'Enter' && otp.length === 6 && handleVerifyOtp()}
-                placeholder="Enter 6-digit code"
-                className="input text-center text-lg tracking-widest"
-                maxLength={6}
-                disabled={isLoading}
-              />
-            </div>
-            <button
-              onClick={handleVerifyOtp}
-              disabled={otp.length < 6 || isLoading}
-              className="btn-primary w-full"
-            >
-              {isLoading ? 'Verifying...' : 'Verify & Login'}
-            </button>
-            <button
-              onClick={handleBackToPhone}
-              disabled={isLoading}
-              className="text-sm text-primary-600 hover:text-primary-700 w-full text-center"
-            >
-              Change number
-            </button>
-          </div>
-        )}
+    <div className="min-h-screen bg-np-base flex items-center justify-center px-4">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary-500/[0.04] rounded-full blur-[120px]" />
       </div>
 
-      <p className="text-center text-blue-200/60 text-xs mt-6">
-        Government of Nepal - National Planning Commission
-      </p>
+      <div className="relative z-10 w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Mountain className="h-8 w-8 text-primary-400" />
+            <h1 className="text-2xl font-semibold text-white tracking-tight">
+              Nepal <span className="text-gradient-blue">Najar</span>
+            </h1>
+          </div>
+          <p className="text-sm text-gray-500">Sign in to participate</p>
+        </div>
+
+        <div className="glass-card p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center">
+              {isEmailInput ? <Mail className="w-5 h-5 text-primary-400" /> : <Phone className="w-5 h-5 text-primary-400" />}
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                {step === 'identifier' ? 'Sign In' : 'Verify Code'}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {step === 'identifier'
+                  ? 'Use your phone number or email'
+                  : `Code sent to ${identifier}`}
+              </p>
+            </div>
+          </div>
+
+          {(error || callbackError) && (
+            <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3">
+              <p className="text-xs text-red-300">{error || 'Authentication failed. Please try again.'}</p>
+            </div>
+          )}
+
+          {step === 'identifier' ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">Phone or Email</label>
+                <input
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && isValid && handleSendOtp()}
+                  placeholder="+977 98XXXXXXXX or you@email.com"
+                  className="input"
+                  autoFocus
+                  disabled={isLoading}
+                />
+              </div>
+              <button
+                onClick={handleSendOtp}
+                disabled={!isValid || isLoading}
+                className="btn-primary w-full flex items-center justify-center gap-2"
+              >
+                {isLoading ? <span className="animate-pulse">Sending code...</span> : <><span>Send OTP</span><ArrowRight className="w-4 h-4" /></>}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">Verification Code</label>
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onKeyDown={(e) => e.key === 'Enter' && otp.length === 6 && handleVerify()}
+                  placeholder="Enter 6-digit code"
+                  className="input text-center text-lg tracking-widest"
+                  maxLength={6}
+                  autoFocus
+                  disabled={isLoading}
+                />
+              </div>
+              <button
+                onClick={handleVerify}
+                disabled={otp.length < 6 || isLoading}
+                className="btn-primary w-full flex items-center justify-center gap-2"
+              >
+                {isLoading ? <span className="animate-pulse">Verifying...</span> : <><span>Verify &amp; Sign In</span><ArrowRight className="w-4 h-4" /></>}
+              </button>
+              <button
+                onClick={() => { clearError(); setOtp(''); setStep('identifier'); }}
+                disabled={isLoading}
+                className="text-sm text-gray-500 hover:text-primary-400 w-full text-center flex items-center justify-center gap-1"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Change {isEmailInput ? 'email' : 'number'}
+              </button>
+            </div>
+          )}
+
+          <div className="mt-6 pt-4 border-t border-white/[0.06]">
+            <a href="/explore" className="flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-primary-400 transition-colors">
+              <Mountain className="w-4 h-4" />
+              Continue as guest
+            </a>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-gray-600 mt-6">
+          Your vote matters. Sign in to make it count more.
+        </p>
+      </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-np-base flex items-center justify-center"><div className="glass-card px-6 py-5 text-center"><p className="text-sm font-medium text-white">Loading...</p></div></div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -12,7 +12,9 @@
     "first100Days": "पहिलो १०० दिन",
     "admin": "प्रशासन",
     "dashboard": "नियन्त्रण पाटी",
-    "operatorLogin": "सञ्चालक लगइन"
+    "operatorLogin": "सञ्चालक लगइन",
+    "analytics": "विश्लेषण",
+    "search": "खोज"
   },
   "hero": {
     "title": "नेपाल नजर",
@@ -523,6 +525,11 @@
     "showingCount": "{total} मध्ये {count} बाचा देखाउँदै",
     "viewDetails": "विवरण हेर्नुहोस्"
   },
+  "evidence": {
+    "strong": "बलियो प्रमाण",
+    "moderate": "मध्यम प्रमाण",
+    "weak": "कमजोर प्रमाण"
+  },
   "time": {
     "justNow": "भर्खरै",
     "minutesAgo": "{mins} मिनेट अघि",
@@ -531,5 +538,64 @@
     "daysAgo": "{days} दिन अघि",
     "weeksAgo": "{weeks} हप्ता अघि",
     "monthsAgo": "{months} महिना अघि"
+  },
+  "analytics": {
+    "title": "विश्लेषण ड्यासबोर्ड",
+    "subtitle": "सरकारी बाचा कार्यान्वयनमा डाटामा आधारित अन्तर्दृष्टि",
+    "overallProgress": "समग्र प्रगति",
+    "statusDistribution": "स्थिति वितरण",
+    "promisesByCategory": "वर्ग अनुसार बाचाहरू",
+    "avgProgressByCategory": "वर्ग अनुसार औसत प्रगति",
+    "evidenceCoverage": "प्रमाण कभरेज",
+    "provinceComparison": "प्रदेश तुलना",
+    "promises": "बाचाहरू",
+    "progress": "प्रगति",
+    "articles": "लेखहरू"
+  },
+  "searchPage": {
+    "title": "बाचाहरू खोज्नुहोस्",
+    "placeholder": "शीर्षक, वर्ग वा विवरणद्वारा खोज्नुहोस्...",
+    "noResults": "तपाईंको खोजसँग मिल्ने कुनै बाचा भेटिएन।",
+    "tryDifferent": "फरक खोज शब्द प्रयोग गर्नुहोस्।",
+    "results": "नतिजा"
+  },
+  "compare": {
+    "title": "बाचाहरू तुलना गर्नुहोस्",
+    "subtitle": "छानिएका बाचाहरूको अगाडि-पछाडि तुलना",
+    "empty": "तुलनाका लागि कुनै बाचा छानिएको छैन।",
+    "emptyDesc": "ट्र्याकर वा नक्सा पृष्ठबाट बाचाहरू थपेर तुलना गर्नुहोस्।",
+    "browsePromises": "बाचाहरू हेर्नुहोस्",
+    "remove": "हटाउनुहोस्",
+    "progress": "प्रगति",
+    "status": "स्थिति",
+    "category": "वर्ग",
+    "evidence": "प्रमाण",
+    "budget": "बजेट"
+  },
+  "export": {
+    "csv": "CSV निर्यात",
+    "pdf": "PDF निर्यात",
+    "title": "निर्यात"
+  },
+  "notifications": {
+    "title": "सूचना प्राथमिकताहरू",
+    "pushNotifications": "पुस सूचनाहरू",
+    "pushDesc": "बाचाको स्थिति परिवर्तन हुँदा सूचना पाउनुहोस्",
+    "emailAlerts": "इमेल अलर्ट",
+    "emailDesc": "हेरिरहेका बाचाहरूको इमेल अपडेट पाउनुहोस्",
+    "digestFrequency": "डाइजेस्ट आवृत्ति",
+    "weekly": "साप्ताहिक",
+    "monthly": "मासिक",
+    "never": "कहिल्यै पनि होइन",
+    "watchedProvinces": "हेरिएका प्रदेशहरू",
+    "save": "प्राथमिकता सुरक्षित गर्नुहोस्",
+    "saved": "प्राथमिकता सुरक्षित भयो!"
+  },
+  "breadcrumb": {
+    "home": "गृह",
+    "explore": "अन्वेषण",
+    "firstHundredDays": "पहिलो १०० दिन",
+    "daily": "दैनिक",
+    "analytics": "विश्लेषण"
   }
 }

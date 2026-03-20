@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   ArrowLeft,
+  ArrowRight,
   Shield,
   ShieldCheck,
   ShieldAlert,
@@ -32,7 +33,10 @@ import { useI18n } from '@/lib/i18n';
 import { VoteWidget } from '@/components/public/vote-widget';
 import { BudgetBreakdownCard } from '@/components/budget/budget-breakdown-card';
 import { SignalBadge } from '@/components/public/signal-badge';
+import { CommentsSection } from '@/components/public/comments-section';
+import { SubmitEvidenceModal } from '@/components/public/submit-evidence-modal';
 import { useWatchlistStore } from '@/lib/stores/preferences';
+import { useAuth } from '@/lib/hooks/use-auth';
 import {
   getPromiseBySlug,
   getPromiseById,
@@ -42,6 +46,8 @@ import {
   type GovernmentPromise,
 } from '@/lib/data/promises';
 import { useLatestArticles } from '@/lib/hooks/use-promises';
+import { EvidenceStrengthBadge, ConfidenceDot } from '@/components/public/evidence-strength-badge';
+import { ShareButtons } from '@/components/public/share-buttons';
 
 /* ═══════════════════════════════════════════════
    STATUS CONFIG
@@ -119,8 +125,9 @@ const eventCategoryConfig: Record<string, { bg: string; text: string }> = {
 export default function PromiseDetailPage() {
   const params = useParams();
   const { t, locale } = useI18n();
-  const [copied, setCopied] = useState(false);
+  const [evidenceModalOpen, setEvidenceModalOpen] = useState(false);
   const { toggleWatch, isWatched } = useWatchlistStore();
+  const { isAuthenticated } = useAuth();
 
   const isNe = locale === 'ne';
   const idParam = params.id as string;
@@ -146,12 +153,6 @@ export default function PromiseDetailPage() {
   // Share handlers
   const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
 
-  function handleCopyLink() {
-    navigator.clipboard.writeText(pageUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   // Not found
   if (!promise) {
     return (
@@ -159,17 +160,17 @@ export default function PromiseDetailPage() {
         <div className="text-center">
           <Target className="w-16 h-16 text-gray-600 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-2">
-            {isNe ? 'वचन फेला परेन' : 'Promise Not Found'}
+            {t('commitment.notFoundTitle')}
           </h1>
           <p className="text-gray-500 mb-6">
-            {isNe ? 'यो वचन अवस्थित छैन।' : 'This promise could not be located.'}
+            {t('commitment.notFoundDesc')}
           </p>
           <Link
             href="/explore/first-100-days"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-primary-300 bg-primary-500/15 border border-primary-500/30 hover:bg-primary-500/25 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
-            {isNe ? 'वचन ट्र्याकरमा फर्कनुहोस्' : 'Back to Commitment Tracker'}
+            {t('commitment.backToTracker')}
           </Link>
         </div>
       </div>
@@ -203,7 +204,7 @@ export default function PromiseDetailPage() {
               className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-300 transition-colors mb-6"
             >
               <ArrowLeft className="w-4 h-4" />
-              {isNe ? 'वचन ट्र्याकरमा फर्कनुहोस्' : 'Back to Commitment Tracker'}
+              {t('commitment.backToTracker')}
             </Link>
           </div>
         </section>
@@ -230,7 +231,13 @@ export default function PromiseDetailPage() {
                     {t(trust.labelKey)}
                   </span>
                   {promise.signalType && (
-                    <SignalBadge type={promise.signalType} locale={locale as 'en' | 'ne'} />
+                    <SignalBadge type={promise.signalType} />
+                  )}
+                  {realArticles && realArticles.length > 0 && (
+                    <EvidenceStrengthBadge
+                      confidences={realArticles.map((a) => a.confidence)}
+                      showCount
+                    />
                   )}
                 </div>
 
@@ -278,8 +285,8 @@ export default function PromiseDetailPage() {
                 {promise.progress > 0 ? (
                   <>
                     <p className="text-sm text-gray-300 mb-2">
-                      <span className="text-white font-semibold">{promise.progress}% complete</span>
-                      <span className="text-gray-500"> as of {new Date(promise.lastUpdate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                      <span className="text-white font-semibold">{promise.progress}{t('commitment.percentComplete')}</span>
+                      <span className="text-gray-500"> {t('commitment.asOf')} {new Date(promise.lastUpdate).toLocaleDateString(isNe ? 'ne-NP' : 'en-US', { month: 'long', year: 'numeric' })}</span>
                     </p>
                     <div className="h-4 rounded-full overflow-hidden bg-white/[0.06]">
                       <div
@@ -295,11 +302,11 @@ export default function PromiseDetailPage() {
                 ) : (
                   <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <p className="text-sm text-gray-400">
-                      {isNe ? 'प्रगति अझै प्रमाणित गरिएको छैन' : 'No verified progress data yet'}
+                      {t('commitment.noProgressData')}
                     </p>
                     {promise.evidenceCount > 0 && (
                       <p className="text-xs text-cyan-500/60 mt-1">
-                        {promise.evidenceCount} article{promise.evidenceCount !== 1 ? 's' : ''} mention this promise
+                        {promise.evidenceCount} {t('commitment.mentionPromise')}
                       </p>
                     )}
                   </div>
@@ -313,14 +320,17 @@ export default function PromiseDetailPage() {
                   {promise.linkedProjects} {promise.linkedProjects !== 1 ? t('commitment.projectsPlural') : t('commitment.projects')}
                 </span>
                 {promise.evidenceCount > 0 && (
-                  <span className="inline-flex items-center gap-1">
+                  <button
+                    onClick={() => document.getElementById('related-news')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="inline-flex items-center gap-1 hover:text-cyan-400 transition-colors cursor-pointer"
+                  >
                     <FileText className="w-3 h-3" />
                     {promise.evidenceCount} {t('commitment.evidence')}
-                  </span>
+                  </button>
                 )}
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {isNe ? 'अन्तिम अपडेट' : 'Last updated'}: {promise.lastUpdate}
+                  {t('commitment.lastUpdated')}: {promise.lastUpdate}
                 </span>
               </div>
             </div>
@@ -333,6 +343,15 @@ export default function PromiseDetailPage() {
         <section className="px-4 sm:px-6 lg:px-8 pb-8">
           <div className="max-w-4xl mx-auto">
             <VoteWidget promiseId={promise.id} variant="full" />
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════
+           COMMENTS SECTION
+           ═══════════════════════════════════════ */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <CommentsSection promiseId={promise.id} />
           </div>
         </section>
 
@@ -355,16 +374,26 @@ export default function PromiseDetailPage() {
         {/* ═══════════════════════════════════════
            REAL SCRAPED ARTICLES
            ═══════════════════════════════════════ */}
-        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+        <section id="related-news" className="px-4 sm:px-6 lg:px-8 pb-8 scroll-mt-6">
           <div className="max-w-4xl mx-auto">
             <div className="glass-card p-6">
-              <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-cyan-400" />
-                {isNe ? 'सम्बन्धित समाचार कभरेज' : 'Related News Coverage'}
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-semibold uppercase tracking-wider">
-                  Live
-                </span>
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-cyan-400" />
+                  {t('commitment.relatedNews')}
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-semibold uppercase tracking-wider">
+                    {t('commitment.live')}
+                  </span>
+                </h3>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => setEvidenceModalOpen(true)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all"
+                  >
+                    Submit Evidence
+                  </button>
+                )}
+              </div>
               {realArticles && realArticles.length > 0 ? (
                 <div className="divide-y divide-white/[0.04]">
                   {realArticles.map((article) => (
@@ -389,9 +418,10 @@ export default function PromiseDetailPage() {
                               {new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           )}
-                          {article.confidence > 0.5 && (
-                            <span className="text-[9px] text-cyan-600">
-                              {Math.round(article.confidence * 100)}% match
+                          {article.confidence > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[9px] text-gray-500">
+                              <ConfidenceDot confidence={article.confidence} />
+                              {Math.round(article.confidence * 100)}%
                             </span>
                           )}
                         </div>
@@ -402,10 +432,10 @@ export default function PromiseDetailPage() {
               ) : (
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
                   <p className="text-sm text-gray-500">
-                    {isNe ? 'यो वचनसँग सम्बन्धित कुनै समाचार छैन।' : 'No news coverage found yet for this promise.'}
+                    {t('commitment.noNewsCoverage')}
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
-                    {isNe ? 'स्क्र्यापर चलिरहेको छ।' : 'Our scraper checks news sources regularly.'}
+                    {t('commitment.scraperRunning')}
                   </p>
                 </div>
               )}
@@ -421,24 +451,26 @@ export default function PromiseDetailPage() {
             <div className="glass-card p-6">
               <h3 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
                 <Link2 className="w-4 h-4 text-primary-400" />
-                {isNe ? 'सम्बन्धित परियोजनाहरू' : 'Linked Projects'}
+                {t('commitment.linkedProjectsTitle')}
               </h3>
               {promise.linkedProjects > 0 ? (
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
-                  <div className="text-3xl font-bold text-primary-400 mb-1">{promise.linkedProjects}</div>
+                <Link
+                  href={`/explore/projects?category=${encodeURIComponent(promise.category)}`}
+                  className="block p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center hover:bg-white/[0.05] hover:border-primary-500/30 transition-all group"
+                >
+                  <div className="text-3xl font-bold text-primary-400 mb-1 group-hover:text-primary-300 transition-colors">{promise.linkedProjects}</div>
                   <div className="text-sm text-gray-500">
-                    {isNe
-                      ? `${promise.linkedProjects} सम्बन्धित परियोजनाहरू`
-                      : `${promise.linkedProjects} linked ${promise.linkedProjects !== 1 ? 'projects' : 'project'}`}
+                    {promise.linkedProjects} {t('commitment.linkedProjectsCount')}
                   </div>
-                  <p className="text-xs text-gray-600 mt-2">
-                    {isNe ? 'विस्तृत परियोजना ट्र्याकिङ चाँडै आउँदैछ।' : 'Detailed project tracking coming soon.'}
+                  <p className="text-xs text-primary-400/60 mt-2 inline-flex items-center gap-1">
+                    {t('projects.viewDetails')}
+                    <ArrowRight className="w-3 h-3" />
                   </p>
-                </div>
+                </Link>
               ) : (
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
                   <p className="text-sm text-gray-500">
-                    {isNe ? 'कुनै सम्बन्धित परियोजना छैन।' : 'No linked projects yet.'}
+                    {t('commitment.noLinkedProjects')}
                   </p>
                 </div>
               )}
@@ -454,7 +486,7 @@ export default function PromiseDetailPage() {
             <div className="max-w-4xl mx-auto">
               <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-cyan-400" />
-                {isNe ? 'सम्बन्धित घटनाक्रम' : 'Related Timeline'}
+                {t('commitment.relatedTimeline')}
               </h3>
 
               <div className="relative ml-4">
@@ -481,7 +513,10 @@ export default function PromiseDetailPage() {
                         </div>
 
                         {/* Event card */}
-                        <div className="glass-card-hover flex-1 p-4 -mt-1">
+                        <Link
+                          href={`/explore/first-100-days?category=${encodeURIComponent(event.category)}`}
+                          className="glass-card-hover flex-1 p-4 -mt-1 block"
+                        >
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div>
                               <h4 className="text-sm font-semibold text-white">
@@ -507,7 +542,7 @@ export default function PromiseDetailPage() {
                               {event.category}
                             </span>
                           </div>
-                        </div>
+                        </Link>
                       </div>
                     );
                   })}
@@ -529,66 +564,18 @@ export default function PromiseDetailPage() {
                 </div>
               </div>
               <h3 className="text-lg font-bold text-white mb-1">
-                {isNe ? 'यो वचन साझा गर्नुहोस्' : 'Share This Promise'}
+                {t('commitment.shareThisPromise')}
               </h3>
               <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">
-                {isNe ? 'नेताहरूलाई जवाफदेही बनाउन मद्दत गर्नुहोस्' : 'Help hold leaders accountable'}
+                {t('commitment.holdAccountable')}
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                {/* WhatsApp */}
-                <button
-                  onClick={() =>
-                    window.open(
-                      `https://wa.me/?text=${encodeURIComponent(whatsappText)}`,
-                      '_blank',
-                      'noopener,noreferrer'
-                    )
-                  }
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#25D366]/20 border border-[#25D366]/40 hover:bg-[#25D366]/30 transition-all duration-200 shadow-[0_0_15px_rgba(37,211,102,0.15)]"
-                >
-                  {isNe ? 'WhatsApp मा साझा गर्नुहोस्' : 'Share on WhatsApp'}
-                </button>
-
-                {/* Facebook */}
-                <button
-                  onClick={() =>
-                    window.open(
-                      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`,
-                      '_blank',
-                      'noopener,noreferrer'
-                    )
-                  }
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-[#1877F2]/20 border border-[#1877F2]/30 hover:bg-[#1877F2]/30 transition-all duration-200"
-                >
-                  Facebook
-                </button>
-
-                {/* X / Twitter */}
-                <button
-                  onClick={() =>
-                    window.open(
-                      `https://twitter.com/intent/tweet?text=${encodeURIComponent(whatsappText)}`,
-                      '_blank',
-                      'noopener,noreferrer'
-                    )
-                  }
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.08] border border-white/[0.12] hover:bg-white/[0.14] transition-all duration-200"
-                >
-                  X / Twitter
-                </button>
-
-                {/* Copy Link */}
-                <button
-                  onClick={handleCopyLink}
-                  className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    copied
-                      ? 'text-emerald-300 bg-emerald-500/20 border border-emerald-500/30'
-                      : 'text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08]'
-                  }`}
-                >
-                  {copied ? (isNe ? 'कपी भयो!' : 'Copied!') : (isNe ? 'लिंक कपी गर्नुहोस्' : 'Copy Link')}
-                </button>
+              <div className="flex justify-center">
+                <ShareButtons
+                  url={pageUrl}
+                  title={`${promise.title_ne}\n${promise.title}`}
+                  text={whatsappText}
+                />
               </div>
             </div>
           </div>
@@ -597,6 +584,13 @@ export default function PromiseDetailPage() {
         {/* Footer accent line */}
         <div className="h-px bg-gradient-to-r from-transparent via-primary-500/30 to-transparent" />
       </div>
+
+      {/* Submit Evidence Modal */}
+      <SubmitEvidenceModal
+        promiseId={promise.id}
+        isOpen={evidenceModalOpen}
+        onClose={() => setEvidenceModalOpen(false)}
+      />
     </div>
   );
 }

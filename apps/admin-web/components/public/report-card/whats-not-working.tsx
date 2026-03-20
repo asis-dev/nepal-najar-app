@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { AlertTriangle, Globe, XCircle, Clock, AlertOctagon } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import type { DownSource, SilentPromise } from '@/lib/hooks/use-accountability';
@@ -164,9 +165,10 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {silentPromises.map((p) => (
-              <div
+              <Link
                 key={p.id}
-                className="glass-card p-3 border-l-2 border-gray-500/20"
+                href={`/explore/first-100-days/${p.id}`}
+                className="glass-card p-3 border-l-2 border-gray-500/20 hover:bg-white/[0.03] hover:border-gray-400/30 transition-all"
               >
                 <span className="text-xs font-medium text-gray-400 line-clamp-2">
                   {isNe && p.title_ne ? p.title_ne : p.title}
@@ -179,7 +181,7 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
                     {t('accountability.noUpdates')}
                   </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { syncToCloud } from '@/lib/services/preferences-sync';
 
 /* ═══════════════════════════════════════════════
    ENGAGEMENT STORE
@@ -109,12 +110,24 @@ export const useEngagementStore = create<EngagementState & EngagementActions>()(
           newStreak = 1;
         }
 
+        const newLongest = Math.max(longestStreak, newStreak);
         set({
           currentStreak: newStreak,
-          longestStreak: Math.max(longestStreak, newStreak),
+          longestStreak: newLongest,
           lastVisitDate: today,
           todayInteracted: false, // reset daily interaction flag
         });
+
+        // Cloud sync if logged in
+        try {
+          const { useAuth } = require('@/lib/hooks/use-auth');
+          const { user } = useAuth.getState();
+          if (user?.id) {
+            syncToCloud(user.id, {
+              streak_data: { currentStreak: newStreak, longestStreak: newLongest, lastVisitDate: today },
+            });
+          }
+        } catch { /* not logged in or SSR */ }
       },
 
       recordInteraction: () => {

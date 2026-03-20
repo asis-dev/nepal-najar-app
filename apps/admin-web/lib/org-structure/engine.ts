@@ -64,18 +64,23 @@ async function fetchSourceDocument(unit: PublicGovUnit): Promise<PublicGovSource
     try {
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'NepalNajar/1.0 (organization-tracker)',
-          Accept: 'text/html',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5,ne;q=0.3',
         },
-        signal: AbortSignal.timeout(12000),
+        redirect: 'follow',
+        signal: AbortSignal.timeout(15000),
         next: { revalidate: 3600 },
       });
 
       if (!response.ok) continue;
 
       const html = await response.text();
+      if (html.length < 500) continue; // Too short to be a real page
       const $ = cheerio.load(html);
       const pageTitle = $('title').first().text().trim() || $('h1').first().text().trim() || null;
+      // Skip security/blocked pages
+      if (pageTitle?.toLowerCase().includes('security') || pageTitle?.toLowerCase().includes('restricted') || pageTitle?.toLowerCase().includes('blocked')) continue;
       const rawText = textFromHtml($);
 
       return {

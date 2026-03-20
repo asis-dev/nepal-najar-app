@@ -1,44 +1,40 @@
 'use client';
 
 import { Shield, Newspaper, Users, Brain } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 export type SignalType = 'official' | 'discovered' | 'reported' | 'inferred';
 
 const signalConfig: Record<SignalType, {
-  label: string;
-  labelNe: string;
+  labelKey: string;
   icon: typeof Shield;
   bg: string;
   text: string;
   border: string;
 }> = {
   official: {
-    label: 'Official',
-    labelNe: 'आधिकारिक',
+    labelKey: 'signal.official',
     icon: Shield,
     bg: 'bg-[#003893]/15',
     text: 'text-blue-300',
     border: 'border-[#003893]/30',
   },
   discovered: {
-    label: 'Discovered',
-    labelNe: 'खोजिएको',
+    labelKey: 'signal.discovered',
     icon: Newspaper,
     bg: 'bg-cyan-500/15',
     text: 'text-cyan-300',
     border: 'border-cyan-500/30',
   },
   reported: {
-    label: 'Public Report',
-    labelNe: 'सार्वजनिक रिपोर्ट',
+    labelKey: 'signal.publicReport',
     icon: Users,
     bg: 'bg-emerald-500/15',
     text: 'text-emerald-300',
     border: 'border-emerald-500/30',
   },
   inferred: {
-    label: 'Inferred',
-    labelNe: 'अनुमानित',
+    labelKey: 'signal.inferred',
     icon: Brain,
     bg: 'bg-purple-500/15',
     text: 'text-purple-300',
@@ -50,13 +46,13 @@ interface SignalBadgeProps {
   type: SignalType;
   /** Compact mode: icon only */
   compact?: boolean;
-  locale?: 'en' | 'ne';
 }
 
-export function SignalBadge({ type, compact = false, locale = 'en' }: SignalBadgeProps) {
+export function SignalBadge({ type, compact = false }: SignalBadgeProps) {
+  const { t } = useI18n();
   const config = signalConfig[type];
   const Icon = config.icon;
-  const label = locale === 'ne' ? config.labelNe : config.label;
+  const label = t(config.labelKey);
 
   if (compact) {
     return (

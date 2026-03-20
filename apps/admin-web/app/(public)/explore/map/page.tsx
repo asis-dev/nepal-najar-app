@@ -44,11 +44,11 @@ const categoryColors: Record<string, string> = {
   social: 'text-teal-400 bg-teal-500/15',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  in_progress: 'In Progress',
-  delivered: 'Delivered',
-  stalled: 'Stalled',
-  not_started: 'Not Started',
+const STATUS_KEYS: Record<string, string> = {
+  in_progress: 'commitment.inProgress',
+  delivered: 'commitment.delivered',
+  stalled: 'commitment.stalled',
+  not_started: 'commitment.notStarted',
 };
 
 const STATUS_DOT_COLORS: Record<string, string> = {
@@ -109,10 +109,10 @@ export default function PublicMapPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-display font-bold text-white flex items-center gap-3">
               <Map className="w-7 h-7 text-primary-400" />
-              Promise Landscape
+              {t('map.promiseLandscape')}
             </h1>
             <p className="text-sm text-gray-400 mt-1">
-              Explore {stats?.total ?? '--'} government promises across {categoryBreakdown.length} sectors
+              {t('map.explorePromises')}
             </p>
           </div>
           {selectedCategory && (
@@ -120,7 +120,7 @@ export default function PublicMapPage() {
               onClick={() => setSelectedCategory(null)}
               className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors"
             >
-              ← All Sectors
+              {t('map.allSectors')}
             </button>
           )}
         </div>
@@ -132,7 +132,7 @@ export default function PublicMapPage() {
               <Eye className="w-4 h-4 text-primary-400" />
             </div>
             <div>
-              <p className="text-xs text-gray-400">Total Promises</p>
+              <p className="text-xs text-gray-400">{t('map.totalPromises')}</p>
               <p className="text-xl font-bold text-white">{stats?.total ?? '--'}</p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export default function PublicMapPage() {
               <TrendingUp className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <p className="text-xs text-gray-400">In Progress</p>
+              <p className="text-xs text-gray-400">{t('commitment.inProgress')}</p>
               <p className="text-xl font-bold text-white">{stats?.inProgress ?? '--'}</p>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function PublicMapPage() {
               <CheckCircle2 className="w-4 h-4 text-blue-400" />
             </div>
             <div>
-              <p className="text-xs text-gray-400">Delivered</p>
+              <p className="text-xs text-gray-400">{t('commitment.delivered')}</p>
               <p className="text-xl font-bold text-white">{stats?.delivered ?? '--'}</p>
             </div>
           </div>
@@ -159,7 +159,7 @@ export default function PublicMapPage() {
               <AlertTriangle className="w-4 h-4 text-red-400" />
             </div>
             <div>
-              <p className="text-xs text-gray-400">Stalled</p>
+              <p className="text-xs text-gray-400">{t('commitment.stalled')}</p>
               <p className="text-xl font-bold text-white">{stats?.stalled ?? '--'}</p>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function PublicMapPage() {
           {/* Left: Category Tiles */}
           <div className="lg:col-span-1 space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-3">
-              Sectors
+              {t('map.sectors')}
             </h2>
 
             {isLoading ? (
@@ -208,7 +208,7 @@ export default function PublicMapPage() {
                           <Icon className="w-3.5 h-3.5" />
                         </div>
                         <span className="text-sm font-medium text-gray-200 capitalize">
-                          {cat.name.replace(/_/g, ' ')}
+                          {t(`categoryName.${cat.name}`)}
                         </span>
                       </div>
                       <span className="text-xs text-gray-500">{cat.total}</span>
@@ -216,28 +216,37 @@ export default function PublicMapPage() {
 
                     {/* Promises count */}
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-500">{cat.total} promises tracked</span>
+                      <span className="text-[10px] text-gray-500">{cat.total} {t('map.promisesTracked')}</span>
                     </div>
 
-                    {/* Status dots */}
+                    {/* Status dots — clickable to filter by category + status */}
                     <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500">
                       {cat.delivered > 0 && (
-                        <span className="flex items-center gap-1">
+                        <Link
+                          href={`/explore/first-100-days?category=${encodeURIComponent(cat.name)}&status=delivered`}
+                          className="flex items-center gap-1 hover:text-blue-300 transition-colors"
+                        >
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                          {cat.delivered} done
-                        </span>
+                          {cat.delivered} {t('map.done')}
+                        </Link>
                       )}
                       {cat.inProgress > 0 && (
-                        <span className="flex items-center gap-1">
+                        <Link
+                          href={`/explore/first-100-days?category=${encodeURIComponent(cat.name)}&status=in_progress`}
+                          className="flex items-center gap-1 hover:text-emerald-300 transition-colors"
+                        >
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          {cat.inProgress} active
-                        </span>
+                          {cat.inProgress} {t('map.active')}
+                        </Link>
                       )}
                       {cat.stalled > 0 && (
-                        <span className="flex items-center gap-1">
+                        <Link
+                          href={`/explore/first-100-days?category=${encodeURIComponent(cat.name)}&status=stalled`}
+                          className="flex items-center gap-1 hover:text-red-300 transition-colors"
+                        >
                           <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                          {cat.stalled} stalled
-                        </span>
+                          {cat.stalled} {t('map.stalled')}
+                        </Link>
                       )}
                     </div>
                   </button>
@@ -252,13 +261,13 @@ export default function PublicMapPage() {
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Eye className="w-4 h-4 text-primary-400" />
                 {selectedCategory
-                  ? `${selectedCategory.replace(/_/g, ' ')} Promises`
-                  : 'All Promises'}{' '}
+                  ? `${t(`categoryName.${selectedCategory}`)} ${t('map.promises')}`
+                  : t('map.allPromises')}{' '}
                 — {filteredPromises.length}
               </h3>
               {selectedCatData && (
                 <span className="text-xs text-gray-500">
-                  {selectedCatData.total} promises
+                  {selectedCatData.total} {t('map.promises')}
                 </span>
               )}
             </div>
@@ -291,19 +300,19 @@ export default function PublicMapPage() {
                           <div className="flex items-center gap-2 mt-1">
                             <span className="flex items-center gap-1 text-[10px] text-gray-500">
                               <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                              {STATUS_LABELS[promise.status] ?? promise.status}
+                              {STATUS_KEYS[promise.status] ? t(STATUS_KEYS[promise.status]) : promise.status}
                             </span>
                             <SignalBadge type={promise.signalType} compact />
                             <span className="text-[10px] text-gray-600 capitalize">
-                              {promise.category.replace(/_/g, ' ')}
+                              {t(`categoryName.${promise.category}`)}
                             </span>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
                           {promise.evidenceCount > 0 ? (
-                            <span className="text-[10px] text-cyan-500/70">{promise.evidenceCount} articles</span>
+                            <span className="text-[10px] text-cyan-500/70">{promise.evidenceCount} {t('map.articles')}</span>
                           ) : (
-                            <span className="text-[10px] text-gray-600 italic">No data</span>
+                            <span className="text-[10px] text-gray-600 italic">{t('map.noData')}</span>
                           )}
                         </div>
                       </div>
@@ -312,7 +321,7 @@ export default function PublicMapPage() {
                 })
               ) : (
                 <div className="p-8 text-center text-gray-500 text-sm">
-                  No promises found for this category.
+                  {t('map.noPromisesCategory')}
                 </div>
               )}
             </div>

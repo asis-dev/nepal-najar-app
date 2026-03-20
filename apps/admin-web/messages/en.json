@@ -12,7 +12,9 @@
     "first100Days": "First 100 Days",
     "admin": "Admin",
     "dashboard": "Dashboard",
-    "operatorLogin": "Operator Login"
+    "operatorLogin": "Operator Login",
+    "analytics": "Analytics",
+    "search": "Search"
   },
   "hero": {
     "title": "Nepal Najar",
@@ -523,6 +525,11 @@
     "showingCount": "Showing {count} of {total} promises",
     "viewDetails": "View details"
   },
+  "evidence": {
+    "strong": "Strong Evidence",
+    "moderate": "Moderate Evidence",
+    "weak": "Weak Evidence"
+  },
   "time": {
     "justNow": "Just now",
     "minutesAgo": "{mins}m ago",
@@ -531,5 +538,64 @@
     "daysAgo": "{days}d ago",
     "weeksAgo": "{weeks}w ago",
     "monthsAgo": "{months}mo ago"
+  },
+  "analytics": {
+    "title": "Analytics Dashboard",
+    "subtitle": "Data-driven insights on government promise delivery",
+    "overallProgress": "Overall Progress",
+    "statusDistribution": "Status Distribution",
+    "promisesByCategory": "Promises by Category",
+    "avgProgressByCategory": "Average Progress by Category",
+    "evidenceCoverage": "Evidence Coverage",
+    "provinceComparison": "Province Comparison",
+    "promises": "promises",
+    "progress": "progress",
+    "articles": "articles"
+  },
+  "searchPage": {
+    "title": "Search Promises",
+    "placeholder": "Search by title, category, or description...",
+    "noResults": "No promises match your search.",
+    "tryDifferent": "Try a different search term.",
+    "results": "results"
+  },
+  "compare": {
+    "title": "Compare Promises",
+    "subtitle": "Side-by-side comparison of selected promises",
+    "empty": "No promises selected for comparison.",
+    "emptyDesc": "Add promises from the tracker or map page to compare them.",
+    "browsePromises": "Browse Promises",
+    "remove": "Remove",
+    "progress": "Progress",
+    "status": "Status",
+    "category": "Category",
+    "evidence": "Evidence",
+    "budget": "Budget"
+  },
+  "export": {
+    "csv": "Export CSV",
+    "pdf": "Export PDF",
+    "title": "Export"
+  },
+  "notifications": {
+    "title": "Notification Preferences",
+    "pushNotifications": "Push Notifications",
+    "pushDesc": "Get notified when promise statuses change",
+    "emailAlerts": "Email Alerts",
+    "emailDesc": "Receive email updates about watched promises",
+    "digestFrequency": "Digest Frequency",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "never": "Never",
+    "watchedProvinces": "Watched Provinces",
+    "save": "Save Preferences",
+    "saved": "Preferences saved!"
+  },
+  "breadcrumb": {
+    "home": "Home",
+    "explore": "Explore",
+    "firstHundredDays": "First 100 Days",
+    "daily": "Daily",
+    "analytics": "Analytics"
   }
 }

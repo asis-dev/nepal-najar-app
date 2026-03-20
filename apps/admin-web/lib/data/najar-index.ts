@@ -4,9 +4,12 @@
  * IMPORTANT: Includes data confidence gating. When insufficient verified data
  * exists, the index reports 'insufficient' confidence rather than showing
  * a misleading number computed from unverified or empty data.
+ *
+ * Now accepts promises as a parameter — caller passes real data from Supabase.
+ * Falls back to static data import when no promises are provided.
  */
 
-import { promises, computeStats } from './promises';
+import { promises as staticPromises, type GovernmentPromise } from './promises';
 
 /* ═══════════════════════════════════════════════
    TYPES
@@ -50,17 +53,29 @@ const WEIGHTS = {
    HELPERS
    ═══════════════════════════════════════════════ */
 
-function computeTrustScore(): number {
-  const score = promises.reduce((sum, p) => {
+function computeStatsFromPromises(promiseList: GovernmentPromise[]) {
+  const total = promiseList.length;
+  const delivered = promiseList.filter((p) => p.status === 'delivered').length;
+  const inProgress = promiseList.filter((p) => p.status === 'in_progress').length;
+  const stalled = promiseList.filter((p) => p.status === 'stalled').length;
+  const notStarted = promiseList.filter((p) => p.status === 'not_started').length;
+  const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
+  const avgProgress = total > 0 ? Math.round(promiseList.reduce((sum, p) => sum + p.progress, 0) / total) : 0;
+
+  return { total, delivered, inProgress, stalled, notStarted, deliveryRate, avgProgress };
+}
+
+function computeTrustScore(promiseList: GovernmentPromise[]): number {
+  const score = promiseList.reduce((sum, p) => {
     if (p.trustLevel === 'verified') return sum + 100;
     if (p.trustLevel === 'partial') return sum + 50;
     return sum;
   }, 0);
-  return promises.length > 0 ? score / promises.length : 0;
+  return promiseList.length > 0 ? score / promiseList.length : 0;
 }
 
-function computeBudgetUtilization(): number {
-  const withBudget = promises.filter(
+function computeBudgetUtilization(promiseList: GovernmentPromise[]): number {
+  const withBudget = promiseList.filter(
     (p) => p.estimatedBudgetNPR != null && p.estimatedBudgetNPR > 0,
   );
   if (withBudget.length === 0) return 0;
@@ -91,8 +106,8 @@ function scoreToGrade(score: number): NajarGrade {
   return 'F';
 }
 
-function computeDataConfidence(): { confidence: DataConfidence; count: number } {
-  const verified = promises.filter(
+function computeDataConfidence(promiseList: GovernmentPromise[]): { confidence: DataConfidence; count: number } {
+  const verified = promiseList.filter(
     (p) => p.trustLevel === 'verified' || p.trustLevel === 'partial',
   ).length;
 
@@ -105,17 +120,24 @@ function computeDataConfidence(): { confidence: DataConfidence; count: number } 
    MAIN COMPUTATION
    ═══════════════════════════════════════════════ */
 
+/**
+ * Compute the Najar Index from real promise data.
+ * @param promiseList — Pass Supabase promises for real data. Falls back to static if omitted.
+ * @param voteAggregates — Real vote data from Supabase public_votes.
+ */
 export function computeNajarIndex(
+  promiseList?: GovernmentPromise[],
   voteAggregates?: Record<string, { up: number; down: number }>,
 ): NajarIndex {
-  const stats = computeStats();
-  const { confidence, count } = computeDataConfidence();
+  const promises = promiseList ?? staticPromises;
+  const stats = computeStatsFromPromises(promises);
+  const { confidence, count } = computeDataConfidence(promises);
 
   const subScores: NajarSubScores = {
     deliveryRate: stats.deliveryRate,
     avgProgress: stats.avgProgress,
-    trustScore: Math.round(computeTrustScore()),
-    budgetUtilization: Math.round(computeBudgetUtilization()),
+    trustScore: Math.round(computeTrustScore(promises)),
+    budgetUtilization: Math.round(computeBudgetUtilization(promises)),
     citizenSentiment: computeCitizenSentiment(voteAggregates),
   };
 

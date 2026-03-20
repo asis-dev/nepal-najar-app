@@ -50,26 +50,11 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'राष्ट्रिय प्राथमिकता तय गर्ने, मन्त्रालयहरू समन्वय गर्ने र सरकारव्यापी डेलिभरी लक्ष्यको स्वामित्व लिने।',
     scope: 'National',
     scopeNe: 'राष्ट्रिय',
-    sourceUrl: 'https://www.opmcm.gov.np/en/',
-    sourcePaths: ['/en/prime-minister/', '/en/'],
+    sourceUrl: 'https://www.opmcm.gov.np/',
+    sourcePaths: ['/en/', '/en/prime-minister/', '/'],
     promiseCategories: ['Governance', 'Anti-Corruption', 'Infrastructure', 'Transport', 'Energy', 'Health', 'Education', 'Economy', 'Social'],
     trackedProjects: ['National delivery scorecard', '100-day commitments', 'Cross-ministry review meetings'],
-    achievements: [
-      {
-        title: '100-day delivery review structure set',
-        titleNe: '१०० दिने डेलिभरी समीक्षा संरचना तय',
-        status: 'in_progress',
-        detail: 'Central oversight reviews are being organized so ministries report against the same public scorecard.',
-        detailNe: 'मन्त्रालयहरूले एउटै सार्वजनिक स्कोरकार्डमा प्रतिवेदन दिन सकून् भनेर केन्द्रीय समीक्षा संरचना बनाइँदैछ।',
-      },
-      {
-        title: 'Cross-government accountability model published',
-        titleNe: 'सरकारव्यापी जवाफदेहिता मोडेल प्रकाशित',
-        status: 'planned',
-        detail: 'Institutional accountability and public reporting responsibilities are planned as a shared standard.',
-        detailNe: 'संस्थागत जवाफदेहिता र सार्वजनिक प्रतिवेदनको साझा मापदण्ड योजना गरिएको छ।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
   {
     id: 'mopit',
@@ -89,22 +74,7 @@ export const publicGovUnits: PublicGovUnit[] = [
     sourcePaths: ['/about-us', '/department', '/'],
     promiseCategories: ['Infrastructure', 'Transport'],
     trackedProjects: ['Ring Road expansion', 'East-West corridor upgrades', 'Bridge strengthening'],
-    achievements: [
-      {
-        title: 'Road corridor prioritization published',
-        titleNe: 'सडक करिडोर प्राथमिकता प्रकाशित',
-        status: 'in_progress',
-        detail: 'Major transport works are now grouped into a public set of top delivery corridors.',
-        detailNe: 'प्रमुख यातायात कार्यलाई सार्वजनिक प्राथमिक करिडोरको रूपमा समेटिएको छ।',
-      },
-      {
-        title: 'Bridge safety review cycle started',
-        titleNe: 'पुल सुरक्षा समीक्षा चक्र सुरु',
-        status: 'delivered',
-        detail: 'High-risk bridge reviews were moved into a regular monitoring cadence.',
-        detailNe: 'उच्च जोखिमका पुलहरूको समीक्षा नियमित निगरानी चक्रमा ल्याइएको छ।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
   {
     id: 'dor',
@@ -120,19 +90,11 @@ export const publicGovUnits: PublicGovUnit[] = [
     responsibilityNe: 'राष्ट्रिय राजमार्ग, रिङरोड र रणनीतिक सडक काम कार्यान्वयन गर्ने तथा प्रगति प्रतिवेदन दिने।',
     scope: 'Road network execution',
     scopeNe: 'सडक सञ्जाल कार्यान्वयन',
-    sourceUrl: 'https://dor.gov.np/',
-    sourcePaths: ['/home/publication', '/'],
+    sourceUrl: 'https://dor.gov.np/home',
+    sourcePaths: ['/home/publication', '/home', '/'],
     promiseCategories: ['Infrastructure', 'Transport'],
     trackedProjects: ['Kathmandu Ring Road', 'East-West Highway packages'],
-    achievements: [
-      {
-        title: 'Priority package tracking standardized',
-        titleNe: 'प्राथमिक प्याकेज ट्र्याकिङ मापदण्डीकरण',
-        status: 'delivered',
-        detail: 'Priority road packages are being tracked against a common milestone format.',
-        detailNe: 'प्राथमिक सडक प्याकेजहरू साझा माइलस्टोन ढाँचामा ट्र्याक गरिँदैछन्।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
   {
     id: 'transport-division',
@@ -151,15 +113,7 @@ export const publicGovUnits: PublicGovUnit[] = [
     sourceUrl: 'https://mopit.gov.np/',
     promiseCategories: ['Transport', 'Technology'],
     trackedProjects: ['Digital permit systems', 'Fleet regulation updates'],
-    achievements: [
-      {
-        title: 'Route oversight dashboard planned',
-        titleNe: 'रुट निगरानी ड्यासबोर्ड योजना',
-        status: 'planned',
-        detail: 'A public-facing route and permit monitoring layer is under planning.',
-        detailNe: 'सार्वजनिक रुट तथा परमिट निगरानी तह योजनामा छ।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
   {
     id: 'moewri',
@@ -179,15 +133,7 @@ export const publicGovUnits: PublicGovUnit[] = [
     sourcePaths: ['/category/notice/', '/'],
     promiseCategories: ['Energy', 'Infrastructure', 'Environment'],
     trackedProjects: ['Transmission line upgrades', 'Hydro coordination', 'Irrigation modernization'],
-    achievements: [
-      {
-        title: 'Transmission bottleneck review underway',
-        titleNe: 'प्रसारण अवरोध समीक्षा जारी',
-        status: 'in_progress',
-        detail: 'Critical bottlenecks affecting energy delivery are being reviewed as named workstreams.',
-        detailNe: 'ऊर्जा डेलिभरीलाई असर गर्ने मुख्य अवरोध छुट्टै कार्यप्रवाहका रूपमा समीक्षा भइरहेका छन्।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
   {
     id: 'nea-office',
@@ -207,15 +153,7 @@ export const publicGovUnits: PublicGovUnit[] = [
     sourcePaths: ['/about', '/'],
     promiseCategories: ['Energy', 'Technology'],
     trackedProjects: ['Service reliability improvements', 'Outage monitoring'],
-    achievements: [
-      {
-        title: 'Reliability reporting cadence improved',
-        titleNe: 'विश्वसनीयता प्रतिवेदन चक्र सुधार',
-        status: 'in_progress',
-        detail: 'Regular reporting on outages and response performance is being tightened.',
-        detailNe: 'आउटेज र प्रतिक्रिया प्रदर्शनबारे नियमित प्रतिवेदन अझ कडा बनाइँदैछ।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
   {
     id: 'mohp',
@@ -235,15 +173,7 @@ export const publicGovUnits: PublicGovUnit[] = [
     sourcePaths: ['/about-us', '/'],
     promiseCategories: ['Health', 'Social', 'Technology'],
     trackedProjects: ['Hospital service upgrades', 'Primary care modernization'],
-    achievements: [
-      {
-        title: 'Hospital delivery watchlist created',
-        titleNe: 'अस्पताल डेलिभरी वाचलिस्ट तयार',
-        status: 'delivered',
-        detail: 'Critical facility improvements are now grouped into a public monitoring list.',
-        detailNe: 'मुख्य स्वास्थ्य संरचना सुधारहरू सार्वजनिक निगरानी सूचीमा समेटिएका छन्।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
   {
     id: 'education-ministry',
@@ -263,15 +193,7 @@ export const publicGovUnits: PublicGovUnit[] = [
     sourcePaths: ['/about-us', '/'],
     promiseCategories: ['Education', 'Technology', 'Social'],
     trackedProjects: ['School infrastructure', 'Digital classroom programs'],
-    achievements: [
-      {
-        title: 'Education delivery priorities grouped by district',
-        titleNe: 'जिल्लाअनुसार शिक्षा डेलिभरी प्राथमिकता समूहबद्ध',
-        status: 'planned',
-        detail: 'District-level education priorities are being structured into a single public tracking view.',
-        detailNe: 'जिल्लास्तरीय शिक्षा प्राथमिकतालाई एउटै सार्वजनिक ट्र्याकिङ दृश्यमा ल्याउने तयारी छ।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
   {
     id: 'finance-ministry',
@@ -291,14 +213,6 @@ export const publicGovUnits: PublicGovUnit[] = [
     sourcePaths: ['/about-us', '/'],
     promiseCategories: ['Economy', 'Governance', 'Anti-Corruption'],
     trackedProjects: ['Budget release monitoring', 'Capital expenditure discipline'],
-    achievements: [
-      {
-        title: 'Budget release transparency expected',
-        titleNe: 'बजेट निकासा पारदर्शिता अपेक्षित',
-        status: 'in_progress',
-        detail: 'Capital release timing is being watched as a core delivery dependency across ministries.',
-        detailNe: 'पुँजीगत निकासा समयलाई मन्त्रालयहरूबीचको मुख्य डेलिभरी निर्भरता रूपमा हेरिँदैछ।',
-      },
-    ],
+    achievements: [], // Real achievements come from Supabase government_org_units.achievements
   },
 ];

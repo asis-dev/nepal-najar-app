@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Shield,
   ShieldCheck,
@@ -34,12 +35,16 @@ import {
   Briefcase,
   Users,
   Bookmark,
+  GitCompareArrows,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { CountdownStrip } from '@/components/public/countdown-strip';
 import { VoteWidget } from '@/components/public/vote-widget';
 import { BudgetOverviewStrip } from '@/components/budget/budget-overview-strip';
 import { useWatchlistStore } from '@/lib/stores/preferences';
+import { useComparisonStore } from '@/lib/stores/comparison';
+import { ExportButton } from '@/components/public/export-button';
+import { exportPromisesCSV, exportPromisesPDF } from '@/lib/utils/export';
 import {
   promises,
   deadlines,
@@ -184,11 +189,23 @@ function ProgressRing({ percentage, size = 180, strokeWidth = 12 }: { percentage
    MAIN PAGE COMPONENT
    ═══════════════════════════════════════════════ */
 export default function BachanTrackerPage() {
-  const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const categoryFilter = searchParams.get('category') || 'All';
+  const statusFilter = searchParams.get('status') || 'All';
   const [copied, setCopied] = useState(false);
   const { locale, t } = useI18n();
+
+  const setFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === 'All') params.delete(key);
+    else params.set(key, value);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+  const setCategoryFilter = (v: string) => setFilter('category', v);
+  const setStatusFilter = (v: string) => setFilter('status', v);
   const { toggleWatch, isWatched } = useWatchlistStore();
+  const { addToComparison, removeFromComparison, isInComparison } = useComparisonStore();
 
   const isNe = locale === 'ne';
 
@@ -349,7 +366,9 @@ export default function BachanTrackerPage() {
            ═══════════════════════════════════════ */}
         <section className="px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
-            <BudgetOverviewStrip promises={promises} />
+            <Link href="/explore/projects" className="block hover:opacity-90 transition-opacity">
+              <BudgetOverviewStrip promises={promises} />
+            </Link>
           </div>
         </section>
 
@@ -419,9 +438,13 @@ export default function BachanTrackerPage() {
                   {t('commitment.promiseList')}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  {filteredPromises.length} / {promises.length}
+                  {t('commitment.promisesShown', { count: filteredPromises.length, total: promises.length })}
                 </p>
               </div>
+              <ExportButton
+                onExportCSV={() => exportPromisesCSV(filteredPromises)}
+                onExportPDF={() => exportPromisesPDF(filteredPromises)}
+              />
             </div>
 
             {filteredPromises.length === 0 ? (
@@ -473,6 +496,25 @@ export default function BachanTrackerPage() {
                             {t(trust.labelKey)}
                           </span>
 
+                          {/* Compare toggle */}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              isInComparison(promise.id)
+                                ? removeFromComparison(promise.id)
+                                : addToComparison(promise.id);
+                            }}
+                            className={`p-1.5 rounded-lg transition-all ${
+                              isInComparison(promise.id)
+                                ? 'text-cyan-400 bg-cyan-500/15'
+                                : 'text-gray-600 hover:text-gray-400 hover:bg-white/[0.04]'
+                            }`}
+                            title={isInComparison(promise.id) ? 'Remove from compare' : 'Add to compare'}
+                          >
+                            <GitCompareArrows className="w-3.5 h-3.5" />
+                          </button>
+
                           {/* Bookmark/Watch toggle */}
                           <button
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWatch(promise.id); }}
@@ -522,7 +564,7 @@ export default function BachanTrackerPage() {
                           {promise.spentNPR != null && promise.spentNPR > 0 && (
                             <span className="inline-flex items-center gap-1 text-amber-400/70">
                               <TrendingUp className="w-3 h-3" />
-                              {Math.round((promise.spentNPR / promise.estimatedBudgetNPR) * 100)}% {isNe ? 'खर्च' : 'spent'}
+                              {Math.round((promise.spentNPR / promise.estimatedBudgetNPR) * 100)}% {t('budget.spent')}
                             </span>
                           )}
                         </div>

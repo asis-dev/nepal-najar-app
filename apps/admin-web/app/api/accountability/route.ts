@@ -2,6 +2,10 @@
  * GET /api/accountability
  * Public aggregation endpoint for the Government Accountability Report Card.
  * Returns: whatsWorking, whatsNotWorking, transparencyScore, voteAggregates
+ *
+ * All data comes from Supabase (real scraped evidence). Falls back to static
+ * data only when Supabase is not configured.
+ *
  * Cached for 5 minutes via Next.js revalidate.
  */
 import { NextResponse } from 'next/server';
@@ -66,6 +70,15 @@ interface AccountabilityArticleRow {
   source_name: string;
 }
 
+interface PromiseRow {
+  id: string;
+  title: string;
+  title_ne: string;
+  category: string;
+  status: string;
+  progress: number;
+}
+
 export async function GET() {
   if (!isSupabaseConfigured()) {
     // Return static fallback when Supabase isn't configured
@@ -93,6 +106,7 @@ export async function GET() {
     { data: dataSources },
     { data: govUnits },
     { data: votes },
+    { data: dbPromises },
   ] = await Promise.all([
     supabase
       .from('scraped_articles')
@@ -102,7 +116,26 @@ export async function GET() {
     supabase.from('data_sources').select('*'),
     supabase.from('government_org_units').select('*'),
     supabase.from('public_votes').select('topic_id, vote_type'),
+    supabase.from('promises').select('id, title, title_ne, category, status, progress').order('id'),
   ]);
+
+  // Use Supabase promises if available, fall back to static
+  const allPromises: PromiseRow[] = (dbPromises && dbPromises.length > 0)
+    ? (dbPromises as PromiseRow[])
+    : staticPromises.map((p) => ({
+        id: p.id,
+        title: p.title,
+        title_ne: p.title_ne,
+        category: p.category,
+        status: p.status,
+        progress: p.progress,
+      }));
+
+  // Build promise lookup map
+  const promiseLookup = new Map<string, PromiseRow>();
+  for (const p of allPromises) {
+    promiseLookup.set(p.id, p);
+  }
 
   // ─── What's Working: promises with article evidence ───
   const promiseArticleMap = new Map<string, { count: number; latest: AccountabilityArticleRow }>();
@@ -125,7 +158,7 @@ export async function GET() {
   for (const [pid, data] of promiseArticleMap) {
     if (data.count < 1) continue;
     coveredPromiseIds.add(pid);
-    const promise = staticPromises.find((p) => p.id === pid);
+    const promise = promiseLookup.get(pid);
     if (!promise) continue;
     whatsWorking.push({
       id: promise.id,
@@ -191,8 +224,8 @@ export async function GET() {
     }
   }
 
-  // Silent promises — zero evidence
-  const silentPromises: SilentPromise[] = staticPromises
+  // Silent promises — zero evidence (from Supabase promises, not static)
+  const silentPromises: SilentPromise[] = allPromises
     .filter((p) => !coveredPromiseIds.has(p.id))
     .map((p) => ({
       id: p.id,
@@ -223,7 +256,7 @@ export async function GET() {
 
   const sourceHealthPct = totalSources > 0 ? Math.round((healthySources / totalSources) * 100) : 0;
   const govPortalPct = totalGovPortals > 0 ? Math.round((verifiedPortals / totalGovPortals) * 100) : 0;
-  const coveragePct = Math.round((coveredPromiseIds.size / staticPromises.length) * 100);
+  const coveragePct = Math.round((coveredPromiseIds.size / allPromises.length) * 100);
 
   const transparencyScore: TransparencyScore = {
     sourceHealth: sourceHealthPct,

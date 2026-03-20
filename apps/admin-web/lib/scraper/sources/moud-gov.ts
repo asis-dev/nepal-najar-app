@@ -51,6 +51,6 @@ export const moudGovScraper: SourceScraper = {
       });
     }
 
-    return articles.slice(0, 15);
+    return articles.slice(0, 30);
   },
 };

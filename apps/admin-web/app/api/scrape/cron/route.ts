@@ -12,6 +12,7 @@ import { scrapers } from '@/lib/scraper';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/server';
 import { matchArticleToPromises } from '@/lib/scraper/matcher';
 import { buildGovernmentStructureSnapshot } from '@/lib/org-structure/engine';
+import { recomputeAllPromises } from '@/lib/scraper/promise-recomputer';
 
 export const maxDuration = 300; // 5 min for full scrape cycle
 
@@ -170,6 +171,14 @@ export async function GET(request: Request) {
     };
   }
 
+  // Recompute promise metrics from real evidence
+  let promiseRecompute: { processed: number; updated: number; errors: number } | undefined;
+  try {
+    promiseRecompute = await recomputeAllPromises();
+  } catch {
+    promiseRecompute = { processed: 0, updated: 0, errors: 0 };
+  }
+
   return NextResponse.json({
     success: true,
     sourcesAttempted: scraperEntries.length,
@@ -177,6 +186,7 @@ export async function GET(request: Request) {
     articlesFound: totalFound,
     articlesNew: totalNew,
     governmentStructure: orgRefresh,
+    promiseRecompute,
     results,
   });
 }

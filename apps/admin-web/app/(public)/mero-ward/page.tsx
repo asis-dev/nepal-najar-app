@@ -168,11 +168,9 @@ export default function MeroWardPage() {
         </div>
 
         <PublicPageHero
-          eyebrow={isNe ? 'मेरो क्षेत्र' : 'My area'}
+          eyebrow={t('meroWard.myArea')}
           title={t('meroWard.title')}
-          description={
-            isNe ? 'प्रदेश र जिल्लाको शासन स्कोर' : 'Province and district governance scores'
-          }
+          description={t('meroWard.pageDesc')}
           centered
           stats={
             userScore ? (
@@ -201,7 +199,7 @@ export default function MeroWardPage() {
                   {nationalAvg}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {isNe ? 'राष्ट्रिय औसत' : 'National Avg'}
+                  {t('meroWard.nationalAverage')}
                 </div>
               </div>
 
@@ -212,7 +210,7 @@ export default function MeroWardPage() {
                   {isNe ? provinceScores[0]?.province_ne : provinceScores[0]?.province}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {isNe ? 'शीर्ष प्रदेश' : 'Top Province'}
+                  {t('meroWard.topProvince')}
                 </div>
               </div>
 
@@ -223,7 +221,7 @@ export default function MeroWardPage() {
                   {provinceScores.reduce((s, p) => s + p.projectCount, 0)}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {isNe ? 'कुल परियोजना' : 'Total Projects'}
+                  {t('meroWard.totalProjects')}
                 </div>
               </div>
 
@@ -234,7 +232,7 @@ export default function MeroWardPage() {
                   {provinceScores.reduce((s, p) => s + p.delayedCount, 0)}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {isNe ? 'ढिला भएका' : 'Delayed'}
+                  {t('meroWard.delayed')}
                 </div>
               </div>
               </div>
@@ -249,11 +247,11 @@ export default function MeroWardPage() {
               {/* Table header */}
               <div className="hidden sm:flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] text-xs text-gray-500 uppercase tracking-wider">
                 <span className="w-7" />
-                <span className="flex-1">{isNe ? 'प्रदेश' : 'Province'}</span>
-                <span className="w-12 text-right">{isNe ? 'स्कोर' : 'Score'}</span>
-                <span className="w-28">{isNe ? 'प्रगति' : 'Progress'}</span>
-                <span className="w-16 text-right">{isNe ? 'परियोजना' : 'Projects'}</span>
-                <span className="w-14 text-right">{isNe ? 'ढिला' : 'Delayed'}</span>
+                <span className="flex-1">{t('meroWard.province')}</span>
+                <span className="w-12 text-right">{t('meroWard.score')}</span>
+                <span className="w-28">{t('meroWard.progress')}</span>
+                <span className="w-16 text-right">{t('meroWard.totalProjects')}</span>
+                <span className="w-14 text-right">{t('meroWard.delayed')}</span>
                 <span className="w-6" />
                 <span className="w-6" />
               </div>
@@ -285,7 +283,7 @@ export default function MeroWardPage() {
                           </span>
                           {isUserProvince && (
                             <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary-500/20 text-primary-400 border border-primary-500/30">
-                              {isNe ? 'मेरो' : 'Mine'}
+                              {t('meroWard.mine')}
                             </span>
                           )}
                         </div>
@@ -344,11 +342,11 @@ export default function MeroWardPage() {
                           </div>
                         </div>
                         <span className="text-xs text-gray-500">
-                          {province.projectCount} {isNe ? 'परियोजना' : 'projects'}
+                          {province.projectCount} {t('meroWard.projects')}
                         </span>
                         {province.delayedCount > 0 && (
                           <span className="text-xs text-amber-400/70">
-                            {province.delayedCount} {isNe ? 'ढिला' : 'delayed'}
+                            {province.delayedCount} {t('meroWard.delayed')}
                           </span>
                         )}
                       </div>
@@ -359,7 +357,7 @@ export default function MeroWardPage() {
                       <div className="border-b border-white/[0.06] bg-white/[0.01]">
                         <div className="px-5 py-2 flex items-center gap-2 border-b border-white/[0.04]">
                           <span className="text-[10px] uppercase tracking-widest text-gray-600">
-                            {isNe ? 'जिल्लाहरू' : 'Districts'}
+                            {t('meroWard.districts')}
                           </span>
                           <span className="text-[10px] text-gray-600">
                             ({expandedDistricts.length})

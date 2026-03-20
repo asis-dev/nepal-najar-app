@@ -7,9 +7,14 @@ import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
 
 const quickLinkKeys = [
   { href: '/', labelKey: 'nav.home' },
-  { href: '/explore/projects', labelKey: 'nav.projects' },
-  { href: '/explore/map', labelKey: 'nav.map' },
   { href: '/explore/first-100-days', labelKey: 'nav.first100Days' },
+  { href: '/explore/map', labelKey: 'nav.map' },
+  { href: '/explore/analytics', labelKey: 'nav.analytics' },
+  { href: '/daily', labelKey: 'nav.daily' },
+  { href: '/report-card', labelKey: 'nav.reportCard' },
+  { href: '/mero-ward', labelKey: 'nav.myArea' },
+  { href: '/search', labelKey: 'nav.search' },
+  { href: '/explore/projects', labelKey: 'nav.projects' },
 ];
 
 export function Footer() {

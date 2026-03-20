@@ -175,3 +175,29 @@ ALTER TABLE government_org_units ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public read government org units" ON government_org_units FOR SELECT USING (true);
 CREATE POLICY "Service full access government org units" ON government_org_units FOR ALL USING (true) WITH CHECK (true);
+
+-- ═══════════════════════════════════════════════
+-- 7. PUBLIC VOTES — citizen voting on promises/issues
+-- ═══════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS public_votes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  topic_type TEXT NOT NULL,            -- 'promise' | 'issue' | 'priority'
+  topic_id TEXT NOT NULL,              -- promise ID or issue slug
+  vote_type TEXT NOT NULL,             -- 'up' | 'down' | 'priority'
+  device_fingerprint TEXT NOT NULL,
+  geo_verified BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_public_votes_unique ON public_votes (topic_type, topic_id, device_fingerprint);
+CREATE INDEX IF NOT EXISTS idx_public_votes_topic ON public_votes (topic_type, topic_id);
+
+ALTER TABLE public_votes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read votes" ON public_votes FOR SELECT USING (true);
+CREATE POLICY "Service full access votes" ON public_votes FOR ALL USING (true) WITH CHECK (true);
+
+-- ═══════════════════════════════════════════════
+-- 8. ADD signal_type COLUMN TO PROMISES
+-- ═══════════════════════════════════════════════
+ALTER TABLE promises ADD COLUMN IF NOT EXISTS signal_type TEXT DEFAULT 'news';

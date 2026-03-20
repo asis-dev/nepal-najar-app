@@ -2,8 +2,9 @@
  * Government Promises Data — based on RSP "बाचा पत्र 2082" (Citizen Contract)
  * Source: bachapatra.rspnepal.org — 100 Pillars of Policy Departure
  *
- * NOTE: This is mock/seed data. When the backend Promise entity is built,
- * this will be replaced by API calls. But the types and structure will remain.
+ * SEED/REFERENCE data only. Real-time metrics (status, progress, trust_level,
+ * evidence_count) are computed from scraped articles + AI analysis in Supabase.
+ * All metric fields default to zero/unverified — actual values come from the database.
  */
 
 /* ═══════════════════════════════════════════════

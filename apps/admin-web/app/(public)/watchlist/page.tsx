@@ -123,11 +123,11 @@ export default function WatchlistPage() {
               <div>
                 <h1 className="text-3xl sm:text-4xl font-bold text-white flex items-center gap-3">
                   <Eye className="w-7 h-7 sm:w-8 sm:h-8 text-primary-400" />
-                  {isNe ? 'मेरो वाचलिस्ट' : 'My Watchlist'}
+                  {t('watchlist.title')}
                 </h1>
                 <p className="text-gray-400 text-sm mt-1">
                   {watchedPromises.length}{' '}
-                  {isNe ? 'वचनहरू हेरिरहेको' : 'promises watched'}
+                  {t('watchlist.promisesWatched')}
                 </p>
               </div>
 
@@ -137,7 +137,7 @@ export default function WatchlistPage() {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium text-red-400/80 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all duration-200"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  {isNe ? 'सबै हटाउनुहोस्' : 'Clear all'}
+                  {t('watchlist.clearAll')}
                 </button>
               )}
             </div>
@@ -152,18 +152,16 @@ export default function WatchlistPage() {
               <div className="glass-card p-12 sm:p-16 text-center">
                 <EyeOff className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                 <h2 className="text-xl font-semibold text-gray-300 mb-2">
-                  {isNe ? 'वाचलिस्ट खाली छ' : 'Watchlist is empty'}
+                  {t('watchlist.isEmpty')}
                 </h2>
                 <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
-                  {isNe
-                    ? 'तपाईंले अझै कुनै वचन हेर्न थाल्नुभएको छैन। पहिले 100 दिनको ट्र्याकरमा जानुहोस्।'
-                    : 'You haven\'t added any promises to watch yet. Head to the commitment tracker to start watching.'}
+                  {t('watchlist.emptyDesc')}
                 </p>
                 <Link
                   href="/explore/first-100-days"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200"
                 >
-                  {isNe ? 'वचन ट्र्याकर हेर्नुहोस्' : 'Browse Commitment Tracker'}
+                  {t('watchlist.browseTracker')}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>

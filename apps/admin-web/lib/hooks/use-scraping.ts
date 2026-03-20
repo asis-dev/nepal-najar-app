@@ -79,6 +79,22 @@ export function usePotentialProjects(_params?: { limit?: number; offset?: number
   });
 }
 
+export function useScraperHealth() {
+  return useQuery({
+    queryKey: ['scraper-health'],
+    queryFn: async () => {
+      const secret = process.env.NEXT_PUBLIC_SCRAPE_SECRET;
+      const res = await fetch('/api/scrape/status', {
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to fetch scraper health');
+      return res.json();
+    },
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
+
 export function useTriggerScraping() {
   const queryClient = useQueryClient();
   return useMutation({

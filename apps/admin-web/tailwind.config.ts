@@ -12,10 +12,10 @@ const config: Config = {
       colors: {
         // Core luxury palette
         np: {
-          void: '#050510',        // Deepest black-blue (globe bg)
-          base: '#0a0e1a',        // App background
-          surface: '#0f1629',     // Card surfaces
-          elevated: '#151d35',    // Elevated surfaces
+          void: '#050510',        // Deepest black-blue
+          base: '#07111F',        // App background — deep navy-black
+          surface: '#0d1525',     // Card surfaces
+          elevated: '#131f38',    // Elevated surfaces
           border: 'rgba(255,255,255,0.08)',
           'border-bright': 'rgba(255,255,255,0.15)',
         },
@@ -52,8 +52,12 @@ const config: Config = {
         },
         // Nepal themed
         nepal: {
-          blue: '#003893',
-          red: '#DC143C',
+          blue: '#003893',         // Flag blue
+          red: '#DC143C',          // Flag crimson
+          crimson: '#DC143C',      // Alias for accent
+          dawn: '#D9A441',         // Sunrise gold (sparingly)
+          slate: '#23364A',        // Mountain slate
+          mist: '#DDE7F0',         // Snow mist
           mountain: '#1a365d',
           snow: '#f7fafc',
           forest: '#276749',

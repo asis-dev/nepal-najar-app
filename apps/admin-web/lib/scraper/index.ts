@@ -15,9 +15,12 @@ import { mopitGovScraper } from './sources/mopit-gov';
 import { moudGovScraper } from './sources/moud-gov';
 import { moewriGovScraper } from './sources/moewri-gov';
 import { mohaGovScraper } from './sources/moha-gov';
+// Phase 2: 36 new sources — government portals + Nepali news
+import { allNewSources } from './sources/all-sources';
 
-/** All registered scrapers */
+/** All registered scrapers (10 original + 36 new = 46 total) */
 export const scrapers: Record<string, SourceScraper> = {
+  // Original 10 sources
   'kathmandu-post': kathmanduPostScraper,
   'mof-gov': mofGovScraper,
   'online-khabar': onlineKhabarScraper,
@@ -28,6 +31,8 @@ export const scrapers: Record<string, SourceScraper> = {
   'moud-gov': moudGovScraper,
   'moewri-gov': moewriGovScraper,
   'moha-gov': mohaGovScraper,
+  // 36 new sources (29 government + 7 news)
+  ...allNewSources,
 };
 
 /**

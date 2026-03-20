@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { syncToCloud } from '@/lib/services/preferences-sync';
 
 /* ═══════════════════════════════════════════════
    HOMETOWN PREFERENCES STORE
@@ -32,14 +33,23 @@ export const usePreferencesStore = create<HometownPreferences & PreferencesActio
       hasSetHometown: false,
       showPicker: false,
 
-      setHometown: (province, district, municipality) =>
+      setHometown: (province, district, municipality) => {
         set({
           province,
           district: district ?? null,
           municipality: municipality ?? null,
           hasSetHometown: true,
           showPicker: false,
-        }),
+        });
+        // Cloud sync if logged in
+        try {
+          const { useAuth } = require('@/lib/hooks/use-auth');
+          const { user } = useAuth.getState();
+          if (user?.id) {
+            syncToCloud(user.id, { province, district: district ?? undefined, municipality: municipality ?? undefined });
+          }
+        } catch { /* not logged in or SSR */ }
+      },
 
       clearHometown: () =>
         set({
@@ -87,15 +97,25 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
     (set, get) => ({
       watchedProjectIds: [],
 
-      toggleWatch: (projectId) =>
+      toggleWatch: (projectId) => {
         set((state) => {
           const exists = state.watchedProjectIds.includes(projectId);
-          return {
-            watchedProjectIds: exists
-              ? state.watchedProjectIds.filter((id) => id !== projectId)
-              : [...state.watchedProjectIds, projectId],
-          };
-        }),
+          const newList = exists
+            ? state.watchedProjectIds.filter((id) => id !== projectId)
+            : [...state.watchedProjectIds, projectId];
+
+          // Cloud sync if logged in
+          try {
+            const { useAuth } = require('@/lib/hooks/use-auth');
+            const { user } = useAuth.getState();
+            if (user?.id) {
+              syncToCloud(user.id, { watchlist: newList });
+            }
+          } catch { /* not logged in or SSR */ }
+
+          return { watchedProjectIds: newList };
+        });
+      },
 
       isWatched: (projectId) => get().watchedProjectIds.includes(projectId),
 

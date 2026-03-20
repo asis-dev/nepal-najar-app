@@ -79,8 +79,8 @@ export function HometownPicker() {
                 </h3>
                 <p className="text-xs text-gray-500">
                   {step === 'province'
-                    ? (locale === 'ne' ? 'Where in Nepal are you from?' : t('hero.tagline'))
-                    : (locale === 'ne' ? 'Select your district (optional)' : t('hometown.selectDistrict'))}
+                    ? t('hometown.whereFrom')
+                    : t('hometown.selectDistrict')}
                 </p>
               </div>
             </div>
@@ -146,12 +146,12 @@ export function HometownPicker() {
                       <TrendingUp className="w-4 h-4 text-primary-400 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-400">
-                          {locale === 'ne' ? 'प्रदेश स्कोर' : 'Province Score'}
+                          {t('hometown.provinceScore')}
                         </p>
                         <p className="text-sm font-bold text-white">
                           {pScore.score}<span className="text-gray-500 font-normal">/100</span>
                           <span className="text-[10px] text-gray-500 ml-2">
-                            #{pScore.rank} {locale === 'ne' ? '७ मध्ये' : 'of 7'}
+                            #{pScore.rank} {t('hometown.ofSeven')}
                           </span>
                         </p>
                       </div>
