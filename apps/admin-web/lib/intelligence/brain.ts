@@ -12,6 +12,11 @@
 import { aiComplete } from './ai-router';
 import { getSupabase } from '@/lib/supabase/server';
 import { PROMISES_KNOWLEDGE } from './knowledge-base';
+import {
+  type Classification,
+  normalizeClassification,
+  needsHumanReview,
+} from './types';
 
 interface Signal {
   id: string;
@@ -30,7 +35,7 @@ interface ClassificationResult {
   isRelevant: boolean;
   relevanceScore: number;
   matchedPromiseIds: number[];
-  classification: string;
+  classification: Classification;
   reasoning: string;
 }
 
@@ -90,15 +95,25 @@ Author: ${signal.author || 'unknown'}`;
   try {
     const response = await aiComplete('classify', systemPrompt, userPrompt);
     const parsed = parseJSON<ClassificationResult>(response.content);
-    return (
-      parsed || {
+    if (!parsed) {
+      return {
         isRelevant: false,
         relevanceScore: 0,
         matchedPromiseIds: [],
         classification: 'neutral',
         reasoning: 'Failed to parse AI response',
-      }
-    );
+      };
+    }
+
+    return {
+      ...parsed,
+      classification: normalizeClassification(parsed.classification),
+      relevanceScore:
+        typeof parsed.relevanceScore === 'number' ? parsed.relevanceScore : 0,
+      matchedPromiseIds: Array.isArray(parsed.matchedPromiseIds)
+        ? parsed.matchedPromiseIds
+        : [],
+    };
   } catch (err) {
     return {
       isRelevant: false,
@@ -241,8 +256,13 @@ export async function processSignalsBatch(
             tier1_processed: true,
             relevance_score: result.relevanceScore,
             matched_promise_ids: result.matchedPromiseIds,
-            classification: result.classification,
+            classification: normalizeClassification(result.classification),
             reasoning: result.reasoning,
+            review_required: needsHumanReview({
+              confidence: null,
+              relevanceScore: result.relevanceScore,
+              matchedPromiseIds: result.matchedPromiseIds,
+            }),
           })
           .eq('id', signal.id);
 
@@ -283,17 +303,26 @@ export async function processSignalsBatch(
 
         // Update signal with deep analysis
         const primaryAnalysis = analyses[0];
+        const normalizedClass = normalizeClassification(
+          primaryAnalysis?.classification || signal.classification,
+        );
+        const confidence = primaryAnalysis?.confidence || 0;
+
         await supabase
           .from('intelligence_signals')
           .update({
             tier3_processed: true,
-            confidence: primaryAnalysis?.confidence || 0,
-            classification:
-              primaryAnalysis?.classification || signal.classification,
+            confidence,
+            classification: normalizedClass,
             reasoning:
               primaryAnalysis?.reasoning || signal.reasoning,
             extracted_data: primaryAnalysis?.extractedData || {},
             corroborated_by: corroborating.map((s) => s.id),
+            review_required: needsHumanReview({
+              confidence,
+              relevanceScore: signal.relevance_score as number | null,
+              matchedPromiseIds: (signal.matched_promise_ids as number[]) || [],
+            }),
           })
           .eq('id', signal.id);
 

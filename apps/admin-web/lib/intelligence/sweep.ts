@@ -18,6 +18,45 @@ import { processSignalsBatch } from './brain';
 import { collectSocialEvidence } from './evidence/social-collector';
 import { syncPromiseStatuses } from './promise-status-sync';
 
+async function upsertDailyQualityMetrics() {
+  const supabase = getSupabase();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: signals } = await supabase
+    .from('intelligence_signals')
+    .select('classification, confidence, relevance_score, review_required, review_status')
+    .gte('discovered_at', `${today}T00:00:00.000Z`);
+
+  const rows = signals || [];
+  const total = rows.length;
+  const relevant = rows.filter((r) => (r.relevance_score || 0) >= 0.3).length;
+  const neutral = rows.filter((r) => r.classification === 'neutral').length;
+  const confirms = rows.filter((r) => r.classification === 'confirms').length;
+  const contradicts = rows.filter((r) => r.classification === 'contradicts').length;
+  const reviewRequired = rows.filter((r) => r.review_required).length;
+  const reviewOverrides = rows.filter((r) => r.review_status === 'edited').length;
+  const avgConfidence =
+    total === 0
+      ? 0
+      : rows.reduce((sum, row) => sum + (row.confidence || 0), 0) / total;
+
+  await supabase.from('intelligence_quality_daily').upsert(
+    {
+      date: today,
+      total_signals: total,
+      relevant_signals: relevant,
+      neutral_signals: neutral,
+      confirms_signals: confirms,
+      contradicts_signals: contradicts,
+      avg_confidence: Number(avgConfidence.toFixed(4)),
+      review_required_count: reviewRequired,
+      review_overrides_count: reviewOverrides,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'date' },
+  );
+}
+
 interface SweepResult {
   sweepId: string;
   status: 'completed' | 'partial' | 'failed';
@@ -309,6 +348,14 @@ export async function runFullSweep(
       result.analysis.errors.length;
 
     result.status = result.totalErrors > 10 ? 'partial' : 'completed';
+
+    try {
+      await upsertDailyQualityMetrics();
+    } catch (err) {
+      result.analysis.errors.push(
+        `Quality metrics error: ${err instanceof Error ? err.message : 'unknown'}`,
+      );
+    }
   } catch (err) {
     result.status = 'failed';
     result.analysis.errors.push(

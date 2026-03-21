@@ -6,7 +6,7 @@ import {
   BarChart3, Building2, FolderKanban, Users, AlertTriangle,
   ClipboardList, FileText, Shield, Bell, Settings,
   CheckCircle2, TrendingUp, Eye, Mountain, Map, Crown,
-  MessageCircle, Radar, Globe, HeartPulse, MessageSquare, FileUp
+  MessageCircle, Radar, Globe, HeartPulse, MessageSquare, FileUp, ListChecks
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -41,6 +41,7 @@ const sections: NavSection[] = [
       { name: 'Evidence', href: '/evidence', icon: FileText },
       { name: 'Budget', href: '/budget', icon: TrendingUp },
       { name: 'Verification', href: '/verification', icon: Shield },
+      { name: 'Review Queue', href: '/review', icon: ListChecks },
       { name: 'Audit Log', href: '/audit', icon: Eye },
     ],
   },

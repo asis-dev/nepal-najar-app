@@ -10,6 +10,12 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
+import { PROMISES_KNOWLEDGE } from '../lib/intelligence/knowledge-base';
+import {
+  normalizeClassification,
+  needsHumanReview,
+  type Classification,
+} from '../lib/intelligence/types';
 
 dotenv.config({ path: resolve(__dirname, '../.env.local') });
 
@@ -31,45 +37,15 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-// ─── Promise Knowledge Base (compact) ──────────────────────────────
+// ─── Promise Knowledge Base (single source of truth) ─────────────────────
 
-const PROMISES = [
-  { id: 1, title: 'Directly Elected Executive System', keywords: 'presidential system, direct election, executive head, constitutional amendment' },
-  { id: 2, title: 'Limit Federal Ministries to 18', keywords: 'ministry reduction, federal restructuring, government efficiency, cabinet size' },
-  { id: 3, title: 'Allocate 60% Budget to Provincial & Local Governments', keywords: 'fiscal federalism, budget allocation, provincial budget, local government funding' },
-  { id: 4, title: 'Investigate Assets of Public Officials Since 1990', keywords: 'asset investigation, corruption probe, CIAA, wealth audit, property investigation' },
-  { id: 5, title: 'Mandatory Public Asset Disclosure', keywords: 'asset disclosure, property declaration, transparency, public officials wealth' },
-  { id: 6, title: '100 Days 100 Works Plan', keywords: '100 days, quick wins, immediate action, government plan, priority tasks' },
-  { id: 7, title: 'Public Procurement Transparency Portal', keywords: 'procurement, e-procurement, tender, contract transparency, public spending' },
-  { id: 8, title: '7% Annual GDP Growth Target', keywords: 'GDP growth, economic growth, economic target, development rate' },
-  { id: 9, title: 'Create 500,000 Jobs', keywords: 'employment, jobs, unemployment, labor market, youth employment' },
-  { id: 10, title: 'Raise Exports to $30 Billion', keywords: 'exports, trade, export target, trade deficit, foreign trade' },
-  { id: 11, title: 'Tax Reform — Reduce Citizen Burden', keywords: 'tax reform, tax reduction, taxation, VAT, income tax, tax policy' },
-  { id: 12, title: 'Generate 30,000 MW Electricity in 10 Years', keywords: 'hydropower, electricity, MW, energy generation, power plant, dam' },
-  { id: 13, title: 'Complete Melamchi Water Supply', keywords: 'Melamchi, water supply, Kathmandu water, drinking water, water project' },
-  { id: 14, title: 'Complete All National Pride Projects in 2 Years', keywords: 'national pride project, rashtriya gaurav, mega project, infrastructure completion' },
-  { id: 15, title: 'East-West Highway 4-Lane Expansion', keywords: 'highway, East-West, 4-lane, road expansion, Mahendra highway' },
-  { id: 16, title: 'East-West Electric Railway', keywords: 'railway, electric rail, train, rail track, Mechi-Mahakali' },
-  { id: 17, title: 'Operationalize Bhairahawa & Pokhara Airports', keywords: 'airport, Bhairahawa, Pokhara, Gautam Buddha, international airport' },
-  { id: 18, title: '"Online, Not Queue" — Digital Government Services', keywords: 'digital government, e-governance, online services, paperless, digital Nepal' },
-  { id: 19, title: 'Digital Parks in All 7 Provinces', keywords: 'IT park, digital park, tech hub, technology zone, province' },
-  { id: 20, title: 'Declare IT as National Strategic Industry', keywords: 'IT industry, technology sector, strategic industry, software, BPO' },
-  { id: 21, title: 'Cryptocurrency Regulation & Pilot', keywords: 'cryptocurrency, bitcoin, digital currency, blockchain, crypto regulation' },
-  { id: 22, title: 'Universal Health Insurance — 100% Coverage', keywords: 'health insurance, universal health, medical coverage, health card' },
-  { id: 23, title: 'Centralized National Ambulance Service', keywords: 'ambulance, emergency service, 102, medical transport, emergency response' },
-  { id: 24, title: 'Free Education for Up to 3 Children', keywords: 'free education, school fee, education policy, public school, tuition' },
-  { id: 25, title: '"Skill in Education" National Expansion', keywords: 'skill education, vocational, TVET, technical education, skill development' },
-  { id: 26, title: 'Zero Dropout Rate — School Retention Program', keywords: 'dropout, school retention, enrollment, education access, child education' },
-  { id: 27, title: 'Clean Kathmandu Valley Campaign', keywords: 'Kathmandu clean, waste management, pollution, valley cleanup, solid waste' },
-  { id: 28, title: 'Bagmati & Major River Restoration', keywords: 'Bagmati, river cleanup, river restoration, water pollution, river conservation' },
-  { id: 29, title: 'Land Reform — Commission in 100 Days', keywords: 'land reform, land commission, land ownership, landless, land rights' },
-  { id: 30, title: 'Overseas Voting for Diaspora Nepalis', keywords: 'overseas voting, diaspora, NRN, foreign employment, migrant voting' },
-  { id: 31, title: 'Cooperatives Crisis Resolution — Return Depositors Money', keywords: 'cooperative, depositor, savings, cooperative fraud, financial cooperative' },
-  { id: 32, title: 'Double Tourist Numbers & Spending', keywords: 'tourism, tourist, Visit Nepal, tourist arrival, tourism revenue' },
-  { id: 33, title: 'Official State Apology to Dalit Community', keywords: 'Dalit, caste discrimination, state apology, social justice, untouchability' },
-  { id: 34, title: 'Social Security Expansion — Pension & Insurance', keywords: 'social security, pension, elderly allowance, insurance, social protection' },
-  { id: 35, title: 'Fast-Track Citizenship & Passport Processing', keywords: 'citizenship, passport, MRP, identity document, citizenship by descent' },
-];
+const PROMISES = PROMISES_KNOWLEDGE.map((p) => ({
+  id: p.id,
+  title: p.title,
+  keywords: [p.keyAspects, p.progressIndicators, p.stallIndicators]
+    .filter(Boolean)
+    .join(', '),
+}));
 
 // ─── Gemini API Call ────────────────────────────────────────────────
 
@@ -117,7 +93,7 @@ interface ClassResult {
   isRelevant: boolean;
   relevanceScore: number;
   matchedPromiseIds: number[];
-  classification: string;
+  classification: Classification;
   reasoning: string;
 }
 
@@ -204,7 +180,7 @@ async function main() {
       // Normalize result fields
       const score = typeof result.relevanceScore === 'number' ? result.relevanceScore : 0;
       const matchedIds = Array.isArray(result.matchedPromiseIds) ? result.matchedPromiseIds : [];
-      const classification = result.classification || 'neutral';
+      const classification = normalizeClassification(result.classification);
       const reasoning = result.reasoning || '';
 
       // Update signal in database
@@ -214,6 +190,11 @@ async function main() {
         matched_promise_ids: matchedIds,
         classification,
         reasoning,
+        review_required: needsHumanReview({
+          confidence: null,
+          relevanceScore: score,
+          matchedPromiseIds: matchedIds,
+        }),
       }).eq('id', signal.id);
 
       if (result.isRelevant && score >= 0.3) {
