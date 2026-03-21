@@ -29,6 +29,7 @@ const PUBLIC_PREFIXES = [
   '/api/comments',
   '/api/og',
   '/api/v1',
+  '/api/intelligence',
   '/search',
 ];
 

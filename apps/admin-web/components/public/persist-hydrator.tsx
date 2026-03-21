@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences';
 import { useEngagementStore } from '@/lib/stores/engagement';
 import { useVotingStore } from '@/lib/stores/voting';
+import { useComparisonStore } from '@/lib/stores/comparison';
 
 export function PersistHydrator() {
   useEffect(() => {
@@ -11,6 +12,7 @@ export function PersistHydrator() {
     void useWatchlistStore.persist.rehydrate();
     void useEngagementStore.persist.rehydrate();
     void useVotingStore.persist.rehydrate();
+    void useComparisonStore.persist.rehydrate();
   }, []);
 
   return null;

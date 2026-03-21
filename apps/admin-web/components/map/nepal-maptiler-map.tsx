@@ -45,6 +45,7 @@ export function NepalMapTilerMap({
   const mapRef = useRef<Map | null>(null);
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const districtsLoadedRef = useRef(false);
 
   const token = process.env.NEXT_PUBLIC_MAPTILER_KEY || null;
 
@@ -94,19 +95,20 @@ export function NepalMapTilerMap({
         source: 'provinces',
         paint: {
           'fill-color': [
-            'match',
-            ['get', 'severity'],
-            'low', 'rgba(16, 185, 129, 0.35)',
-            'medium', 'rgba(245, 158, 11, 0.35)',
-            'high', 'rgba(249, 115, 22, 0.35)',
-            'critical', 'rgba(239, 68, 68, 0.4)',
-            'rgba(16, 185, 129, 0.35)',
+            'case',
+            ['==', ['coalesce', ['feature-state', 'dynamicSeverity'], ['get', 'severity']], 'critical'],
+            'rgba(239, 68, 68, 0.65)',
+            ['==', ['coalesce', ['feature-state', 'dynamicSeverity'], ['get', 'severity']], 'high'],
+            'rgba(249, 115, 22, 0.6)',
+            ['==', ['coalesce', ['feature-state', 'dynamicSeverity'], ['get', 'severity']], 'medium'],
+            'rgba(250, 204, 21, 0.55)',
+            'rgba(16, 185, 129, 0.55)',
           ],
           'fill-opacity': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
             0.85,
-            0.6,
+            0.7,
           ],
         },
       });
@@ -162,50 +164,66 @@ export function NepalMapTilerMap({
         },
       });
 
-      // --- District layers ---
-      map.addSource('districts', {
-        type: 'geojson',
-        data: '/geo/nepal-districts.geojson',
-      });
+      // --- District layers (lazy-loaded at zoom 7+) ---
+      const addDistrictLayers = () => {
+        if (districtsLoadedRef.current) return;
+        districtsLoadedRef.current = true;
 
-      map.addLayer({
-        id: 'district-fill',
-        type: 'fill',
-        source: 'districts',
-        minzoom: 7,
-        paint: {
-          'fill-color': 'rgba(59, 130, 246, 0.1)',
-          'fill-opacity': 0.4,
-        },
-      });
+        map.addSource('districts', {
+          type: 'geojson',
+          data: '/geo/nepal-districts.geojson',
+        });
 
-      map.addLayer({
-        id: 'district-border',
-        type: 'line',
-        source: 'districts',
-        minzoom: 7,
-        paint: {
-          'line-color': 'rgba(255, 255, 255, 0.25)',
-          'line-width': 1,
-        },
-      });
+        map.addLayer({
+          id: 'district-fill',
+          type: 'fill',
+          source: 'districts',
+          minzoom: 7,
+          paint: {
+            'fill-color': 'rgba(59, 130, 246, 0.1)',
+            'fill-opacity': 0.4,
+          },
+        });
 
-      map.addLayer({
-        id: 'district-labels',
-        type: 'symbol',
-        source: 'districts',
-        minzoom: 8,
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-size': 11,
-          'text-font': ['Open Sans Regular'],
-          'text-anchor': 'center',
-        },
-        paint: {
-          'text-color': 'rgba(255, 255, 255, 0.7)',
-          'text-halo-color': 'rgba(0, 0, 0, 0.7)',
-          'text-halo-width': 1,
-        },
+        map.addLayer({
+          id: 'district-border',
+          type: 'line',
+          source: 'districts',
+          minzoom: 7,
+          paint: {
+            'line-color': 'rgba(255, 255, 255, 0.25)',
+            'line-width': 1,
+          },
+        });
+
+        map.addLayer({
+          id: 'district-labels',
+          type: 'symbol',
+          source: 'districts',
+          minzoom: 8,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-size': 11,
+            'text-font': ['Open Sans Regular'],
+            'text-anchor': 'center',
+          },
+          paint: {
+            'text-color': 'rgba(255, 255, 255, 0.7)',
+            'text-halo-color': 'rgba(0, 0, 0, 0.7)',
+            'text-halo-width': 1,
+          },
+        });
+      };
+
+      // Load districts immediately if already zoomed in, otherwise wait
+      if (map.getZoom() >= 7) {
+        addDistrictLayers();
+      }
+
+      map.on('zoomend', () => {
+        if (map.getZoom() >= 7) {
+          addDistrictLayers();
+        }
       });
 
       setMapReady(true);
@@ -213,6 +231,7 @@ export function NepalMapTilerMap({
 
     return () => {
       mapRef.current = null;
+      districtsLoadedRef.current = false;
       map.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -321,6 +340,23 @@ export function NepalMapTilerMap({
     map.setFilter('province-highlight', ['==', ['get', 'name'], filterValue]);
     map.setFilter('province-highlight-border', ['==', ['get', 'name'], filterValue]);
   }, [selectedProvince, mapReady]);
+
+  // --- Sync regionData severity into feature states ---
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    for (const d of regionData) {
+      try {
+        map.setFeatureState(
+          { source: 'provinces', id: d.name },
+          { dynamicSeverity: d.severity || 'low' }
+        );
+      } catch {
+        // Feature might not exist yet
+      }
+    }
+  }, [regionData, mapReady]);
 
   // --- No token placeholder ---
   if (!token) {

@@ -555,7 +555,7 @@ export default function PromiseDetailPage() {
         {/* ═══════════════════════════════════════
            SHARE SECTION
            ═══════════════════════════════════════ */}
-        <section className="px-4 sm:px-6 lg:px-8 pb-20">
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
           <div className="max-w-4xl mx-auto">
             <div className="glass-card p-6 sm:p-8 text-center">
               <div className="flex items-center justify-center gap-3 mb-3">
