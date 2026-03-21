@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Map, AlertTriangle, TrendingUp,
@@ -166,7 +166,15 @@ const severityTone: Record<string, string> = {
   critical: 'text-red-300 bg-red-500/12 border-red-500/25',
 };
 
-export default function PublicMapPage() {
+export default function PublicMapPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-np-base animate-pulse" />}>
+      <PublicMapPage />
+    </Suspense>
+  );
+}
+
+function PublicMapPage() {
   const { locale, t } = useI18n();
   const { data: promises, isLoading } = useAllPromises();
   const { stats } = usePromiseStats();
