@@ -376,7 +376,7 @@ function BachanTrackerContent() {
            ═══════════════════════════════════════ */}
         <section className="px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
-            <Link href="/explore/projects" className="block hover:opacity-90 transition-opacity">
+            <Link href="/explore/first-100-days" className="block hover:opacity-90 transition-opacity">
               <BudgetOverviewStrip promises={promises} />
             </Link>
           </div>

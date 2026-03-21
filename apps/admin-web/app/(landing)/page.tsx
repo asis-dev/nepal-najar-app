@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   TimerReset,
 } from 'lucide-react';
+import { Target } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { TrustLanes } from '@/components/public/trust-lanes';
 import { MeroWardCard } from '@/components/public/mero-ward-card';
@@ -24,6 +25,7 @@ import {
   useLatestArticles,
   usePromiseStats,
 } from '@/lib/hooks/use-promises';
+import { getDailyPromise } from '@/lib/data/daily-promise';
 
 const NepalGlobe = dynamic(
   () => import('@/components/globe/nepal-globe').then((m) => ({ default: m.NepalGlobe })),
@@ -148,6 +150,7 @@ export default function LandingPage() {
   const { data: latestArticles, isLoading: articlesLoading } = useLatestArticles(3);
   const { data: articleCount } = useArticleCount();
   const [selectedProvince, setSelectedProvince] = useState<string>('Bagmati Province');
+  const dailyPromise = useMemo(() => getDailyPromise(), []);
 
   const selectedProvinceData = useMemo(
     () => provinceOverview.find((province) => province.name === selectedProvince) ?? provinceOverview[2],
@@ -158,7 +161,7 @@ export default function LandingPage() {
     {
       title: 'Explore promises',
       description: 'Browse the biggest public promises, linked evidence, and tracked progress across sectors.',
-      href: '/explore/projects',
+      href: '/explore/first-100-days',
       icon: ScanSearch,
       metric: statsLoading ? '--' : `${stats?.total ?? 0} tracked`,
     },
@@ -451,6 +454,33 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="public-section pt-2">
+          <div className="public-shell">
+            <Link href="/daily" className="block group">
+              <div className="glass-card-hover flex items-center gap-5 p-5 sm:p-6">
+                <div className="flex-shrink-0 rounded-2xl bg-gradient-to-br from-primary-500/15 to-cyan-500/15 p-4">
+                  <Target className="h-7 w-7 text-primary-300" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                    Daily promise
+                  </p>
+                  <h3 className="mt-1 truncate text-lg font-semibold text-white">
+                    {dailyPromise.title}
+                  </h3>
+                  <p className="mt-1 line-clamp-1 text-sm text-gray-400">
+                    {dailyPromise.description}
+                  </p>
+                </div>
+                <span className="hidden items-center gap-2 text-sm font-medium text-primary-300 transition-colors group-hover:text-primary-200 sm:inline-flex">
+                  Check today&apos;s promise
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              </div>
+            </Link>
           </div>
         </section>
 

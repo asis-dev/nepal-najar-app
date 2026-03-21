@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Eye, Map, Calendar, MapPinHouse, TimerReset, ShieldCheck } from 'lucide-react';
+import { Eye, Map, Landmark, MapPinHouse, TimerReset, ShieldCheck } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
 const navItems = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
   { href: '/explore/first-100-days', labelKey: 'nav.first100Days', icon: TimerReset },
   { href: '/explore/map', labelKey: 'nav.map', icon: Map },
-  { href: '/daily', labelKey: 'nav.daily', icon: Calendar },
+  { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
   { href: '/mero-ward', labelKey: 'nav.myArea', icon: MapPinHouse },
   { href: '/evidence', labelKey: 'nav.evidence', icon: ShieldCheck },
 ];

@@ -15,3 +15,6 @@ public/sw.js
 public/sw.js.map
 public/swe-worker-*.js
 public/workbox-*.js
+.playwright-cli/
+apps/admin-web/.next.prepush-check/
+output/

@@ -595,7 +595,7 @@ export default function PromiseDetailPage() {
               </h3>
               {promise.linkedProjects > 0 ? (
                 <Link
-                  href={`/explore/projects?category=${encodeURIComponent(promise.category)}`}
+                  href={`/explore/first-100-days?category=${encodeURIComponent(promise.category)}`}
                   className="block p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center hover:bg-white/[0.05] hover:border-primary-500/30 transition-all group"
                 >
                   <div className="text-3xl font-bold text-primary-400 mb-1 group-hover:text-primary-300 transition-colors">{promise.linkedProjects}</div>

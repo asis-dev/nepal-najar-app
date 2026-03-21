@@ -212,7 +212,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             {message.sources.map((source) => (
               <Link
                 key={source.id}
-                href={`/explore/projects/${source.id}`}
+                href={`/explore/first-100-days/${source.id}`}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium
                   bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 transition-colors border border-primary-500/20"
               >

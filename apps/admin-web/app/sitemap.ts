@@ -20,7 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${SITE_URL}/explore/projects`,
+      url: `${SITE_URL}/explore/first-100-days`,
       lastModified: now,
       changeFrequency: 'daily',
       priority: 0.8,

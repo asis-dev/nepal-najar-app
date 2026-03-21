@@ -33,7 +33,7 @@ const primaryNavLinks = [
 ];
 
 const mobileOnlyLinks = [
-  { href: '/explore/projects', labelKey: 'nav.projects', icon: FolderKanban },
+  { href: '/explore/first-100-days', labelKey: 'nav.projects', icon: FolderKanban },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
   { href: '/search', labelKey: 'nav.search', icon: Search },
 ];

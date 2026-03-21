@@ -252,7 +252,7 @@ export default function ProjectDetailPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#0a0e1a] via-[#0d1225] to-[#0a0e1a] text-white/50">
         <p className="text-lg">{t('project.notFound')}</p>
-        <Link href="/explore/projects" className="mt-4 text-cyan-400 hover:underline">
+        <Link href="/explore/first-100-days" className="mt-4 text-cyan-400 hover:underline">
           &larr; {t('project.backToProjects')}
         </Link>
       </div>
@@ -266,7 +266,7 @@ export default function ProjectDetailPage() {
       <div className="mx-auto max-w-4xl">
         {/* Back link */}
         <Link
-          href="/explore/projects"
+          href="/explore/first-100-days"
           className="mb-8 inline-flex items-center gap-2 text-sm text-white/40 transition-colors hover:text-cyan-400"
         >
           <ArrowLeft className="h-4 w-4" />

@@ -14,7 +14,7 @@ const quickLinkKeys = [
   { href: '/report-card', labelKey: 'nav.reportCard' },
   { href: '/mero-ward', labelKey: 'nav.myArea' },
   { href: '/search', labelKey: 'nav.search' },
-  { href: '/explore/projects', labelKey: 'nav.projects' },
+  { href: '/explore/first-100-days', labelKey: 'nav.projects' },
 ];
 
 export function Footer() {
