@@ -45,6 +45,7 @@ import { useWatchlistStore } from '@/lib/stores/preferences';
 import { useComparisonStore } from '@/lib/stores/comparison';
 import { ExportButton } from '@/components/public/export-button';
 import { exportPromisesCSV, exportPromisesPDF } from '@/lib/utils/export';
+import { useEvidenceCounts } from '@/lib/hooks/use-evidence-vault';
 import {
   promises,
   deadlines,
@@ -214,6 +215,7 @@ function BachanTrackerContent() {
   const setStatusFilter = (v: string) => setFilter('status', v);
   const { toggleWatch, isWatched } = useWatchlistStore();
   const { addToComparison, removeFromComparison, isInComparison } = useComparisonStore();
+  const { data: evidenceCounts } = useEvidenceCounts();
 
   const isNe = locale === 'ne';
 
@@ -622,6 +624,11 @@ function BachanTrackerContent() {
                             <FileText className="w-3 h-3" />
                             {promise.evidenceCount} {t('commitment.evidence')}
                           </span>
+                          {evidenceCounts && evidenceCounts[parseInt(promise.id, 10)] > 0 && (
+                            <span className="inline-flex items-center gap-1 text-cyan-400/70">
+                              💬 {evidenceCounts[parseInt(promise.id, 10)]}
+                            </span>
+                          )}
                           <span className="inline-flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {promise.lastUpdate}

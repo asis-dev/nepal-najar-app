@@ -15,6 +15,8 @@ import { collectAllWebSearch } from './collectors/web-search';
 import { collectAllSocial } from './collectors/social';
 import { collectAllApify } from './collectors/apify';
 import { processSignalsBatch } from './brain';
+import { collectSocialEvidence } from './evidence/social-collector';
+import { syncPromiseStatuses } from './promise-status-sync';
 
 interface SweepResult {
   sweepId: string;
@@ -54,6 +56,14 @@ interface SweepResult {
     promisesUpdated: number;
     totalCostUsd: number;
     errors: string[];
+  };
+  evidence: {
+    extracted: number;
+    new: number;
+  };
+  statusSync: {
+    promisesChecked: number;
+    statusesUpdated: number;
   };
   totalSignals: number;
   totalErrors: number;
@@ -116,6 +126,14 @@ export async function runFullSweep(
       promisesUpdated: 0,
       totalCostUsd: 0,
       errors: [],
+    },
+    evidence: {
+      extracted: 0,
+      new: 0,
+    },
+    statusSync: {
+      promisesChecked: 0,
+      statusesUpdated: 0,
     },
     totalSignals: 0,
     totalErrors: 0,
@@ -228,6 +246,47 @@ export async function runFullSweep(
           break;
 
         totalRounds++;
+      }
+    }
+
+    // ===== EVIDENCE COLLECTION PHASE =====
+    if (!skipAnalysis) {
+      console.log('[Sweep] Starting evidence collection phase...');
+      try {
+        const evidenceResult = await collectSocialEvidence({
+          minRelevance: 0.5,
+          limit: 50,
+        });
+        result.evidence = {
+          extracted: evidenceResult.signalsProcessed,
+          new: evidenceResult.evidenceCreated,
+        };
+        if (evidenceResult.errors.length > 0) {
+          result.analysis.errors.push(...evidenceResult.errors.map(e => `[Evidence] ${e}`));
+        }
+        console.log(`[Sweep] Evidence: ${evidenceResult.evidenceCreated} new entries from ${evidenceResult.signalsProcessed} signals`);
+      } catch (err) {
+        result.analysis.errors.push(
+          `Evidence collection error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+
+      // ===== STATUS SYNC PHASE =====
+      console.log('[Sweep] Starting promise status sync...');
+      try {
+        const syncResult = await syncPromiseStatuses();
+        result.statusSync = {
+          promisesChecked: syncResult.promisesChecked,
+          statusesUpdated: syncResult.statusesUpdated,
+        };
+        if (syncResult.errors.length > 0) {
+          result.analysis.errors.push(...syncResult.errors.map(e => `[StatusSync] ${e}`));
+        }
+        console.log(`[Sweep] StatusSync: ${syncResult.statusesUpdated} statuses updated out of ${syncResult.promisesChecked} checked`);
+      } catch (err) {
+        result.analysis.errors.push(
+          `Status sync error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
       }
     }
 

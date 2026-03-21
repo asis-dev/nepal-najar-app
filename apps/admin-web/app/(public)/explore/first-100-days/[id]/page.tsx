@@ -46,8 +46,10 @@ import {
   type GovernmentPromise,
 } from '@/lib/data/promises';
 import { useLatestArticles } from '@/lib/hooks/use-promises';
+import { useEvidenceVault } from '@/lib/hooks/use-evidence-vault';
 import { EvidenceStrengthBadge, ConfidenceDot } from '@/components/public/evidence-strength-badge';
 import { ShareButtons } from '@/components/public/share-buttons';
+import { Youtube, Facebook, Twitter, MessageCircle, Clock, Quote, ExternalLink as ExtLinkIcon } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════
    STATUS CONFIG
@@ -139,6 +141,9 @@ export default function PromiseDetailPage() {
 
   // Get REAL related articles from Supabase (not mock data)
   const { data: realArticles } = useLatestArticles(10, promise?.id);
+
+  // Get evidence vault entries for this promise
+  const { data: evidenceEntries } = useEvidenceVault(promise?.id);
 
   // Get related timeline events (by category match)
   const relatedEvents = useMemo(() => {
@@ -343,6 +348,141 @@ export default function PromiseDetailPage() {
         <section className="px-4 sm:px-6 lg:px-8 pb-8">
           <div className="max-w-4xl mx-auto">
             <VoteWidget promiseId={promise.id} variant="full" />
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════
+           EVIDENCE & STATEMENTS (from Evidence Vault)
+           ═══════════════════════════════════════ */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="glass-card p-6">
+              <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                <Quote className="w-4 h-4 text-cyan-400" />
+                {isNe ? 'प्रमाण र वक्तव्यहरू' : 'Evidence & Statements'}
+                {evidenceEntries && evidenceEntries.length > 0 && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-semibold uppercase tracking-wider">
+                    {evidenceEntries.length}
+                  </span>
+                )}
+              </h3>
+
+              {evidenceEntries && evidenceEntries.length > 0 ? (
+                <div className="space-y-4">
+                  {evidenceEntries.map((entry) => {
+                    const SourceIcon =
+                      entry.source_type === 'youtube' ? Youtube :
+                      entry.source_type === 'facebook' ? Facebook :
+                      entry.source_type === 'twitter' ? Twitter :
+                      MessageCircle;
+                    const sourceBg =
+                      entry.source_type === 'youtube' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                      entry.source_type === 'facebook' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                      entry.source_type === 'twitter' ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' :
+                      'bg-gray-500/10 text-gray-400 border-gray-500/20';
+
+                    const statementTypeBg: Record<string, string> = {
+                      commitment: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                      claim: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                      excuse: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                      update: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+                      contradiction: 'bg-red-500/10 text-red-400 border-red-500/20',
+                      denial: 'bg-red-500/10 text-red-400 border-red-500/20',
+                      deflection: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+                      acknowledgment: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+                    };
+
+                    const formatTimestamp = (seconds: number) => {
+                      const m = Math.floor(seconds / 60);
+                      const s = seconds % 60;
+                      return `${m}:${s.toString().padStart(2, '0')}`;
+                    };
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 hover:bg-white/[0.04] transition-colors"
+                      >
+                        {/* Official name + title */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="text-sm font-medium text-white">{entry.official_name}</p>
+                            {entry.official_title && (
+                              <p className="text-xs text-gray-500">{entry.official_title}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {/* Statement type badge */}
+                            {entry.statement_type && (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border capitalize ${statementTypeBg[entry.statement_type] || statementTypeBg.acknowledgment}`}>
+                                {entry.statement_type}
+                              </span>
+                            )}
+                            {/* Source badge */}
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${sourceBg}`}>
+                              <SourceIcon className="w-3 h-3" />
+                              {entry.source_type}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Quote with blue left border */}
+                        <div className="border-l-2 border-cyan-500/50 pl-3 mb-3">
+                          <p className="text-sm text-gray-300 leading-relaxed line-clamp-4">
+                            &ldquo;{entry.quote_text}&rdquo;
+                          </p>
+                        </div>
+
+                        {/* Bottom meta row */}
+                        <div className="flex items-center gap-3 flex-wrap text-[10px] text-gray-500">
+                          {entry.spoken_date && (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(entry.spoken_date).toLocaleDateString(isNe ? 'ne-NP' : 'en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </span>
+                          )}
+                          {entry.source_type === 'youtube' && entry.timestamp_seconds != null && entry.timestamp_url && (
+                            <a
+                              href={entry.timestamp_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+                            >
+                              <Youtube className="w-3 h-3" />
+                              Watch at {formatTimestamp(entry.timestamp_seconds)}
+                            </a>
+                          )}
+                          <a
+                            href={entry.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-primary-400 hover:text-primary-300 transition-colors"
+                          >
+                            <ExtLinkIcon className="w-3 h-3" />
+                            {isNe ? 'स्रोत हेर्नुहोस्' : 'View Source'}
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
+                  <p className="text-sm text-gray-500">
+                    {isNe ? 'अहिलेसम्म कुनै प्रमाण संकलन भएको छैन' : 'No evidence collected yet'}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {isNe
+                      ? 'बुद्धिमत्ता स्वीपले स्वचालित रूपमा प्रमाण संकलन गर्छ'
+                      : 'Intelligence sweeps automatically collect evidence from official statements'}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
