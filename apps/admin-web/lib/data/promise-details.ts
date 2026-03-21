@@ -1,6 +1,6 @@
 /**
  * Promise Details — Ministry assignments, milestones, and progress methodology
- * for all 35 government promises from the RSP "Bacha Patra 2082" (Citizen Contract).
+ * for all 109 government promises from the RSP "Bacha Patra 2082" (Citizen Contract).
  *
  * Ministry assignments reflect Nepal's federal government structure.
  * The RSP government committed to reducing ministries to 18.
@@ -47,7 +47,7 @@ export interface PromiseDetail {
 }
 
 /* ═══════════════════════════════════════════════
-   PROMISE DETAILS — ALL 35
+   PROMISE DETAILS — ALL 109
    ═══════════════════════════════════════════════ */
 
 export const promiseDetails: PromiseDetail[] = [
@@ -193,7 +193,7 @@ export const promiseDetails: PromiseDetail[] = [
     progress_methodology_description: 'Composite of actual GDP growth rate vs 7% target, investment inflows, and policy reform completion.',
   },
 
-  // ── 9: Create 500,000 Jobs ──
+  // ── 9: Create 1.2 Million Jobs ──
   {
     promiseId: '9',
     responsible_ministry: 'Ministry of Labour, Employment and Social Security',
@@ -203,12 +203,12 @@ export const promiseDetails: PromiseDetail[] = [
     supporting_ministries: ['Ministry of Industry, Commerce and Supplies'],
     milestones: [
       { id: '9-m1', title: 'Launch national employment creation program', title_ne: 'राष्ट्रिय रोजगारी सिर्जना कार्यक्रम सुरु', completed: false },
-      { id: '9-m2', title: 'Create 100,000 new registered jobs', title_ne: '१ लाख नयाँ दर्ता रोजगारी सिर्जना', completed: false },
+      { id: '9-m2', title: 'Create 300,000 new registered jobs', title_ne: '३ लाख नयाँ दर्ता रोजगारी सिर्जना', completed: false },
       { id: '9-m3', title: 'Establish startup incubation hubs in all provinces', title_ne: 'सबै प्रदेशमा स्टार्टअप इन्क्युबेसन हब स्थापना', completed: false },
-      { id: '9-m4', title: 'Reach 500,000 new jobs milestone', title_ne: '५ लाख नयाँ रोजगारी माइलस्टोन पुग्ने', completed: false },
+      { id: '9-m4', title: 'Reach 1.2 million new jobs milestone', title_ne: '१२ लाख नयाँ रोजगारी माइलस्टोन पुग्ने', completed: false },
     ],
     progress_methodology: 'coverage_percentage',
-    progress_methodology_description: 'Number of new formally registered jobs created divided by 500,000 target.',
+    progress_methodology_description: 'Number of new formally registered jobs created divided by 1,200,000 target.',
   },
 
   // ── 10: Raise Exports to $30 Billion ──
@@ -666,6 +666,1120 @@ export const promiseDetails: PromiseDetail[] = [
     ],
     progress_methodology: 'milestone_completion',
     progress_methodology_description: 'Tracked through digitization, backlog clearance, processing time, and online service availability.',
+  },
+
+  // ── 36: Formal State Apology for Caste Discrimination ──
+  {
+    promiseId: '36',
+    responsible_ministry: 'Office of the Prime Minister and Council of Ministers',
+    responsible_ministry_ne: 'प्रधानमन्त्री तथा मन्त्रिपरिषदको कार्यालय',
+    responsible_minister: 'Balen Shah (Prime Minister)',
+    responsible_minister_ne: 'बालेन शाह (प्रधानमन्त्री)',
+    supporting_ministries: ['National Dalit Commission'],
+    milestones: [
+      { id: '36-m1', title: 'Draft formal apology text in consultation with affected communities', title_ne: 'प्रभावित समुदायसँग परामर्श गरी औपचारिक माफी पाठ मस्यौदा', completed: false },
+      { id: '36-m2', title: 'Deliver apology in PM first parliamentary address', title_ne: 'प्रधानमन्त्रीको पहिलो संसदीय सम्बोधनमा माफी प्रदान', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through drafting and delivery of formal apology.',
+  },
+
+  // ── 37: Dismantle Structural Caste Discrimination ──
+  {
+    promiseId: '37',
+    responsible_ministry: 'Ministry of Law, Justice and Parliamentary Affairs',
+    responsible_ministry_ne: 'कानून, न्याय तथा संसदीय मामिला मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    supporting_ministries: ['National Dalit Commission', 'National Human Rights Commission'],
+    milestones: [
+      { id: '37-m1', title: 'Audit existing laws for discriminatory provisions', title_ne: 'विद्यमान कानूनमा भेदभावपूर्ण प्रावधान लेखापरीक्षण', completed: false },
+      { id: '37-m2', title: 'Draft anti-discrimination reform bill', title_ne: 'भेदभाव विरोधी सुधार विधेयक मस्यौदा', completed: false },
+      { id: '37-m3', title: 'Pass comprehensive anti-caste discrimination legislation', title_ne: 'व्यापक जाति भेदभाव विरोधी कानून पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through legal audit, bill drafting, and parliamentary passage.',
+  },
+
+  // ── 38: Ban MPs from Becoming Ministers ──
+  {
+    promiseId: '38',
+    responsible_ministry: 'Ministry of Law, Justice and Parliamentary Affairs',
+    responsible_ministry_ne: 'कानून, न्याय तथा संसदीय मामिला मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '38-m1', title: 'Draft constitutional amendment separating legislature and executive', title_ne: 'विधायिका र कार्यपालिका अलग गर्ने संविधान संशोधन मस्यौदा', completed: false },
+      { id: '38-m2', title: 'Table amendment in parliament', title_ne: 'संसदमा संशोधन पेश', completed: false },
+      { id: '38-m3', title: 'Pass constitutional amendment', title_ne: 'संविधान संशोधन पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through constitutional amendment drafting and parliamentary passage.',
+  },
+
+  // ── 39: Non-Partisan Local Governments ──
+  {
+    promiseId: '39',
+    responsible_ministry: 'Ministry of Federal Affairs and General Administration',
+    responsible_ministry_ne: 'संघीय मामिला तथा सामान्य प्रशासन मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '39-m1', title: 'Draft non-partisan local election framework', title_ne: 'गैर-दलीय स्थानीय निर्वाचन ढाँचा मस्यौदा', completed: false },
+      { id: '39-m2', title: 'Pass local government reform legislation', title_ne: 'स्थानीय सरकार सुधार कानून पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through framework drafting and legislative passage.',
+  },
+
+  // ── 40: Two-Term Limit for Party Leadership ──
+  {
+    promiseId: '40',
+    responsible_ministry: 'Ministry of Law, Justice and Parliamentary Affairs',
+    responsible_ministry_ne: 'कानून, न्याय तथा संसदीय मामिला मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '40-m1', title: 'Draft Political Parties Act amendment', title_ne: 'राजनीतिक दल ऐन संशोधन मस्यौदा', completed: false },
+      { id: '40-m2', title: 'Pass amendment through parliament', title_ne: 'संसदबाट संशोधन पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through amendment drafting and parliamentary passage.',
+  },
+
+  // ── 41: Expert Ministers ──
+  {
+    promiseId: '41',
+    responsible_ministry: 'Office of the Prime Minister and Council of Ministers',
+    responsible_ministry_ne: 'प्रधानमन्त्री तथा मन्त्रिपरिषदको कार्यालय',
+    responsible_minister: 'Balen Shah (Prime Minister)',
+    responsible_minister_ne: 'बालेन शाह (प्रधानमन्त्री)',
+    milestones: [
+      { id: '41-m1', title: 'Publish criteria for expert minister selection', title_ne: 'विज्ञ मन्त्री चयन मापदण्ड प्रकाशन', completed: false },
+      { id: '41-m2', title: 'Appoint subject-matter expert cabinet', title_ne: 'विषय विशेषज्ञ मन्त्रिपरिषद नियुक्त', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through criteria publication and expert appointments.',
+  },
+
+  // ── 42: Amend Political Parties Act ──
+  {
+    promiseId: '42',
+    responsible_ministry: 'Ministry of Law, Justice and Parliamentary Affairs',
+    responsible_ministry_ne: 'कानून, न्याय तथा संसदीय मामिला मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '42-m1', title: 'Complete review of party funding loopholes', title_ne: 'पार्टी कोष कमजोरी समीक्षा सम्पन्न', completed: false },
+      { id: '42-m2', title: 'Draft amendment bill', title_ne: 'संशोधन विधेयक मस्यौदा', completed: false },
+      { id: '42-m3', title: 'Pass amended Political Parties Act', title_ne: 'संशोधित राजनीतिक दल ऐन पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through review, drafting, and parliamentary passage.',
+  },
+
+  // ── 43: Time-Bound Public Services ──
+  {
+    promiseId: '43',
+    responsible_ministry: 'Ministry of Federal Affairs and General Administration',
+    responsible_ministry_ne: 'संघीय मामिला तथा सामान्य प्रशासन मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '43-m1', title: 'Publish service delivery time standards for all services', title_ne: 'सबै सेवाका लागि सेवा वितरण समय मापदण्ड प्रकाशन', completed: false },
+      { id: '43-m2', title: 'Deploy digital tracking for service delivery timelines', title_ne: 'सेवा वितरण समयरेखाका लागि डिजिटल ट्र्याकिङ तैनाथ', completed: false },
+      { id: '43-m3', title: 'Achieve 90% on-time service delivery', title_ne: '९०% समयमा सेवा वितरण हासिल', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of services meeting published time-bound delivery standards.',
+  },
+
+  // ── 44: National Identity Card Integration ──
+  {
+    promiseId: '44',
+    responsible_ministry: 'Ministry of Home Affairs',
+    responsible_ministry_ne: 'गृह मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '44-m1', title: 'Design unified national ID card system', title_ne: 'एकीकृत राष्ट्रिय परिचयपत्र प्रणाली डिजाइन', completed: false },
+      { id: '44-m2', title: 'Begin national enrollment for new ID cards', title_ne: 'नयाँ परिचयपत्रका लागि राष्ट्रिय नामांकन सुरु', completed: false },
+      { id: '44-m3', title: 'Issue cards to 50% of population', title_ne: 'जनसंख्याको ५०% लाई कार्ड जारी', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of eligible citizens issued new unified national ID cards.',
+  },
+
+  // ── 45: Digital Approval System ──
+  {
+    promiseId: '45',
+    responsible_ministry: 'Ministry of Communication and Information Technology',
+    responsible_ministry_ne: 'सञ्चार तथा सूचना प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '45-m1', title: 'Launch tippani.gov.np platform', title_ne: 'tippani.gov.np प्लाटफर्म सुरु', completed: false },
+      { id: '45-m2', title: 'Migrate federal ministries to digital approval', title_ne: 'संघीय मन्त्रालयलाई डिजिटल स्वीकृतिमा स्थानान्तरण', completed: false },
+      { id: '45-m3', title: 'Extend to provincial and local governments', title_ne: 'प्रदेश र स्थानीय सरकारमा विस्तार', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of government entities using digital approval system.',
+  },
+
+  // ── 46: Faceless Paperless Administration ──
+  {
+    promiseId: '46',
+    responsible_ministry: 'Office of the Prime Minister and Council of Ministers',
+    responsible_ministry_ne: 'प्रधानमन्त्री तथा मन्त्रिपरिषदको कार्यालय',
+    responsible_minister: 'Balen Shah (Prime Minister)',
+    responsible_minister_ne: 'बालेन शाह (प्रधानमन्त्री)',
+    milestones: [
+      { id: '46-m1', title: 'Audit all in-person government processes', title_ne: 'सबै व्यक्तिगत सरकारी प्रक्रिया लेखापरीक्षण', completed: false },
+      { id: '46-m2', title: 'Digitize 50% of processes', title_ne: '५०% प्रक्रिया डिजिटाइज', completed: false },
+      { id: '46-m3', title: 'Achieve fully paperless operations in core ministries', title_ne: 'मुख्य मन्त्रालयमा पूर्ण कागजविहीन सञ्चालन हासिल', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of government processes fully digitized and faceless.',
+  },
+
+  // ── 47: Make CIAA Independent and Effective ──
+  {
+    promiseId: '47',
+    responsible_ministry: 'Commission for the Investigation of Abuse of Authority (CIAA)',
+    responsible_ministry_ne: 'अख्तियार दुरुपयोग अनुसन्धान आयोग',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '47-m1', title: 'Draft CIAA independence reform bill', title_ne: 'अख्तियार स्वतन्त्रता सुधार विधेयक मस्यौदा', completed: false },
+      { id: '47-m2', title: 'Pass CIAA reform legislation', title_ne: 'अख्तियार सुधार कानून पारित', completed: false },
+      { id: '47-m3', title: 'Appoint independent CIAA commissioners', title_ne: 'स्वतन्त्र अख्तियार आयुक्त नियुक्त', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through reform legislation and independent appointments.',
+  },
+
+  // ── 48: Abolish Party Sister Organizations in State Mechanisms ──
+  {
+    promiseId: '48',
+    responsible_ministry: 'Ministry of Law, Justice and Parliamentary Affairs',
+    responsible_ministry_ne: 'कानून, न्याय तथा संसदीय मामिला मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '48-m1', title: 'Draft legislation banning party organizations in state bodies', title_ne: 'राज्य निकायमा पार्टी संगठन प्रतिबन्ध कानून मस्यौदा', completed: false },
+      { id: '48-m2', title: 'Pass ban through parliament', title_ne: 'संसदबाट प्रतिबन्ध पारित', completed: false },
+      { id: '48-m3', title: 'Enforce deregistration of party wings in government', title_ne: 'सरकारमा पार्टी शाखा विलोपन लागू', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through legislation and enforcement of party organization removal.',
+  },
+
+  // ── 49: Autonomous Civil Service Transfer Board ──
+  {
+    promiseId: '49',
+    responsible_ministry: 'Ministry of Federal Affairs and General Administration',
+    responsible_ministry_ne: 'संघीय मामिला तथा सामान्य प्रशासन मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '49-m1', title: 'Draft autonomous transfer board legislation', title_ne: 'स्वायत्त सरुवा बोर्ड कानून मस्यौदा', completed: false },
+      { id: '49-m2', title: 'Establish and operationalize the board', title_ne: 'बोर्ड स्थापना र सञ्चालन', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through legislation and board operationalization.',
+  },
+
+  // ── 50: Complete Transitional Justice Tasks ──
+  {
+    promiseId: '50',
+    responsible_ministry: 'Ministry of Law, Justice and Parliamentary Affairs',
+    responsible_ministry_ne: 'कानून, न्याय तथा संसदीय मामिला मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    supporting_ministries: ['Truth and Reconciliation Commission'],
+    milestones: [
+      { id: '50-m1', title: 'Strengthen Truth and Reconciliation Commission mandate', title_ne: 'सत्य र मेलमिलाप आयोगको जनादेश सुदृढ', completed: false },
+      { id: '50-m2', title: 'Complete investigation of remaining conflict-era cases', title_ne: 'बाँकी द्वन्द्वकालीन मुद्दाको अनुसन्धान सम्पन्न', completed: false },
+      { id: '50-m3', title: 'Deliver justice and reparations to victims', title_ne: 'पीडितलाई न्याय र क्षतिपूर्ति प्रदान', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through case investigation completion and victim reparation delivery.',
+  },
+
+  // ── 51: Gen-Z Movement Investigation ──
+  {
+    promiseId: '51',
+    responsible_ministry: 'Ministry of Home Affairs',
+    responsible_ministry_ne: 'गृह मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '51-m1', title: 'Form independent investigation commission', title_ne: 'स्वतन्त्र अनुसन्धान आयोग गठन', completed: false },
+      { id: '51-m2', title: 'Complete investigation and publish findings', title_ne: 'अनुसन्धान सम्पन्न र निष्कर्ष प्रकाशन', completed: false },
+      { id: '51-m3', title: 'Hold accountable parties responsible', title_ne: 'जिम्मेवार पक्षलाई जवाफदेही बनाउने', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through commission formation, investigation, and accountability proceedings.',
+  },
+
+  // ── 52: Repeal 20+ Outdated Economic Laws ──
+  {
+    promiseId: '52',
+    responsible_ministry: 'Ministry of Law, Justice and Parliamentary Affairs',
+    responsible_ministry_ne: 'कानून, न्याय तथा संसदीय मामिला मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    supporting_ministries: ['Ministry of Finance', 'Ministry of Industry, Commerce and Supplies'],
+    milestones: [
+      { id: '52-m1', title: 'Complete audit of economic legislation', title_ne: 'आर्थिक कानून लेखापरीक्षण सम्पन्न', completed: false },
+      { id: '52-m2', title: 'Identify 20+ laws for repeal', title_ne: '२०+ कानून खारेजका लागि पहिचान', completed: false },
+      { id: '52-m3', title: 'Pass omnibus repeal bill', title_ne: 'सर्वव्यापी खारेज विधेयक पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Number of outdated laws repealed out of 20+ target.',
+  },
+
+  // ── 53: True One-Stop Service Center for Investors ──
+  {
+    promiseId: '53',
+    responsible_ministry: 'Ministry of Industry, Commerce and Supplies',
+    responsible_ministry_ne: 'उद्योग, वाणिज्य तथा आपूर्ति मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '53-m1', title: 'Design true single-window service architecture', title_ne: 'वास्तविक एकद्वार सेवा वास्तुकला डिजाइन', completed: false },
+      { id: '53-m2', title: 'Launch one-stop center with all approvals integrated', title_ne: 'सबै स्वीकृति एकीकृत एकद्वार केन्द्र सुरु', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through center design, launch, and investor satisfaction metrics.',
+  },
+
+  // ── 54: Digital Business Registration ──
+  {
+    promiseId: '54',
+    responsible_ministry: 'Ministry of Industry, Commerce and Supplies',
+    responsible_ministry_ne: 'उद्योग, वाणिज्य तथा आपूर्ति मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '54-m1', title: 'Build online business registration portal', title_ne: 'अनलाइन व्यवसाय दर्ता पोर्टल निर्माण', completed: false },
+      { id: '54-m2', title: 'Enable same-day digital registration', title_ne: 'उही दिन डिजिटल दर्ता सक्षम', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through portal launch and average registration processing time.',
+  },
+
+  // ── 55: Complete Stalled National Pride Projects ──
+  {
+    promiseId: '55',
+    responsible_ministry: 'National Planning Commission',
+    responsible_ministry_ne: 'राष्ट्रिय योजना आयोग',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '55-m1', title: 'Audit and publish status of all stalled projects', title_ne: 'सबै रोकिएका आयोजनाको स्थिति लेखापरीक्षण र प्रकाशन', completed: false },
+      { id: '55-m2', title: 'Resolve contractual disputes and restart', title_ne: 'सम्झौता विवाद समाधान र पुन: सुरु', completed: false },
+      { id: '55-m3', title: 'Complete all stalled projects', title_ne: 'सबै रोकिएका आयोजना सम्पन्न', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Number of stalled projects completed out of total identified.',
+  },
+
+  // ── 56: 10 New National Pride Projects ──
+  {
+    promiseId: '56',
+    responsible_ministry: 'National Planning Commission',
+    responsible_ministry_ne: 'राष्ट्रिय योजना आयोग',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '56-m1', title: 'Identify and announce 10 new projects', title_ne: '१० नयाँ आयोजना पहिचान र घोषणा', completed: false },
+      { id: '56-m2', title: 'Complete DPR for all 10 projects', title_ne: 'सबै १० आयोजनाको डीपीआर सम्पन्न', completed: false },
+      { id: '56-m3', title: 'Begin construction on first 5 projects', title_ne: 'पहिलो ५ आयोजनामा निर्माण सुरु', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Number of new national pride projects launched and under construction.',
+  },
+
+  // ── 57: Reduce Multidimensional Poverty to 10% ──
+  {
+    promiseId: '57',
+    responsible_ministry: 'National Planning Commission',
+    responsible_ministry_ne: 'राष्ट्रिय योजना आयोग',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '57-m1', title: 'Publish poverty reduction strategy', title_ne: 'गरिबी निवारण रणनीति प्रकाशन', completed: false },
+      { id: '57-m2', title: 'Reduce MPI to 15%', title_ne: 'बहुआयामिक गरिबी सूचकांक १५% मा कम', completed: false },
+      { id: '57-m3', title: 'Achieve 10% MPI target', title_ne: '१०% बहुआयामिक गरिबी लक्ष्य हासिल', completed: false },
+    ],
+    progress_methodology: 'composite_index',
+    progress_methodology_description: 'Tracked through multidimensional poverty index measurements vs 10% target.',
+  },
+
+  // ── 58: Nepal Production Fund ──
+  {
+    promiseId: '58',
+    responsible_ministry: 'Ministry of Industry, Commerce and Supplies',
+    responsible_ministry_ne: 'उद्योग, वाणिज्य तथा आपूर्ति मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '58-m1', title: 'Design fund structure and eligibility criteria', title_ne: 'कोष संरचना र पात्रता मापदण्ड डिजाइन', completed: false },
+      { id: '58-m2', title: 'Capitalize and launch Nepal Production Fund', title_ne: 'नेपाल उत्पादन कोष पूँजीकरण र सुरु', completed: false },
+      { id: '58-m3', title: 'Disburse first round of production grants', title_ne: 'उत्पादन अनुदानको पहिलो चरण वितरण', completed: false },
+    ],
+    progress_methodology: 'budget_disbursement',
+    progress_methodology_description: 'Tracked through fund capitalization and disbursement to production enterprises.',
+  },
+
+  // ── 59: Cooperatives Under NRB Supervision ──
+  {
+    promiseId: '59',
+    responsible_ministry: 'Nepal Rastra Bank (Central Bank)',
+    responsible_ministry_ne: 'नेपाल राष्ट्र बैंक',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '59-m1', title: 'Draft cooperative supervision framework', title_ne: 'सहकारी सुपरिवेक्षण ढाँचा मस्यौदा', completed: false },
+      { id: '59-m2', title: 'Transfer supervisory authority to NRB', title_ne: 'सुपरिवेक्षण अधिकार नेपाल राष्ट्र बैंकमा हस्तान्तरण', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through framework drafting and supervisory authority transfer.',
+  },
+
+  // ── 60: Return Deposits to Small Savers ──
+  {
+    promiseId: '60',
+    responsible_ministry: 'Ministry of Land Management, Cooperatives and Poverty Alleviation',
+    responsible_ministry_ne: 'भूमि व्यवस्थापन, सहकारी तथा गरिबी निवारण मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '60-m1', title: 'Identify and verify small saver depositors', title_ne: 'साना बचतकर्ता निक्षेपकर्ता पहिचान र प्रमाणित', completed: false },
+      { id: '60-m2', title: 'Begin returning deposits to small savers', title_ne: 'साना बचतकर्तालाई निक्षेप फिर्ता सुरु', completed: false },
+    ],
+    progress_methodology: 'budget_disbursement',
+    progress_methodology_description: 'Amount returned to small savers vs total owed.',
+  },
+
+  // ── 61: Criminalize Predatory Lending ──
+  {
+    promiseId: '61',
+    responsible_ministry: 'Ministry of Law, Justice and Parliamentary Affairs',
+    responsible_ministry_ne: 'कानून, न्याय तथा संसदीय मामिला मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '61-m1', title: 'Draft anti-usury legislation', title_ne: 'सूदखोरी विरोधी कानून मस्यौदा', completed: false },
+      { id: '61-m2', title: 'Pass criminalization bill through parliament', title_ne: 'संसदबाट अपराधीकरण विधेयक पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through bill drafting and parliamentary passage.',
+  },
+
+  // ── 62: NEPSE Reform ──
+  {
+    promiseId: '62',
+    responsible_ministry: 'Securities Board of Nepal (SEBON)',
+    responsible_ministry_ne: 'नेपाल धितोपत्र बोर्ड',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '62-m1', title: 'Launch intraday trading on NEPSE', title_ne: 'नेप्सेमा इन्ट्राडे ट्रेडिङ सुरु', completed: false },
+      { id: '62-m2', title: 'Introduce derivatives market', title_ne: 'डेरिभेटिभ्स बजार शुरु', completed: false },
+      { id: '62-m3', title: 'Align with international exchange standards', title_ne: 'अन्तर्राष्ट्रिय विनिमय मापदण्डसँग पंक्तिबद्ध', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through market reform milestones and trading volume metrics.',
+  },
+
+  // ── 63: Review India Rupee Peg ──
+  {
+    promiseId: '63',
+    responsible_ministry: 'Nepal Rastra Bank (Central Bank)',
+    responsible_ministry_ne: 'नेपाल राष्ट्र बैंक',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '63-m1', title: 'Commission international expert panel', title_ne: 'अन्तर्राष्ट्रिय विज्ञ प्यानल आयोजित', completed: false },
+      { id: '63-m2', title: 'Complete study and publish recommendations', title_ne: 'अध्ययन सम्पन्न र सिफारिस प्रकाशन', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through expert panel formation and study completion.',
+  },
+
+  // ── 64: Cryptocurrency Regulation — Clear Policy ──
+  {
+    promiseId: '64',
+    responsible_ministry: 'Nepal Rastra Bank (Central Bank)',
+    responsible_ministry_ne: 'नेपाल राष्ट्र बैंक',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '64-m1', title: 'Draft cryptocurrency regulatory framework', title_ne: 'क्रिप्टोकरेन्सी नियामक ढाँचा मस्यौदा', completed: false },
+      { id: '64-m2', title: 'Enact clear crypto policy within 1 year', title_ne: '१ वर्षभित्र स्पष्ट क्रिप्टो नीति लागू', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through framework drafting and policy enactment.',
+  },
+
+  // ── 65: 15,000 MW Installed Electricity Capacity ──
+  {
+    promiseId: '65',
+    responsible_ministry: 'Ministry of Energy, Water Resources and Irrigation',
+    responsible_ministry_ne: 'ऊर्जा, जलस्रोत तथा सिँचाइ मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '65-m1', title: 'Publish capacity expansion roadmap', title_ne: 'क्षमता विस्तार रोडम्याप प्रकाशन', completed: false },
+      { id: '65-m2', title: 'Achieve 10,000 MW installed capacity', title_ne: '१०,००० मेगावाट जडित क्षमता हासिल', completed: false },
+      { id: '65-m3', title: 'Achieve 15,000 MW target', title_ne: '१५,००० मेगावाट लक्ष्य हासिल', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Actual installed MW capacity vs 15,000 MW target.',
+  },
+
+  // ── 66: Energy Export Diplomacy ──
+  {
+    promiseId: '66',
+    responsible_ministry: 'Ministry of Energy, Water Resources and Irrigation',
+    responsible_ministry_ne: 'ऊर्जा, जलस्रोत तथा सिँचाइ मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    supporting_ministries: ['Ministry of Foreign Affairs'],
+    milestones: [
+      { id: '66-m1', title: 'Sign energy export agreement with India', title_ne: 'भारतसँग ऊर्जा निर्यात सम्झौता हस्ताक्षर', completed: false },
+      { id: '66-m2', title: 'Sign energy export agreement with Bangladesh', title_ne: 'बंगलादेशसँग ऊर्जा निर्यात सम्झौता हस्ताक्षर', completed: false },
+      { id: '66-m3', title: 'Begin commercial electricity exports', title_ne: 'व्यावसायिक विद्युत निर्यात सुरु', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through agreement signing and commercial export commencement.',
+  },
+
+  // ── 67: Green Data Centers Near Hydropower ──
+  {
+    promiseId: '67',
+    responsible_ministry: 'Ministry of Communication and Information Technology',
+    responsible_ministry_ne: 'सञ्चार तथा सूचना प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    supporting_ministries: ['Ministry of Energy, Water Resources and Irrigation'],
+    milestones: [
+      { id: '67-m1', title: 'Identify sites near hydropower for data centers', title_ne: 'डाटा सेन्टरका लागि जलविद्युत नजिक स्थान पहिचान', completed: false },
+      { id: '67-m2', title: 'Launch first green data center', title_ne: 'पहिलो हरित डाटा सेन्टर सुरु', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Number of operational green data centers.',
+  },
+
+  // ── 68: Green GPU Computing Exports ──
+  {
+    promiseId: '68',
+    responsible_ministry: 'Ministry of Communication and Information Technology',
+    responsible_ministry_ne: 'सञ्चार तथा सूचना प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '68-m1', title: 'Develop GPU computing infrastructure policy', title_ne: 'जीपीयू कम्प्युटिङ पूर्वाधार नीति विकास', completed: false },
+      { id: '68-m2', title: 'Deploy first GPU computing facility', title_ne: 'पहिलो जीपीयू कम्प्युटिङ सुविधा तैनाथ', completed: false },
+      { id: '68-m3', title: 'Begin exporting AI/ML computing services', title_ne: 'एआई/एमएल कम्प्युटिङ सेवा निर्यात सुरु', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Tracked through facility deployment and computing export revenue.',
+  },
+
+  // ── 69: Restructure Electricity Tariffs ──
+  {
+    promiseId: '69',
+    responsible_ministry: 'Nepal Electricity Authority',
+    responsible_ministry_ne: 'नेपाल विद्युत प्राधिकरण',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '69-m1', title: 'Complete tariff structure review', title_ne: 'महसुल संरचना समीक्षा सम्पन्न', completed: false },
+      { id: '69-m2', title: 'Implement new tariff structure', title_ne: 'नयाँ महसुल संरचना लागू', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through tariff review and new structure implementation.',
+  },
+
+  // ── 70-78: Technology (extended) ──
+  {
+    promiseId: '70',
+    responsible_ministry: 'Ministry of Communication and Information Technology',
+    responsible_ministry_ne: 'सञ्चार तथा सूचना प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '70-m1', title: 'Pass cabinet resolution declaring IT strategic industry', title_ne: 'सूचना प्रविधिलाई रणनीतिक उद्योग घोषणा गर्ने मन्त्रिपरिषद प्रस्ताव पारित', completed: false },
+      { id: '70-m2', title: 'Implement special IT industry incentive package', title_ne: 'विशेष सूचना प्रविधि उद्योग प्रोत्साहन प्याकेज लागू', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through cabinet resolution and incentive implementation.',
+  },
+
+  {
+    promiseId: '71',
+    responsible_ministry: 'Ministry of Communication and Information Technology',
+    responsible_ministry_ne: 'सञ्चार तथा सूचना प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '71-m1', title: 'Publish IT export growth strategy', title_ne: 'सूचना प्रविधि निर्यात वृद्धि रणनीति प्रकाशन', completed: false },
+      { id: '71-m2', title: 'Achieve $1 billion IT exports', title_ne: '$१ अर्ब सूचना प्रविधि निर्यात हासिल', completed: false },
+      { id: '71-m3', title: 'Achieve $5 billion IT exports', title_ne: '$५ अर्ब सूचना प्रविधि निर्यात हासिल', completed: false },
+    ],
+    progress_methodology: 'composite_index',
+    progress_methodology_description: 'Actual IT export value vs $30B trajectory.',
+  },
+
+  {
+    promiseId: '72',
+    responsible_ministry: 'Ministry of Communication and Information Technology',
+    responsible_ministry_ne: 'सञ्चार तथा सूचना प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '72-m1', title: 'Draft IT Promotion Board Act', title_ne: 'सूचना प्रविधि प्रवर्धन बोर्ड ऐन मस्यौदा', completed: false },
+      { id: '72-m2', title: 'Establish and operationalize the board', title_ne: 'बोर्ड स्थापना र सञ्चालन', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through legislation and board operationalization.',
+  },
+
+  {
+    promiseId: '73',
+    responsible_ministry: 'Ministry of Communication and Information Technology',
+    responsible_ministry_ne: 'सञ्चार तथा सूचना प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '73-m1', title: 'Complete site selection and DPR for all 7 parks', title_ne: 'सातवटै पार्कको स्थान चयन र डीपीआर सम्पन्न', completed: false },
+      { id: '73-m2', title: 'Operationalize first 3 digital parks', title_ne: 'पहिलो ३ डिजिटल पार्क सञ्चालन', completed: false },
+      { id: '73-m3', title: 'All 7 parks operational', title_ne: 'सातवटै पार्क सञ्चालनमा', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Number of operational digital parks out of 7.',
+  },
+
+  {
+    promiseId: '74',
+    responsible_ministry: 'Ministry of Labour, Employment and Social Security',
+    responsible_ministry_ne: 'श्रम, रोजगार तथा सामाजिक सुरक्षा मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '74-m1', title: 'Draft Labor Act amendment for remote work', title_ne: 'रिमोट कामका लागि श्रम ऐन संशोधन मस्यौदा', completed: false },
+      { id: '74-m2', title: 'Pass amended Labor Act', title_ne: 'संशोधित श्रम ऐन पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through amendment drafting and parliamentary passage.',
+  },
+
+  {
+    promiseId: '75',
+    responsible_ministry: 'Ministry of Culture, Tourism and Civil Aviation',
+    responsible_ministry_ne: 'संस्कृति, पर्यटन तथा नागरिक उड्डयन मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    supporting_ministries: ['Department of Immigration'],
+    milestones: [
+      { id: '75-m1', title: 'Design digital nomad visa program', title_ne: 'डिजिटल नोम्याड भिसा कार्यक्रम डिजाइन', completed: false },
+      { id: '75-m2', title: 'Launch visa application portal', title_ne: 'भिसा आवेदन पोर्टल सुरु', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through program design and visa issuance numbers.',
+  },
+
+  {
+    promiseId: '76',
+    responsible_ministry: 'Nepal Rastra Bank (Central Bank)',
+    responsible_ministry_ne: 'नेपाल राष्ट्र बैंक',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '76-m1', title: 'Develop national digital payment infrastructure', title_ne: 'राष्ट्रिय डिजिटल भुक्तानी पूर्वाधार विकास', completed: false },
+      { id: '76-m2', title: 'Achieve 50% cashless transactions', title_ne: '५०% नगदरहित कारोबार हासिल', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of transactions conducted digitally.',
+  },
+
+  {
+    promiseId: '77',
+    responsible_ministry: 'Nepal Rastra Bank (Central Bank)',
+    responsible_ministry_ne: 'नेपाल राष्ट्र बैंक',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '77-m1', title: 'Negotiate access with international payment providers', title_ne: 'अन्तर्राष्ट्रिय भुक्तानी प्रदायकसँग पहुँच वार्ता', completed: false },
+      { id: '77-m2', title: 'Enable PayPal/Stripe for Nepali businesses', title_ne: 'नेपाली व्यवसायका लागि पेप्याल/स्ट्राइप सक्षम', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through provider agreements and activation for Nepali users.',
+  },
+
+  {
+    promiseId: '78',
+    responsible_ministry: 'Nepal Telecommunications Authority',
+    responsible_ministry_ne: 'नेपाल दूरसञ्चार प्राधिकरण',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '78-m1', title: 'License satellite internet providers', title_ne: 'उपग्रह इन्टरनेट प्रदायकलाई इजाजतपत्र', completed: false },
+      { id: '78-m2', title: 'Deploy satellite internet in 50+ remote areas', title_ne: '५०+ दुर्गम क्षेत्रमा उपग्रह इन्टरनेट तैनाथ', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Number of remote areas with satellite internet connectivity.',
+  },
+
+  // ── 79-82: Tourism ──
+  {
+    promiseId: '79',
+    responsible_ministry: 'Ministry of Culture, Tourism and Civil Aviation',
+    responsible_ministry_ne: 'संस्कृति, पर्यटन तथा नागरिक उड्डयन मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    supporting_ministries: ['Nepal Tourism Board'],
+    milestones: [
+      { id: '79-m1', title: 'Launch targeted international marketing campaigns', title_ne: 'लक्षित अन्तर्राष्ट्रिय मार्केटिङ अभियान सुरु', completed: false },
+      { id: '79-m2', title: 'Achieve 50% increase in tourist arrivals', title_ne: 'पर्यटक आगमनमा ५०% वृद्धि हासिल', completed: false },
+    ],
+    progress_methodology: 'composite_index',
+    progress_methodology_description: 'Tourist arrival numbers and spending vs baseline.',
+  },
+
+  {
+    promiseId: '80',
+    responsible_ministry: 'Ministry of Culture, Tourism and Civil Aviation',
+    responsible_ministry_ne: 'संस्कृति, पर्यटन तथा नागरिक उड्डयन मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '80-m1', title: 'Complete pending infrastructure at both airports', title_ne: 'दुवै विमानस्थलमा बाँकी पूर्वाधार सम्पन्न', completed: false },
+      { id: '80-m2', title: 'Achieve regular international flights at both airports', title_ne: 'दुवै विमानस्थलमा नियमित अन्तर्राष्ट्रिय उडान हासिल', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Number of regular international flights operating.',
+  },
+
+  {
+    promiseId: '81',
+    responsible_ministry: 'Ministry of Culture, Tourism and Civil Aviation',
+    responsible_ministry_ne: 'संस्कृति, पर्यटन तथा नागरिक उड्डयन मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '81-m1', title: 'Identify potential hill station sites', title_ne: 'सम्भावित हिल स्टेसन स्थान पहिचान', completed: false },
+      { id: '81-m2', title: 'Begin development of first 3 hill stations', title_ne: 'पहिलो ३ हिल स्टेसन विकास सुरु', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Number of hill stations under development or operational.',
+  },
+
+  {
+    promiseId: '82',
+    responsible_ministry: 'Ministry of Culture, Tourism and Civil Aviation',
+    responsible_ministry_ne: 'संस्कृति, पर्यटन तथा नागरिक उड्डयन मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '82-m1', title: 'Digitize all trekking and park permits', title_ne: 'सबै ट्रेकिङ र पार्क अनुमतिपत्र डिजिटाइज', completed: false },
+      { id: '82-m2', title: 'Launch online permit application portal', title_ne: 'अनलाइन अनुमतिपत्र आवेदन पोर्टल सुरु', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Percentage of permits issued digitally.',
+  },
+
+  // ── 83-87: Agriculture ──
+  {
+    promiseId: '83',
+    responsible_ministry: 'Ministry of Agriculture and Livestock Development',
+    responsible_ministry_ne: 'कृषि तथा पशुपन्छी विकास मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '83-m1', title: 'Launch national food self-sufficiency program', title_ne: 'राष्ट्रिय खाद्य आत्मनिर्भरता कार्यक्रम सुरु', completed: false },
+      { id: '83-m2', title: 'Achieve self-sufficiency in rice and wheat', title_ne: 'धान र गहुँमा आत्मनिर्भरता हासिल', completed: false },
+    ],
+    progress_methodology: 'composite_index',
+    progress_methodology_description: 'Domestic production vs consumption ratio for staple crops.',
+  },
+
+  {
+    promiseId: '84',
+    responsible_ministry: 'Ministry of Energy, Water Resources and Irrigation',
+    responsible_ministry_ne: 'ऊर्जा, जलस्रोत तथा सिँचाइ मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '84-m1', title: 'Publish irrigation expansion master plan', title_ne: 'सिँचाइ विस्तार मास्टर प्लान प्रकाशन', completed: false },
+      { id: '84-m2', title: 'Achieve 50% irrigation coverage', title_ne: '५०% सिँचाइ कभरेज हासिल', completed: false },
+      { id: '84-m3', title: 'Achieve 80% irrigation coverage', title_ne: '८०% सिँचाइ कभरेज हासिल', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of arable land under irrigation.',
+  },
+
+  {
+    promiseId: '85',
+    responsible_ministry: 'Ministry of Agriculture and Livestock Development',
+    responsible_ministry_ne: 'कृषि तथा पशुपन्छी विकास मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '85-m1', title: 'Complete NARC restructuring plan', title_ne: 'कृषि अनुसन्धान परिषद पुनर्संरचना योजना सम्पन्न', completed: false },
+      { id: '85-m2', title: 'Implement new autonomous structure', title_ne: 'नयाँ स्वायत्त संरचना लागू', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through restructuring plan and implementation.',
+  },
+
+  {
+    promiseId: '86',
+    responsible_ministry: 'Ministry of Agriculture and Livestock Development',
+    responsible_ministry_ne: 'कृषि तथा पशुपन्छी विकास मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '86-m1', title: 'Launch agritech startup incubation program', title_ne: 'एग्रिटेक स्टार्टअप इन्क्युबेसन कार्यक्रम सुरु', completed: false },
+      { id: '86-m2', title: 'Deploy fintech solutions for farmer credit', title_ne: 'किसान ऋणका लागि फिनटेक समाधान तैनाथ', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through program launch and farmer adoption metrics.',
+  },
+
+  {
+    promiseId: '87',
+    responsible_ministry: 'Ministry of Industry, Commerce and Supplies',
+    responsible_ministry_ne: 'उद्योग, वाणिज्य तथा आपूर्ति मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '87-m1', title: 'Publish production economy transition strategy', title_ne: 'उत्पादन अर्थतन्त्र संक्रमण रणनीति प्रकाशन', completed: false },
+      { id: '87-m2', title: 'Reduce trade deficit by 20%', title_ne: 'व्यापार घाटा २०% कम', completed: false },
+    ],
+    progress_methodology: 'composite_index',
+    progress_methodology_description: 'Trade deficit reduction and domestic production growth metrics.',
+  },
+
+  // ── 88-92: Education (extended) ──
+  {
+    promiseId: '88',
+    responsible_ministry: 'Ministry of Education, Science and Technology',
+    responsible_ministry_ne: 'शिक्षा, विज्ञान तथा प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '88-m1', title: 'Finalize free education implementation policy', title_ne: 'निःशुल्क शिक्षा कार्यान्वयन नीति अन्तिम', completed: false },
+      { id: '88-m2', title: 'Roll out to all public schools nationwide', title_ne: 'राष्ट्रव्यापी सबै सार्वजनिक विद्यालयमा लागू', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of eligible families receiving free education.',
+  },
+
+  {
+    promiseId: '89',
+    responsible_ministry: 'Ministry of Education, Science and Technology',
+    responsible_ministry_ne: 'शिक्षा, विज्ञान तथा प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '89-m1', title: 'Pass university autonomy legislation', title_ne: 'विश्वविद्यालय स्वायत्तता कानून पारित', completed: false },
+      { id: '89-m2', title: 'Increase research funding by 200%', title_ne: 'अनुसन्धान कोष २००% वृद्धि', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through legislation and research funding allocation.',
+  },
+
+  {
+    promiseId: '90',
+    responsible_ministry: 'Ministry of Education, Science and Technology',
+    responsible_ministry_ne: 'शिक्षा, विज्ञान तथा प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '90-m1', title: 'Draft campus depoliticization policy', title_ne: 'क्याम्पस विराजनीतिकरण नीति मस्यौदा', completed: false },
+      { id: '90-m2', title: 'Enforce ban on political activities in campuses', title_ne: 'क्याम्पसमा राजनीतिक गतिविधिमा प्रतिबन्ध लागू', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through policy implementation and compliance monitoring.',
+  },
+
+  {
+    promiseId: '91',
+    responsible_ministry: 'Ministry of Education, Science and Technology',
+    responsible_ministry_ne: 'शिक्षा, विज्ञान तथा प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '91-m1', title: 'Draft inclusive education national policy', title_ne: 'समावेशी शिक्षा राष्ट्रिय नीति मस्यौदा', completed: false },
+      { id: '91-m2', title: 'Train 5,000 special education teachers', title_ne: '५,००० विशेष शिक्षा शिक्षक तालिम', completed: false },
+      { id: '91-m3', title: 'Make 50% of public schools fully accessible', title_ne: '५०% सार्वजनिक विद्यालय पूर्ण पहुँचयोग्य', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of schools with inclusive education facilities and trained teachers.',
+  },
+
+  {
+    promiseId: '92',
+    responsible_ministry: 'Ministry of Education, Science and Technology',
+    responsible_ministry_ne: 'शिक्षा, विज्ञान तथा प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '92-m1', title: 'Launch international student attraction strategy', title_ne: 'अन्तर्राष्ट्रिय विद्यार्थी आकर्षण रणनीति सुरु', completed: false },
+      { id: '92-m2', title: 'Enroll 10,000 international students', title_ne: '१०,००० अन्तर्राष्ट्रिय विद्यार्थी भर्ना', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Number of international students enrolled in Nepali universities.',
+  },
+
+  // ── 93-96: Healthcare (extended) ──
+  {
+    promiseId: '93',
+    responsible_ministry: 'Ministry of Health and Population',
+    responsible_ministry_ne: 'स्वास्थ्य तथा जनसंख्या मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '93-m1', title: 'Establish dedicated mental health division', title_ne: 'समर्पित मानसिक स्वास्थ्य डिभिजन स्थापना', completed: false },
+      { id: '93-m2', title: 'Launch community mental health programs in all provinces', title_ne: 'सबै प्रदेशमा सामुदायिक मानसिक स्वास्थ्य कार्यक्रम सुरु', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Number of provinces with operational community mental health programs.',
+  },
+
+  {
+    promiseId: '94',
+    responsible_ministry: 'Ministry of Health and Population',
+    responsible_ministry_ne: 'स्वास्थ्य तथा जनसंख्या मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '94-m1', title: 'Establish medicine price control commission', title_ne: 'औषधि मूल्य नियन्त्रण आयोग स्थापना', completed: false },
+      { id: '94-m2', title: 'Implement price caps on essential medicines', title_ne: 'आवश्यक औषधिमा मूल्य सीमा लागू', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through commission formation and price cap implementation.',
+  },
+
+  {
+    promiseId: '95',
+    responsible_ministry: 'Ministry of Health and Population',
+    responsible_ministry_ne: 'स्वास्थ्य तथा जनसंख्या मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '95-m1', title: 'Complete DPR for rehabilitation centers in 7 provinces', title_ne: '७ प्रदेशमा पुनर्स्थापना केन्द्रको डीपीआर सम्पन्न', completed: false },
+      { id: '95-m2', title: 'Operationalize first 3 centers', title_ne: 'पहिलो ३ केन्द्र सञ्चालन', completed: false },
+      { id: '95-m3', title: 'All 7 provincial centers operational', title_ne: 'सातवटै प्रदेश केन्द्र सञ्चालनमा', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Number of operational rehabilitation centers out of 7.',
+  },
+
+  {
+    promiseId: '96',
+    responsible_ministry: 'Ministry of Health and Population',
+    responsible_ministry_ne: 'स्वास्थ्य तथा जनसंख्या मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '96-m1', title: 'Build pandemic preparedness labs in all provinces', title_ne: 'सबै प्रदेशमा महामारी तयारी प्रयोगशाला निर्माण', completed: false },
+      { id: '96-m2', title: 'Establish strategic medical stockpile', title_ne: 'रणनीतिक चिकित्सा भण्डार स्थापना', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Number of provinces with pandemic preparedness infrastructure.',
+  },
+
+  // ── 97-100: Judiciary & Foreign Policy ──
+  {
+    promiseId: '97',
+    responsible_ministry: 'Judicial Council',
+    responsible_ministry_ne: 'न्याय परिषद',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '97-m1', title: 'Draft merit-based judicial appointment criteria', title_ne: 'योग्यतामा आधारित न्यायिक नियुक्ति मापदण्ड मस्यौदा', completed: false },
+      { id: '97-m2', title: 'Implement new appointment system', title_ne: 'नयाँ नियुक्ति प्रणाली लागू', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through criteria adoption and appointments made under new system.',
+  },
+
+  {
+    promiseId: '98',
+    responsible_ministry: 'Supreme Court of Nepal',
+    responsible_ministry_ne: 'सर्वोच्च अदालत नेपाल',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '98-m1', title: 'Pilot live streaming in Supreme Court', title_ne: 'सर्वोच्च अदालतमा प्रत्यक्ष स्ट्रिमिङ पाइलट', completed: false },
+      { id: '98-m2', title: 'Extend to all high courts', title_ne: 'सबै उच्च अदालतमा विस्तार', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Number of courts with live proceedings available.',
+  },
+
+  {
+    promiseId: '99',
+    responsible_ministry: 'Judicial Council',
+    responsible_ministry_ne: 'न्याय परिषद',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '99-m1', title: 'Draft mandatory judicial asset disclosure policy', title_ne: 'अनिवार्य न्यायिक सम्पत्ति विवरण नीति मस्यौदा', completed: false },
+      { id: '99-m2', title: 'Launch public disclosure portal for judiciary', title_ne: 'न्यायपालिकाका लागि सार्वजनिक विवरण पोर्टल सुरु', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through policy implementation and compliance rate.',
+  },
+
+  {
+    promiseId: '100',
+    responsible_ministry: 'Ministry of Foreign Affairs',
+    responsible_ministry_ne: 'परराष्ट्र मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '100-m1', title: 'Form diplomatic negotiation team for treaty review', title_ne: 'सन्धि समीक्षाका लागि कूटनीतिक वार्ता टोली गठन', completed: false },
+      { id: '100-m2', title: 'Begin formal renegotiation with India', title_ne: 'भारतसँग औपचारिक पुनर्वार्ता सुरु', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through team formation and negotiation progress.',
+  },
+
+  // ── 101-104: Diaspora ──
+  {
+    promiseId: '101',
+    responsible_ministry: 'Election Commission of Nepal',
+    responsible_ministry_ne: 'निर्वाचन आयोग नेपाल',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '101-m1', title: 'Develop secure i-voting platform', title_ne: 'सुरक्षित आई-भोटिङ प्लाटफर्म विकास', completed: false },
+      { id: '101-m2', title: 'Pilot i-voting in select countries', title_ne: 'चयन गरिएका देशमा आई-भोटिङ पाइलट', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through platform development, security audit, and pilot deployment.',
+  },
+
+  {
+    promiseId: '102',
+    responsible_ministry: 'Ministry of Finance',
+    responsible_ministry_ne: 'अर्थ मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '102-m1', title: 'Design diaspora investment fund structure', title_ne: 'प्रवासी लगानी कोष संरचना डिजाइन', completed: false },
+      { id: '102-m2', title: 'Launch fund with initial capitalization', title_ne: 'प्रारम्भिक पूँजीकरणसहित कोष सुरु', completed: false },
+    ],
+    progress_methodology: 'budget_disbursement',
+    progress_methodology_description: 'Tracked through fund capitalization and investment deployment.',
+  },
+
+  {
+    promiseId: '103',
+    responsible_ministry: 'Ministry of Home Affairs',
+    responsible_ministry_ne: 'गृह मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '103-m1', title: 'Draft Nepali origin recognition policy', title_ne: 'नेपाली मूल मान्यता नीति मस्यौदा', completed: false },
+      { id: '103-m2', title: 'Pass legislation granting rights to origin Nepalis', title_ne: 'मूल नेपालीलाई अधिकार प्रदान गर्ने कानून पारित', completed: false },
+    ],
+    progress_methodology: 'legislative_stages',
+    progress_methodology_description: 'Tracked through policy drafting and legislative passage.',
+  },
+
+  {
+    promiseId: '104',
+    responsible_ministry: 'Ministry of Education, Science and Technology',
+    responsible_ministry_ne: 'शिक्षा, विज्ञान तथा प्रविधि मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '104-m1', title: 'Launch diaspora expertise registration portal', title_ne: 'प्रवासी विशेषज्ञता दर्ता पोर्टल सुरु', completed: false },
+      { id: '104-m2', title: 'Connect 10,000 diaspora professionals to national projects', title_ne: '१०,००० प्रवासी पेशेवरलाई राष्ट्रिय आयोजनासँग जोड्ने', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Number of diaspora professionals registered and engaged.',
+  },
+
+  // ── 105-108: Environment (extended) ──
+  {
+    promiseId: '105',
+    responsible_ministry: 'Ministry of Forests and Environment',
+    responsible_ministry_ne: 'वन तथा वातावरण मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '105-m1', title: 'Publish net-zero roadmap', title_ne: 'शून्य उत्सर्जन रोडम्याप प्रकाशन', completed: false },
+      { id: '105-m2', title: 'Achieve 50% emission reduction vs baseline', title_ne: 'आधारभूतको तुलनामा ५०% उत्सर्जन कटौती हासिल', completed: false },
+    ],
+    progress_methodology: 'composite_index',
+    progress_methodology_description: 'Carbon emission reduction vs baseline measurements.',
+  },
+
+  {
+    promiseId: '106',
+    responsible_ministry: 'Ministry of Forests and Environment',
+    responsible_ministry_ne: 'वन तथा वातावरण मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '106-m1', title: 'Establish national forest fire monitoring center', title_ne: 'राष्ट्रिय वन आगो अनुगमन केन्द्र स्थापना', completed: false },
+      { id: '106-m2', title: 'Deploy drone and satellite monitoring systems', title_ne: 'ड्रोन र उपग्रह अनुगमन प्रणाली तैनाथ', completed: false },
+    ],
+    progress_methodology: 'milestone_completion',
+    progress_methodology_description: 'Tracked through center establishment and monitoring system deployment.',
+  },
+
+  {
+    promiseId: '107',
+    responsible_ministry: 'Ministry of Urban Development',
+    responsible_ministry_ne: 'सहरी विकास मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '107-m1', title: 'Complete feasibility studies for waste-to-energy plants', title_ne: 'फोहोरबाट ऊर्जा प्लान्टको सम्भाव्यता अध्ययन सम्पन्न', completed: false },
+      { id: '107-m2', title: 'Operationalize first waste-to-energy plant', title_ne: 'पहिलो फोहोरबाट ऊर्जा प्लान्ट सञ्चालन', completed: false },
+    ],
+    progress_methodology: 'infrastructure_completion',
+    progress_methodology_description: 'Number of operational waste-to-energy plants.',
+  },
+
+  {
+    promiseId: '108',
+    responsible_ministry: 'Ministry of Home Affairs',
+    responsible_ministry_ne: 'गृह मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    supporting_ministries: ['Department of Hydrology and Meteorology'],
+    milestones: [
+      { id: '108-m1', title: 'Deploy early warning systems in 50 vulnerable areas', title_ne: '५० जोखिमपूर्ण क्षेत्रमा पूर्व चेतावनी प्रणाली तैनाथ', completed: false },
+      { id: '108-m2', title: 'Achieve nationwide coverage of early warning', title_ne: 'पूर्व चेतावनीको राष्ट्रव्यापी कभरेज हासिल', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Number of vulnerable areas with operational early warning systems.',
+  },
+
+  // ── 109: Athlete Pensions & Health Insurance ──
+  {
+    promiseId: '109',
+    responsible_ministry: 'Ministry of Youth and Sports',
+    responsible_ministry_ne: 'युवा तथा खेलकुद मन्त्रालय',
+    responsible_minister: 'To be appointed',
+    responsible_minister_ne: 'नियुक्त हुन बाँकी',
+    milestones: [
+      { id: '109-m1', title: 'Design athlete pension and insurance program', title_ne: 'खेलाडी पेन्सन र बीमा कार्यक्रम डिजाइन', completed: false },
+      { id: '109-m2', title: 'Launch pension fund for national athletes', title_ne: 'राष्ट्रिय खेलाडीका लागि पेन्सन कोष सुरु', completed: false },
+      { id: '109-m3', title: 'Enroll all national-level athletes in health insurance', title_ne: 'सबै राष्ट्रिय स्तरका खेलाडीलाई स्वास्थ्य बीमामा भर्ना', completed: false },
+    ],
+    progress_methodology: 'coverage_percentage',
+    progress_methodology_description: 'Percentage of national athletes enrolled in pension and insurance programs.',
   },
 ];
 
