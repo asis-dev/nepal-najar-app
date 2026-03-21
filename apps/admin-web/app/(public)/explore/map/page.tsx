@@ -1,17 +1,118 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Map, AlertTriangle, TrendingUp,
   CheckCircle2, Eye,
   Building2, Truck, Cpu, Heart, Zap,
   GraduationCap, Leaf, Scale, Fingerprint,
-  Briefcase, Users,
+  Briefcase, Users, X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useI18n } from '@/lib/i18n';
 import { useAllPromises, usePromiseStats } from '@/lib/hooks/use-promises';
 import { SignalBadge } from '@/components/public/signal-badge';
+
+const MapFallback = dynamic(
+  () => import('@/components/map/map-fallback').then((m) => ({ default: m.MapFallback })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full rounded-2xl bg-white/[0.03] animate-pulse flex items-center justify-center">
+        <Map className="w-8 h-8 text-gray-600" />
+      </div>
+    ),
+  },
+);
+
+/* ═══════════════════════════════════════════
+   PROVINCE DATA
+   ═══════════════════════════════════════════ */
+type ProvinceOverview = {
+  name: string;
+  label: string;
+  total: number;
+  delayed: number;
+  progress: number;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  summary: string;
+  focus: string[];
+};
+
+const provinceOverview: ProvinceOverview[] = [
+  {
+    name: 'Koshi Province',
+    label: 'Koshi',
+    total: 31,
+    delayed: 4,
+    progress: 56,
+    severity: 'medium',
+    summary: 'Roads, hydropower, and district-level health upgrades are the strongest visible workstreams.',
+    focus: ['Transport', 'Energy', 'Health'],
+  },
+  {
+    name: 'Madhesh Province',
+    label: 'Madhesh',
+    total: 28,
+    delayed: 7,
+    progress: 44,
+    severity: 'high',
+    summary: 'Border connectivity, local services, and governance delivery remain the key public pressure points.',
+    focus: ['Transport', 'Social', 'Governance'],
+  },
+  {
+    name: 'Bagmati Province',
+    label: 'Bagmati',
+    total: 42,
+    delayed: 6,
+    progress: 63,
+    severity: 'medium',
+    summary: 'Kathmandu valley reforms, digital governance, and anti-corruption commitments are driving the most attention.',
+    focus: ['Technology', 'Governance', 'Anti-Corruption'],
+  },
+  {
+    name: 'Gandaki Province',
+    label: 'Gandaki',
+    total: 24,
+    delayed: 3,
+    progress: 58,
+    severity: 'low',
+    summary: 'Tourism-linked infrastructure, local roads, and environmental resilience projects are advancing steadily.',
+    focus: ['Environment', 'Infrastructure', 'Transport'],
+  },
+  {
+    name: 'Lumbini Province',
+    label: 'Lumbini',
+    total: 29,
+    delayed: 5,
+    progress: 49,
+    severity: 'medium',
+    summary: 'Education, logistics, and industrial growth promises are highly watched across the province.',
+    focus: ['Education', 'Economy', 'Transport'],
+  },
+  {
+    name: 'Karnali Province',
+    label: 'Karnali',
+    total: 18,
+    delayed: 5,
+    progress: 37,
+    severity: 'high',
+    summary: 'Basic infrastructure and service delivery remain the biggest test for visible progress in Karnali.',
+    focus: ['Infrastructure', 'Health', 'Energy'],
+  },
+  {
+    name: 'Sudurpashchim Province',
+    label: 'Sudurpashchim',
+    total: 20,
+    delayed: 6,
+    progress: 34,
+    severity: 'critical',
+    summary: 'Transport gaps and slower follow-through are keeping this province under closer public scrutiny.',
+    focus: ['Transport', 'Infrastructure', 'Social'],
+  },
+];
 
 /* ═══════════════════════════════════════════
    CATEGORY CONFIG
@@ -58,11 +159,32 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   not_started: 'bg-gray-400',
 };
 
+const severityTone: Record<string, string> = {
+  low: 'text-emerald-300 bg-emerald-500/12 border-emerald-500/25',
+  medium: 'text-amber-300 bg-amber-500/12 border-amber-500/25',
+  high: 'text-orange-300 bg-orange-500/12 border-orange-500/25',
+  critical: 'text-red-300 bg-red-500/12 border-red-500/25',
+};
+
 export default function PublicMapPage() {
   const { locale, t } = useI18n();
   const { data: promises, isLoading } = useAllPromises();
   const { stats } = usePromiseStats();
+  const searchParams = useSearchParams();
+
+  const initialProvince = searchParams.get('province') || null;
+  const [selectedProvince, setSelectedProvince] = useState<string | null>(initialProvince);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const selectedProvinceData = useMemo(
+    () => provinceOverview.find((p) => p.name === selectedProvince) ?? null,
+    [selectedProvince],
+  );
+
+  const handleProvinceClick = useCallback((name: string) => {
+    setSelectedProvince((prev) => (prev === name ? null : name));
+    setSelectedCategory(null);
+  }, []);
 
   // Build category breakdown
   type CatEntry = { name: string; total: number; inProgress: number; delivered: number; stalled: number; notStarted: number; avgProgress: number };
@@ -99,13 +221,11 @@ export default function PublicMapPage() {
     return promises.filter((p) => p.category === selectedCategory);
   }, [promises, selectedCategory]);
 
-  const selectedCatData = categoryBreakdown.find((c) => c.name === selectedCategory);
-
   return (
-    <div className="min-h-screen relative z-10 space-y-6 px-4 py-8 sm:px-6 lg:px-8 animate-fade-in">
+    <div className="min-h-screen relative z-10 space-y-6 px-4 py-6 sm:px-6 lg:px-8 animate-fade-in">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-display font-bold text-white flex items-center gap-3">
               <Map className="w-7 h-7 text-primary-400" />
@@ -115,18 +235,10 @@ export default function PublicMapPage() {
               {t('map.explorePromises')}
             </p>
           </div>
-          {selectedCategory && (
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              {t('map.allSectors')}
-            </button>
-          )}
         </div>
 
         {/* Stats Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           <div className="glass-card p-4 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary-500/15 flex items-center justify-center">
               <Eye className="w-4 h-4 text-primary-400" />
@@ -165,13 +277,165 @@ export default function PublicMapPage() {
           </div>
         </div>
 
-        {/* Main grid: Category tiles + Promise list */}
+        {/* MAP — primary element */}
+        <div className="glass-card overflow-hidden mb-6">
+          <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <Map className="w-4 h-4 text-cyan-400" />
+              Nepal Province Map
+            </h2>
+            {selectedProvince && (
+              <button
+                onClick={() => {
+                  setSelectedProvince(null);
+                  setSelectedCategory(null);
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-3 h-3" />
+                Clear selection
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px]">
+            {/* Map container */}
+            <div className="h-[500px] lg:h-[560px] w-full">
+              <MapFallback
+                regionData={provinceOverview.map((province) => ({
+                  name: province.name,
+                  total: province.total,
+                  delayed: province.delayed,
+                  severity: province.severity,
+                  progress: province.progress,
+                }))}
+                selectedProvince={selectedProvince}
+                onProvinceClick={handleProvinceClick}
+              />
+            </div>
+
+            {/* Province detail sidebar */}
+            <div className="border-t lg:border-t-0 lg:border-l border-white/[0.06] p-4 space-y-4 overflow-y-auto max-h-[560px]">
+              {selectedProvinceData ? (
+                <>
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-lg font-semibold text-white">{selectedProvinceData.label}</h3>
+                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.15em] ${severityTone[selectedProvinceData.severity]}`}>
+                        {selectedProvinceData.severity}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-400 mt-2 leading-relaxed">
+                      {selectedProvinceData.summary}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">Tracked</p>
+                      <p className="text-xl font-semibold text-white mt-1">{selectedProvinceData.total}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">Delayed</p>
+                      <p className="text-xl font-semibold text-red-400 mt-1">{selectedProvinceData.delayed}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">Progress</p>
+                      <p className="text-xl font-semibold text-white mt-1">{selectedProvinceData.progress}%</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Key sectors</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProvinceData.focus.map((item) => (
+                        <span
+                          key={item}
+                          className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs text-gray-300"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Province list for quick switching */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">All provinces</p>
+                    <div className="space-y-1.5">
+                      {provinceOverview.map((p) => (
+                        <button
+                          key={p.name}
+                          onClick={() => handleProvinceClick(p.name)}
+                          className={`w-full text-left rounded-lg px-3 py-2 text-xs transition-colors flex items-center justify-between ${
+                            selectedProvince === p.name
+                              ? 'bg-primary-500/15 text-white border border-primary-500/30'
+                              : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                          }`}
+                        >
+                          <span>{p.label}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-500">{p.progress}%</span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              p.severity === 'critical' ? 'bg-red-500' :
+                              p.severity === 'high' ? 'bg-orange-500' :
+                              p.severity === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`} />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                  <Map className="w-10 h-10 text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-400">Click a province on the map</p>
+                  <p className="text-xs text-gray-500 mt-1">to see delivery details</p>
+
+                  <div className="mt-6 space-y-1.5 w-full">
+                    {provinceOverview.map((p) => (
+                      <button
+                        key={p.name}
+                        onClick={() => handleProvinceClick(p.name)}
+                        className="w-full text-left rounded-lg px-3 py-2 text-xs text-gray-400 hover:bg-white/[0.04] hover:text-gray-200 transition-colors flex items-center justify-between"
+                      >
+                        <span>{p.label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-500">{p.progress}%</span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            p.severity === 'critical' ? 'bg-red-500' :
+                            p.severity === 'high' ? 'bg-orange-500' :
+                            p.severity === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sector breakdown + Promise list */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Category Tiles */}
           <div className="lg:col-span-1 space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-3">
-              {t('map.sectors')}
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+                {t('map.sectors')}
+              </h2>
+              {selectedCategory && (
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  {t('map.allSectors')}
+                </button>
+              )}
+            </div>
 
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
@@ -185,12 +449,6 @@ export default function PublicMapPage() {
                 const Icon = categoryIcons[cat.name] || Building2;
                 const colorClass = categoryColors[cat.name] || 'text-gray-400 bg-gray-500/15';
                 const isSelected = selectedCategory === cat.name;
-                const progressColor =
-                  cat.avgProgress >= 60
-                    ? 'bg-emerald-500'
-                    : cat.avgProgress >= 30
-                      ? 'bg-amber-500'
-                      : 'bg-red-500';
 
                 return (
                   <button
@@ -214,39 +472,24 @@ export default function PublicMapPage() {
                       <span className="text-xs text-gray-500">{cat.total}</span>
                     </div>
 
-                    {/* Promises count */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-500">{cat.total} {t('map.promisesTracked')}</span>
-                    </div>
-
-                    {/* Status dots — clickable to filter by category + status */}
                     <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500">
                       {cat.delivered > 0 && (
-                        <Link
-                          href={`/explore/first-100-days?category=${encodeURIComponent(cat.name)}&status=delivered`}
-                          className="flex items-center gap-1 hover:text-blue-300 transition-colors"
-                        >
+                        <span className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                           {cat.delivered} {t('map.done')}
-                        </Link>
+                        </span>
                       )}
                       {cat.inProgress > 0 && (
-                        <Link
-                          href={`/explore/first-100-days?category=${encodeURIComponent(cat.name)}&status=in_progress`}
-                          className="flex items-center gap-1 hover:text-emerald-300 transition-colors"
-                        >
+                        <span className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                           {cat.inProgress} {t('map.active')}
-                        </Link>
+                        </span>
                       )}
                       {cat.stalled > 0 && (
-                        <Link
-                          href={`/explore/first-100-days?category=${encodeURIComponent(cat.name)}&status=stalled`}
-                          className="flex items-center gap-1 hover:text-red-300 transition-colors"
-                        >
+                        <span className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
                           {cat.stalled} {t('map.stalled')}
-                        </Link>
+                        </span>
                       )}
                     </div>
                   </button>
@@ -265,11 +508,6 @@ export default function PublicMapPage() {
                   : t('map.allPromises')}{' '}
                 — {filteredPromises.length}
               </h3>
-              {selectedCatData && (
-                <span className="text-xs text-gray-500">
-                  {selectedCatData.total} {t('map.promises')}
-                </span>
-              )}
             </div>
 
             <div className="flex-1 divide-y divide-white/[0.04] overflow-y-auto max-h-[700px]">
