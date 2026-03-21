@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -189,6 +189,14 @@ function ProgressRing({ percentage, size = 180, strokeWidth = 12 }: { percentage
    MAIN PAGE COMPONENT
    ═══════════════════════════════════════════════ */
 export default function BachanTrackerPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-white/40">Loading...</div></div>}>
+      <BachanTrackerContent />
+    </Suspense>
+  );
+}
+
+function BachanTrackerContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const categoryFilter = searchParams.get('category') || 'All';

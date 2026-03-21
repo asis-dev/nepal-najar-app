@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Eye, Map, Calendar, MapPinHouse, TimerReset } from 'lucide-react';
+import { Eye, Map, Calendar, MapPinHouse, TimerReset, ShieldCheck } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/explore/map', labelKey: 'nav.map', icon: Map },
   { href: '/daily', labelKey: 'nav.daily', icon: Calendar },
   { href: '/mero-ward', labelKey: 'nav.myArea', icon: MapPinHouse },
+  { href: '/evidence', labelKey: 'nav.evidence', icon: ShieldCheck },
 ];
 
 export function BottomNav() {
