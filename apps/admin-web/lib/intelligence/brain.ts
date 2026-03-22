@@ -75,6 +75,24 @@ You analyze signals (news articles, social media posts, videos, documents) to de
 Here are the 109 promises (ID: Title — Key aspects):
 ${PROMISES_KNOWLEDGE.map((p) => `${p.id}: ${p.title} — ${p.keyAspects}`).join('\n')}
 
+CLASSIFICATION RULES — BE AGGRESSIVE:
+- If a signal mentions ANY government activity, policy, budget, minister, ministry, or government institution → it IS relevant (relevanceScore >= 0.4)
+- If a signal mentions specific sectors like health, education, infrastructure, economy, corruption, tourism, energy, agriculture → match to related promises
+- "neutral" should ONLY be used for entertainment, sports (unless government sports policy), celebrity gossip, or completely unrelated content
+- Nepal government forming cabinet? → Relevant to promises 1-6 (governance reform)
+- Budget or spending news? → Relevant to promises 8-11 (economy)
+- Any infrastructure (road, bridge, airport, hydropower, water)? → Relevant to promises 12-15, 17
+- Health/hospital news? → Relevant to promises 22-23
+- Education news? → Relevant to promises 24-26
+- Foreign policy/diplomacy? → Relevant to promise 33
+- Anti-corruption? → Relevant to promise 4
+- Digital/tech/internet? → Relevant to promises 18-20
+- Agriculture/farming? → Relevant to promise 27
+- Tourism? → Relevant to promise 32
+- Election/voting reform? → Relevant to promise 30
+- DEFAULT TO RELEVANT when in doubt. We'd rather have false positives than miss real evidence.
+- A relevanceScore below 0.3 should be RARE — only for truly unrelated content.
+
 NEPALI CONTENT HANDLING:
 - Many signals will be in Nepali (Devanagari script). You MUST read and understand Nepali text.
 - Match Nepali keywords to English promise titles and vice versa.
@@ -152,7 +170,20 @@ Your job is to deeply analyze evidence and determine its impact on specific gove
 3. Detect indirect evidence (e.g., "Ministry allocated NPR 5B for roads" -> Promise #15 highway is progressing)
 4. Identify contradictions (e.g., official says "on track" but budget was cut)
 5. Consider the source reliability and cross-reference with other signals
-6. Suggest status changes with reasoning
+6. Suggest status changes with reasoning — BE PROACTIVE about suggesting status changes
+
+ANALYSIS RULES — BE AGGRESSIVE:
+- If there is ANY indication of government action on a promise, suggest "in_progress" status
+- If budget has been allocated to a sector, that counts as progress — suggest 5-15% progress minimum
+- If a minister makes a statement about plans, that counts as "statement" classification with suggestedStatus "in_progress"
+- If a bill is tabled or committee is formed, suggest 10-20% progress
+- If construction/implementation has begun, suggest 20-40% progress
+- If an initiative is launched/inaugurated, suggest 30-50% progress
+- If measurable outcomes are reported, suggest 50-80% progress
+- Only suggest "stalled" if there is CLEAR evidence of delay, cancellation, or opposition blocking
+- Extract ALL data points — amounts, dates, percentages, officials, organizations. Be thorough.
+- When multiple promises could be affected, create analysis entries for ALL of them, not just the primary one
+- Confidence should be >= 0.4 for any direct government action, >= 0.3 for indirect evidence
 
 Here are the full promise details:
 ${PROMISES_KNOWLEDGE.map(
