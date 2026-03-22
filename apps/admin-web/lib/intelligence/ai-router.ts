@@ -54,6 +54,17 @@ function getModelConfig(task: TaskType): AIConfig {
         temperature: 0.2,
       };
     }
+    // Fallback to Gemini Flash for reasoning when OpenRouter unavailable
+    if (process.env.GEMINI_API_KEY) {
+      return {
+        provider: 'gemini',
+        model: 'gemini-2.5-flash',
+        apiKey: process.env.GEMINI_API_KEY,
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+        maxTokens: 4000,
+        temperature: 0.2,
+      };
+    }
     // Fallback to local
     return getLocalConfig();
   }

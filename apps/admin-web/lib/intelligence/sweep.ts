@@ -16,9 +16,7 @@ import { collectAllSocial } from './collectors/social';
 import { collectAllApify } from './collectors/apify';
 import { collectGovPortals } from './collectors/gov-portal';
 import { processSignalsBatch } from './brain';
-// Translation pipeline (imported for future integration into processing)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { translateNepaliSignal, batchTranslateNepaliSignals } from './translate';
+import { batchTranslateNepaliSignals } from './translate';
 import { collectSocialEvidence } from './evidence/social-collector';
 import { syncPromiseStatuses } from './promise-status-sync';
 import { computeDailyActivityRollup } from './daily-activity-rollup';
@@ -306,6 +304,47 @@ export async function runFullSweep(
           break;
 
         totalRounds++;
+      }
+
+      // ===== TRANSLATION PHASE =====
+      // Translate Nepali signals that were classified as relevant
+      try {
+        console.log('[Sweep] Starting Nepali signal translation...');
+        const { data: nepaliSignals } = await supabase
+          .from('intelligence_signals')
+          .select('id, title, content, language')
+          .eq('language', 'ne')
+          .eq('tier1_processed', true)
+          .gte('relevance_score', 0.3)
+          .is('title_en', null)
+          .limit(20);
+
+        if (nepaliSignals && nepaliSignals.length > 0) {
+          const translated = await batchTranslateNepaliSignals(
+            nepaliSignals.map((s) => ({
+              id: s.id,
+              title: s.title,
+              content: s.content,
+            })),
+          );
+
+          // Write translations back to the database
+          for (const [signalId, translation] of translated) {
+            await supabase
+              .from('intelligence_signals')
+              .update({
+                title_en: translation.titleEn,
+                summary_en: translation.summaryEn,
+              })
+              .eq('id', signalId);
+          }
+
+          console.log(`[Sweep] Translated ${translated.size} Nepali signals`);
+        }
+      } catch (err) {
+        result.analysis.errors.push(
+          `Translation error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
       }
     }
 

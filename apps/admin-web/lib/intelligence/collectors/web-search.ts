@@ -356,6 +356,54 @@ async function searchSearXNG(query: string): Promise<SearchResult[]> {
   }
 }
 
+// DuckDuckGo HTML search — free fallback when Google and SearXNG are unavailable
+async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      kl: 'np-en', // Nepal region
+      df: 'm', // past month
+    });
+
+    const res = await fetch(`https://html.duckduckgo.com/html/?${params}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; NepalNajar/2.0)',
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    const results: SearchResult[] = [];
+    // Extract results from DDG HTML response
+    const resultRegex =
+      /<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+
+    while ((match = resultRegex.exec(html)) !== null && results.length < 5) {
+      const url = decodeURIComponent(
+        match[1].replace(/.*uddg=/, '').replace(/&.*/, ''),
+      );
+      const title = match[2].replace(/<[^>]+>/g, '').trim();
+      const snippet = match[3].replace(/<[^>]+>/g, '').trim();
+
+      if (url && title && url.startsWith('http')) {
+        results.push({
+          title,
+          url,
+          snippet,
+          source: new URL(url).hostname,
+        });
+      }
+    }
+
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 export async function searchForPromise(
   promiseId: number,
 ): Promise<SearchResult[]> {
@@ -367,10 +415,13 @@ export async function searchForPromise(
   const seenUrls = new Set<string>();
 
   for (const query of config.queries) {
-    // Try Google first, fallback to SearXNG
+    // Try Google first, fallback to SearXNG, then DuckDuckGo
     let results = await searchGoogle(query);
     if (results.length === 0) {
       results = await searchSearXNG(query);
+    }
+    if (results.length === 0) {
+      results = await searchDuckDuckGo(query);
     }
 
     for (const result of results) {
@@ -415,6 +466,9 @@ export async function collectAllWebSearch(): Promise<{
         let results = await searchGoogle(query);
         if (results.length === 0) {
           results = await searchSearXNG(query);
+        }
+        if (results.length === 0) {
+          results = await searchDuckDuckGo(query);
         }
 
         resultsFound += results.length;
