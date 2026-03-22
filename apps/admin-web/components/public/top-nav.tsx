@@ -18,6 +18,7 @@ import {
   TimerReset,
   BarChart3,
   Search,
+  Megaphone,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
@@ -34,6 +35,7 @@ const primaryNavLinks = [
 
 const mobileOnlyLinks = [
   { href: '/explore/first-100-days', labelKey: 'nav.projects', icon: FolderKanban },
+  { href: '/proposals', labelKey: 'nav.proposals', icon: Megaphone },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
   { href: '/search', labelKey: 'nav.search', icon: Search },
 ];

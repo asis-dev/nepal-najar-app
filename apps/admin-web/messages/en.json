@@ -15,7 +15,8 @@
     "operatorLogin": "Operator Login",
     "analytics": "Analytics",
     "search": "Search",
-    "evidence": "Evidence"
+    "evidence": "Evidence",
+    "proposals": "Proposals"
   },
   "hero": {
     "title": "Nepal Najar",
@@ -453,7 +454,8 @@
     "loading": "Loading...",
     "noResults": "No results",
     "back": "Back",
-    "na": "N/A"
+    "na": "N/A",
+    "copied": "Copied!"
   },
   "signal": {
     "official": "Official",
@@ -598,5 +600,109 @@
     "firstHundredDays": "First 100 Days",
     "daily": "Daily",
     "analytics": "Analytics"
+  },
+  "proposals": {
+    "eyebrow": "Community Proposals",
+    "subtitle": "Propose development projects for your area. Vote, discuss, and make your voice heard.",
+    "searchPlaceholder": "Search proposals...",
+    "backToList": "Back to Proposals",
+    "propose": "Propose",
+    "createProposal": "Create Proposal",
+    "createTitle": "Create a Proposal",
+    "createSubtitle": "Describe what you want built or improved in your area",
+    "loadMore": "Load More",
+    "myProposals": "My Proposals",
+    "newProposal": "New Proposal",
+    "proposalsCount": "proposals",
+    "votes": "votes",
+    "comments": "Comments",
+    "commentPlaceholder": "Share your thoughts...",
+    "noComments": "No comments yet. Be the first to share your thoughts.",
+    "awaitingApproval": "Awaiting approval",
+    "description": "Description",
+    "estimatedCost": "Estimated Cost",
+    "relatedPromises": "Related Government Promises",
+    "promise": "Promise",
+    "statusTimeline": "Status Timeline",
+    "signIn": "Sign in",
+    "toComment": "to leave a comment",
+    "signInRequired": "Sign in Required",
+    "signInToPropose": "You need to sign in to create a proposal.",
+    "signInToViewMy": "Sign in to view your proposals.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "flag": "Report",
+    "cancel": "Cancel",
+    "submitProposal": "Submit Proposal",
+    "createError": "Failed to create proposal. Please try again.",
+    "confirmDelete": "Are you sure you want to delete this proposal?",
+    "noProposals": "No Proposals Yet",
+    "noProposalsDesc": "You haven't created any proposals yet. Start by proposing something for your area.",
+    "filters": {
+      "all": "All",
+      "open": "Open",
+      "trending": "Trending",
+      "accepted": "Accepted",
+      "filters": "Filters",
+      "allProvinces": "All Provinces",
+      "allCategories": "All Categories"
+    },
+    "sort": {
+      "label": "Sort By",
+      "trending": "Trending",
+      "newest": "Newest",
+      "topVoted": "Top Voted"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "open": "Open",
+      "trending": "Trending",
+      "under_review": "Under Review",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "archived": "Archived"
+    },
+    "categories": {
+      "infrastructure": "Infrastructure",
+      "health": "Health",
+      "education": "Education",
+      "environment": "Environment",
+      "transport": "Transport",
+      "technology": "Technology",
+      "water_sanitation": "Water & Sanitation",
+      "agriculture": "Agriculture",
+      "tourism": "Tourism",
+      "governance": "Governance",
+      "social": "Social",
+      "energy": "Energy",
+      "other": "Other"
+    },
+    "form": {
+      "title": "Title (English)",
+      "titlePlaceholder": "What do you want to propose?",
+      "titleNe": "Title (Nepali)",
+      "titleNePlaceholder": "शीर्षक नेपालीमा",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe your proposal in detail...",
+      "descriptionNe": "Description (Nepali)",
+      "descriptionNePlaceholder": "विवरण नेपालीमा...",
+      "category": "Category",
+      "province": "Province",
+      "selectProvince": "Select Province",
+      "district": "District",
+      "selectDistrict": "Select District",
+      "municipality": "Municipality / Ward",
+      "municipalityPlaceholder": "e.g. Bidur Municipality",
+      "relatedPromises": "Related Promises (optional)",
+      "searchPromises": "Search promises...",
+      "estimatedCost": "Estimated Cost (NPR, optional)",
+      "costPlaceholder": "e.g. 5000000"
+    },
+    "empty": {
+      "title": "No Proposals Yet",
+      "description": "Be the first to propose a development project for your community."
+    }
   }
 }

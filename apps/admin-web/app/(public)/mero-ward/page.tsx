@@ -13,6 +13,10 @@ import {
   BarChart3,
   AlertTriangle,
   Trophy,
+  Megaphone,
+  ArrowRight,
+  ChevronUp,
+  MessageSquare,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import {
@@ -25,6 +29,7 @@ import { PublicPageHero } from '@/components/public/page-hero';
 import { usePreferencesStore } from '@/lib/stores/preferences';
 import { formatNPR } from '@/lib/data/promises';
 import { NEPAL_PROVINCES } from '@/lib/stores/preferences';
+import { useTrendingProposals } from '@/lib/hooks/use-proposals';
 
 /* ===================================================
    TREND ICON
@@ -117,6 +122,76 @@ function DistrictRow({ district, isNe }: { district: RegionScore; isNe: boolean 
       {/* Trend */}
       <TrendIcon trend={district.trend} />
     </div>
+  );
+}
+
+/* ===================================================
+   COMMUNITY PROPOSALS SECTION
+   =================================================== */
+function CommunityProposalsSection({ province, isNe }: { province: string | null; isNe: boolean }) {
+  const { data: proposals, isLoading } = useTrendingProposals(3);
+
+  // Filter to user's province if set
+  const filtered = province
+    ? (proposals ?? []).filter((p) => p.province === province)
+    : (proposals ?? []);
+  const display = filtered.length > 0 ? filtered.slice(0, 3) : (proposals ?? []).slice(0, 3);
+
+  if (isLoading || display.length === 0) return null;
+
+  return (
+    <section className="px-4 sm:px-6 lg:px-8 pb-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-white flex items-center gap-2">
+            <Megaphone className="w-4 h-4 text-primary-400" />
+            Community Proposals
+          </h2>
+          <Link
+            href="/proposals"
+            className="text-xs text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-1"
+          >
+            View All <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <div className="space-y-2">
+          {display.map((proposal) => {
+            const netVotes = proposal.upvote_count - proposal.downvote_count;
+            return (
+              <Link
+                key={proposal.id}
+                href={`/proposals/${proposal.id}`}
+                className="block glass-card p-4 hover:bg-white/[0.04] transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                    <ChevronUp className="w-4 h-4 text-gray-500" />
+                    <span className={`text-xs font-bold tabular-nums ${netVotes > 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
+                      {netVotes}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-200 truncate">
+                      {isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {proposal.province}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <MessageSquare className="w-3 h-3" />
+                        {proposal.comment_count}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -378,6 +453,9 @@ export default function MeroWardPage() {
             </div>
           </div>
         </section>
+
+        {/* Community Proposals Section */}
+        <CommunityProposalsSection province={userProvince} isNe={isNe} />
 
         {/* Footer accent line */}
         <div className="h-px bg-gradient-to-r from-transparent via-primary-500/30 to-transparent" />

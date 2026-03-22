@@ -15,7 +15,8 @@
     "operatorLogin": "सञ्चालक लगइन",
     "analytics": "विश्लेषण",
     "search": "खोज",
-    "evidence": "प्रमाण"
+    "evidence": "प्रमाण",
+    "proposals": "जनताको माग"
   },
   "hero": {
     "title": "नेपाल नजर",
@@ -453,7 +454,8 @@
     "loading": "लोड हुँदैछ...",
     "noResults": "कुनै नतिजा छैन",
     "back": "पछाडि",
-    "na": "उपलब्ध छैन"
+    "na": "उपलब्ध छैन",
+    "copied": "प्रतिलिपि भयो!"
   },
   "signal": {
     "official": "आधिकारिक",
@@ -598,5 +600,109 @@
     "firstHundredDays": "पहिलो १०० दिन",
     "daily": "दैनिक",
     "analytics": "विश्लेषण"
+  },
+  "proposals": {
+    "eyebrow": "सामुदायिक प्रस्ताव",
+    "subtitle": "आफ्नो क्षेत्रको लागि विकास आयोजना प्रस्ताव गर्नुहोस्। मतदान गर्नुहोस्, छलफल गर्नुहोस्।",
+    "searchPlaceholder": "प्रस्ताव खोज्नुहोस्...",
+    "backToList": "प्रस्ताव सूचीमा फर्कनुहोस्",
+    "propose": "प्रस्ताव गर्नुहोस्",
+    "createProposal": "प्रस्ताव बनाउनुहोस्",
+    "createTitle": "प्रस्ताव बनाउनुहोस्",
+    "createSubtitle": "आफ्नो क्षेत्रमा के बनाउन वा सुधार गर्न चाहनुहुन्छ वर्णन गर्नुहोस्",
+    "loadMore": "थप लोड गर्नुहोस्",
+    "myProposals": "मेरा प्रस्तावहरू",
+    "newProposal": "नयाँ प्रस्ताव",
+    "proposalsCount": "प्रस्तावहरू",
+    "votes": "मत",
+    "comments": "टिप्पणीहरू",
+    "commentPlaceholder": "आफ्नो विचार साझा गर्नुहोस्...",
+    "noComments": "अहिलेसम्म कुनै टिप्पणी छैन।",
+    "awaitingApproval": "स्वीकृतिको प्रतीक्षामा",
+    "description": "विवरण",
+    "estimatedCost": "अनुमानित लागत",
+    "relatedPromises": "सम्बन्धित सरकारी प्रतिबद्धता",
+    "promise": "प्रतिबद्धता",
+    "statusTimeline": "स्थिति समयरेखा",
+    "signIn": "साइन इन गर्नुहोस्",
+    "toComment": "टिप्पणी गर्न",
+    "signInRequired": "साइन इन आवश्यक",
+    "signInToPropose": "प्रस्ताव बनाउन साइन इन गर्नुपर्छ।",
+    "signInToViewMy": "आफ्ना प्रस्तावहरू हेर्न साइन इन गर्नुहोस्।",
+    "edit": "सम्पादन",
+    "delete": "मेटाउनुहोस्",
+    "flag": "रिपोर्ट",
+    "cancel": "रद्द गर्नुहोस्",
+    "submitProposal": "प्रस्ताव पेश गर्नुहोस्",
+    "createError": "प्रस्ताव बनाउन असफल भयो। पुन: प्रयास गर्नुहोस्।",
+    "confirmDelete": "तपाईं यो प्रस्ताव मेटाउन निश्चित हुनुहुन्छ?",
+    "noProposals": "अहिलेसम्म कुनै प्रस्ताव छैन",
+    "noProposalsDesc": "तपाईंले अहिलेसम्म कुनै प्रस्ताव बनाउनुभएको छैन। आफ्नो क्षेत्रको लागि केही प्रस्ताव गर्नुहोस्।",
+    "filters": {
+      "all": "सबै",
+      "open": "खुला",
+      "trending": "ट्रेन्डिङ",
+      "accepted": "स्वीकृत",
+      "filters": "फिल्टर",
+      "allProvinces": "सबै प्रदेश",
+      "allCategories": "सबै श्रेणी"
+    },
+    "sort": {
+      "label": "क्रमबद्ध",
+      "trending": "ट्रेन्डिङ",
+      "newest": "नयाँ",
+      "topVoted": "शीर्ष मत"
+    },
+    "statuses": {
+      "draft": "ड्राफ्ट",
+      "open": "खुला",
+      "trending": "ट्रेन्डिङ",
+      "under_review": "समीक्षाधीन",
+      "accepted": "स्वीकृत",
+      "rejected": "अस्वीकृत",
+      "in_progress": "प्रगतिमा",
+      "completed": "सम्पन्न",
+      "archived": "संग्रहित"
+    },
+    "categories": {
+      "infrastructure": "पूर्वाधार",
+      "health": "स्वास्थ्य",
+      "education": "शिक्षा",
+      "environment": "वातावरण",
+      "transport": "यातायात",
+      "technology": "प्रविधि",
+      "water_sanitation": "पानी र सरसफाइ",
+      "agriculture": "कृषि",
+      "tourism": "पर्यटन",
+      "governance": "शासन",
+      "social": "सामाजिक",
+      "energy": "ऊर्जा",
+      "other": "अन्य"
+    },
+    "form": {
+      "title": "शीर्षक (अंग्रेजी)",
+      "titlePlaceholder": "तपाईं के प्रस्ताव गर्न चाहनुहुन्छ?",
+      "titleNe": "शीर्षक (नेपाली)",
+      "titleNePlaceholder": "शीर्षक नेपालीमा",
+      "description": "विवरण",
+      "descriptionPlaceholder": "आफ्नो प्रस्तावको विस्तृत वर्णन गर्नुहोस्...",
+      "descriptionNe": "विवरण (नेपाली)",
+      "descriptionNePlaceholder": "विवरण नेपालीमा...",
+      "category": "श्रेणी",
+      "province": "प्रदेश",
+      "selectProvince": "प्रदेश छान्नुहोस्",
+      "district": "जिल्ला",
+      "selectDistrict": "जिल्ला छान्नुहोस्",
+      "municipality": "नगरपालिका / वडा",
+      "municipalityPlaceholder": "जस्तै: विदुर नगरपालिका",
+      "relatedPromises": "सम्बन्धित प्रतिबद्धता (ऐच्छिक)",
+      "searchPromises": "प्रतिबद्धता खोज्नुहोस्...",
+      "estimatedCost": "अनुमानित लागत (NPR, ऐच्छिक)",
+      "costPlaceholder": "जस्तै: ५०,००,०००"
+    },
+    "empty": {
+      "title": "अहिलेसम्म कुनै प्रस्ताव छैन",
+      "description": "आफ्नो समुदायको लागि पहिलो विकास आयोजना प्रस्ताव गर्नुहोस्।"
+    }
   }
 }
