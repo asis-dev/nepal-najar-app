@@ -22,7 +22,7 @@ interface RSSSource {
   relatedPromiseIds: number[];
 }
 
-// Nepal news RSS feeds (22 sources: 12 English, 10 Nepali)
+// Nepal news RSS feeds (18 active sources: 10 English, 8 Nepali — 4 commented out due to feed/site issues)
 export const RSS_FEEDS: RSSSource[] = [
   // ── English feeds ──────────────────────────────────────
   {
@@ -56,14 +56,14 @@ export const RSS_FEEDS: RSSSource[] = [
   {
     id: 'rss-himalayan-times',
     name: 'The Himalayan Times',
-    feedUrl: 'https://thehimalayantimes.com/feed',
+    feedUrl: 'https://thehimalayantimes.com/rssFeed/14',
     language: 'en',
     relatedPromiseIds: [],
   },
   {
     id: 'rss-myrepublica',
     name: 'myRepublica',
-    feedUrl: 'https://myrepublica.nagariknetwork.com/feed',
+    feedUrl: 'https://myrepublica.nagariknetwork.com/feeds',
     language: 'en',
     relatedPromiseIds: [],
   },
@@ -77,14 +77,14 @@ export const RSS_FEEDS: RSSSource[] = [
   {
     id: 'rss-annapurna-express',
     name: 'The Annapurna Express',
-    feedUrl: 'https://theannapurnaexpress.com/feed',
+    feedUrl: 'https://theannapurnaexpress.com/rss',
     language: 'en',
     relatedPromiseIds: [],
   },
   {
     id: 'rss-rising-nepal',
     name: 'The Rising Nepal',
-    feedUrl: 'https://risingnepaldaily.com/feed',
+    feedUrl: 'https://risingnepaldaily.com/rss',
     language: 'en',
     relatedPromiseIds: [],
   },
@@ -95,13 +95,14 @@ export const RSS_FEEDS: RSSSource[] = [
     language: 'en',
     relatedPromiseIds: [],
   },
-  {
-    id: 'rss-nepal-live-today',
-    name: 'Nepal Live Today',
-    feedUrl: 'https://nepallivetoday.com/feed/',
-    language: 'en',
-    relatedPromiseIds: [],
-  },
+  // NOTE: Nepal Live Today (nepallivetoday.com) – domain no longer resolves (DNS failure). Site appears permanently down. Commented out 2026-03-22.
+  // {
+  //   id: 'rss-nepal-live-today',
+  //   name: 'Nepal Live Today',
+  //   feedUrl: 'https://nepallivetoday.com/feed/',
+  //   language: 'en',
+  //   relatedPromiseIds: [],
+  // },
 
   // ── Nepali feeds ───────────────────────────────────────
   {
@@ -128,14 +129,14 @@ export const RSS_FEEDS: RSSSource[] = [
   {
     id: 'rss-annapurna-post',
     name: 'Annapurna Post',
-    feedUrl: 'https://annapurnapost.com/feed',
+    feedUrl: 'https://annapurnapost.com/rss',
     language: 'ne',
     relatedPromiseIds: [],
   },
   {
     id: 'rss-gorkhapatra',
     name: 'Gorkhapatra Online',
-    feedUrl: 'https://gorkhapatraonline.com/feed',
+    feedUrl: 'https://gorkhapatraonline.com/rss',
     language: 'ne',
     relatedPromiseIds: [],
   },
@@ -146,27 +147,30 @@ export const RSS_FEEDS: RSSSource[] = [
     language: 'ne',
     relatedPromiseIds: [],
   },
-  {
-    id: 'rss-ratopati-ne',
-    name: 'Ratopati (NE)',
-    feedUrl: 'https://ratopati.com/feed',
-    language: 'ne',
-    relatedPromiseIds: [],
-  },
-  {
-    id: 'rss-ujyaalo',
-    name: 'Ujyaalo Online',
-    feedUrl: 'https://ujyaaloonline.com/feed',
-    language: 'ne',
-    relatedPromiseIds: [],
-  },
-  {
-    id: 'rss-nayapatrika',
-    name: 'Naya Patrika',
-    feedUrl: 'https://nayapatrikadaily.com/feed',
-    language: 'ne',
-    relatedPromiseIds: [],
-  },
+  // NOTE: Ratopati Nepali (ratopati.com/feed) – returns 403 with message "contact administration for access". RSS feed deliberately restricted. Commented out 2026-03-22.
+  // {
+  //   id: 'rss-ratopati-ne',
+  //   name: 'Ratopati (NE)',
+  //   feedUrl: 'https://ratopati.com/feed',
+  //   language: 'ne',
+  //   relatedPromiseIds: [],
+  // },
+  // NOTE: Ujyaalo Online (ujyaaloonline.com) – Cloudflare bot protection blocks all automated feed access (403). Commented out 2026-03-22.
+  // {
+  //   id: 'rss-ujyaalo',
+  //   name: 'Ujyaalo Online',
+  //   feedUrl: 'https://ujyaaloonline.com/feed',
+  //   language: 'ne',
+  //   relatedPromiseIds: [],
+  // },
+  // NOTE: Naya Patrika (nayapatrikadaily.com) – site returns 502/403 errors on all endpoints including homepage. Appears down or misconfigured. Commented out 2026-03-22.
+  // {
+  //   id: 'rss-nayapatrika',
+  //   name: 'Naya Patrika',
+  //   feedUrl: 'https://nayapatrikadaily.com/feed',
+  //   language: 'ne',
+  //   relatedPromiseIds: [],
+  // },
   {
     id: 'rss-bbc-nepali',
     name: 'BBC Nepali',
