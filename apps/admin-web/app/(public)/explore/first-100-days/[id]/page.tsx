@@ -35,6 +35,9 @@ import { BudgetBreakdownCard } from '@/components/budget/budget-breakdown-card';
 import { SignalBadge } from '@/components/public/signal-badge';
 import { CommentsSection } from '@/components/public/comments-section';
 import { SubmitEvidenceModal } from '@/components/public/submit-evidence-modal';
+import { ShareProofButton } from '@/components/public/share-proof-button';
+import { ProofGallery } from '@/components/public/proof-gallery';
+import { VerifyProgress } from '@/components/public/verify-progress';
 import { useWatchlistStore } from '@/lib/stores/preferences';
 import { useAuth } from '@/lib/hooks/use-auth';
 import {
@@ -45,11 +48,11 @@ import {
   type TrustLevel,
   type GovernmentPromise,
 } from '@/lib/data/promises';
-import { useLatestArticles } from '@/lib/hooks/use-promises';
+import { useLatestArticles, usePromiseTodaySignals } from '@/lib/hooks/use-promises';
 import { useEvidenceVault } from '@/lib/hooks/use-evidence-vault';
 import { EvidenceStrengthBadge, ConfidenceDot } from '@/components/public/evidence-strength-badge';
 import { ShareButtons } from '@/components/public/share-buttons';
-import { Youtube, Facebook, Twitter, MessageCircle, Clock, Quote, ExternalLink as ExtLinkIcon } from 'lucide-react';
+import { Youtube, Facebook, Twitter, MessageCircle, Clock, Quote, ExternalLink as ExtLinkIcon, Radio } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════
    STATUS CONFIG
@@ -141,6 +144,9 @@ export default function PromiseDetailPage() {
 
   // Get REAL related articles from Supabase (not mock data)
   const { data: realArticles } = useLatestArticles(10, promise?.id);
+
+  // Get today's activity signals for this promise
+  const { data: todaySignals, isLoading: signalsLoading } = usePromiseTodaySignals(promise?.id ?? '');
 
   // Get evidence vault entries for this promise
   const { data: evidenceEntries } = useEvidenceVault(promise?.id);
@@ -246,19 +252,22 @@ export default function PromiseDetailPage() {
                   )}
                 </div>
 
-                <button
-                  onClick={() => toggleWatch(promise.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
-                    isWatched(promise.id)
-                      ? 'bg-primary-500/15 text-primary-300 border-primary-500/30'
-                      : 'bg-white/[0.04] text-gray-400 border-white/[0.08] hover:border-primary-500/30 hover:text-primary-300'
-                  }`}
-                >
-                  <Bookmark className={`w-3.5 h-3.5 ${isWatched(promise.id) ? 'fill-primary-400' : ''}`} />
-                  {isWatched(promise.id)
-                    ? (locale === 'ne' ? 'हेरिरहेको' : 'Watching')
-                    : (locale === 'ne' ? 'हेर्नुहोस्' : 'Watch')}
-                </button>
+                <div className="flex items-center gap-2">
+                  <ShareProofButton promiseId={promise.id} />
+                  <button
+                    onClick={() => toggleWatch(promise.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                      isWatched(promise.id)
+                        ? 'bg-primary-500/15 text-primary-300 border-primary-500/30'
+                        : 'bg-white/[0.04] text-gray-400 border-white/[0.08] hover:border-primary-500/30 hover:text-primary-300'
+                    }`}
+                  >
+                    <Bookmark className={`w-3.5 h-3.5 ${isWatched(promise.id) ? 'fill-primary-400' : ''}`} />
+                    {isWatched(promise.id)
+                      ? (locale === 'ne' ? 'हेरिरहेको' : 'Watching')
+                      : (locale === 'ne' ? 'हेर्नुहोस्' : 'Watch')}
+                  </button>
+                </div>
               </div>
 
               {/* Title (bilingual, editorial) */}
@@ -487,6 +496,24 @@ export default function PromiseDetailPage() {
         </section>
 
         {/* ═══════════════════════════════════════
+           CITIZEN PROOF GALLERY
+           ═══════════════════════════════════════ */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <ProofGallery promiseId={promise.id} />
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════
+           VERIFY PROGRESS
+           ═══════════════════════════════════════ */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <VerifyProgress promiseId={promise.id} />
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════
            COMMENTS SECTION
            ═══════════════════════════════════════ */}
         <section className="px-4 sm:px-6 lg:px-8 pb-8">
@@ -510,6 +537,159 @@ export default function PromiseDetailPage() {
             </div>
           </section>
         ) : null}
+
+        {/* ═══════════════════════════════════════
+           TODAY'S ACTIVITY — signals detected today
+           ═══════════════════════════════════════ */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="glass-card p-6">
+              <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                <Radio className="w-4 h-4 text-emerald-400" />
+                {t('daily.todaysActivity')}
+                {todaySignals && todaySignals.length > 0 && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold">
+                    {todaySignals.length} {t('daily.signals')}
+                  </span>
+                )}
+              </h3>
+
+              {signalsLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+                      <div className="h-4 w-3/4 bg-white/[0.06] rounded animate-pulse" />
+                      <div className="h-3 w-1/2 bg-white/[0.06] rounded animate-pulse mt-2" />
+                    </div>
+                  ))}
+                </div>
+              ) : todaySignals && todaySignals.length > 0 ? (
+                <div className="space-y-3">
+                  {todaySignals.map((signal) => {
+                    const classIcon = signal.classification === 'confirms' ? '\u2705'
+                      : signal.classification === 'contradicts' ? '\u274C'
+                      : '\uD83D\uDCCB';
+                    const timeDiff = Math.floor((Date.now() - new Date(signal.discovered_at).getTime()) / 3600000);
+                    const timeLabel = timeDiff < 1 ? (isNe ? 'अहिले भर्खर' : 'Just now')
+                      : `${timeDiff}${isNe ? ' घण्टा अघि' : 'h ago'}`;
+
+                    return (
+                      <a
+                        key={signal.id}
+                        href={signal.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 hover:bg-white/[0.05] transition-colors group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-base mt-0.5">{classIcon}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-gray-200 group-hover:text-white transition-colors line-clamp-2">
+                              {signal.headline}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-[10px] text-gray-500">{signal.source_name}</span>
+                              <span className="text-[10px] text-gray-600">{timeLabel}</span>
+                              <span className="text-[10px] text-gray-600">{Math.round(signal.confidence * 100)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+                  <p className="text-sm text-gray-500">
+                    {t('daily.noSignalsToday')}
+                    {promise.lastActivityDate && (
+                      <span className="ml-1">
+                        {t('daily.lastActivity')}: {(() => {
+                          const days = Math.floor((Date.now() - new Date(promise.lastActivityDate).getTime()) / 86400000);
+                          return `${days} ${t('daily.daysAgo')}`;
+                        })()}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════
+           TODAY'S ACTIVITY
+           ═══════════════════════════════════════ */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="glass-card p-6">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2 mb-4">
+                <Radio className="w-4 h-4 text-cyan-400" />
+                {isNe ? 'आजको गतिविधि' : "Today's Activity"}
+              </h3>
+
+              {signalsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="w-4 h-4 border-2 border-gray-600 border-t-cyan-400 rounded-full animate-spin" />
+                  {isNe ? 'लोड हुँदैछ...' : 'Loading...'}
+                </div>
+              ) : todaySignals && todaySignals.length > 0 ? (
+                <div className="space-y-3">
+                  {todaySignals.map((signal) => {
+                    const classificationConfig: Record<string, { icon: string; label: string; label_ne: string; bg: string; text: string }> = {
+                      confirms: { icon: '✅', label: 'Confirms', label_ne: 'पुष्टि', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+                      contradicts: { icon: '❌', label: 'Contradicts', label_ne: 'विरोध', bg: 'bg-red-500/15', text: 'text-red-400' },
+                      neutral: { icon: '📋', label: 'Neutral', label_ne: 'तटस्थ', bg: 'bg-gray-500/15', text: 'text-gray-400' },
+                    };
+                    const cls = classificationConfig[signal.classification] ?? classificationConfig.neutral;
+
+                    return (
+                      <div
+                        key={signal.id}
+                        className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.1] transition-colors"
+                      >
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${cls.bg} ${cls.text}`}>
+                          {cls.icon} {isNe ? cls.label_ne : cls.label}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-200 leading-snug">
+                            {signal.headline}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+                            <a
+                              href={signal.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 hover:text-cyan-400 transition-colors"
+                            >
+                              {signal.source_name}
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <span className="inline-flex items-center gap-1">
+                              <ConfidenceDot confidence={signal.confidence} />
+                              {Math.round(signal.confidence * 100)}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <p className="text-sm text-gray-500">
+                    {isNe ? 'आज कुनै गतिविधि छैन' : 'No activity today'}
+                  </p>
+                  {promise.lastActivityDate && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      {isNe ? 'अन्तिम गतिविधि' : 'Last activity'}: {new Date(promise.lastActivityDate).toLocaleDateString(isNe ? 'ne-NP' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
         {/* ═══════════════════════════════════════
            REAL SCRAPED ARTICLES

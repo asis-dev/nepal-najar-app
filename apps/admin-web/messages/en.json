@@ -16,7 +16,8 @@
     "analytics": "Analytics",
     "search": "Search",
     "evidence": "Evidence",
-    "proposals": "Proposals"
+    "proposals": "Proposals",
+    "affectsMe": "For Me"
   },
   "hero": {
     "title": "Nepal Najar",
@@ -347,7 +348,35 @@
     "sevenDayCalendar": "7-Day Calendar",
     "today": "Today",
     "noProgress": "No verified progress data yet.",
-    "articlesMention": "articles mention this"
+    "articlesMention": "articles mention this",
+    "activityDashboard": "Daily Activity Dashboard",
+    "heroTitle": "promises had activity today",
+    "heroSubtitle": "Was any work done on promises today?",
+    "activeToday": "Active Today",
+    "noActivity": "No Activity",
+    "signals": "signals",
+    "signal": "signal",
+    "daysSince": "days since last activity",
+    "daySince": "day since last activity",
+    "neverActive": "No activity recorded",
+    "of": "of",
+    "promisesTotal": "promises",
+    "viewPromise": "View promise",
+    "streakAndDaily": "Streak & Promise of the Day",
+    "topHeadline": "Top headline"
+  },
+  "daily": {
+    "activityDashboard": "Daily Activity Dashboard",
+    "activeToday": "Active Today",
+    "noActivity": "No Activity",
+    "lastActivity": "Last activity",
+    "daysAgo": "days ago",
+    "signals": "signals",
+    "promisesHadActivity": "promises had activity today",
+    "activeOfTotal": "{active} of {total}",
+    "recentActivity": "Most Recent Activity",
+    "todaysActivity": "Today's Activity",
+    "noSignalsToday": "No new signals today."
   },
   "watchlist": {
     "title": "My Watchlist",
@@ -704,5 +733,15 @@
       "title": "No Proposals Yet",
       "description": "Be the first to propose a development project for your community."
     }
+  },
+  "affectsMe": {
+    "title": "What Affects Me",
+    "direct": "Directly Affects You",
+    "indirect": "Indirectly Affects You",
+    "otherAreas": "Other Areas",
+    "setLocation": "Set your location to see which promises affect your area",
+    "basedOn": "Based on",
+    "changeLocation": "Change Location",
+    "promisesAffectYou": "promises directly affect your area"
   }
 }

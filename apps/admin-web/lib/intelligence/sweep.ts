@@ -14,9 +14,14 @@ import { collectAllYouTube } from './collectors/youtube';
 import { collectAllWebSearch } from './collectors/web-search';
 import { collectAllSocial } from './collectors/social';
 import { collectAllApify } from './collectors/apify';
+import { collectGovPortals } from './collectors/gov-portal';
 import { processSignalsBatch } from './brain';
+// Translation pipeline (imported for future integration into processing)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { translateNepaliSignal, batchTranslateNepaliSignals } from './translate';
 import { collectSocialEvidence } from './evidence/social-collector';
 import { syncPromiseStatuses } from './promise-status-sync';
+import { computeDailyActivityRollup } from './daily-activity-rollup';
 
 async function upsertDailyQualityMetrics() {
   const supabase = getSupabase();
@@ -114,6 +119,7 @@ export async function runFullSweep(
     skipAnalysis?: boolean;
     analysisBatchSize?: number;
     sweepType?: 'scheduled' | 'manual' | 'targeted';
+    rssOnly?: boolean;
   } = {},
 ): Promise<SweepResult> {
   const supabase = getSupabase();
@@ -123,6 +129,7 @@ export async function runFullSweep(
     skipAnalysis = false,
     analysisBatchSize = 15,
     sweepType = 'manual',
+    rssOnly = false,
   } = options;
 
   // Create sweep record
@@ -181,57 +188,70 @@ export async function runFullSweep(
   try {
     // ===== COLLECTION PHASE =====
     if (!skipCollection) {
-      console.log('[Sweep] Starting collection phase...');
+      console.log(`[Sweep] Starting collection phase...${rssOnly ? ' (RSS-only mode)' : ''}`);
 
-      // Run collectors in parallel where possible
-      const [rssResult, youtubeResult] = await Promise.allSettled([
-        collectAllRSS(),
-        collectAllYouTube(),
-      ]);
-
-      if (rssResult.status === 'fulfilled') {
-        result.collection.rss = rssResult.value;
-      } else {
+      // RSS collection always runs
+      try {
+        result.collection.rss = await collectAllRSS();
+      } catch (err) {
         result.collection.rss.errors.push(
-          rssResult.reason?.message || 'RSS failed',
+          err instanceof Error ? err.message : 'RSS failed',
         );
       }
 
-      if (youtubeResult.status === 'fulfilled') {
-        result.collection.youtube = youtubeResult.value;
-      } else {
-        result.collection.youtube.errors.push(
-          youtubeResult.reason?.message || 'YouTube failed',
-        );
+      // Skip non-RSS collectors in rss-only mode
+      if (!rssOnly) {
+        // Run YouTube
+        try {
+          result.collection.youtube = await collectAllYouTube();
+        } catch (err) {
+          result.collection.youtube.errors.push(
+            err instanceof Error ? err.message : 'YouTube failed',
+          );
+        }
+
+        // Run sequentially (rate-limited)
+        try {
+          result.collection.search = await collectAllWebSearch();
+        } catch (err) {
+          result.collection.search.errors.push(
+            err instanceof Error ? err.message : 'Search failed',
+          );
+        }
+
+        try {
+          result.collection.social = await collectAllSocial();
+        } catch (err) {
+          result.collection.social.errors.push(
+            err instanceof Error ? err.message : 'Social failed',
+          );
+        }
+
+        // Run Apify Facebook profile scraper
+        try {
+          result.collection.apify = await collectAllApify();
+        } catch (err) {
+          result.collection.apify.errors.push(
+            err instanceof Error ? err.message : 'Apify failed',
+          );
+        }
+
+        // Run Government Portal scraper
+        try {
+          const govResult = await collectGovPortals();
+          // Merge gov portal results into legacy bucket (press releases)
+          result.collection.legacy.articlesFound += govResult.totalItems;
+          result.collection.legacy.newArticles += govResult.newItems;
+          result.collection.legacy.errors.push(...govResult.errors);
+        } catch (err) {
+          result.collection.legacy.errors.push(
+            err instanceof Error ? err.message : 'Gov portal collection failed',
+          );
+        }
       }
 
-      // Run sequentially (rate-limited)
-      try {
-        result.collection.search = await collectAllWebSearch();
-      } catch (err) {
-        result.collection.search.errors.push(
-          err instanceof Error ? err.message : 'Search failed',
-        );
-      }
-
-      try {
-        result.collection.social = await collectAllSocial();
-      } catch (err) {
-        result.collection.social.errors.push(
-          err instanceof Error ? err.message : 'Social failed',
-        );
-      }
-
-      // Run Apify Facebook profile scraper
-      try {
-        result.collection.apify = await collectAllApify();
-      } catch (err) {
-        result.collection.apify.errors.push(
-          err instanceof Error ? err.message : 'Apify failed',
-        );
-      }
-
-      // Also run legacy scraper (existing 46 sources)
+      // Also run legacy scraper (existing 46 sources) — skip in rss-only mode
+      if (!rssOnly) {
       try {
         const legacyRes = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/scrape/bulk`,
@@ -258,6 +278,7 @@ export async function runFullSweep(
           err instanceof Error ? err.message : 'Legacy scraper failed',
         );
       }
+      } // end if (!rssOnly) for legacy
     }
 
     // ===== ANALYSIS PHASE =====
@@ -354,6 +375,16 @@ export async function runFullSweep(
     } catch (err) {
       result.analysis.errors.push(
         `Quality metrics error: ${err instanceof Error ? err.message : 'unknown'}`,
+      );
+    }
+
+    // Daily activity rollup — "Was any work done today?" per promise
+    try {
+      const rollup = await computeDailyActivityRollup();
+      console.log(`[Sweep] Daily rollup: ${rollup.promisesActive} active promises, ${rollup.totalSignals} signals`);
+    } catch (err) {
+      result.analysis.errors.push(
+        `Daily rollup error: ${err instanceof Error ? err.message : 'unknown'}`,
       );
     }
   } catch (err) {

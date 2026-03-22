@@ -70,10 +70,24 @@ export async function tier1Classify(
   signal: Signal,
 ): Promise<ClassificationResult> {
   const systemPrompt = `You are an intelligence analyst for Nepal Najar, a government promise tracker.
-You analyze signals (news articles, social media posts, videos, documents) to determine if they are relevant to any of Nepal's 35 government promises.
+You analyze signals (news articles, social media posts, videos, documents) to determine if they are relevant to any of Nepal's 109 government promises.
 
-Here are the 35 promises (ID: Title — Key aspects):
+Here are the 109 promises (ID: Title — Key aspects):
 ${PROMISES_KNOWLEDGE.map((p) => `${p.id}: ${p.title} — ${p.keyAspects}`).join('\n')}
+
+NEPALI CONTENT HANDLING:
+- Many signals will be in Nepali (Devanagari script). You MUST read and understand Nepali text.
+- Match Nepali keywords to English promise titles and vice versa.
+- Consider that the same concept may be expressed differently in Nepali vs English.
+- "अर्ब" = billion NPR, "करोड" = 10 million NPR, "लाख" = 100,000 NPR.
+- Dates may be in Bikram Sambat (BS) calendar — note the BS date and approximate AD equivalent in your reasoning.
+- Government ministry names appear in both languages — match them correctly.
+
+CURRENT POLITICAL CONTEXT (as of March 2026):
+- Nepal held snap elections on March 5, 2026. RSP (Rastriya Swatantra Party) won 182/275 seats.
+- Balen Shah is the new Prime Minister (sworn in March 26, 2026).
+- Rabi Lamichhane is RSP Chairman. These are RSP's "बाचा पत्र 2082" campaign promises being tracked.
+- The previous KP Sharma Oli government was replaced after Gen Z protests in September 2025.
 
 Respond in JSON format ONLY:
 {
@@ -160,6 +174,18 @@ ${relatedSignals.map((s) => `- [${s.signal_type}] "${s.title}" (${s.source_id}, 
 `
     : ''
 }
+
+NEPALI CONTENT:
+- If the signal is in Nepali, translate the key claims to English in your reasoning.
+- Match Nepali official names to their English equivalents (e.g., प्रधानमन्त्री = Prime Minister).
+- Budget amounts: "अर्ब" = billion, "करोड" = 10 million, "लाख" = 100,000 NPR.
+- Dates in Bikram Sambat (BS): Convert to AD equivalent (BS 2082 ≈ AD 2025-2026).
+
+CURRENT POLITICAL CONTEXT (as of March 2026):
+- Nepal held snap elections on March 5, 2026. RSP (Rastriya Swatantra Party) won 182/275 seats.
+- Balen Shah is the new Prime Minister (sworn in March 26, 2026).
+- Rabi Lamichhane is RSP Chairman. These are RSP's "बाचा पत्र 2082" campaign promises being tracked.
+- The previous KP Sharma Oli government was replaced after Gen Z protests in September 2025.
 
 Respond with a JSON array of analysis results, one per matched promise:
 [{

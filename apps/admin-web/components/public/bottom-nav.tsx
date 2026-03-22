@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Eye, Map, Landmark, MapPinHouse, TimerReset, ShieldCheck } from 'lucide-react';
+import { Eye, Map, Landmark, MapPinHouse, TimerReset, Megaphone } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
 const navItems = [
@@ -10,8 +10,8 @@ const navItems = [
   { href: '/explore/first-100-days', labelKey: 'nav.first100Days', icon: TimerReset },
   { href: '/explore/map', labelKey: 'nav.map', icon: Map },
   { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
-  { href: '/mero-ward', labelKey: 'nav.myArea', icon: MapPinHouse },
-  { href: '/evidence', labelKey: 'nav.evidence', icon: ShieldCheck },
+  { href: '/affects-me', labelKey: 'nav.affectsMe', icon: MapPinHouse },
+  { href: '/proposals', labelKey: 'nav.proposals', icon: Megaphone },
 ];
 
 export function BottomNav() {

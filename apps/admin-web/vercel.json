@@ -2,7 +2,11 @@
   "crons": [
     {
       "path": "/api/intelligence/sweep?secret=${CRON_SECRET}",
-      "schedule": "0 */12 * * *"
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/intelligence/sweep?secret=${CRON_SECRET}&mode=rss-only",
+      "schedule": "0 * * * *"
     }
   ]
 }

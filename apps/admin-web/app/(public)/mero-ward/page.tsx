@@ -17,6 +17,10 @@ import {
   ArrowRight,
   ChevronUp,
   MessageSquare,
+  ThumbsUp,
+  ThumbsDown,
+  ClipboardList,
+  Star,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import {
@@ -30,6 +34,11 @@ import { usePreferencesStore } from '@/lib/stores/preferences';
 import { formatNPR } from '@/lib/data/promises';
 import { NEPAL_PROVINCES } from '@/lib/stores/preferences';
 import { useTrendingProposals } from '@/lib/hooks/use-proposals';
+import { WardScorecard } from '@/components/public/ward-scorecard';
+import { WardReportForm } from '@/components/public/ward-report-form';
+import { LeaderboardWidget } from '@/components/public/leaderboard-widget';
+import { useWardReports, type WardReport } from '@/lib/hooks/use-ward-reports';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 /* ===================================================
    TREND ICON
@@ -196,14 +205,89 @@ function CommunityProposalsSection({ province, isNe }: { province: string | null
 }
 
 /* ===================================================
+   RECENT REPORTS SECTION
+   =================================================== */
+function RecentReportsSection({ province, district, isNe }: { province: string | null; district: string | null; isNe: boolean }) {
+  const { data: reports, isLoading } = useWardReports(province, district);
+
+  if (isLoading || !reports || reports.length === 0) return null;
+
+  const TOPIC_ICONS: Record<string, string> = {
+    roads: '\u{1F6E3}\uFE0F', water: '\u{1F4A7}', electricity: '\u26A1',
+    health: '\u{1F3E5}', education: '\u{1F4DA}', sanitation: '\u{1F6BF}',
+    internet: '\u{1F4F6}', safety: '\u{1F512}', employment: '\u{1F4BC}',
+    other: '\u{1F4E6}',
+  };
+
+  return (
+    <section className="px-4 sm:px-6 lg:px-8 pb-8">
+      <div className="max-w-4xl mx-auto">
+        <h2 className="text-base font-semibold text-white flex items-center gap-2 mb-4">
+          <ClipboardList className="w-4 h-4 text-primary-400" />
+          {isNe ? '\u0939\u093E\u0932\u0915\u093E \u0930\u093F\u092A\u094B\u0930\u094D\u091F\u0939\u0930\u0942' : 'Recent Reports'}
+        </h2>
+        <div className="space-y-2">
+          {reports.slice(0, 5).map((report: WardReport) => (
+            <div key={report.id} className="glass-card p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl flex-shrink-0 mt-0.5">
+                  {TOPIC_ICONS[report.topic] || '\u{1F4E6}'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-gray-200 capitalize">
+                      {report.topic}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          className={`w-3 h-3 ${
+                            s <= report.rating
+                              ? report.rating >= 4 ? 'text-emerald-400 fill-emerald-400' : report.rating >= 3 ? 'text-amber-400 fill-amber-400' : 'text-red-400 fill-red-400'
+                              : 'text-gray-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {report.description && (
+                    <p className="text-sm text-gray-400 line-clamp-2 mb-1.5">
+                      {report.description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span>{report.author_name || 'Anonymous'}</span>
+                    <span className="flex items-center gap-1">
+                      <ThumbsUp className="w-3 h-3" />
+                      {report.agree_count}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <ThumbsDown className="w-3 h-3" />
+                      {report.disagree_count}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ===================================================
    MAIN PAGE COMPONENT
    =================================================== */
 export default function MeroWardPage() {
   const { locale, t } = useI18n();
   const isNe = locale === 'ne';
 
-  const { province: userProvince } = usePreferencesStore();
+  const { province: userProvince, district: userDistrict } = usePreferencesStore();
+  const { isAuthenticated } = useAuth();
   const [expandedProvince, setExpandedProvince] = useState<string | null>(null);
+  const [showReportForm, setShowReportForm] = useState(false);
 
   const provinceScores = useMemo(() => getProvinceScores(), []);
   const nationalAvg = useMemo(() => getNationalAverage(), []);
@@ -451,6 +535,62 @@ export default function MeroWardPage() {
                 );
               })}
             </div>
+          </div>
+        </section>
+
+        {/* Ward Scorecard + Report Form */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Scorecard */}
+              <WardScorecard
+                province={userProvince}
+                district={userDistrict}
+                onRateClick={() => setShowReportForm(true)}
+              />
+
+              {/* Report Form or CTA */}
+              {showReportForm ? (
+                <WardReportForm
+                  onClose={() => setShowReportForm(false)}
+                  onSuccess={() => {
+                    // Keep form open for success message
+                  }}
+                />
+              ) : (
+                <div className="glass-card p-6 flex flex-col items-center justify-center text-center">
+                  <ClipboardList className="w-10 h-10 text-primary-400 mb-3" />
+                  <h3 className="text-base font-semibold text-white mb-2">
+                    {isNe ? '\u092E\u0947\u0930\u094B \u0935\u093E\u0930\u094D\u0921\u092C\u093E\u091F \u0930\u093F\u092A\u094B\u0930\u094D\u091F' : 'Report from My Ward'}
+                  </h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    {isNe
+                      ? '\u0924\u092A\u093E\u0908\u0902\u0915\u094B \u0915\u094D\u0937\u0947\u0924\u094D\u0930\u0915\u094B \u0935\u093E\u0938\u094D\u0924\u0935\u093F\u0915 \u0905\u0935\u0938\u094D\u0925\u093E \u0930\u093F\u092A\u094B\u0930\u094D\u091F \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D\u0964'
+                      : 'Share what is really happening in your area.'}
+                  </p>
+                  <button
+                    onClick={() => setShowReportForm(true)}
+                    className="px-6 py-3 rounded-xl text-sm font-semibold bg-primary-500/20 text-primary-300 border border-primary-500/30 hover:bg-primary-500/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all duration-300"
+                  >
+                    {isNe ? '\u0930\u093F\u092A\u094B\u0930\u094D\u091F \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D' : 'Submit a Report'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Recent Reports */}
+        <RecentReportsSection province={userProvince} district={userDistrict} isNe={isNe} />
+
+        {/* Leaderboard Widget — How your area compares */}
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <LeaderboardWidget
+              type="areas"
+              title={isNe ? '\u0924\u092A\u093E\u0908\u0902\u0915\u094B \u0915\u094D\u0937\u0947\u0924\u094D\u0930 \u0915\u0938\u0930\u0940 \u091B?' : 'How your area compares'}
+              limit={5}
+            />
           </div>
         </section>
 

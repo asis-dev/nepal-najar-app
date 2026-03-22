@@ -52,6 +52,20 @@ export interface GovernmentPromise {
   /** Funding source */
   fundingSource?: string;
   fundingSource_ne?: string;
+  /** Date of most recent daily activity (YYYY-MM-DD) */
+  lastActivityDate?: string;
+  /** Number of signals on the last activity date */
+  lastActivitySignalCount?: number;
+  /** Geographic impact scope */
+  geoScope?: 'national' | 'provincial' | 'district' | 'municipal';
+  /** Affected provinces (empty = all/national) */
+  affectedProvinces?: string[];
+  /** Affected districts (for district-scoped projects) */
+  affectedDistricts?: string[];
+  /** How far the benefit extends beyond the primary location */
+  impactRadius?: 'local' | 'regional' | 'national';
+  /** Where physical work/construction happens (for national projects) */
+  primaryLocations?: Array<{ province: string; district?: string; description?: string }>;
 }
 
 export interface Deadline {
@@ -130,6 +144,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2026-07-01',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '2',
@@ -147,6 +163,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'संघीय मन्त्रालय १८ मा घटाउने, संघ, प्रदेश र स्थानीय सरकारबीचको दोहोरोपन हटाउने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '3',
@@ -165,6 +183,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2026-05-29',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── ANTI-CORRUPTION ──
@@ -185,6 +205,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2026-07-09',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '5',
@@ -202,6 +224,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सबै सार्वजनिक पदाधिकारीले पद ग्रहण गर्नुअघि सार्वजनिक रूपमा सम्पत्ति विवरण खुलाउनुपर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '6',
@@ -220,6 +244,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2026-07-09',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '7',
@@ -237,6 +263,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सबै सरकारी खरिद तथ्याङ्क, सम्झौता र खर्चका लागि खुला पोर्टल',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── ECONOMY & JOBS ──
@@ -256,6 +284,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: '५ वर्षभित्र $१०० अर्ब जीडीपी लक्ष्य गरी औसत वार्षिक ७% जीडीपी वृद्धि हासिल गर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '9',
@@ -273,6 +303,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'स्टार्टअप, उद्यमशीलता, विदेशी लगानी र डिजिटल अर्थतन्त्रमार्फत १२ लाख रोजगारी सिर्जना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '10',
@@ -290,6 +322,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'मुख्यतया सूचना प्रविधि सेवामार्फत एक दशकभित्र निर्यात $३० अर्बमा पुर्याउने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '11',
@@ -308,6 +342,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2026-05-29',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── ENERGY & INFRASTRUCTURE ──
@@ -327,6 +363,13 @@ export const promises: GovernmentPromise[] = [
     description_ne: '३०,००० मेगावाट बिजुली उत्पादन हासिल गरी ऊर्जा निर्यातक बन्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Dolakha', description: 'Upper Tamakoshi' },
+      { province: 'Gandaki', district: 'Myagdi', description: 'Modi Khola' },
+      { province: 'Koshi', district: 'Sankhuwasabha', description: 'Arun III' },
+    ],
   },
   {
     id: '13',
@@ -344,6 +387,13 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'मेलम्ची सुरुङमार्फत काठमाडौं उपत्यकामा सफा खानेपानी वितरण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'district',
+    affectedProvinces: ['Bagmati'],
+    affectedDistricts: ['Kathmandu', 'Lalitpur', 'Bhaktapur'],
+    impactRadius: 'local',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Sindhupalchok', description: 'Melamchi tunnel source' },
+    ],
   },
   {
     id: '14',
@@ -362,6 +412,13 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2028-04-01',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Kathmandu', description: 'Kathmandu-Tarai Fast Track' },
+      { province: 'Koshi', district: 'Sunsari', description: 'Nijgadh Airport site' },
+      { province: 'Lumbini', district: 'Rupandehi', description: 'Lumbini development' },
+    ],
   },
   {
     id: '15',
@@ -379,6 +436,9 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सम्पूर्ण पूर्व-पश्चिम राजमार्ग (महेन्द्र राजमार्ग) लाई ४ लेन विभाजित राजमार्गमा स्तरोन्नति',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'],
+    impactRadius: 'regional',
   },
 
   // ── TRANSPORT ──
@@ -398,6 +458,9 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'यात्रु र मालवस्तु ढुवानीका लागि पूर्व-पश्चिम विद्युतीय रेलमार्ग निर्माण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'],
+    impactRadius: 'regional',
   },
   {
     id: '17',
@@ -415,6 +478,14 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'भैरहवा (गौतम बुद्ध) र पोखरा अन्तर्राष्ट्रिय विमानस्थल पूर्ण सञ्चालन',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Lumbini', 'Gandaki'],
+    affectedDistricts: ['Rupandehi', 'Kaski'],
+    impactRadius: 'regional',
+    primaryLocations: [
+      { province: 'Lumbini', district: 'Rupandehi', description: 'Bhairahawa (Gautam Buddha) Airport' },
+      { province: 'Gandaki', district: 'Kaski', description: 'Pokhara International Airport' },
+    ],
   },
 
   // ── TECHNOLOGY ──
@@ -434,6 +505,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सबै सरकारी सेवामा लाइन हटाउने, बिचौलिया र दलालको अन्त्य गर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '19',
@@ -451,6 +524,9 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सूचना प्रविधि उद्योग वृद्धिका लागि प्रत्येक प्रदेशमा प्रविधि/डिजिटल पार्क स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'],
+    impactRadius: 'regional',
   },
   {
     id: '20',
@@ -468,6 +544,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सूचना प्रविधिलाई रणनीतिक उद्योग घोषणा, प्रवर्धन बोर्ड गठन, बौद्धिक सम्पत्तिमा ऋण, ५ लाख प्रविधि रोजगारी लक्ष्य',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '21',
@@ -486,6 +564,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2027-04-01',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── HEALTH ──
@@ -505,6 +585,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'विश्वव्यापी स्वास्थ्य बीमामार्फत सबै नागरिकका लागि १००% बीमा गरिएको गुणस्तरीय स्वास्थ्य सेवा',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '23',
@@ -522,6 +604,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'एकल हटलाइनमार्फत पहुँचयोग्य केन्द्रीकृत, राष्ट्रव्यापी एम्बुलेन्स सेवा स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── EDUCATION ──
@@ -541,6 +625,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'प्रति परिवार ३ सन्तानसम्म माध्यमिक तहसम्म निःशुल्क शिक्षा',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '25',
@@ -558,6 +644,11 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'काठमाडौंको सफल "शिक्षामा सीप" कार्यक्रम सबै जिल्लामा राष्ट्रिय रूपमा विस्तार गर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Kathmandu', description: 'Original pilot program' },
+    ],
   },
   {
     id: '26',
@@ -575,6 +666,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'स्मार्ट कक्षाकोठा, प्रयोगशाला, पुस्तकालय र अवधारण कार्यक्रममार्फत शून्य छुट दर हासिल',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── ENVIRONMENT ──
@@ -594,6 +687,10 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'काठमाडौं उपत्यकाका लागि व्यापक फोहोर व्यवस्थापन, नदी सफाइ र वायु गुणस्तर सुधार',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'district',
+    affectedProvinces: ['Bagmati'],
+    affectedDistricts: ['Kathmandu', 'Lalitpur', 'Bhaktapur'],
+    impactRadius: 'local',
   },
   {
     id: '28',
@@ -611,6 +708,12 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'ढल शोधन र अतिक्रमण हटाउनेमार्फत बागमती र अन्य प्रमुख नदी पुनर्स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Bagmati'],
+    impactRadius: 'regional',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Kathmandu', description: 'Bagmati River corridor' },
+    ],
   },
 
   // ── SOCIAL ──
@@ -631,6 +734,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2026-07-09',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '30',
@@ -648,6 +753,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'विदेशमा बसोबास गर्ने नेपाली नागरिकका लागि विदेशबाट मतदान र दोहोरो नागरिकताको समर्थन',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '31',
@@ -665,6 +772,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'कानूनी समाधानमार्फत सहकारी संकट समाधान गरी निक्षेपकर्ताको पैसा फिर्ता गर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '32',
@@ -682,6 +791,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: '५ वर्षभित्र अन्तर्राष्ट्रिय पर्यटक आगमन र प्रति-पर्यटक खर्च दोब्बर गर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '33',
@@ -699,6 +810,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'शताब्दियौंको ऐतिहासिक विभेदका लागि दलित समुदायलाई आधिकारिक राज्य माफी जारी गर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '34',
@@ -716,6 +829,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'खेलाडीका लागि पेन्सन कोष, सहुलियत पहिलो घर ऋण, जेष्ठ नागरिक हेरचाहसहित सामाजिक सुरक्षा विस्तार',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '35',
@@ -733,6 +848,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'डिजिटलाइजेसन र प्रक्रिया सुधारमार्फत राहदानी र नागरिकताको ढिलाइ हटाउने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── DALIT RIGHTS & SOCIAL JUSTICE ──
@@ -752,6 +869,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'प्रधानमन्त्रीले पहिलो सम्बोधनमा जातीय भेदभावका लागि नेपाल राज्यको तर्फबाट औपचारिक माफी माग्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '37',
@@ -769,6 +888,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'संरचनागत जातीय भेदभाव उन्मूलनका लागि कानूनी, नीतिगत र संस्थागत सुधार',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── GOVERNANCE (EXTENDED) ──
@@ -788,6 +909,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'विधायिकी र कार्यकारी भूमिका अलगाउन संवैधानिक सुधार — सांसदले मन्त्री बन्न नपाउने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '39',
@@ -805,6 +928,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'स्थानीय सरकारको निर्वाचनलाई सामुदायिक सेवामा केन्द्रित गैर-दलीय मोडेलमा रूपान्तरण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '40',
@@ -822,6 +947,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'पार्टी अध्यक्षका लागि दुई कार्यकाल सीमा लागू गर्न राजनीतिक दल ऐन संशोधन',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '41',
@@ -839,6 +966,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'राजनीतिक नियुक्तिको सट्टा विषय विशेषज्ञलाई मन्त्रीमा नियुक्त गर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '42',
@@ -856,6 +985,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'पैसाको दुरुपयोग र अपारदर्शी कोष अनुमति दिने राजनीतिक दल ऐनका कमजोरी बन्द गर्ने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '43',
@@ -873,6 +1004,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'डिजिटल सेवा वितरण प्रणालीमार्फत सबै सार्वजनिक सेवाको समयबद्ध वितरण ग्यारेन्टी',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '44',
@@ -890,6 +1023,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सबै परिचय कागजातलाई एकल राष्ट्रिय परिचयपत्र प्रणालीमा एकीकरण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '45',
@@ -907,6 +1042,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'कागजमा आधारित सरकारी स्वीकृतिलाई tippani.gov.np मा डिजिटल टिप्पणी प्रणालीले प्रतिस्थापन',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '46',
@@ -924,6 +1061,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सरकारी प्रशासनलाई पूर्ण रूपमा अनुहारविहीन र कागजविहीन सञ्चालनमा रूपान्तरण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── ANTI-CORRUPTION (EXTENDED) ──
@@ -943,6 +1082,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'राजनीतिक हस्तक्षेपबाट पूर्ण स्वतन्त्रता र सञ्चालन प्रभावकारिता सुनिश्चित गर्न अख्तियार सुधार',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '48',
@@ -960,6 +1101,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सरकारी निकाय, युनियन र राज्य संस्थाबाट सबै राजनीतिक दलका भातृ संगठन हटाउने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '49',
@@ -977,6 +1120,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'पदस्थापनमा राजनीतिक हस्तक्षेप हटाउन निजामती सेवा सरुवाको लागि स्वायत्त बोर्ड गठन',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '50',
@@ -994,6 +1139,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सत्य र मेलमिलापमार्फत द्वन्द्वकालका सबै बाँकी संक्रमणकालीन न्याय कार्य सम्पन्न',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '51',
@@ -1011,6 +1158,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'जेन-जी विरोध आन्दोलनका क्रममा भदौ २३-२४ का घटनाहरूको स्वतन्त्र अनुसन्धान',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── ECONOMY (EXTENDED) ──
@@ -1030,6 +1179,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'व्यापार र लगानीमा बाधा पुर्‍याउने कम्तीमा २० पुराना आर्थिक कानून पहिचान गरी खारेज',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '53',
@@ -1047,6 +1198,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सबै लगानीकर्ता स्वीकृति र दर्ताका लागि वास्तविक एकद्वार सेवा केन्द्र स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '54',
@@ -1064,6 +1217,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: '२४ घण्टाभित्र पूर्ण अनलाइन व्यवसाय दर्ता र इजाजतपत्र सक्षम',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '55',
@@ -1082,6 +1237,13 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2028-04-01',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Kathmandu', description: 'Kathmandu-Tarai Fast Track' },
+      { province: 'Bagmati', district: 'Sindhupalchok', description: 'Melamchi Water Supply' },
+      { province: 'Koshi', district: 'Sunsari', description: 'Nijgadh Airport area' },
+    ],
   },
   {
     id: '56',
@@ -1099,6 +1261,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: '५ वर्षमा १० नयाँ राष्ट्रिय गौरवका आयोजना पहिचान, योजना र सुरु',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '57',
@@ -1116,6 +1280,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'लक्षित हस्तक्षेपमार्फत बहुआयामिक गरिबी सूचकांक हालको स्तरबाट १०% मा कम',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '58',
@@ -1133,6 +1299,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'घरेलु उत्पादन र निर्माण उद्यमलाई सहयोग गर्न नेपाल उत्पादन कोष स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── FINANCIAL SECTOR ──
@@ -1152,6 +1320,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सबै बचत तथा ऋण सहकारीलाई नेपाल राष्ट्र बैंकको नियामक सुपरिवेक्षणमा ल्याउने',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '60',
@@ -1170,6 +1340,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2026-07-09',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '61',
@@ -1187,6 +1359,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'शिकारी ऋण अभ्यास (मेट्रे ब्याज/सूदखोरी) अपराधीकरण गर्ने कानून लागू',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '62',
@@ -1204,6 +1378,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'इन्ट्राडे ट्रेडिङ, डेरिभेटिभ्स बजार र अन्तर्राष्ट्रिय उत्कृष्ट अभ्याससहित नेप्से सुधार',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '63',
@@ -1221,6 +1397,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'नेपाल-भारत रुपैयाँ पेग व्यवस्था पुनरावलोकनका लागि अन्तर्राष्ट्रिय विज्ञ अध्ययन आयोग',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '64',
@@ -1239,6 +1417,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2027-04-01',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── ENERGY ──
@@ -1258,6 +1438,13 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सरकारको कार्यकालभित्र कुल १५,००० मेगावाट जडित विद्युत उत्पादन क्षमता हासिल',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Dolakha', description: 'Upper Tamakoshi expansion' },
+      { province: 'Koshi', district: 'Sankhuwasabha', description: 'Arun III Hydropower' },
+      { province: 'Gandaki', district: 'Myagdi', description: 'Modi Khola projects' },
+    ],
   },
   {
     id: '66',
@@ -1275,6 +1462,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'भारत र बंगलादेशसँग ऊर्जा निर्यात सम्झौता वार्ता र हस्ताक्षर',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '67',
@@ -1292,6 +1481,12 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'स्वच्छ अतिरिक्त विद्युत प्रयोग गरी जलविद्युत प्लान्ट नजिक हरित डाटा सेन्टर स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Dolakha', description: 'Near Upper Tamakoshi' },
+      { province: 'Koshi', district: 'Sankhuwasabha', description: 'Near Arun III' },
+    ],
   },
   {
     id: '68',
@@ -1309,6 +1504,11 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'एआई/एमएल कम्प्युटिङ निर्यातका लागि जलविद्युतबाट सञ्चालित जीपीयू कम्प्युटिङ पूर्वाधार विकास',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Dolakha', description: 'Hydropower-powered GPU farms' },
+    ],
   },
   {
     id: '69',
@@ -1326,6 +1526,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'औद्योगिक प्रयोगलाई प्रवर्धन र घरेलु भार कम गर्न विद्युत महसुल पुनर्संरचना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── TECHNOLOGY (EXTENDED) ──
@@ -1345,6 +1547,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'विशेष प्रोत्साहन र सुरक्षासहित सूचना प्रविधिलाई औपचारिक रूपमा राष्ट्रिय रणनीतिक उद्योग घोषणा',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '71',
@@ -1362,6 +1566,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'प्रतिभा विकास र प्रोत्साहनमार्फत १० वर्षभित्र सूचना प्रविधि सेवा निर्यातमा $३० अर्ब लक्ष्य',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '72',
@@ -1379,6 +1585,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'उद्योग-नेतृत्व शासनसहित स्वायत्त सूचना प्रविधि प्रवर्धन बोर्ड स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '73',
@@ -1396,6 +1604,9 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सूचना प्रविधि पारिस्थितिकी वृद्धिका लागि सातवटै प्रदेशमा डिजिटल प्रविधि पार्क निर्माण र सञ्चालन',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'],
+    impactRadius: 'regional',
   },
   {
     id: '74',
@@ -1413,6 +1624,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'रिमोट काम, फ्रिल्यान्सिङ र गिग अर्थतन्त्र रोजगारीलाई कानूनी मान्यता दिन श्रम ऐन संशोधन',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '75',
@@ -1430,6 +1643,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'रिमोट कर्मचारी र प्रविधि प्रतिभालाई नेपालमा आकर्षित गर्न डिजिटल नोम्याड भिसा श्रेणी शुरु',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '76',
@@ -1447,6 +1662,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'नगदरहित समाजतर्फ संक्रमणका लागि राष्ट्रिय डिजिटल भुक्तानी पूर्वाधार निर्माण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '77',
@@ -1464,6 +1681,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'नेपाली व्यवसाय र फ्रिल्यान्सरका लागि अन्तर्राष्ट्रिय भुक्तानी गेटवे (पेप्याल, स्ट्राइप) पहुँच सक्षम',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '78',
@@ -1481,6 +1700,13 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'दुर्गम र पहाडी क्षेत्रमा जडान प्रदान गर्न उपग्रह इन्टरनेट पूर्वाधार तैनाथ',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Karnali', description: 'Remote mountain districts' },
+      { province: 'Sudurpashchim', description: 'Remote hill areas' },
+      { province: 'Gandaki', district: 'Manang', description: 'High altitude areas' },
+    ],
   },
 
   // ── TOURISM ──
@@ -1500,6 +1726,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'लक्षित मार्केटिङ र पूर्वाधारमार्फत अन्तर्राष्ट्रिय पर्यटक आगमन र प्रति-पर्यटक खर्च दोब्बर',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '80',
@@ -1517,6 +1745,14 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'नियमित उडानसहित पोखरा र भैरहवा विमानस्थलमा पूर्ण अन्तर्राष्ट्रिय सञ्चालन हासिल',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Gandaki', 'Lumbini'],
+    affectedDistricts: ['Kaski', 'Rupandehi'],
+    impactRadius: 'regional',
+    primaryLocations: [
+      { province: 'Gandaki', district: 'Kaski', description: 'Pokhara International Airport' },
+      { province: 'Lumbini', district: 'Rupandehi', description: 'Bhairahawa Airport' },
+    ],
   },
   {
     id: '81',
@@ -1534,6 +1770,9 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'भारतीय पर्यटकलाई विश्राम र कल्याण पर्यटनका लागि आकर्षित गर्न भारत सीमा नजिक हिल स्टेसन विकास',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Koshi', 'Madhesh', 'Lumbini', 'Sudurpashchim'],
+    impactRadius: 'regional',
   },
   {
     id: '82',
@@ -1551,6 +1790,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'ट्रेकिङ अनुमतिपत्र, राष्ट्रिय निकुञ्ज प्रवेश र पर्यटन सम्बन्धी स्वीकृति पूर्ण डिजिटाइज',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── AGRICULTURE ──
@@ -1571,6 +1812,8 @@ export const promises: GovernmentPromise[] = [
     trustLevel: 'unverified',
     signalType: 'inferred',
     deadline: '2028-04-01',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '84',
@@ -1588,6 +1831,12 @@ export const promises: GovernmentPromise[] = [
     description_ne: '५ वर्षभित्र सिँचाइ कभरेज हालको स्तरबाट कृषियोग्य भूमिको ८०% मा विस्तार',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Madhesh', description: 'Terai irrigation expansion' },
+      { province: 'Lumbini', description: 'Terai irrigation expansion' },
+    ],
   },
   {
     id: '85',
@@ -1605,6 +1854,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'नेपाल कृषि अनुसन्धान परिषदलाई प्रभावकारी, स्वायत्त कृषि अनुसन्धान संस्थामा पुनर्संरचना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '86',
@@ -1622,6 +1873,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'कृषि आधुनिकीकरण र किसानको ऋण पहुँच सुधारका लागि एग्रिटेक र फिनटेक समाधान प्रवर्धन',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '87',
@@ -1639,6 +1892,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'नेपाललाई आयातमा निर्भर अर्थतन्त्रबाट उत्पादन-र-निर्यातमुखी अर्थतन्त्रमा रूपान्तरण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── EDUCATION (EXTENDED) ──
@@ -1658,6 +1913,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'प्रति परिवार ३ सन्तानसम्म प्राथमिकदेखि उच्च माध्यमिकसम्म निःशुल्क गुणस्तरीय शिक्षा ग्यारेन्टी',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '89',
@@ -1675,6 +1932,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'विश्वविद्यालयलाई पूर्ण स्वायत्तता प्रदान र अनुसन्धान र नवप्रवर्तनतर्फ ध्यान केन्द्रित',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '90',
@@ -1692,6 +1951,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'शैक्षिक संस्थामा राजनीतिक दल गतिविधि, विद्यार्थी शाखा र राजनीतिक हस्तक्षेपमा प्रतिबन्ध',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '91',
@@ -1709,6 +1970,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सबै विद्यालयमा अपाङ्गता भएका बालबालिका र न्यूरोडाइभर्स शिक्षार्थीका लागि समावेशी शिक्षा लागू',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '92',
@@ -1726,6 +1989,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'अन्तर्राष्ट्रिय विद्यार्थी आकर्षित गर्दै नेपाललाई क्षेत्रीय उच्च शिक्षा हबको रूपमा स्थापित',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── HEALTHCARE (EXTENDED) ──
@@ -1745,6 +2010,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'समर्पित मानसिक स्वास्थ्य संरचना र राष्ट्रव्यापी सामुदायिक मानसिक स्वास्थ्य कार्यक्रम स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '94',
@@ -1762,6 +2029,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'आवश्यक औषधि सस्तो बनाउन औषधि मूल्य नियन्त्रण संयन्त्र लागू',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '95',
@@ -1779,6 +2048,9 @@ export const promises: GovernmentPromise[] = [
     description_ne: '७ वटै प्रदेशमा अपाङ्गता पुनर्स्थापना केन्द्र स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'],
+    impactRadius: 'regional',
   },
   {
     id: '96',
@@ -1796,6 +2068,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'प्रयोगशाला, भण्डार र प्रतिक्रिया प्रोटोकल सहित महामारी तयारी पूर्वाधार निर्माण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── JUDICIARY ──
@@ -1815,6 +2089,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'न्यायिक नियुक्ति प्रक्रियालाई राजनीतिक प्रभावमुक्त, पूर्ण योग्यतामा आधारित सुधार',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '98',
@@ -1832,6 +2108,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सार्वजनिक पारदर्शिता र जवाफदेहिताका लागि अदालत कार्यवाही प्रत्यक्ष प्रसारण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '99',
@@ -1849,6 +2127,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'सबै न्यायाधीश र न्यायिक अधिकृतका लागि अनिवार्य सार्वजनिक सम्पत्ति विवरण',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── FOREIGN POLICY ──
@@ -1868,6 +2148,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: '१९५० को नेपाल-भारत शान्ति र मैत्री सन्धि संशोधनका लागि कूटनीतिक वार्ता सुरु',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── DIASPORA ──
@@ -1887,6 +2169,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'विश्वभरका नेपाली प्रवासीका लागि सुरक्षित इन्टरनेट आधारित मतदान (आई-भोटिङ) प्रणाली लागू',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '102',
@@ -1904,6 +2188,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'विप्रेषणलाई राष्ट्रिय विकास आयोजनामा प्रवाहित गर्ने सार्वभौम प्रवासी लगानी कोष सिर्जना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '103',
@@ -1921,6 +2207,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'विदेशी नागरिकता लिनेलाई नेपाली मूल मान्यता — अधिकार र सुविधा प्रदान गर्ने नीति अंगीकार',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '104',
@@ -1938,6 +2226,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'नेपाली प्रवासी पेशेवरको विशेषज्ञता र सीपको उपयोग गरी राष्ट्रिय ज्ञान बैंक सिर्जना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 
   // ── ENVIRONMENT (EXTENDED) ──
@@ -1957,6 +2247,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'शून्य कार्बन उत्सर्जन लक्ष्यमा प्रतिबद्ध र राष्ट्रिय जलवायु कार्य रोडम्याप विकास',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '106',
@@ -1974,6 +2266,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'ड्रोन र उपग्रह प्रविधिसहित राष्ट्रिय वन आगो अनुगमन र प्रतिक्रिया केन्द्र स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
   {
     id: '107',
@@ -1991,6 +2285,13 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'फोहोर संकट समाधान र विद्युत उत्पादन गर्न प्रमुख शहरमा फोहोरबाट ऊर्जा प्लान्ट स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'provincial',
+    affectedProvinces: ['Bagmati', 'Gandaki', 'Lumbini'],
+    impactRadius: 'regional',
+    primaryLocations: [
+      { province: 'Bagmati', district: 'Kathmandu', description: 'Kathmandu Valley waste crisis' },
+      { province: 'Gandaki', district: 'Kaski', description: 'Pokhara waste management' },
+    ],
   },
   {
     id: '108',
@@ -2008,6 +2309,13 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'जोखिमपूर्ण नदी बेसिन र पहाडी क्षेत्रमा राष्ट्रव्यापी बाढी र पहिरो पूर्व चेतावनी प्रणाली तैनाथ',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
+    primaryLocations: [
+      { province: 'Koshi', description: 'Koshi River basin flood zones' },
+      { province: 'Gandaki', description: 'Gandaki basin landslide areas' },
+      { province: 'Sudurpashchim', description: 'Karnali/Mahakali flood zones' },
+    ],
   },
 
   // ── SPORTS ──
@@ -2027,6 +2335,8 @@ export const promises: GovernmentPromise[] = [
     description_ne: 'राष्ट्रिय खेलाडीका लागि पेन्सन कोष र व्यापक स्वास्थ्य बीमा स्थापना',
     trustLevel: 'unverified',
     signalType: 'inferred',
+    geoScope: 'national',
+    impactRadius: 'national',
   },
 ];
 

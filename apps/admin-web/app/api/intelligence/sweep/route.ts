@@ -44,9 +44,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const mode = request.nextUrl.searchParams.get('mode');
+    const isRssOnly = mode === 'rss-only';
+
     const result = await runFullSweep({
       sweepType: 'scheduled',
-      analysisBatchSize: 10,
+      analysisBatchSize: isRssOnly ? 5 : 10,
+      rssOnly: isRssOnly,
     });
 
     return NextResponse.json({

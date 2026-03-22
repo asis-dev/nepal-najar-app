@@ -18,41 +18,167 @@ interface RSSSource {
   id: string;
   name: string;
   feedUrl: string;
+  language: 'en' | 'ne';
   relatedPromiseIds: number[];
 }
 
-// Nepal news RSS feeds
+// Nepal news RSS feeds (22 sources: 12 English, 10 Nepali)
 export const RSS_FEEDS: RSSSource[] = [
-  // ✅ Confirmed working (English)
+  // ── English feeds ──────────────────────────────────────
   {
     id: 'rss-kathmandu-post',
     name: 'Kathmandu Post',
     feedUrl: 'https://kathmandupost.com/rss',
+    language: 'en',
     relatedPromiseIds: [],
   },
   {
     id: 'rss-online-khabar-en',
     name: 'Online Khabar (EN)',
     feedUrl: 'https://english.onlinekhabar.com/feed',
+    language: 'en',
     relatedPromiseIds: [],
   },
   {
     id: 'rss-khabarhub-en',
     name: 'Khabarhub (EN)',
     feedUrl: 'https://english.khabarhub.com/feed/',
+    language: 'en',
     relatedPromiseIds: [],
   },
   {
     id: 'rss-ratopati-en',
     name: 'Ratopati (EN)',
     feedUrl: 'https://english.ratopati.com/feed',
+    language: 'en',
     relatedPromiseIds: [],
   },
-  // ✅ Confirmed working (Nepali)
+  {
+    id: 'rss-himalayan-times',
+    name: 'The Himalayan Times',
+    feedUrl: 'https://thehimalayantimes.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-myrepublica',
+    name: 'myRepublica',
+    feedUrl: 'https://myrepublica.nagariknetwork.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nepali-times',
+    name: 'Nepali Times',
+    feedUrl: 'https://www.nepalitimes.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-annapurna-express',
+    name: 'The Annapurna Express',
+    feedUrl: 'https://theannapurnaexpress.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-rising-nepal',
+    name: 'The Rising Nepal',
+    feedUrl: 'https://risingnepaldaily.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nepal-news-en',
+    name: 'Nepal News (EN)',
+    feedUrl: 'https://english.nepalnews.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nepal-live-today',
+    name: 'Nepal Live Today',
+    feedUrl: 'https://nepallivetoday.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+
+  // ── Nepali feeds ───────────────────────────────────────
   {
     id: 'rss-setopati-ne',
     name: 'Setopati (NE)',
     feedUrl: 'https://setopati.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-ekantipur',
+    name: 'eKantipur',
+    feedUrl: 'https://ekantipur.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nagarik',
+    name: 'Nagarik News',
+    feedUrl: 'https://nagariknews.nagariknetwork.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-annapurna-post',
+    name: 'Annapurna Post',
+    feedUrl: 'https://annapurnapost.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-gorkhapatra',
+    name: 'Gorkhapatra Online',
+    feedUrl: 'https://gorkhapatraonline.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-onlinekhabar-ne',
+    name: 'Online Khabar (NE)',
+    feedUrl: 'https://www.onlinekhabar.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-ratopati-ne',
+    name: 'Ratopati (NE)',
+    feedUrl: 'https://ratopati.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-ujyaalo',
+    name: 'Ujyaalo Online',
+    feedUrl: 'https://ujyaaloonline.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nayapatrika',
+    name: 'Naya Patrika',
+    feedUrl: 'https://nayapatrikadaily.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-bbc-nepali',
+    name: 'BBC Nepali',
+    feedUrl: 'https://feeds.bbci.co.uk/nepali/rss.xml',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-khabarhub-ne',
+    name: 'Khabarhub (NE)',
+    feedUrl: 'https://khabarhub.com/feed/',
+    language: 'ne',
     relatedPromiseIds: [],
   },
 ];
@@ -209,7 +335,7 @@ export async function collectAllRSS(): Promise<{
               ? new Date(item.pubDate).toISOString()
               : null,
             discovered_at: new Date().toISOString(),
-            language: 'en',
+            language: source.language,
             media_type: 'text',
             metadata: { categories: item.categories || [] },
           },

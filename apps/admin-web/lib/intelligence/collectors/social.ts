@@ -27,8 +27,11 @@ interface TrackedAccount {
 }
 
 // Key accounts to monitor
+// NOTE: Nepal banned major social media platforms (including X/Twitter) in
+// September 2025. Government X presence is minimal as a result. The accounts
+// below are the few verified handles that existed pre-ban.
 export const TRACKED_ACCOUNTS: TrackedAccount[] = [
-  // Twitter/X accounts
+  // Twitter/X accounts (verified)
   {
     id: 'tw-pm-nepal',
     platform: 'twitter',
@@ -37,32 +40,18 @@ export const TRACKED_ACCOUNTS: TrackedAccount[] = [
     relatedPromiseIds: [1, 2, 3, 6, 33],
   },
   {
-    id: 'tw-mof-nepal',
+    id: 'tw-nepal-government',
     platform: 'twitter',
-    handle: 'MOabornepal',
-    name: 'Ministry of Finance',
-    relatedPromiseIds: [8, 10, 11],
+    handle: 'nepalgovernment',
+    name: 'Nepal Government',
+    relatedPromiseIds: [],
   },
   {
-    id: 'tw-moewri',
+    id: 'tw-dot-nepal',
     platform: 'twitter',
-    handle: 'moaborngov',
-    name: 'Min of Energy',
-    relatedPromiseIds: [12, 13, 28],
-  },
-  {
-    id: 'tw-nea-nepal',
-    platform: 'twitter',
-    handle: 'NEaborngov',
-    name: 'Nepal Electricity Authority',
-    relatedPromiseIds: [12],
-  },
-  {
-    id: 'tw-nrb-nepal',
-    platform: 'twitter',
-    handle: 'NRBaborng',
-    name: 'Nepal Rastra Bank',
-    relatedPromiseIds: [8, 10, 21],
+    handle: 'hello_dotnpl',
+    name: 'Department of Tourism Nepal',
+    relatedPromiseIds: [],
   },
 
   // Facebook pages (using public page data)

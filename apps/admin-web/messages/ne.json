@@ -16,7 +16,8 @@
     "analytics": "विश्लेषण",
     "search": "खोज",
     "evidence": "प्रमाण",
-    "proposals": "जनताको माग"
+    "proposals": "जनताको माग",
+    "affectsMe": "मेरो लागि"
   },
   "hero": {
     "title": "नेपाल नजर",
@@ -347,7 +348,35 @@
     "sevenDayCalendar": "७ दिनको क्यालेन्डर",
     "today": "आज",
     "noProgress": "अहिलेसम्म प्रमाणित प्रगति डाटा छैन।",
-    "articlesMention": "समाचारमा उल्लेख"
+    "articlesMention": "समाचारमा उल्लेख",
+    "activityDashboard": "दैनिक गतिविधि ड्यासबोर्ड",
+    "heroTitle": "वचनहरूमा आज गतिविधि भयो",
+    "heroSubtitle": "आज वचनहरूमा कुनै काम भयो?",
+    "activeToday": "आज सक्रिय",
+    "noActivity": "कुनै गतिविधि छैन",
+    "signals": "संकेतहरू",
+    "signal": "संकेत",
+    "daysSince": "दिनदेखि कुनै गतिविधि छैन",
+    "daySince": "दिनदेखि कुनै गतिविधि छैन",
+    "neverActive": "कुनै गतिविधि रेकर्ड छैन",
+    "of": "मा",
+    "promisesTotal": "वचनहरू",
+    "viewPromise": "वचन हेर्नुहोस्",
+    "streakAndDaily": "लगातार र आजको वचन",
+    "topHeadline": "शीर्ष समाचार"
+  },
+  "daily": {
+    "activityDashboard": "दैनिक गतिविधि ड्यासबोर्ड",
+    "activeToday": "आज सक्रिय",
+    "noActivity": "कुनै गतिविधि छैन",
+    "lastActivity": "अन्तिम गतिविधि",
+    "daysAgo": "दिन अघि",
+    "signals": "संकेतहरू",
+    "promisesHadActivity": "वचनहरूमा आज गतिविधि भयो",
+    "activeOfTotal": "{active} मध्ये {total}",
+    "recentActivity": "हालको गतिविधि",
+    "todaysActivity": "आजको गतिविधि",
+    "noSignalsToday": "आज कुनै नयाँ संकेत छैन।"
   },
   "watchlist": {
     "title": "मेरो सूची",
@@ -704,5 +733,15 @@
       "title": "अहिलेसम्म कुनै प्रस्ताव छैन",
       "description": "आफ्नो समुदायको लागि पहिलो विकास आयोजना प्रस्ताव गर्नुहोस्।"
     }
+  },
+  "affectsMe": {
+    "title": "मलाई के असर पर्छ",
+    "direct": "तपाईंलाई सीधा असर पर्छ",
+    "indirect": "तपाईंलाई अप्रत्यक्ष असर पर्छ",
+    "otherAreas": "अन्य क्षेत्रहरू",
+    "setLocation": "तपाईंको क्षेत्रमा कुन वाचाहरू असर गर्छ हेर्न स्थान सेट गर्नुहोस्",
+    "basedOn": "आधारमा",
+    "changeLocation": "स्थान परिवर्तन",
+    "promisesAffectYou": "वाचाहरू तपाईंको क्षेत्रलाई सीधा असर गर्छ"
   }
 }

@@ -36,6 +36,8 @@ import {
   Users,
   Bookmark,
   GitCompareArrows,
+  Radio,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { CountdownStrip } from '@/components/public/countdown-strip';
@@ -57,6 +59,7 @@ import {
   type TrustLevel,
   type GovernmentPromise,
 } from '@/lib/data/promises';
+import { useAllPromises } from '@/lib/hooks/use-promises';
 
 /* ═══════════════════════════════════════════════
    STATUS CONFIG
@@ -203,7 +206,9 @@ function BachanTrackerContent() {
   const categoryFilter = searchParams.get('category') || 'All';
   const statusFilter = searchParams.get('status') || 'All';
   const [copied, setCopied] = useState(false);
+  const [sortBy, setSortBy] = useState<'default' | 'activity'>('default');
   const { locale, t } = useI18n();
+  const { data: livePromises } = useAllPromises();
 
   const setFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -228,14 +233,37 @@ function BachanTrackerContent() {
     { key: 'stalled', labelKey: 'commitment.stalled' },
   ];
 
+  // Build activity-aware lookup from live Supabase data
+  const activityMap = useMemo(() => {
+    const map: Record<string, { lastActivityDate?: string; lastActivitySignalCount?: number }> = {};
+    if (livePromises) {
+      for (const lp of livePromises) {
+        if (lp.lastActivityDate) {
+          map[lp.id] = { lastActivityDate: lp.lastActivityDate, lastActivitySignalCount: lp.lastActivitySignalCount };
+        }
+      }
+    }
+    return map;
+  }, [livePromises]);
+
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   // Filter logic
   const filteredPromises = useMemo(() => {
-    return promises.filter((p) => {
+    const filtered = promises.filter((p) => {
       if (categoryFilter !== 'All' && p.category !== categoryFilter) return false;
       if (statusFilter !== 'All' && p.status !== statusFilter) return false;
       return true;
     });
-  }, [categoryFilter, statusFilter]);
+    if (sortBy === 'activity') {
+      return [...filtered].sort((a, b) => {
+        const aDate = activityMap[a.id]?.lastActivityDate || '';
+        const bDate = activityMap[b.id]?.lastActivityDate || '';
+        return bDate.localeCompare(aDate);
+      });
+    }
+    return filtered;
+  }, [categoryFilter, statusFilter, sortBy, activityMap]);
 
   // Use computeStats from data file
   const stats = useMemo(() => computeStats(), []);
@@ -451,10 +479,23 @@ function BachanTrackerContent() {
                   {t('commitment.promisesShown', { count: filteredPromises.length, total: promises.length })}
                 </p>
               </div>
-              <ExportButton
-                onExportCSV={() => exportPromisesCSV(filteredPromises)}
-                onExportPDF={() => exportPromisesPDF(filteredPromises)}
-              />
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSortBy(sortBy === 'activity' ? 'default' : 'activity')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                    sortBy === 'activity'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-white/[0.04] text-gray-400 border border-transparent hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <ArrowUpDown className="w-3 h-3" />
+                  {t('daily.recentActivity')}
+                </button>
+                <ExportButton
+                  onExportCSV={() => exportPromisesCSV(filteredPromises)}
+                  onExportPDF={() => exportPromisesPDF(filteredPromises)}
+                />
+              </div>
             </div>
 
             {filteredPromises.length === 0 ? (
@@ -555,6 +596,42 @@ function BachanTrackerContent() {
                           {isNe ? `${promise.category_ne} / ${promise.category}` : `${promise.category} / ${promise.category_ne}`}
                         </span>
                       </div>
+
+                      {/* Activity indicator */}
+                      {(() => {
+                        const activity = activityMap[promise.id];
+                        const isActiveToday = activity?.lastActivityDate === today;
+                        const daysSince = activity?.lastActivityDate
+                          ? Math.floor((Date.now() - new Date(activity.lastActivityDate).getTime()) / 86400000)
+                          : null;
+                        const isRecentWeek = daysSince !== null && daysSince <= 7;
+
+                        return (
+                          <div className="mb-3 relative z-10">
+                            {isActiveToday ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                {t('daily.activeToday')}
+                                {activity?.lastActivitySignalCount ? (
+                                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-[10px] font-semibold">
+                                    {activity.lastActivitySignalCount} {t('daily.signals')}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : isRecentWeek ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs text-amber-400">
+                                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                                {daysSince} {t('daily.daysAgo')}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                                <span className="w-2 h-2 rounded-full bg-gray-500" />
+                                {daysSince !== null ? `${daysSince} ${t('daily.daysAgo')}` : t('daily.noActivity')}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Description */}
                       <p className="text-sm text-gray-400 mb-4 leading-relaxed relative z-10">

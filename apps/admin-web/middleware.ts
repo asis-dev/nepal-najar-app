@@ -31,7 +31,18 @@ const PUBLIC_PREFIXES = [
   '/api/og',
   '/api/v1',
   '/api/intelligence',
+  '/api/proposals',
+  '/api/evidence',
+  '/api/verify',
+  '/api/ward-reports',
+  '/api/leaderboard',
+  '/api/notifications',
+  '/api/promises',
   '/search',
+  '/proposals',
+  '/affects-me',
+  '/leaderboard',
+  '/notifications',
 ];
 
 // Dashboard routes that require admin auth

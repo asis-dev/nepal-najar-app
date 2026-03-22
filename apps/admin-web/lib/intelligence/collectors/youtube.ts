@@ -91,17 +91,9 @@ export const YOUTUBE_CHANNELS: YouTubeChannel[] = [
 
   // Talk shows / Political analysis
   {
-    id: 'yt-sushil-nepal-tv',
-    name: 'Sushil Nepal TV',
-    channelId: 'UC_placeholder1',
-    type: 'talk_show',
-    relatedPromiseIds: [],
-    relatedOfficialIds: [],
-  },
-  {
-    id: 'yt-tamasuk',
-    name: 'Tamasuk (Accountability)',
-    channelId: 'UC_placeholder2',
+    id: 'yt-tough-talk',
+    name: 'Tough Talk',
+    channelId: 'UClgqAXWBfF1p4sGKtcvs39Q',
     type: 'talk_show',
     relatedPromiseIds: [],
     relatedOfficialIds: [],
@@ -124,6 +116,12 @@ export const YOUTUBE_SEARCH_QUERIES = [
   'नेपाल सरकार प्रगति',
   'प्रधानमन्त्री नेपाल',
   'Nepal press conference government',
+  'RSP government formation 2026',
+  'Balen Shah prime minister',
+  'राष्ट्रिय स्वतन्त्र पार्टी',
+  'बालेन शाह प्रधानमन्त्री',
+  'Nepal budget 2083',
+  'Nepal government accountability 2026',
 ];
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';

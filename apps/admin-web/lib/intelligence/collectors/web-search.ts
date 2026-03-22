@@ -6,6 +6,11 @@
  * Uses Google Custom Search API or SearXNG (self-hosted, free)
  */
 
+import {
+  getAllPromiseSearchQueries,
+  getSearchQueryBatch,
+} from './search-query-generator';
+
 interface SearchResult {
   title: string;
   url: string;
@@ -354,9 +359,8 @@ async function searchSearXNG(query: string): Promise<SearchResult[]> {
 export async function searchForPromise(
   promiseId: number,
 ): Promise<SearchResult[]> {
-  const config = PROMISE_SEARCH_QUERIES.find(
-    (p) => p.promiseId === promiseId,
-  );
+  const allQueries = getAllPromiseSearchQueries(PROMISE_SEARCH_QUERIES);
+  const config = allQueries.find((p) => p.promiseId === promiseId);
   if (!config) return [];
 
   const allResults: SearchResult[] = [];
@@ -395,7 +399,15 @@ export async function collectAllWebSearch(): Promise<{
   let newSignals = 0;
   const errors: string[] = [];
 
-  for (const config of PROMISE_SEARCH_QUERIES) {
+  // Merge handcrafted (1-35) + auto-generated (36-109) queries
+  const allQueries = getAllPromiseSearchQueries(PROMISE_SEARCH_QUERIES);
+  // Process ~25 promises per sweep, cycling through all 109
+  const batch = getSearchQueryBatch(allQueries);
+  console.log(
+    `[WebSearch] Processing batch of ${batch.length} promises (IDs: ${batch[0]?.promiseId}-${batch[batch.length - 1]?.promiseId})`,
+  );
+
+  for (const config of batch) {
     for (const query of config.queries) {
       queriesRun++;
 

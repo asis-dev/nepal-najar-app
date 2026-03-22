@@ -19,11 +19,14 @@ import { Target } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { TrustLanes } from '@/components/public/trust-lanes';
 import { MeroWardCard } from '@/components/public/mero-ward-card';
+import { LeaderboardWidget } from '@/components/public/leaderboard-widget';
+import { AffectsMePrompt } from '@/components/public/affects-me-prompt';
 import { usePreferencesStore } from '@/lib/stores/preferences';
 import {
   useArticleCount,
   useLatestArticles,
   usePromiseStats,
+  useDailyActivity,
 } from '@/lib/hooks/use-promises';
 import { getDailyPromise } from '@/lib/data/daily-promise';
 
@@ -149,6 +152,7 @@ export default function LandingPage() {
   const { stats, isLoading: statsLoading } = usePromiseStats();
   const { data: latestArticles, isLoading: articlesLoading } = useLatestArticles(3);
   const { data: articleCount } = useArticleCount();
+  const { data: dailyActivity } = useDailyActivity();
   const [selectedProvince, setSelectedProvince] = useState<string>('Bagmati Province');
   const dailyPromise = useMemo(() => getDailyPromise(), []);
 
@@ -239,7 +243,7 @@ export default function LandingPage() {
                   </button>
                 </div>
 
-                <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                <div className="mt-7 grid gap-3 sm:grid-cols-4">
                   <LandingStat
                     label="Promises tracked"
                     value={statsLoading ? '--' : stats?.total ?? 0}
@@ -247,6 +251,10 @@ export default function LandingPage() {
                   <LandingStat
                     label="In progress"
                     value={statsLoading ? '--' : stats?.inProgress ?? 0}
+                  />
+                  <LandingStat
+                    label="Active today"
+                    value={dailyActivity?.summary.activeCount ?? 0}
                   />
                   <LandingStat
                     label="Articles scanned"
@@ -513,6 +521,20 @@ export default function LandingPage() {
                 );
               })}
             </div>
+          </div>
+        </section>
+
+        {/* What Affects Me */}
+        <section className="public-section pt-2">
+          <div className="public-shell">
+            <AffectsMePrompt />
+          </div>
+        </section>
+
+        {/* Most Engaged Areas */}
+        <section className="public-section pt-2">
+          <div className="public-shell">
+            <LeaderboardWidget type="areas" limit={5} />
           </div>
         </section>
 

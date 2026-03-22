@@ -9,12 +9,18 @@ import {
   Share2,
   Calendar,
   Target,
+  Activity,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useEngagementStore } from '@/lib/stores/engagement';
 import { getDailyPromise, getDailyPromiseHistory } from '@/lib/data/daily-promise';
 import { VoteWidget } from '@/components/public/vote-widget';
 import { PublicPageHero } from '@/components/public/page-hero';
+import { useDailyActivity } from '@/lib/hooks/use-promises';
+import type { DailyActivityPromise, DailyActivityInactive } from '@/lib/hooks/use-promises';
 
 /* ===================================================
    STATUS CONFIG (mirrors first-100-days)
@@ -39,19 +45,18 @@ const statusLabelKeys: Record<string, string> = {
 const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const dayNamesNe = ['आइत', 'सोम', 'मंगल', 'बुध', 'बिही', 'शुक्र', 'शनि'];
 
-function getDayOfWeek(dateStr: string): number {
-  // dateStr can be "2026-3-18" format
-  const parts = dateStr.split('-').map(Number);
-  const d = new Date(parts[0], parts[1] - 1, parts[2]);
-  return d.getDay();
-}
-
 function formatDateLabel(dateStr: string, isNe: boolean): string {
   const parts = dateStr.split('-').map(Number);
   const d = new Date(parts[0], parts[1] - 1, parts[2]);
   const dayIdx = d.getDay();
   return isNe ? dayNamesNe[dayIdx] : dayNamesEn[dayIdx];
 }
+
+/* ===================================================
+   CONSTANTS
+   =================================================== */
+const TOTAL_PROMISES = 109;
+const INACTIVE_INITIAL_SHOW = 10;
 
 /* ===================================================
    MAIN PAGE COMPONENT
@@ -61,6 +66,7 @@ export default function DailyPage() {
   const isNe = locale === 'ne';
 
   const [hydrated, setHydrated] = useState(false);
+  const [showAllInactive, setShowAllInactive] = useState(false);
 
   const {
     currentStreak,
@@ -68,6 +74,9 @@ export default function DailyPage() {
     lastVisitDate,
     recordVisit,
   } = useEngagementStore();
+
+  // Daily activity data
+  const { data: activity, isLoading: activityLoading } = useDailyActivity();
 
   // Hydration guard
   useEffect(() => {
@@ -96,6 +105,14 @@ export default function DailyPage() {
 
   const style = statusStyles[todayPromise.status] ?? statusStyles.not_started;
 
+  const totalActive = activity?.summary?.activeCount ?? 0;
+  const totalInactive = activity?.summary?.inactiveCount ?? 0;
+  const totalSignals = activity?.summary?.totalSignals ?? 0;
+
+  const visibleInactive = showAllInactive
+    ? (activity?.inactivePromises ?? [])
+    : (activity?.inactivePromises ?? []).slice(0, INACTIVE_INITIAL_SHOW);
+
   // Share streak handler
   function handleShareStreak() {
     const text = isNe
@@ -122,7 +139,7 @@ export default function DailyPage() {
     return (
       <div className="min-h-screen bg-np-base">
         <div className="px-4 sm:px-6 lg:px-8 pt-6">
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-3xl mx-auto">
             <div className="h-6 w-20 bg-white/5 rounded animate-pulse mb-8" />
             <div className="glass-card p-8 mb-6">
               <div className="h-24 w-24 bg-white/5 rounded-full mx-auto animate-pulse mb-4" />
@@ -131,11 +148,6 @@ export default function DailyPage() {
             <div className="glass-card p-6 mb-6">
               <div className="h-4 w-32 bg-white/5 rounded animate-pulse mb-4" />
               <div className="h-20 bg-white/5 rounded animate-pulse" />
-            </div>
-            <div className="flex gap-3 justify-center">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className="w-10 h-14 bg-white/5 rounded-lg animate-pulse" />
-              ))}
             </div>
           </div>
         </div>
@@ -152,7 +164,7 @@ export default function DailyPage() {
 
       <div className="relative z-10">
         <div className="public-shell pt-6">
-          <div className="mx-auto max-w-2xl">
+          <div className="mx-auto max-w-3xl">
             <Link
               href="/explore"
               className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-400 transition-colors"
@@ -164,12 +176,247 @@ export default function DailyPage() {
         </div>
 
         <PublicPageHero
-          eyebrow={t('dailyStreak.tracker')}
-          title={t('dailyStreak.onePromise')}
-          description={t('dailyStreak.description')}
+          eyebrow={t('dailyStreak.activityDashboard')}
+          title={t('dailyStreak.heroSubtitle')}
           centered
         />
 
+        {/* ═══════════════════════════════════════════
+            HERO STAT: X of 109 promises had activity
+            ═══════════════════════════════════════════ */}
+        <section className="public-section pt-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-3xl">
+              <div className="glass-card public-gradient-panel relative overflow-hidden p-7 text-center sm:p-10">
+                <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.04] via-transparent to-transparent pointer-events-none" />
+                <div className="relative z-10">
+                  {activityLoading ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-20 w-28 bg-white/5 rounded-xl animate-pulse" />
+                      <div className="h-5 w-56 bg-white/5 rounded animate-pulse" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-2 flex items-baseline justify-center gap-3">
+                        <span className="bg-gradient-to-b from-emerald-300 to-emerald-500 bg-clip-text text-7xl font-bold text-transparent tabular-nums sm:text-8xl">
+                          {totalActive}
+                        </span>
+                        <span className="text-xl text-gray-400 sm:text-2xl">
+                          {t('dailyStreak.of')} {TOTAL_PROMISES}
+                        </span>
+                      </div>
+                      <p className="text-base text-gray-400 sm:text-lg">
+                        {t('dailyStreak.heroTitle')}
+                      </p>
+                      {totalSignals > 0 && (
+                        <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-1.5">
+                          <Activity className="w-4 h-4 text-emerald-400" />
+                          <span className="text-sm text-emerald-300 font-medium">
+                            {totalSignals} {totalSignals === 1 ? t('dailyStreak.signal') : t('dailyStreak.signals')}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════
+            ACTIVE TODAY (green section)
+            ═══════════════════════════════════════════ */}
+        <section className="public-section pt-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-3xl">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="relative">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-75" />
+                </div>
+                <h2 className="text-lg font-semibold text-white">
+                  {t('dailyStreak.activeToday')}
+                </h2>
+                <span className="text-sm text-gray-500">
+                  ({totalActive})
+                </span>
+              </div>
+
+              {activityLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="glass-card p-4">
+                      <div className="h-5 w-3/4 bg-white/5 rounded animate-pulse mb-2" />
+                      <div className="h-4 w-1/2 bg-white/5 rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : totalActive === 0 ? (
+                <div className="glass-card p-6 text-center">
+                  <AlertCircle className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">
+                    {isNe ? 'आज कुनै गतिविधि छैन' : 'No activity detected today'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(activity?.activePromises ?? []).map((ap: DailyActivityPromise) => (
+                    <Link
+                      key={ap.promiseId}
+                      href={`/promises/${ap.slug || ap.promiseId}`}
+                      className="glass-card block p-4 sm:p-5 hover:border-emerald-500/30 transition-all duration-200 group"
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Pulsing green dot */}
+                        <div className="relative mt-1.5 shrink-0">
+                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                          <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-75" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          {/* Title */}
+                          <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors truncate sm:text-base">
+                            {isNe ? ap.title_ne : ap.title}
+                          </h3>
+
+                          {/* Signal count badge */}
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400">
+                              <Activity className="w-3 h-3" />
+                              {ap.signalCount} {ap.signalCount === 1 ? t('dailyStreak.signal') : t('dailyStreak.signals')}
+                            </span>
+
+                            {/* Breakdown badges */}
+                            {ap.confirmsCount > 0 && (
+                              <span className="text-[10px] text-emerald-400/70">
+                                +{ap.confirmsCount} {isNe ? 'पुष्टि' : 'confirms'}
+                              </span>
+                            )}
+                            {ap.contradictsCount > 0 && (
+                              <span className="text-[10px] text-red-400/70">
+                                -{ap.contradictsCount} {isNe ? 'विरोध' : 'contradicts'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Top headline */}
+                          {ap.topHeadline && (
+                            <p className="mt-2 text-xs text-gray-500 line-clamp-1">
+                              {ap.topHeadline}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════
+            NO ACTIVITY (gray section)
+            ═══════════════════════════════════════════ */}
+        <section className="public-section pt-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-3xl">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-500" />
+                <h2 className="text-lg font-semibold text-gray-400">
+                  {t('dailyStreak.noActivity')}
+                </h2>
+                <span className="text-sm text-gray-600">
+                  ({totalInactive})
+                </span>
+              </div>
+
+              {activityLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="glass-card p-3">
+                      <div className="h-4 w-2/3 bg-white/5 rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {visibleInactive.map((ip: DailyActivityInactive) => (
+                      <Link
+                        key={ip.promiseId}
+                        href={`/promises/${ip.slug || ip.promiseId}`}
+                        className="glass-card block px-4 py-3 hover:border-gray-500/30 transition-all duration-200 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Gray dot */}
+                          <div className="w-2 h-2 rounded-full bg-gray-600 shrink-0" />
+
+                          {/* Title */}
+                          <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors truncate flex-1">
+                            {isNe ? ip.title_ne : ip.title}
+                          </span>
+
+                          {/* Staleness label */}
+                          <span className="text-xs text-gray-600 shrink-0 whitespace-nowrap">
+                            {ip.daysSinceLastActivity === null
+                              ? t('dailyStreak.neverActive')
+                              : ip.daysSinceLastActivity === 1
+                                ? `1 ${t('dailyStreak.daySince')}`
+                                : `${ip.daysSinceLastActivity} ${t('dailyStreak.daysSince')}`}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+
+                  {/* Show more / less toggle */}
+                  {totalInactive > INACTIVE_INITIAL_SHOW && (
+                    <button
+                      onClick={() => setShowAllInactive(!showAllInactive)}
+                      className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium text-gray-500 hover:text-gray-300 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all duration-200"
+                    >
+                      {showAllInactive ? (
+                        <>
+                          <ChevronUp className="w-3.5 h-3.5" />
+                          {isNe ? 'कम देखाउनुहोस्' : 'Show less'}
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3.5 h-3.5" />
+                          {isNe
+                            ? `सबै ${totalInactive} देखाउनुहोस्`
+                            : `Show all ${totalInactive}`}
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════
+            DIVIDER — secondary content below
+            ═══════════════════════════════════════════ */}
+        <div className="public-shell">
+          <div className="mx-auto max-w-3xl">
+            <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-2" />
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <Flame className="w-4 h-4 text-gray-600" />
+              <span className="text-xs text-gray-600 uppercase tracking-wider font-medium">
+                {t('dailyStreak.streakAndDaily')}
+              </span>
+              <Flame className="w-4 h-4 text-gray-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════
+            STREAK CARD (secondary)
+            ═══════════════════════════════════════════ */}
         <section className="public-section pt-0">
           <div className="public-shell">
             <div className="mx-auto max-w-2xl">
@@ -214,6 +461,9 @@ export default function DailyPage() {
           </div>
         </section>
 
+        {/* ═══════════════════════════════════════════
+            TODAY'S PROMISE (secondary)
+            ═══════════════════════════════════════════ */}
         <section className="public-section pt-0">
           <div className="public-shell">
             <div className="mx-auto max-w-2xl">

@@ -39,6 +39,8 @@ function mapPromise(p: Record<string, unknown>): GovernmentPromise {
     spentNPR: p.spent_npr as number | undefined,
     fundingSource: p.funding_source as string | undefined,
     fundingSource_ne: p.funding_source_ne as string | undefined,
+    lastActivityDate: p.last_activity_date as string | undefined,
+    lastActivitySignalCount: (p.last_activity_signal_count ?? 0) as number,
   };
 }
 
@@ -207,4 +209,89 @@ export function usePromisesByCategory() {
   }));
 
   return { categories, isLoading: false };
+}
+
+/* ═══════════════════════════════════════════
+   Daily Activity Response Types
+   ═══════════════════════════════════════════ */
+export interface DailyActivityPromise {
+  promiseId: string;
+  title: string;
+  title_ne: string;
+  slug: string;
+  signalCount: number;
+  confirmsCount: number;
+  contradictsCount: number;
+  neutralCount: number;
+  topHeadline?: string;
+  maxConfidence: number;
+}
+
+export interface DailyActivityInactive {
+  promiseId: string;
+  title: string;
+  title_ne: string;
+  slug: string;
+  daysSinceLastActivity: number | null;
+  lastActivityDate: string | null;
+}
+
+export interface DailyActivitySummary {
+  activeCount: number;
+  inactiveCount: number;
+  totalSignals: number;
+}
+
+export interface DailyActivityResponse {
+  activePromises: DailyActivityPromise[];
+  inactivePromises: DailyActivityInactive[];
+  summary: DailyActivitySummary;
+}
+
+/* ═══════════════════════════════════════════
+   HOOK: useDailyActivity — dashboard data
+   ═══════════════════════════════════════════ */
+export function useDailyActivity(date?: string) {
+  return useQuery<DailyActivityResponse>({
+    queryKey: ['daily-activity', date || 'today'],
+    queryFn: async () => {
+      const params = date ? `?date=${date}` : '';
+      const res = await fetch(`/api/promises/daily-activity${params}`);
+      if (!res.ok) {
+        return {
+          activePromises: [],
+          inactivePromises: [],
+          summary: { activeCount: 0, inactiveCount: 0, totalSignals: 0 },
+        };
+      }
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/* ═══════════════════════════════════════════
+   HOOK: usePromiseTodaySignals — today's signals for one promise
+   ═══════════════════════════════════════════ */
+export interface PromiseSignal {
+  id: string;
+  headline: string;
+  headline_ne?: string;
+  source_name: string;
+  source_url: string;
+  classification: string;
+  confidence: number;
+  discovered_at: string;
+}
+
+export function usePromiseTodaySignals(promiseId: string) {
+  return useQuery<PromiseSignal[]>({
+    queryKey: ['promise-signals', promiseId, 'today'],
+    queryFn: async () => {
+      const res = await fetch(`/api/promises/${promiseId}/signals`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 }

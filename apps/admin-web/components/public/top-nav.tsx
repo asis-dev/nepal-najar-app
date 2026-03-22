@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
+import { NotificationBell } from '@/components/public/notification-bell';
 
 const primaryNavLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
@@ -29,8 +30,8 @@ const primaryNavLinks = [
   { href: '/explore/map', labelKey: 'nav.map', icon: Map },
   { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
   { href: '/daily', labelKey: 'nav.daily', icon: Calendar },
-  { href: '/explore/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
-  { href: '/mero-ward', labelKey: 'nav.myArea', icon: MapPinHouse },
+  { href: '/affects-me', labelKey: 'nav.affectsMe', icon: MapPinHouse },
+  { href: '/proposals', labelKey: 'nav.proposals', icon: Megaphone },
 ];
 
 const mobileOnlyLinks = [
@@ -84,6 +85,7 @@ export function TopNav() {
           </div>
 
           <div className="hidden items-center justify-end gap-2 md:flex">
+            <NotificationBell />
             <Link
               href="/search"
               className="flex items-center justify-center rounded-xl border border-white/[0.08] p-2 text-gray-400 transition-colors hover:border-white/[0.15] hover:text-gray-200"
