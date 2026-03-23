@@ -1,12 +1,36 @@
 /**
  * /api/evidence — Citizen evidence for promises
  *
- * GET  ?promise_id=X  → list evidence for a promise (joined with profiles)
+ * GET  ?promise_id=X            → list approved evidence for a promise (joined with profiles)
+ * GET  ?promise_id=X&status=pending → list unapproved evidence (verifier/admin only)
  * POST { promise_id, media_urls, caption, classification }  → submit evidence (auth required)
+ *       - Verifier/admin submissions are auto-approved
+ *       - Anti-gaming: daily limits, duplicate URL check
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getSupabase, isSupabaseConfigured } from '@/lib/supabase/server';
 import { rateLimit, getClientIp } from '@/lib/middleware/rate-limit';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function formatEvidence(rows: any[]) {
+  return rows.map((e) => ({
+    id: e.id,
+    user_id: e.user_id,
+    promise_id: e.promise_id,
+    evidence_type: e.evidence_type,
+    media_urls: e.media_urls,
+    caption: e.caption,
+    caption_ne: e.caption_ne,
+    classification: e.classification,
+    latitude: e.latitude,
+    longitude: e.longitude,
+    upvote_count: e.upvote_count,
+    downvote_count: e.downvote_count,
+    is_approved: e.is_approved,
+    created_at: e.created_at,
+    display_name: (e.profiles as { display_name: string })?.display_name ?? 'Anonymous',
+  }));
+}
 
 export async function GET(req: NextRequest) {
   const promiseId = req.nextUrl.searchParams.get('promise_id');
@@ -19,7 +43,45 @@ export async function GET(req: NextRequest) {
   }
 
   const db = getSupabase();
+  const status = req.nextUrl.searchParams.get('status');
 
+  // Pending evidence — verifier/admin only
+  if (status === 'pending') {
+    const supabaseUser = await createSupabaseServerClient();
+    const { data: { user } } = await supabaseUser.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const { data: profile } = await db
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || !['verifier', 'admin'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Verifier or admin access required' }, { status: 403 });
+    }
+
+    const { data, error } = await db
+      .from('citizen_evidence')
+      .select('*, profiles(display_name)')
+      .eq('promise_id', promiseId)
+      .eq('is_approved', false)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      if (error.code === '42P01') {
+        return NextResponse.json({ evidence: [] });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ evidence: formatEvidence(data ?? []) });
+  }
+
+  // Default: approved evidence (public)
   const { data, error } = await db
     .from('citizen_evidence')
     .select('*, profiles(display_name)')
@@ -34,25 +96,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const evidence = (data ?? []).map((e: any) => ({
-    id: e.id,
-    user_id: e.user_id,
-    promise_id: e.promise_id,
-    evidence_type: e.evidence_type,
-    media_urls: e.media_urls,
-    caption: e.caption,
-    caption_ne: e.caption_ne,
-    classification: e.classification,
-    latitude: e.latitude,
-    longitude: e.longitude,
-    upvote_count: e.upvote_count,
-    downvote_count: e.downvote_count,
-    created_at: e.created_at,
-    display_name: (e.profiles as { display_name: string })?.display_name ?? 'Anonymous',
-  }));
-
-  return NextResponse.json({ evidence });
+  return NextResponse.json({ evidence: formatEvidence(data ?? []) });
 }
 
 export async function POST(req: NextRequest) {
@@ -108,6 +152,69 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getSupabase();
+
+  // --- Anti-gaming checks ---
+
+  // 1. Check submitter role for auto-approve and daily limits
+  const { data: profile } = await db
+    .from('profiles')
+    .select('role, created_at')
+    .eq('id', user.id)
+    .single();
+
+  const userRole = profile?.role ?? 'citizen';
+  const isPrivileged = ['verifier', 'admin'].includes(userRole);
+
+  // 2. Daily submission limit
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count: dailyCount, error: countErr } = await db
+    .from('citizen_evidence')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .gte('created_at', oneDayAgo);
+
+  if (countErr && countErr.code !== '42P01') {
+    return NextResponse.json({ error: countErr.message }, { status: 500 });
+  }
+
+  const todaySubmissions = dailyCount ?? 0;
+
+  // New accounts (< 7 days old) get stricter limit
+  const accountAge = profile?.created_at
+    ? Date.now() - new Date(profile.created_at).getTime()
+    : Infinity;
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  const isNewAccount = accountAge < sevenDaysMs;
+  const dailyLimit = isNewAccount ? 2 : 5;
+
+  if (todaySubmissions >= dailyLimit) {
+    return NextResponse.json(
+      { error: `Daily submission limit reached (${dailyLimit}/day). Try again tomorrow.` },
+      { status: 429, headers: { 'Retry-After': '86400' } }
+    );
+  }
+
+  // 3. Duplicate URL check
+  if (media_urls && media_urls.length > 0) {
+    for (const url of media_urls) {
+      const { data: duplicate } = await db
+        .from('citizen_evidence')
+        .select('id')
+        .eq('promise_id', promise_id)
+        .contains('media_urls', [url])
+        .limit(1)
+        .maybeSingle();
+
+      if (duplicate) {
+        return NextResponse.json(
+          { error: 'Duplicate media URL: this evidence has already been submitted for this promise.' },
+          { status: 409 }
+        );
+      }
+    }
+  }
+
+  // --- Insert evidence ---
   const { data, error } = await db
     .from('citizen_evidence')
     .insert({
@@ -119,8 +226,9 @@ export async function POST(req: NextRequest) {
       classification,
       latitude: latitude ?? null,
       longitude: longitude ?? null,
+      is_approved: isPrivileged, // Auto-approve for verifier/admin
     })
-    .select('id, created_at')
+    .select('id, created_at, is_approved')
     .single();
 
   if (error) {

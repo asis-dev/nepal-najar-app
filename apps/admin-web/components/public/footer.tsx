@@ -30,6 +30,7 @@ const exploreLinks = [
 ];
 
 const aboutLinks = [
+  { href: '/how-it-works', label: 'How It Works' },
   { href: '/explore/government', label: 'Government' },
   { href: '/explore/compare', label: 'Compare Commitments' },
   { href: '/feedback', label: 'Give Feedback' },

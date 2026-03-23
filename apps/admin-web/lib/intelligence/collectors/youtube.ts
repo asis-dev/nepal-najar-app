@@ -103,6 +103,38 @@ export const YOUTUBE_CHANNELS: YouTubeChannel[] = [
     relatedPromiseIds: [],
     relatedOfficialIds: [],
   },
+  {
+    id: 'yt-nepali-comment',
+    name: 'The Nepali Comment',
+    channelId: 'UC_placeholder_nepali_comment',
+    type: 'talk_show',
+    relatedPromiseIds: [],
+    relatedOfficialIds: [],
+  },
+  {
+    id: 'yt-indepth-story',
+    name: 'INDepth Story',
+    channelId: 'UC_placeholder_indepth_story',
+    type: 'talk_show',
+    relatedPromiseIds: [],
+    relatedOfficialIds: [],
+  },
+  {
+    id: 'yt-anand-nepal',
+    name: 'Anand Nepal',
+    channelId: 'UC_placeholder_anand_nepal',
+    type: 'talk_show',
+    relatedPromiseIds: [],
+    relatedOfficialIds: [],
+  },
+  {
+    id: 'yt-inside-nepal',
+    name: 'Inside Nepal',
+    channelId: 'UC_placeholder_inside_nepal',
+    type: 'talk_show',
+    relatedPromiseIds: [],
+    relatedOfficialIds: [],
+  },
 ];
 
 // Search queries for discovering new content
@@ -137,6 +169,10 @@ const DUCKDUCKGO_YOUTUBE_QUERIES = [
   'site:youtube.com "RSP" Nepal government',
   'site:youtube.com Nepal budget 2083',
   'site:youtube.com Nepal press conference government 2026',
+  'site:youtube.com "The Nepali Comment" Nepal',
+  'site:youtube.com "INDepth Story" Nepal',
+  'site:youtube.com "Anand Nepal" politics',
+  'site:youtube.com "Inside Nepal" politics',
 ];
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';

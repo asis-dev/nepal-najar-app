@@ -178,6 +178,32 @@ export const THREADS_ACCOUNTS: ThreadsAccountConfig[] = [
     relatedPromiseIds: [],
     maxPosts: 10,
   },
+
+  // --- Additional accounts ---
+  {
+    id: 'threads-kunda-dixit',
+    username: 'kundadixit',
+    name: 'Kunda Dixit',
+    category: 'journalist',
+    relatedPromiseIds: [],
+    maxPosts: 10,
+  },
+  {
+    id: 'threads-gagan-thapa',
+    username: 'thapagk',
+    name: 'Gagan Thapa',
+    category: 'politician',
+    relatedPromiseIds: [],
+    maxPosts: 10,
+  },
+  {
+    id: 'threads-pahilopost',
+    username: 'pahilopost',
+    name: 'PahiloPost',
+    category: 'news_outlet',
+    relatedPromiseIds: [],
+    maxPosts: 10,
+  },
 ];
 
 // ─── Approach 1: Apify-based scraping ────────────────────────────────────────

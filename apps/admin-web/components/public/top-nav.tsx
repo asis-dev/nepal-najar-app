@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { ShieldCheck, Award, Star } from 'lucide-react';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
 import { NotificationBell } from '@/components/public/notification-bell';
 import { useTrending } from '@/lib/hooks/use-trending';
@@ -61,7 +62,7 @@ export function TopNav() {
   const { locale, setLocale, t } = useI18n();
   const { pulseLevel } = useTrending();
   const pulseDotColor = PULSE_COLORS[pulseLevel];
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated, isVerifier, signOut, karma, level } = useAuth();
 
   // Close user menu on outside click
   useEffect(() => {
@@ -164,10 +165,46 @@ export function TopNav() {
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border border-np-border bg-np-surface/95 shadow-xl backdrop-blur-xl">
                     <div className="border-b border-np-border px-4 py-3">
-                      <p className="truncate text-sm font-medium text-white">{user.displayName || t('auth.myAccount')}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-white">{user.displayName || t('auth.myAccount')}</p>
+                        {user.role === 'verifier' && (
+                          <span className="flex items-center gap-1 rounded-full bg-cyan-500/20 px-2 py-0.5 text-[10px] font-semibold text-cyan-300">
+                            <ShieldCheck className="h-3 w-3" /> Verifier
+                          </span>
+                        )}
+                        {user.role === 'admin' && (
+                          <span className="flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                            <Star className="h-3 w-3" /> Admin
+                          </span>
+                        )}
+                      </div>
                       <p className="truncate text-xs text-gray-500">{user.email}</p>
+                      {karma != null && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          <Award className="mr-1 inline h-3 w-3 text-primary-400" />
+                          {karma} karma · Level {level || 1}
+                        </p>
+                      )}
                     </div>
                     <div className="py-1">
+                      <Link
+                        href="/reputation"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200"
+                      >
+                        <Award className="h-4 w-4" />
+                        My Reputation
+                      </Link>
+                      {isVerifier && (
+                        <Link
+                          href="/verify-evidence"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-cyan-300"
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                          Verify Evidence
+                        </Link>
+                      )}
                       <button
                         onClick={handleSignOut}
                         className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-red-400"

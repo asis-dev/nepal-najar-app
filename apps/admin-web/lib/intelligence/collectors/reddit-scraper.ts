@@ -63,7 +63,7 @@ const REQUEST_DELAY_MS = 2100; // >2s to respect Reddit rate limits
 const HIGH_ENGAGEMENT_THRESHOLD = 100; // Fetch comments for posts with score > 100
 const RELEVANCE_BOOST_THRESHOLD = 50;  // Posts with score > 50 get relevance boost
 
-export const REDDIT_SUBREDDITS = ['Nepal', 'nepalese', 'Kathmandu'] as const;
+export const REDDIT_SUBREDDITS = ['Nepal', 'nepalese', 'Kathmandu', 'AskNepal'] as const;
 
 export const REDDIT_QUERIES = [
   'Nepal government',

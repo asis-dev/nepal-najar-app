@@ -185,6 +185,103 @@ export const RSS_FEEDS: RSSSource[] = [
     language: 'ne',
     relatedPromiseIds: [],
   },
+
+  // ── Additional English feeds ──────────────────────────────────────────────
+  {
+    id: 'ujyaalo-en',
+    name: 'Ujyaalo Online',
+    feedUrl: 'https://ujyaaloonline.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'nepal-press',
+    name: 'Nepal Press',
+    feedUrl: 'https://nepalpress.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'reporters-nepal',
+    name: 'Reporters Nepal',
+    feedUrl: 'https://reportersnepal.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'himal-south',
+    name: 'Himal Southasian',
+    feedUrl: 'https://www.himalmag.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'record-nepal',
+    name: 'The Record Nepal',
+    feedUrl: 'https://www.recordnepal.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nepal-agency',
+    name: 'RSS Nepal (National News Agency)',
+    feedUrl: 'https://www.rssnepal.com/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+
+  // ── Additional Nepali feeds ─────────────────────────────────────────────
+  {
+    id: 'pahilopost-ne',
+    name: 'PahiloPost',
+    feedUrl: 'https://pahilopost.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'naya-patrika-ne',
+    name: 'Naya Patrika',
+    feedUrl: 'https://nayapatrikadaily.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'baahrakhari-ne',
+    name: 'Baahrakhari',
+    feedUrl: 'https://baahrakhari.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'deshsanchar-ne',
+    name: 'Deshsanchar',
+    feedUrl: 'https://deshsanchar.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'lokpath-ne',
+    name: 'Lokpath',
+    feedUrl: 'https://lokpath.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'nepal-samaya-ne',
+    name: 'Nepal Samaya',
+    feedUrl: 'https://nepalsamaya.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+
+  // ── Independent / Opinion ──────────────────────────────────────────────────
+  {
+    id: 'sasmit-pokhrel',
+    name: 'Sasmit Pokhrel',
+    feedUrl: 'https://sasmitpokhrel.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
 ];
 
 function parseXML(xml: string): RSSItem[] {

@@ -9,7 +9,7 @@ export interface UserProfile {
   displayName: string;
   email: string | null;
   phone: string | null;
-  role: 'citizen' | 'admin';
+  role: 'citizen' | 'observer' | 'verifier' | 'admin';
   province: string | null;
   district: string | null;
 }
@@ -27,6 +27,10 @@ interface AuthState {
   session: Session | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isVerifier: boolean;
+  isObserver: boolean;
+  karma: number | null;
+  level: number | null;
   isLoading: boolean;
   error: string | null;
   _initialized: boolean;
@@ -52,6 +56,10 @@ export const useAuth = create<AuthState>((set, get) => ({
   session: null,
   isAuthenticated: false,
   isAdmin: false,
+  isVerifier: false,
+  isObserver: false,
+  karma: null,
+  level: null,
   isLoading: false,
   error: null,
   _initialized: false,
@@ -68,11 +76,31 @@ export const useAuth = create<AuthState>((set, get) => ({
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       const profile = await get().fetchProfile(session.user.id);
+
+      // Fetch reputation data
+      let karma = 0;
+      let level = 1;
+      try {
+        const { data: repData } = await supabase
+          .from('user_reputation')
+          .select('total_karma, level')
+          .eq('user_id', session.user.id)
+          .single();
+        if (repData) {
+          karma = repData.total_karma ?? 0;
+          level = repData.level ?? 1;
+        }
+      } catch { /* no reputation row — use defaults */ }
+
       set({
         session,
         user: profile,
         isAuthenticated: true,
         isAdmin: profile?.role === 'admin',
+        isVerifier: profile?.role === 'verifier' || profile?.role === 'admin',
+        isObserver: profile?.role === 'observer' || profile?.role === 'citizen',
+        karma,
+        level,
         _initialized: true,
       });
     } else {
@@ -83,11 +111,31 @@ export const useAuth = create<AuthState>((set, get) => ({
     supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (event === 'SIGNED_IN' && newSession?.user) {
         const profile = await get().fetchProfile(newSession.user.id);
+
+        // Fetch reputation data
+        let karma = 0;
+        let level = 1;
+        try {
+          const { data: repData } = await supabase
+            .from('user_reputation')
+            .select('total_karma, level')
+            .eq('user_id', newSession.user.id)
+            .single();
+          if (repData) {
+            karma = repData.total_karma ?? 0;
+            level = repData.level ?? 1;
+          }
+        } catch { /* no reputation row — use defaults */ }
+
         set({
           session: newSession,
           user: profile,
           isAuthenticated: true,
           isAdmin: profile?.role === 'admin',
+          isVerifier: profile?.role === 'verifier' || profile?.role === 'admin',
+          isObserver: profile?.role === 'observer' || profile?.role === 'citizen',
+          karma,
+          level,
         });
       } else if (event === 'SIGNED_OUT') {
         set({
@@ -95,6 +143,10 @@ export const useAuth = create<AuthState>((set, get) => ({
           user: null,
           isAuthenticated: false,
           isAdmin: false,
+          isVerifier: false,
+          isObserver: false,
+          karma: null,
+          level: null,
         });
       } else if (event === 'TOKEN_REFRESHED' && newSession) {
         set({ session: newSession });
@@ -140,11 +192,34 @@ export const useAuth = create<AuthState>((set, get) => ({
 
       if (data.user) {
         const profile = await get().fetchProfile(data.user.id);
+
+        // Fetch reputation data
+        let karma = 0;
+        let level = 1;
+        try {
+          const sb = createSupabaseBrowserClient();
+          if (sb) {
+            const { data: repData } = await sb
+              .from('user_reputation')
+              .select('total_karma, level')
+              .eq('user_id', data.user.id)
+              .single();
+            if (repData) {
+              karma = repData.total_karma ?? 0;
+              level = repData.level ?? 1;
+            }
+          }
+        } catch { /* no reputation row — use defaults */ }
+
         set({
           session: data.session,
           user: profile,
           isAuthenticated: true,
           isAdmin: profile?.role === 'admin',
+          isVerifier: profile?.role === 'verifier' || profile?.role === 'admin',
+          isObserver: profile?.role === 'observer' || profile?.role === 'citizen',
+          karma,
+          level,
         });
       }
     } catch (err: unknown) {
@@ -267,11 +342,34 @@ export const useAuth = create<AuthState>((set, get) => ({
 
       if (data.user) {
         const profile = await get().fetchProfile(data.user.id);
+
+        // Fetch reputation data
+        let karma = 0;
+        let level = 1;
+        try {
+          const sb = createSupabaseBrowserClient();
+          if (sb) {
+            const { data: repData } = await sb
+              .from('user_reputation')
+              .select('total_karma, level')
+              .eq('user_id', data.user.id)
+              .single();
+            if (repData) {
+              karma = repData.total_karma ?? 0;
+              level = repData.level ?? 1;
+            }
+          }
+        } catch { /* no reputation row — use defaults */ }
+
         set({
           session: data.session,
           user: profile,
           isAuthenticated: true,
           isAdmin: profile?.role === 'admin',
+          isVerifier: profile?.role === 'verifier' || profile?.role === 'admin',
+          isObserver: profile?.role === 'observer' || profile?.role === 'citizen',
+          karma,
+          level,
         });
       }
     } catch (err: unknown) {
@@ -298,6 +396,10 @@ export const useAuth = create<AuthState>((set, get) => ({
       user: null,
       isAuthenticated: false,
       isAdmin: false,
+      isVerifier: false,
+      isObserver: false,
+      karma: null,
+      level: null,
       error: null,
     });
   },

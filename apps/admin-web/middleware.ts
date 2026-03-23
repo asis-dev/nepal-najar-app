@@ -47,6 +47,11 @@ const PUBLIC_PREFIXES = [
   '/affects-me',
   '/leaderboard',
   '/notifications',
+  '/verify-evidence',
+  '/apply-verifier',
+  '/reputation',
+  '/api/reputation',
+  '/api/verifier-applications',
 ];
 
 // Dashboard routes that require admin auth

@@ -159,6 +159,56 @@ export const X_ACCOUNTS: XAccountConfig[] = [
     relatedPromiseIds: [],
     maxTweets: 10,
   },
+
+  // --- Additional accounts ---
+  {
+    id: 'x-kunda-dixit',
+    username: 'kundadixit',
+    name: 'Kunda Dixit',
+    category: 'journalist',
+    relatedPromiseIds: [],
+    maxTweets: 10,
+  },
+  {
+    id: 'x-gagan-thapa',
+    username: 'thapagk',
+    name: 'Gagan Thapa',
+    category: 'politician',
+    relatedPromiseIds: [],
+    maxTweets: 10,
+  },
+  {
+    id: 'x-dorje-gurung',
+    username: 'Dorje_sDooing',
+    name: 'Dorje Gurung',
+    category: 'journalist',
+    relatedPromiseIds: [],
+    maxTweets: 10,
+  },
+  {
+    id: 'x-pahilopost',
+    username: 'PahiloPost',
+    name: 'PahiloPost',
+    category: 'news_outlet',
+    relatedPromiseIds: [],
+    maxTweets: 10,
+  },
+  {
+    id: 'x-nepali-comment',
+    username: 'NepaliComment',
+    name: 'The Nepali Comment',
+    category: 'news_outlet',
+    relatedPromiseIds: [],
+    maxTweets: 10,
+  },
+  {
+    id: 'x-record-nepal-2',
+    username: 'recordnepal',
+    name: 'The Record Nepal',
+    category: 'news_outlet',
+    relatedPromiseIds: [],
+    maxTweets: 10,
+  },
 ];
 
 // ─── Search Queries ──────────────────────────────────────────────────────────
