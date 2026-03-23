@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Search, ArrowRight, Eye, FileText } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAllPromises } from '@/lib/hooks/use-promises';
+import { useTrending } from '@/lib/hooks/use-trending';
 import { PublicPageHero } from '@/components/public/page-hero';
 import { SignalBadge } from '@/components/public/signal-badge';
 import { formatNPR } from '@/lib/data/promises';
@@ -53,7 +54,7 @@ const CATEGORY_FILTERS = [
   'social',
 ] as const;
 
-function PromiseCard({ promise, locale, t }: { promise: GovernmentPromise; locale: string; t: (key: string, vars?: Record<string, string | number>) => string }) {
+function PromiseCard({ promise, locale, t, isTrending }: { promise: GovernmentPromise; locale: string; t: (key: string, vars?: Record<string, string | number>) => string; isTrending?: boolean }) {
   const style = STATUS_STYLES[promise.status] ?? STATUS_STYLES.not_started;
   const progress = Math.round(promise.progress ?? 0);
   const statusKey = STATUS_KEYS[promise.status];
@@ -63,6 +64,14 @@ function PromiseCard({ promise, locale, t }: { promise: GovernmentPromise; local
       href={`/explore/first-100-days/${promise.slug}`}
       className="glass-card-hover group block rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md transition-all duration-300 hover:border-primary-500/30 hover:bg-white/[0.08]"
     >
+      {/* Trending badge */}
+      {isTrending && (
+        <span className="trending-badge mb-3">
+          <span className="text-[10px]">{'\uD83D\uDD25'}</span>
+          Trending
+        </span>
+      )}
+
       {/* Header row */}
       <div className="mb-3 flex items-start justify-between gap-3">
         <h3 className="text-base font-bold text-white group-hover:text-primary-300 transition-colors line-clamp-2">
@@ -132,6 +141,7 @@ export default function ExploreProjectsPage() {
   const { locale, t } = useI18n();
 
   const { data: promises, isLoading, isError } = useAllPromises();
+  const { trendingIds } = useTrending();
 
   // Filter promises
   const filtered = useMemo(() => {
@@ -254,7 +264,7 @@ export default function ExploreProjectsPage() {
             </p>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((promise) => (
-                <PromiseCard key={promise.id} promise={promise} locale={locale} t={t} />
+                <PromiseCard key={promise.id} promise={promise} locale={locale} t={t} isTrending={trendingIds.has(promise.id)} />
               ))}
             </div>
           </>

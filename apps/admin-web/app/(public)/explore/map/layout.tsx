@@ -1,8 +1,8 @@
 import { createMetadata } from '@/lib/seo';
 
 export const metadata = createMetadata({
-  title: 'Promise Map',
-  description: 'Interactive map showing government promise progress across Nepal\'s 7 provinces and 77 districts.',
+  title: 'Commitment Map',
+  description: 'Interactive map showing government commitment progress across Nepal\'s 7 provinces and 77 districts.',
   path: '/explore/map',
 });
 

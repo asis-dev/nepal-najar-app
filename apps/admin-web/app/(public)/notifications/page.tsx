@@ -423,8 +423,8 @@ export default function NotificationsPage() {
                     </h3>
                     <p className="text-sm text-gray-600">
                       {isNe
-                        ? 'तपाईंले हेरिरहनुभएका प्रतिज्ञाहरू अपडेट हुँदा सूचना पाउनुहुनेछ।'
-                        : 'You\'ll be notified when promises you watch get updates.'}
+                        ? 'तपाईंले हेरिरहनुभएका वचनबद्धताहरू अपडेट हुँदा सूचना पाउनुहुनेछ।'
+                        : 'You\'ll be notified when commitments you watch get updates.'}
                     </p>
                   </div>
                 )}
@@ -445,8 +445,8 @@ export default function NotificationsPage() {
                           </h3>
                           <p className="text-sm text-gray-400 mt-0.5">
                             {isNe
-                              ? 'प्रतिज्ञा अपडेट हुँदा ब्राउजर सूचनाहरू प्राप्त गर्नुहोस्।'
-                              : 'Get browser notifications when watched promises update.'}
+                              ? 'वचनबद्धता अपडेट हुँदा ब्राउजर सूचनाहरू प्राप्त गर्नुहोस्।'
+                              : 'Get browser notifications when watched commitments update.'}
                           </p>
                         </div>
                         <button
@@ -504,8 +504,8 @@ export default function NotificationsPage() {
                           </h3>
                           <p className="text-sm text-gray-400 mt-0.5">
                             {isNe
-                              ? 'हेरिरहेका प्रतिज्ञाहरू अपडेट हुँदा इमेल प्राप्त गर्नुहोस्।'
-                              : 'Receive email when your watched promises get updates.'}
+                              ? 'हेरिरहेका वचनबद्धताहरू अपडेट हुँदा इमेल प्राप्त गर्नुहोस्।'
+                              : 'Receive email when your watched commitments get updates.'}
                           </p>
                         </div>
                         <button

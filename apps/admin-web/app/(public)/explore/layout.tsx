@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = createMetadata({
-  title: 'Explore Nepal Development',
-  description: 'Track development projects, government promises, and progress across all 7 provinces of Nepal. Real-time transparency for every citizen.',
+  title: 'Explore Nepal Commitments',
+  description: 'Track live public commitments, evidence, and accountability signals across Nepal.',
   path: '/explore',
 });
 

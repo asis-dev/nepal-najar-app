@@ -66,8 +66,13 @@ function determineStatus(summary: SignalSummary): 'not_started' | 'in_progress' 
  * Sync promise statuses based on intelligence signals.
  * Called after each sweep to update promise statuses and evidence counts.
  */
-export async function syncPromiseStatuses(): Promise<SyncResult> {
+export async function syncPromiseStatuses(options?: {
+  applyStatusChanges?: boolean;
+}): Promise<SyncResult> {
   const supabase = getSupabase();
+  const applyStatusChanges =
+    options?.applyStatusChanges ??
+    process.env.INTELLIGENCE_AUTO_STATUS_SYNC === 'true';
   const result: SyncResult = {
     promisesChecked: 0,
     statusesUpdated: 0,
@@ -81,6 +86,8 @@ export async function syncPromiseStatuses(): Promise<SyncResult> {
       .from('intelligence_signals')
       .select('id, matched_promise_ids, classification, confidence, signal_type, relevance_score')
       .eq('tier1_processed', true)
+      .eq('tier3_processed', true)
+      .gte('confidence', 0.3)
       .gte('relevance_score', 0.3);
 
     if (signalsError) {
@@ -165,7 +172,7 @@ export async function syncPromiseStatuses(): Promise<SyncResult> {
       // Determine status if we have signals
       if (summary) {
         const newStatus = determineStatus(summary);
-        if (newStatus) {
+        if (newStatus && applyStatusChanges) {
           updateData.status = newStatus;
         }
       }
@@ -186,7 +193,7 @@ export async function syncPromiseStatuses(): Promise<SyncResult> {
       if (updateError) {
         // If evidence_count column doesn't exist, retry without it
         if (updateError.message.includes('evidence_count')) {
-          const { status, ...withoutEvidence } = updateData as { status?: string };
+          const { status } = updateData as { status?: string };
           if (status) {
             const { error: retryError } = await supabase
               .from('promises')
@@ -212,7 +219,8 @@ export async function syncPromiseStatuses(): Promise<SyncResult> {
       `[StatusSync] Checked ${result.promisesChecked} promises, ` +
       `updated ${result.statusesUpdated} statuses, ` +
       `${result.evidenceCountsUpdated} evidence counts, ` +
-      `${result.errors.length} errors`,
+      `${result.errors.length} errors ` +
+      `(status writes ${applyStatusChanges ? 'enabled' : 'disabled'})`,
     );
   } catch (err) {
     result.errors.push(

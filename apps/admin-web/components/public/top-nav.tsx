@@ -5,46 +5,54 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Calendar,
-  Landmark,
   Globe,
   Menu,
   X,
   LogIn,
   Eye,
-  Map,
-  MapPinHouse,
   ClipboardCheck,
-  FolderKanban,
-  TimerReset,
-  BarChart3,
+  Target,
   Search,
+  Bookmark,
+  MessageSquarePlus,
+  Map,
   Megaphone,
+  TrendingUp,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
 import { NotificationBell } from '@/components/public/notification-bell';
+import { useTrending } from '@/lib/hooks/use-trending';
+
+const PULSE_COLORS = {
+  low: 'bg-blue-400',
+  moderate: 'bg-emerald-400',
+  high: 'bg-orange-400',
+  very_high: 'bg-red-400',
+} as const;
 
 const primaryNavLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
-  { href: '/explore/first-100-days', labelKey: 'nav.first100Days', icon: TimerReset },
-  { href: '/explore/map', labelKey: 'nav.map', icon: Map },
-  { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
+  { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
+  { href: '/trending', labelKey: 'nav.trending', icon: TrendingUp },
   { href: '/daily', labelKey: 'nav.daily', icon: Calendar },
-  { href: '/affects-me', labelKey: 'nav.affectsMe', icon: MapPinHouse },
-  { href: '/proposals', labelKey: 'nav.proposals', icon: Megaphone },
+  { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
+  { href: '/watchlist', labelKey: 'nav.watchlist', icon: Bookmark },
 ];
 
 const mobileOnlyLinks = [
-  { href: '/explore/first-100-days', labelKey: 'nav.projects', icon: FolderKanban },
-  { href: '/proposals', labelKey: 'nav.proposals', icon: Megaphone },
-  { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
   { href: '/search', labelKey: 'nav.search', icon: Search },
+  { href: '/feedback', labelKey: 'nav.feedback', icon: MessageSquarePlus },
+  { href: '/explore/map', labelKey: 'nav.mapBeta', icon: Map },
+  { href: '/proposals', labelKey: 'nav.proposalsBeta', icon: Megaphone },
 ];
 
 export function TopNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { locale, setLocale, t } = useI18n();
+  const { pulseLevel } = useTrending();
+  const pulseDotColor = PULSE_COLORS[pulseLevel];
 
   const toggleLang = () => setLocale(locale === 'en' ? 'ne' : 'en');
   const isActivePath = (href: string) => {
@@ -85,6 +93,18 @@ export function TopNav() {
           </div>
 
           <div className="hidden items-center justify-end gap-2 md:flex">
+            {/* Pulse activity indicator */}
+            <Link
+              href="/trending"
+              className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] px-2.5 py-1.5 text-gray-400 transition-colors hover:border-white/[0.15] hover:text-gray-200"
+              title="Political activity pulse"
+            >
+              <div className="relative flex items-center justify-center">
+                <span className={`absolute inline-flex h-2.5 w-2.5 rounded-full ${pulseDotColor} opacity-30 nav-pulse-outer`} />
+                <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${pulseDotColor}`} />
+              </div>
+              <TrendingUp className="h-3.5 w-3.5" />
+            </Link>
             <NotificationBell />
             <Link
               href="/search"

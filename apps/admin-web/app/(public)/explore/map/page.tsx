@@ -89,7 +89,7 @@ const provinceOverview: ProvinceOverview[] = [
     delayed: 5,
     progress: 49,
     severity: 'medium',
-    summary: 'Education, logistics, and industrial growth promises are highly watched across the province.',
+    summary: 'Education, logistics, and industrial growth commitments are highly watched across the province.',
     focus: ['Education', 'Economy', 'Transport'],
   },
   {

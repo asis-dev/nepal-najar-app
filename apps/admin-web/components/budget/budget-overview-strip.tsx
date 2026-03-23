@@ -43,7 +43,7 @@ export function BudgetOverviewStrip({ promises }: BudgetOverviewStripProps) {
     {
       label: isNe ? 'खर्च दर' : 'Utilization',
       value: `${utilizationRate}%`,
-      sub: `${withBudget.length} ${isNe ? 'वचन' : 'promises'}`,
+      sub: `${withBudget.length} ${isNe ? 'वचनबद्धता' : 'commitments'}`,
       icon: PieChart,
       color: utilizationRate >= 60 ? 'text-emerald-400' : utilizationRate >= 30 ? 'text-amber-400' : 'text-orange-400',
     },

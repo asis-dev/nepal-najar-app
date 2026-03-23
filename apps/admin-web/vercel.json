@@ -7,6 +7,10 @@
     {
       "path": "/api/intelligence/sweep?secret=${CRON_SECRET}&mode=rss-only",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/intelligence/worker?secret=${CRON_SECRET}&limit=10",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

@@ -6,6 +6,7 @@ import {
   Loader2, Newspaper, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useAllPromises } from '@/lib/hooks/use-promises';
+import { StatusRecommendationsPanel } from '@/components/dashboard/status-recommendations-panel';
 
 const STATUS_OPTIONS = ['not_started', 'in_progress', 'delivered', 'stalled'] as const;
 const STATUS_LABELS: Record<string, string> = {
@@ -29,7 +30,7 @@ const TRUST_BADGES: Record<string, { color: string; label: string }> = {
 };
 
 export default function VerificationPage() {
-  const { data: promises, isLoading, refetch } = useAllPromises();
+  const { data: promises, isLoading, refetch } = useAllPromises({ publicOnly: false });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'unverified' | 'verified'>('all');
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -88,7 +89,7 @@ export default function VerificationPage() {
         throw new Error(data.error || 'Failed to verify');
       }
 
-      setMessage({ type: 'success', text: 'Promise verified successfully.' });
+      setMessage({ type: 'success', text: 'Commitment verified successfully.' });
       setExpandedId(null);
       setFormState((prev) => {
         const next = { ...prev };
@@ -146,6 +147,8 @@ export default function VerificationPage() {
           </button>
         ))}
       </div>
+
+      <StatusRecommendationsPanel />
 
       {/* Status message */}
       {message && (

@@ -104,8 +104,8 @@ function SearchContent() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={
                 locale === 'ne'
-                  ? 'वाचा, विषय, वा विवरण खोज्नुहोस्...'
-                  : 'Search promises, categories, or descriptions...'
+                  ? 'वचनबद्धता, विषय, वा विवरण खोज्नुहोस्...'
+                  : 'Search commitments, categories, or descriptions...'
               }
               className="w-full bg-transparent text-white placeholder:text-gray-500 pl-12 pr-4 py-3.5 text-base outline-none"
               autoFocus
@@ -139,8 +139,8 @@ function SearchContent() {
             <FileSearch className="w-12 h-12 text-gray-600 mb-4" />
             <p className="text-gray-400 text-lg mb-1">
               {locale === 'ne'
-                ? 'वाचाहरू खोज्न सुरु गर्नुहोस्'
-                : 'Start searching promises'}
+                ? 'वचनबद्धताहरू खोज्न सुरु गर्नुहोस्'
+                : 'Start searching commitments'}
             </p>
             <p className="text-gray-500 text-sm">
               {locale === 'ne'

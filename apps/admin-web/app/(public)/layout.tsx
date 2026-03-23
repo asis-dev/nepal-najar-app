@@ -3,7 +3,6 @@
 import { TopNav } from '@/components/public/top-nav';
 import { Footer } from '@/components/public/footer';
 import { BottomNav } from '@/components/public/bottom-nav';
-import { ChatFAB } from '@/components/chat/chat-fab';
 import { HometownPicker } from '@/components/public/hometown-picker';
 import { CivicSkyBackground } from '@/components/ui/civic-sky-background';
 
@@ -19,7 +18,6 @@ export default function PublicLayout({
       <main className="relative z-10 flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
       <Footer />
       <BottomNav />
-      <ChatFAB />
       <HometownPicker />
     </div>
   );

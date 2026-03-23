@@ -240,7 +240,7 @@ export async function collectSocialEvidence(options?: {
 
   const minRelevance = options?.minRelevance ?? 0.5;
   const limit = options?.limit ?? 50;
-  const signalTypes = options?.signalTypes ?? ['tweet', 'post', 'article', 'press_release', 'hansard', 'speech'];
+  const signalTypes = options?.signalTypes ?? ['tweet', 'post', 'video', 'article', 'press_release', 'hansard', 'speech'];
 
   const errors: string[] = [];
   let signalsProcessed = 0;

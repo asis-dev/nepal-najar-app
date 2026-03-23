@@ -8,12 +8,12 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Target,
+  Activity,
+  AlertCircle,
   Calendar,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { getDailyPromise } from '@/lib/data/daily-promise';
-import { VoteWidget } from '@/components/public/vote-widget';
+import { useDailyActivity } from '@/lib/hooks/use-promises';
 import { Breadcrumb } from '@/components/public/breadcrumb';
 
 /* ===================================================
@@ -72,12 +72,10 @@ export default function DailyDatePage() {
     setHydrated(true);
   }, []);
 
-  // Parse the date and get the promise for that day
   const targetDate = useMemo(() => parseDate(dateParam), [dateParam]);
-
-  const promise = useMemo(() => getDailyPromise(targetDate), [targetDate]);
-
-  const style = statusStyles[promise.status] ?? statusStyles.not_started;
+  const { data: activity, isLoading: activityLoading } = useDailyActivity(dateParam);
+  const spotlight = activity?.activePromises?.[0];
+  const relatedActivity = (activity?.activePromises ?? []).slice(1, 5);
 
   // Previous and next day
   const prevDate = useMemo(() => {
@@ -189,90 +187,92 @@ export default function DailyDatePage() {
           </div>
         </section>
 
-        {/* Promise card */}
+        {/* Daily activity card */}
         <section className="public-section pt-0">
           <div className="public-shell">
             <div className="mx-auto max-w-2xl">
               <div className="glass-card p-6 sm:p-8">
                 <div className="flex items-center gap-2 mb-5">
-                  <Target className="w-5 h-5 text-primary-400" />
+                  <Activity className="w-5 h-5 text-primary-400" />
                   <h2 className="text-lg font-semibold text-white">
-                    {t('dailyStreak.todaysPromise')}
+                    {isNe ? 'यस मितिको मुख्य गतिविधि' : 'Top activity on this date'}
                   </h2>
                 </div>
 
-                {/* Status + Category */}
-                <div className="flex items-center gap-3 mb-4">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${style.bg} ${style.text}`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                    {t(statusLabelKeys[promise.status] ?? 'commitment.notStarted')}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {isNe
-                      ? `${promise.category_ne} / ${promise.category}`
-                      : `${promise.category} / ${promise.category_ne}`}
-                  </span>
-                </div>
-
-                {/* Title (bilingual) */}
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
-                  {isNe ? promise.title_ne : promise.title}
-                </h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  {isNe ? promise.title : promise.title_ne}
-                </p>
-
-                {/* Description */}
-                <p className="text-sm text-gray-400 leading-relaxed mb-5">
-                  {isNe ? promise.description_ne : promise.description}
-                </p>
-
-                {/* Progress */}
-                <div className="mb-5">
-                  {promise.progress > 0 ? (
-                    <>
-                      <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="text-gray-500">{t('commitment.progress')}</span>
-                        <span className="text-gray-300 font-medium">{promise.progress}%</span>
-                      </div>
-                      <div className="h-2.5 rounded-full overflow-hidden bg-white/[0.06]">
-                        <div
-                          className="h-full rounded-full transition-all duration-1000 ease-out"
-                          style={{
-                            width: `${promise.progress}%`,
-                            background: 'linear-gradient(90deg, #2563eb, #06b6d4)',
-                          }}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                      <p className="text-xs text-gray-500">
-                        {t('dailyStreak.noProgress')}
-                      </p>
-                      {promise.evidenceCount > 0 && (
-                        <p className="text-[10px] text-cyan-500/60 mt-1">
-                          {promise.evidenceCount} {t('dailyStreak.articlesMention')}
-                        </p>
-                      )}
+                {activityLoading ? (
+                  <div className="space-y-3">
+                    <div className="h-5 w-32 rounded bg-white/[0.06] animate-pulse" />
+                    <div className="h-6 w-3/4 rounded bg-white/[0.06] animate-pulse" />
+                    <div className="h-16 rounded bg-white/[0.04] animate-pulse" />
+                  </div>
+                ) : spotlight ? (
+                  <>
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400">
+                        <Activity className="w-3 h-3" />
+                        {spotlight.signalCount} {spotlight.signalCount === 1 ? t('dailyStreak.signal') : t('dailyStreak.signals')}
+                      </span>
+                      {spotlight.status ? (
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusStyles[spotlight.status]?.bg ?? statusStyles.not_started.bg} ${statusStyles[spotlight.status]?.text ?? statusStyles.not_started.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusStyles[spotlight.status]?.dot ?? statusStyles.not_started.dot}`} />
+                          {t(statusLabelKeys[spotlight.status] ?? 'commitment.notStarted')}
+                        </span>
+                      ) : null}
                     </div>
-                  )}
-                </div>
 
-                <VoteWidget promiseId={promise.id} variant="full" />
+                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
+                      {isNe ? spotlight.title_ne : spotlight.title}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {isNe ? spotlight.title : spotlight.title_ne}
+                    </p>
+                    <p className="text-sm text-gray-400 leading-relaxed mb-5">
+                      {spotlight.topHeadline || (isNe ? 'यस मितिमा यही प्रतिबद्धतामा सबैभन्दा बलियो सार्वजनिक संकेत देखियो।' : 'This commitment carried the strongest reviewed public signal on this date.')}
+                    </p>
 
-                {/* View full promise detail */}
-                <div className="mt-5 pt-4 border-t border-white/[0.06]">
-                  <Link
-                    href={`/explore/first-100-days/${promise.slug}`}
-                    className="inline-flex items-center gap-2 text-sm font-medium text-primary-300 hover:text-primary-200 transition-colors"
-                  >
-                    {isNe ? 'पूरा विवरण हेर्नुहोस्' : 'View full promise details'}
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
+                    <div className="mt-5 pt-4 border-t border-white/[0.06]">
+                      <Link
+                        href={`/explore/first-100-days/${spotlight.slug || spotlight.promiseId}`}
+                        className="inline-flex items-center gap-2 text-sm font-medium text-primary-300 hover:text-primary-200 transition-colors"
+                      >
+                        {isNe ? 'पूरा विवरण हेर्नुहोस्' : 'View full commitment details'}
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+
+                    {relatedActivity.length > 0 ? (
+                      <div className="mt-6 space-y-2">
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                          {isNe ? 'थप गतिविधि' : 'More activity'}
+                        </p>
+                        {relatedActivity.map((item) => (
+                          <Link
+                            key={item.promiseId}
+                            href={`/explore/first-100-days/${item.slug || item.promiseId}`}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-gray-300 transition-colors hover:bg-white/[0.05]"
+                          >
+                            <span className="truncate">{isNe ? item.title_ne : item.title}</span>
+                            <span className="shrink-0 text-xs text-emerald-400">
+                              {item.signalCount} {item.signalCount === 1 ? t('dailyStreak.signal') : t('dailyStreak.signals')}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-sm text-gray-400">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="w-4 h-4 text-gray-500" />
+                      <span>{isNe ? 'कुनै गतिविधि भेटिएन' : 'No activity found'}</span>
+                    </div>
+                    <p>
+                      {isNe
+                        ? 'यस मितिमा कुनै समीक्षा गरिएको प्रतिबद्धता गतिविधि रेकर्ड भएको छैन।'
+                        : 'No reviewed commitment activity was recorded on this date.'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -287,7 +287,7 @@ export default function DailyDatePage() {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200 shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_25px_rgba(59,130,246,0.25)]"
               >
                 <Calendar className="w-4 h-4" />
-                {isNe ? 'आजको बाचामा फर्कनुहोस्' : 'Back to Today'}
+                {isNe ? 'आजको गतिविधिमा फर्कनुहोस्' : 'Back to Today'}
               </Link>
             </div>
           </section>

@@ -8,16 +8,20 @@ import {
   Trophy,
   Share2,
   Calendar,
-  Target,
   Activity,
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  Eye,
+  Bell,
+  MapPin,
+  FileText,
+  ArrowUpRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useEngagementStore } from '@/lib/stores/engagement';
-import { getDailyPromise, getDailyPromiseHistory } from '@/lib/data/daily-promise';
-import { VoteWidget } from '@/components/public/vote-widget';
+import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences';
 import { PublicPageHero } from '@/components/public/page-hero';
 import { useDailyActivity } from '@/lib/hooks/use-promises';
 import type { DailyActivityPromise, DailyActivityInactive } from '@/lib/hooks/use-promises';
@@ -55,8 +59,23 @@ function formatDateLabel(dateStr: string, isNe: boolean): string {
 /* ===================================================
    CONSTANTS
    =================================================== */
-const TOTAL_PROMISES = 109;
 const INACTIVE_INITIAL_SHOW = 10;
+
+function getNepalDateString(date: Date = new Date()): string {
+  const nepalOffset = 5 * 60 + 45;
+  const utcMs = date.getTime() + date.getTimezoneOffset() * 60000;
+  const nepalDate = new Date(utcMs + nepalOffset * 60000);
+  return `${nepalDate.getFullYear()}-${String(nepalDate.getMonth() + 1).padStart(2, '0')}-${String(nepalDate.getDate()).padStart(2, '0')}`;
+}
+
+function getRecentDates(days: number): string[] {
+  const today = new Date();
+  return Array.from({ length: days }, (_, index) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - index);
+    return getNepalDateString(d);
+  });
+}
 
 /* ===================================================
    MAIN PAGE COMPONENT
@@ -67,6 +86,8 @@ export default function DailyPage() {
 
   const [hydrated, setHydrated] = useState(false);
   const [showAllInactive, setShowAllInactive] = useState(false);
+  const watchedProjectIds = useWatchlistStore((state) => state.watchedProjectIds);
+  const { province, hasSetHometown } = usePreferencesStore();
 
   const {
     currentStreak,
@@ -90,24 +111,25 @@ export default function DailyPage() {
     }
   }, [hydrated, recordVisit]);
 
-  // Get today's promise and history
-  const todayPromise = useMemo(() => getDailyPromise(), []);
-  const weekHistory = useMemo(() => getDailyPromiseHistory(7), []);
-
-  // Get today's date string for comparison
-  const todayDateStr = useMemo(() => {
-    const now = new Date();
-    const nepalOffset = 5 * 60 + 45;
-    const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-    const nepalDate = new Date(utcMs + nepalOffset * 60000);
-    return `${nepalDate.getFullYear()}-${nepalDate.getMonth() + 1}-${nepalDate.getDate()}`;
-  }, []);
-
-  const style = statusStyles[todayPromise.status] ?? statusStyles.not_started;
+  const todayDateStr = useMemo(() => getNepalDateString(), []);
+  const recentDates = useMemo(() => getRecentDates(7).reverse(), []);
 
   const totalActive = activity?.summary?.activeCount ?? 0;
   const totalInactive = activity?.summary?.inactiveCount ?? 0;
   const totalSignals = activity?.summary?.totalSignals ?? 0;
+  const totalCommitments = totalActive + totalInactive;
+  const spotlightActive = activity?.activePromises?.[0];
+  const spotlightInactive = !spotlightActive ? activity?.inactivePromises?.[0] : null;
+  const watchedActiveCount = useMemo(
+    () => (activity?.activePromises ?? []).filter((promise) => watchedProjectIds.includes(promise.promiseId)).length,
+    [activity, watchedProjectIds],
+  );
+  const watchedSignalCount = useMemo(
+    () => (activity?.activePromises ?? [])
+      .filter((promise) => watchedProjectIds.includes(promise.promiseId))
+      .reduce((sum, promise) => sum + promise.signalCount, 0),
+    [activity, watchedProjectIds],
+  );
 
   const visibleInactive = showAllInactive
     ? (activity?.inactivePromises ?? [])
@@ -202,7 +224,7 @@ export default function DailyPage() {
                           {totalActive}
                         </span>
                         <span className="text-xl text-gray-400 sm:text-2xl">
-                          {t('dailyStreak.of')} {TOTAL_PROMISES}
+                          {t('dailyStreak.of')} {totalCommitments}
                         </span>
                       </div>
                       <p className="text-base text-gray-400 sm:text-lg">
@@ -218,6 +240,82 @@ export default function DailyPage() {
                       )}
                     </>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="public-section pt-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-3xl grid gap-4 lg:grid-cols-3">
+              <div className="glass-card p-5">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                  <Eye className="h-4 w-4" />
+                  Watchlist loop
+                </div>
+                <p className="mt-3 text-2xl font-semibold text-white">{watchedActiveCount}</p>
+                <p className="mt-1 text-sm text-gray-400">watched commitments moved today</p>
+                <p className="mt-3 text-xs leading-6 text-gray-500">
+                  {watchedProjectIds.length > 0
+                    ? `${watchedSignalCount} signals landed on the commitments you care about most.`
+                    : 'Save commitments to your watchlist and daily activity becomes much more personal.'}
+                </p>
+                <Link
+                  href="/watchlist"
+                  className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary-300 transition-colors hover:text-primary-200"
+                >
+                  Open watchlist
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </div>
+
+              <div className="glass-card p-5">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                  <MapPin className="h-4 w-4" />
+                  Local lens
+                </div>
+                <p className="mt-3 text-lg font-semibold text-white">
+                  {hasSetHometown && province ? province : 'Set your area'}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-gray-400">
+                  {hasSetHometown && province
+                    ? 'Use your saved location to collapse the national feed into something closer to home.'
+                    : 'Save your province or district so the daily feed connects to your own geography.'}
+                </p>
+                <Link
+                  href={hasSetHometown ? '/affects-me' : '/explore'}
+                  className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary-300 transition-colors hover:text-primary-200"
+                >
+                  {hasSetHometown ? 'Open affects me' : 'Go set my area'}
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </div>
+
+              <div className="glass-card p-5">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+                  <ShieldCheck className="h-4 w-4" />
+                  Make it actionable
+                </div>
+                <p className="mt-3 text-lg font-semibold text-white">Reviewed movement, not noise</p>
+                <p className="mt-2 text-sm leading-6 text-gray-400">
+                  Use this page to spot what changed, then jump into watchlists, notifications, and feedback while the trail is still fresh.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link
+                    href="/notifications"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:bg-white/[0.08]"
+                  >
+                    <Bell className="h-3.5 w-3.5" />
+                    Notifications
+                  </Link>
+                  <Link
+                    href="/feedback"
+                    className="inline-flex items-center gap-2 rounded-full border border-primary-300/20 bg-primary-500/10 px-3 py-1.5 text-xs font-medium text-primary-100 transition-colors hover:bg-primary-500/15"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Feedback
+                  </Link>
                 </div>
               </div>
             </div>
@@ -262,11 +360,11 @@ export default function DailyPage() {
               ) : (
                 <div className="space-y-3">
                   {(activity?.activePromises ?? []).map((ap: DailyActivityPromise) => (
-                    <Link
-                      key={ap.promiseId}
-                      href={`/promises/${ap.slug || ap.promiseId}`}
-                      className="glass-card block p-4 sm:p-5 hover:border-emerald-500/30 transition-all duration-200 group"
-                    >
+                      <Link
+                        key={ap.promiseId}
+                        href={`/explore/first-100-days/${ap.slug || ap.promiseId}`}
+                        className="glass-card block p-4 sm:p-5 hover:border-emerald-500/30 transition-all duration-200 group"
+                      >
                       <div className="flex items-start gap-3">
                         {/* Pulsing green dot */}
                         <div className="relative mt-1.5 shrink-0">
@@ -346,7 +444,7 @@ export default function DailyPage() {
                     {visibleInactive.map((ip: DailyActivityInactive) => (
                       <Link
                         key={ip.promiseId}
-                        href={`/promises/${ip.slug || ip.promiseId}`}
+                        href={`/explore/first-100-days/${ip.slug || ip.promiseId}`}
                         className="glass-card block px-4 py-3 hover:border-gray-500/30 transition-all duration-200 group"
                       >
                         <div className="flex items-center gap-3">
@@ -462,80 +560,82 @@ export default function DailyPage() {
         </section>
 
         {/* ═══════════════════════════════════════════
-            TODAY'S PROMISE (secondary)
+            LIVE SPOTLIGHT (secondary)
             ═══════════════════════════════════════════ */}
         <section className="public-section pt-0">
           <div className="public-shell">
             <div className="mx-auto max-w-2xl">
               <div className="glass-card p-6 sm:p-8">
-              <div className="flex items-center gap-2 mb-5">
-                <Target className="w-5 h-5 text-primary-400" />
-                <h2 className="text-lg font-semibold text-white">
-                  {t('dailyStreak.todaysPromise')}
-                </h2>
-              </div>
+                <div className="flex items-center gap-2 mb-5">
+                  <Activity className="w-5 h-5 text-primary-400" />
+                  <h2 className="text-lg font-semibold text-white">
+                    {t('dailyStreak.todaysPromise')}
+                  </h2>
+                </div>
 
-              {/* Status + Category */}
-              <div className="flex items-center gap-3 mb-4">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${style.bg} ${style.text}`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                  {t(statusLabelKeys[todayPromise.status] ?? 'commitment.notStarted')}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {isNe
-                    ? `${todayPromise.category_ne} / ${todayPromise.category}`
-                    : `${todayPromise.category} / ${todayPromise.category_ne}`}
-                </span>
-              </div>
-
-              {/* Title (bilingual) */}
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
-                {isNe ? todayPromise.title_ne : todayPromise.title}
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {isNe ? todayPromise.title : todayPromise.title_ne}
-              </p>
-
-              {/* Description */}
-              <p className="text-sm text-gray-400 leading-relaxed mb-5">
-                {isNe ? todayPromise.description_ne : todayPromise.description}
-              </p>
-
-              {/* Progress — honest display */}
-              <div className="mb-5">
-                {todayPromise.progress > 0 ? (
+                {spotlightActive ? (
                   <>
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="text-gray-500">{t('commitment.progress')}</span>
-                      <span className="text-gray-300 font-medium">{todayPromise.progress}%</span>
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400">
+                        <Activity className="w-3 h-3" />
+                        {spotlightActive.signalCount} {spotlightActive.signalCount === 1 ? t('dailyStreak.signal') : t('dailyStreak.signals')}
+                      </span>
+                      {spotlightActive.status ? (
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusStyles[spotlightActive.status]?.bg ?? statusStyles.not_started.bg} ${statusStyles[spotlightActive.status]?.text ?? statusStyles.not_started.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusStyles[spotlightActive.status]?.dot ?? statusStyles.not_started.dot}`} />
+                          {t(statusLabelKeys[spotlightActive.status] ?? 'commitment.notStarted')}
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="h-2.5 rounded-full overflow-hidden bg-white/[0.06]">
-                      <div
-                        className="h-full rounded-full transition-all duration-1000 ease-out"
-                        style={{
-                          width: `${todayPromise.progress}%`,
-                          background: 'linear-gradient(90deg, #2563eb, #06b6d4)',
-                        }}
-                      />
+                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
+                      {isNe ? spotlightActive.title_ne : spotlightActive.title}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {isNe ? spotlightActive.title : spotlightActive.title_ne}
+                    </p>
+                    <p className="text-sm text-gray-400 leading-relaxed mb-5">
+                      {spotlightActive.topHeadline || (isNe ? 'आजको सबैभन्दा बलियो संकेत यही प्रतिबद्धतामा देखियो।' : 'The strongest reviewed signal today landed on this commitment.')}
+                    </p>
+                    <Link
+                      href={`/explore/first-100-days/${spotlightActive.slug || spotlightActive.promiseId}`}
+                      className="inline-flex items-center gap-2 rounded-xl border border-primary-500/30 bg-primary-500/12 px-4 py-2.5 text-sm font-medium text-primary-300 transition-colors hover:bg-primary-500/18"
+                    >
+                      {isNe ? 'प्रतिबद्धता खोल्नुहोस्' : 'Open commitment'}
+                    </Link>
+                  </>
+                ) : spotlightInactive ? (
+                  <>
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white/[0.04] text-gray-400 mb-4">
+                      <AlertCircle className="w-3 h-3" />
+                      {spotlightInactive.daysSinceLastActivity === null
+                        ? (isNe ? 'अहिलेसम्म कुनै गतिविधि रेकर्ड छैन' : 'No activity recorded yet')
+                        : `${spotlightInactive.daysSinceLastActivity} ${spotlightInactive.daysSinceLastActivity === 1 ? t('dailyStreak.daySince') : t('dailyStreak.daysSince')}`}
                     </div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
+                      {isNe ? spotlightInactive.title_ne : spotlightInactive.title}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {isNe ? spotlightInactive.title : spotlightInactive.title_ne}
+                    </p>
+                    <p className="text-sm text-gray-400 leading-relaxed mb-5">
+                      {isNe
+                        ? 'यो प्रतिबद्धतामा केही समयदेखि नयाँ गतिविधि देखिएको छैन।'
+                        : 'This commitment has gone quiet and may need a closer look.'}
+                    </p>
+                    <Link
+                      href={`/explore/first-100-days/${spotlightInactive.slug || spotlightInactive.promiseId}`}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/[0.08]"
+                    >
+                      {isNe ? 'प्रतिबद्धता खोल्नुहोस्' : 'Open commitment'}
+                    </Link>
                   </>
                 ) : (
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <p className="text-xs text-gray-500">
-                      {t('dailyStreak.noProgress')}
-                    </p>
-                    {todayPromise.evidenceCount > 0 && (
-                      <p className="text-[10px] text-cyan-500/60 mt-1">
-                        {todayPromise.evidenceCount} {t('dailyStreak.articlesMention')}
-                      </p>
-                    )}
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-sm text-gray-400">
+                    {isNe
+                      ? 'अझै कुनै दैनिक गतिविधि भेटिएको छैन।'
+                      : 'No reviewed daily activity has been recorded yet.'}
                   </div>
                 )}
-              </div>
-
-                <VoteWidget promiseId={todayPromise.id} variant="full" />
               </div>
             </div>
           </div>
@@ -553,29 +653,26 @@ export default function DailyPage() {
               </div>
 
               <div className="flex items-center justify-center gap-2 sm:gap-3">
-                {weekHistory.reverse().map((entry, idx) => {
-                  const dayLabel = formatDateLabel(entry.date, isNe);
-                  const isToday = entry.date === todayDateStr;
-                  const isVisited = entry.date === lastVisitDate || isToday;
-                  // Format date for URL: ensure YYYY-MM-DD with zero-padded values
-                  const parts = entry.date.split('-').map(Number);
-                  const linkDate = `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+                {recentDates.map((date, idx) => {
+                  const dayLabel = formatDateLabel(date, isNe);
+                  const isToday = date === todayDateStr;
+                  const isVisitedDay = date === lastVisitDate || isToday;
 
                   return (
                     <Link
                       key={idx}
-                      href={isToday ? '/daily' : `/daily/${linkDate}`}
+                      href={isToday ? '/daily' : `/daily/${date}`}
                       className="flex flex-col items-center gap-1.5 cursor-pointer group"
                     >
                       <span className="text-[10px] text-gray-500">{dayLabel}</span>
                       <div
                         className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 group-hover:border-primary-400 ${
-                          isVisited
+                          isVisitedDay
                             ? 'bg-emerald-500/20 border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                             : 'bg-white/[0.04] border-2 border-white/[0.08]'
                         }`}
                       >
-                        {isVisited ? (
+                        {isVisitedDay ? (
                           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                         ) : (
                           <div className="w-2 h-2 rounded-full bg-gray-600" />

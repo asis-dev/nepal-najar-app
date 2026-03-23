@@ -12,9 +12,14 @@ import {
   Link2,
   Calendar,
   Building2,
+  Activity,
+  Bell,
+  MapPin,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { useWatchlistStore } from '@/lib/stores/preferences';
+import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences';
+import { useAllPromises, useDailyActivity } from '@/lib/hooks/use-promises';
 import { promises, type GovernmentPromise } from '@/lib/data/promises';
 
 /* ===================================================
@@ -48,6 +53,18 @@ const categoryColors: Record<string, string> = {
   Social: 'text-pink-400',
 };
 
+function formatRelativeDate(dateString?: string | null): string {
+  if (!dateString) return 'Freshness unavailable';
+  const value = new Date(dateString);
+  if (Number.isNaN(value.getTime())) return 'Freshness unavailable';
+
+  const diffDays = Math.floor((Date.now() - value.getTime()) / 86400000);
+  if (diffDays <= 0) return 'Updated today';
+  if (diffDays === 1) return 'Updated yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 /* ===================================================
    MAIN PAGE COMPONENT
    =================================================== */
@@ -58,17 +75,39 @@ export default function WatchlistPage() {
   const [hydrated, setHydrated] = useState(false);
 
   const { watchedProjectIds, toggleWatch, clearWatchlist } = useWatchlistStore();
+  const { province, hasSetHometown } = usePreferencesStore();
+  const { data: livePromises } = useAllPromises();
+  const { data: dailyActivity } = useDailyActivity();
 
   // Hydration guard
   useEffect(() => {
     setHydrated(true);
   }, []);
 
+  const sourcePromises = livePromises?.length ? livePromises : promises;
+
   // Get watched promises
   const watchedPromises = useMemo(() => {
     if (!hydrated) return [];
-    return promises.filter((p) => watchedProjectIds.includes(p.id));
-  }, [hydrated, watchedProjectIds]);
+    return sourcePromises.filter((p) => watchedProjectIds.includes(p.id));
+  }, [hydrated, watchedProjectIds, sourcePromises]);
+
+  const activePromiseMap = useMemo(
+    () => new Map((dailyActivity?.activePromises ?? []).map((promise) => [promise.promiseId, promise])),
+    [dailyActivity],
+  );
+
+  const activeWatchedPromises = useMemo(
+    () => watchedPromises.filter((promise) => activePromiseMap.has(promise.id)),
+    [activePromiseMap, watchedPromises],
+  );
+
+  const totalWatchedSignals = useMemo(
+    () => activeWatchedPromises.reduce((sum, promise) => sum + (activePromiseMap.get(promise.id)?.signalCount ?? 0), 0),
+    [activePromiseMap, activeWatchedPromises],
+  );
+
+  const leadWatchedPromise = activeWatchedPromises[0] ?? watchedPromises[0];
 
   // Skeleton while hydrating
   if (!hydrated) {
@@ -144,6 +183,72 @@ export default function WatchlistPage() {
           </div>
         </section>
 
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(13,34,64,0.92),rgba(8,47,73,0.35))] shadow-[0_18px_70px_rgba(2,6,23,0.3)]">
+              <div className="grid gap-4 p-6 sm:p-7 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,0.85fr)]">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                    <Eye className="h-3.5 w-3.5" />
+                    Return here
+                  </div>
+                  <h2 className="mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                    {watchedPromises.length > 0
+                      ? `Your watchlist is tracking ${watchedPromises.length} commitments`
+                      : 'Your watchlist becomes the easiest reason to come back'}
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-gray-300 sm:text-base">
+                    {watchedPromises.length > 0
+                      ? `${activeWatchedPromises.length} watched commitments moved today with ${totalWatchedSignals} tracked signals. ${leadWatchedPromise ? `Lead watch: ${leadWatchedPromise.title}.` : ''}`
+                      : 'Save the commitments you care about and Nepal Najar starts feeling personal instead of generic.'}
+                  </p>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <Link
+                      href="/daily"
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
+                    >
+                      Open daily changes
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Link>
+                    <Link
+                      href="/notifications"
+                      className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-100 transition-colors hover:bg-cyan-500/15"
+                    >
+                      Notifications
+                      <Bell className="h-4 w-4" />
+                    </Link>
+                    <Link
+                      href={hasSetHometown ? '/affects-me' : '/explore/first-100-days'}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08]"
+                    >
+                      {hasSetHometown && province ? `${province} lens` : 'Browse tracker'}
+                      <MapPin className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-300">Active today</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">{activeWatchedPromises.length}</p>
+                    <p className="mt-1 text-xs text-gray-400">watched commitments moved</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Signals</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">{totalWatchedSignals}</p>
+                    <p className="mt-1 text-xs text-gray-400">today across your watchlist</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300">Saved</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">{watchedPromises.length}</p>
+                    <p className="mt-1 text-xs text-gray-400">commitments you are following</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Watchlist Content */}
         <section className="px-4 sm:px-6 lg:px-8 pb-16">
           <div className="max-w-3xl mx-auto">
@@ -175,9 +280,20 @@ export default function WatchlistPage() {
                   return (
                     <div
                       key={promise.id}
-                      className="glass-card-hover p-5 sm:p-6 relative group"
+                      className="glass-card-hover p-5 sm:p-6 relative group overflow-hidden"
                       style={{ animationDelay: `${idx * 60}ms` }}
                     >
+                      <div
+                        className="absolute inset-x-0 top-0 h-[2px] opacity-70"
+                        style={{
+                          background:
+                            promise.status === 'delivered'
+                              ? 'linear-gradient(90deg, rgba(16,185,129,0.05), rgba(16,185,129,0.8), rgba(52,211,153,0.1))'
+                              : promise.status === 'stalled'
+                                ? 'linear-gradient(90deg, rgba(239,68,68,0.05), rgba(248,113,113,0.8), rgba(239,68,68,0.1))'
+                                : 'linear-gradient(90deg, rgba(37,99,235,0.05), rgba(34,211,238,0.8), rgba(59,130,246,0.1))',
+                        }}
+                      />
                       <div className="flex items-start gap-4">
                         {/* Main content (clickable link) */}
                         <Link
@@ -206,6 +322,21 @@ export default function WatchlistPage() {
                           <p className="text-sm text-gray-500 mb-4">
                             {isNe ? promise.title : promise.title_ne}
                           </p>
+
+                          <div className="mb-3 flex flex-wrap gap-2 text-[11px]">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-gray-300">
+                              <Activity className="h-3 w-3 text-cyan-300" />
+                              {activePromiseMap.has(promise.id)
+                                ? `${activePromiseMap.get(promise.id)?.signalCount ?? 0} signals today`
+                                : formatRelativeDate(promise.lastActivityDate || promise.lastSignalAt || promise.lastUpdate)}
+                            </span>
+                            {promise.actors?.[0] ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-gray-300">
+                                <Building2 className="h-3 w-3 text-emerald-300" />
+                                {promise.actors[0]}
+                              </span>
+                            ) : null}
+                          </div>
 
                           {/* Progress bar */}
                           <div className="mb-3">
@@ -244,7 +375,7 @@ export default function WatchlistPage() {
                             </span>
                             <span className="inline-flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
-                              {promise.lastUpdate}
+                              {formatRelativeDate(promise.lastActivityDate || promise.lastSignalAt || promise.lastUpdate)}
                             </span>
                           </div>
                         </Link>

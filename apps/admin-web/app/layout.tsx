@@ -31,6 +31,13 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   ...createMetadata(),
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({

@@ -119,10 +119,10 @@ function ComparePageInner() {
 
       {/* Title */}
       <h1 className="mb-2 text-2xl font-bold text-white sm:text-3xl">
-        {isNe ? 'प्रतिज्ञा तुलना' : 'Compare Promises'}
+        {isNe ? 'वचनबद्धता तुलना' : 'Compare Commitments'}
       </h1>
       <p className="mb-8 text-gray-400">
-        {isNe ? 'चयन गरिएका प्रतिज्ञाहरूको साथसाथै तुलना' : 'Side-by-side comparison of selected promises'}
+        {isNe ? 'चयन गरिएका वचनबद्धताहरूको साथसाथै तुलना' : 'Side-by-side comparison of selected commitments'}
       </p>
 
       {/* Empty state */}
@@ -130,18 +130,18 @@ function ComparePageInner() {
         <div className="glass-card flex flex-col items-center justify-center rounded-2xl px-8 py-16 text-center">
           <BarChart3 className="mb-4 h-12 w-12 text-gray-500" />
           <h2 className="mb-2 text-lg font-semibold text-white">
-            {isNe ? 'कुनै प्रतिज्ञा चयन भएको छैन' : 'No promises selected'}
+            {isNe ? 'कुनै वचनबद्धता चयन भएको छैन' : 'No commitments selected'}
           </h2>
           <p className="mb-6 max-w-md text-gray-400">
             {isNe
-              ? 'अन्वेषण पृष्ठबाट ४ वटासम्म प्रतिज्ञाहरू चयन गर्नुहोस्।'
-              : 'Select up to 4 promises from the explore page to compare them side by side.'}
+              ? 'अन्वेषण पृष्ठबाट ४ वटासम्म वचनबद्धताहरू चयन गर्नुहोस्।'
+              : 'Select up to 4 commitments from the explore page to compare them side by side.'}
           </p>
           <Link
             href="/explore"
             className="glass-card glass-card-hover rounded-full px-6 py-2.5 text-sm font-medium text-white transition-all"
           >
-            {isNe ? 'प्रतिज्ञाहरू हेर्नुहोस्' : 'Browse Promises'}
+            {isNe ? 'वचनबद्धताहरू हेर्नुहोस्' : 'Browse Commitments'}
           </Link>
         </div>
       )}

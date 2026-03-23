@@ -32,16 +32,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: `${SITE_URL}/explore/chat`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/explore/first-100-days`,
+      url: `${SITE_URL}/daily`,
       lastModified: now,
       changeFrequency: 'daily',
-      priority: 0.9,
+      priority: 0.8,
+    },
+    {
+      url: `${SITE_URL}/report-card`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
     },
   ];
 

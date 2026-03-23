@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 const SITE_NAME = 'Nepal Najar — नेपाल नजर';
-const SITE_DESCRIPTION = 'जनताको नजरमा Balenको Nepal — The public eye on Balen\'s Nepal. Track development projects, government promises, and progress across all 7 provinces.';
+const SITE_DESCRIPTION = 'जनताको नजरमा Balenको Nepal — The public eye on Balen\'s Nepal. Track development projects, government commitments, and progress across all 7 provinces.';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://nepalnajar.com';
 
 export function createMetadata(overrides?: {

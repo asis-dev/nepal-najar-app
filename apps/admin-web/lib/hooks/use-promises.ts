@@ -9,12 +9,16 @@ import { useQuery } from '@tanstack/react-query';
 import { hasPublicSupabaseConfig, supabasePublic } from '@/lib/supabase/client';
 import {
   promises as staticPromises,
-  computeStats,
   type GovernmentPromise,
   type PromiseStatus,
 } from '@/lib/data/promises';
+import { isPublicCommitment, toPublicCommitment } from '@/lib/data/commitments';
 
 const supabaseConfigured = hasPublicSupabaseConfig;
+
+interface UseAllPromisesOptions {
+  publicOnly?: boolean;
+}
 
 /* ───────── Map Supabase row → GovernmentPromise ───────── */
 function mapPromise(p: Record<string, unknown>): GovernmentPromise {
@@ -23,6 +27,8 @@ function mapPromise(p: Record<string, unknown>): GovernmentPromise {
     slug: p.slug as string,
     title: p.title as string,
     title_ne: p.title_ne as string,
+    summary: (p.summary || p.description || '') as string,
+    summary_ne: (p.summary_ne || p.description_ne || '') as string,
     category: p.category as GovernmentPromise['category'],
     category_ne: (p.category_ne || '') as string,
     status: p.status as GovernmentPromise['status'],
@@ -34,6 +40,16 @@ function mapPromise(p: Record<string, unknown>): GovernmentPromise {
     description_ne: (p.description_ne ?? '') as string,
     trustLevel: p.trust_level as GovernmentPromise['trustLevel'],
     signalType: (p.signal_type || 'inferred') as GovernmentPromise['signalType'],
+    reviewState: (p.review_state || 'reviewed') as GovernmentPromise['reviewState'],
+    isPublic: p.is_public !== false,
+    scope: (p.scope || p.geo_scope || 'unknown') as GovernmentPromise['scope'],
+    actors: (p.actors || []) as string[],
+    sourceCount: (p.source_count ?? 0) as number,
+    lastSignalAt: p.last_signal_at as string | undefined,
+    publishedAt: p.published_at as string | undefined,
+    originSignalId: p.origin_signal_id as string | undefined,
+    mergedIntoId: p.merged_into_id as string | undefined,
+    reviewNotes: p.review_notes as string | undefined,
     deadline: p.deadline as string | undefined,
     estimatedBudgetNPR: p.estimated_budget_npr as number | undefined,
     spentNPR: p.spent_npr as number | undefined,
@@ -63,10 +79,31 @@ export interface ScrapedArticle {
 /* ═══════════════════════════════════════════
    HOOK: useAllPromises
    ═══════════════════════════════════════════ */
-export function useAllPromises() {
+export function useAllPromises(options?: UseAllPromisesOptions) {
+  const publicOnly = options?.publicOnly ?? true;
+
   return useQuery({
-    queryKey: ['promises'],
+    queryKey: ['promises', publicOnly ? 'public' : 'all'],
     queryFn: async (): Promise<GovernmentPromise[]> => {
+      if (publicOnly) {
+        try {
+          const res = await fetch('/api/commitments?limit=250&format=full');
+          if (!res.ok) {
+            throw new Error(`Failed to fetch public commitments: ${res.status}`);
+          }
+          const payload = (await res.json()) as {
+            commitments?: GovernmentPromise[];
+          };
+          if (Array.isArray(payload.commitments) && payload.commitments.length > 0) {
+            return payload.commitments;
+          }
+        } catch (err) {
+          console.warn('[useAllPromises] Public commitments fetch failed, using fallback:', err);
+        }
+
+        return staticPromises.filter((promise) => isPublicCommitment(promise));
+      }
+
       if (!supabaseConfigured) return staticPromises;
       if (!supabasePublic) return staticPromises;
 
@@ -111,23 +148,58 @@ export function useAllPromises() {
 /* ═══════════════════════════════════════════
    HOOK: usePromiseStats — aggregate counts
    ═══════════════════════════════════════════ */
-export function usePromiseStats() {
-  const { data: promises, isLoading } = useAllPromises();
+export function usePromiseStats(options?: UseAllPromisesOptions) {
+  const { data: promises, isLoading } = useAllPromises(options);
+  const publicPromises = promises?.filter((promise) => isPublicCommitment(promise));
 
-  const stats = promises
+  const stats = publicPromises
     ? {
-        total: promises.length,
-        delivered: promises.filter((p) => p.status === 'delivered').length,
-        inProgress: promises.filter((p) => p.status === 'in_progress').length,
-        stalled: promises.filter((p) => p.status === 'stalled').length,
-        notStarted: promises.filter((p) => p.status === 'not_started').length,
-        avgProgress: Math.round(
-          promises.reduce((sum, p) => sum + p.progress, 0) / promises.length
-        ),
+        total: publicPromises.length,
+        delivered: publicPromises.filter((p) => p.status === 'delivered').length,
+        inProgress: publicPromises.filter((p) => p.status === 'in_progress').length,
+        stalled: publicPromises.filter((p) => p.status === 'stalled').length,
+        notStarted: publicPromises.filter((p) => p.status === 'not_started').length,
+        avgProgress: publicPromises.length > 0
+          ? Math.round(
+              publicPromises.reduce((sum, p) => sum + p.progress, 0) / publicPromises.length
+            )
+          : 0,
       }
     : null;
 
   return { stats, isLoading };
+}
+
+export function usePublicCommitments() {
+  const { data: promises, isLoading } = useAllPromises({ publicOnly: true });
+
+  return {
+    data: promises
+      ? promises.filter((commitment) => isPublicCommitment(commitment)).map((commitment) => toPublicCommitment(commitment))
+      : undefined,
+    isLoading,
+  };
+}
+
+export function usePublicCommitmentStats() {
+  const { data: commitments, isLoading } = usePublicCommitments();
+
+  const stats = commitments
+    ? {
+        total: commitments.length,
+        delivered: commitments.filter((commitment) => commitment.status === 'delivered').length,
+        inProgress: commitments.filter((commitment) => commitment.status === 'in_progress').length,
+        stalled: commitments.filter((commitment) => commitment.status === 'stalled').length,
+        notStarted: commitments.filter((commitment) => commitment.status === 'not_started').length,
+        avgProgress: commitments.length > 0
+          ? Math.round(
+              commitments.reduce((sum, commitment) => sum + commitment.progress, 0) / commitments.length
+            )
+          : 0,
+      }
+    : null;
+
+  return { stats, isLoading, total: commitments?.length ?? 0 };
 }
 
 /* ═══════════════════════════════════════════
@@ -190,7 +262,7 @@ export function useArticleCount() {
    HOOK: usePromisesByCategory — for province/category views
    ═══════════════════════════════════════════ */
 export function usePromisesByCategory() {
-  const { data: promises } = useAllPromises();
+  const { data: promises } = useAllPromises({ publicOnly: true });
 
   if (!promises) return { categories: [], isLoading: true };
 
@@ -219,6 +291,8 @@ export interface DailyActivityPromise {
   title: string;
   title_ne: string;
   slug: string;
+  status?: PromiseStatus;
+  category?: string;
   signalCount: number;
   confirmsCount: number;
   contradictsCount: number;

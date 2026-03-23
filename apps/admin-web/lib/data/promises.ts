@@ -14,6 +14,8 @@
 export type PromiseStatus = 'not_started' | 'in_progress' | 'delivered' | 'stalled';
 export type TrustLevel = 'verified' | 'partial' | 'unverified' | 'disputed';
 export type SignalType = 'official' | 'discovered' | 'reported' | 'inferred';
+export type CommitmentReviewState = 'candidate' | 'reviewed' | 'published' | 'rejected';
+export type CommitmentScope = 'national' | 'provincial' | 'district' | 'municipal' | 'unknown';
 export type PromiseCategory =
   | 'Governance'
   | 'Anti-Corruption'
@@ -32,6 +34,8 @@ export interface GovernmentPromise {
   slug: string;
   title: string;
   title_ne: string;
+  summary?: string;
+  summary_ne?: string;
   category: PromiseCategory;
   category_ne: string;
   status: PromiseStatus;
@@ -44,6 +48,22 @@ export interface GovernmentPromise {
   trustLevel: TrustLevel;
   /** How the data was sourced */
   signalType: SignalType;
+  /** Review boundary between discovered candidates and public commitments */
+  reviewState?: CommitmentReviewState;
+  /** Whether this record should appear on the public site */
+  isPublic?: boolean;
+  /** Canonical scope for the public read model */
+  scope?: CommitmentScope;
+  /** Public-facing responsible actors */
+  actors?: string[];
+  /** Number of distinct sources contributing evidence */
+  sourceCount?: number;
+  /** Most recent signal observed by the intelligence engine */
+  lastSignalAt?: string;
+  publishedAt?: string;
+  originSignalId?: string;
+  mergedIntoId?: string;
+  reviewNotes?: string;
   deadline?: string;
   /** Estimated budget in NPR (lakhs) */
   estimatedBudgetNPR?: number;
@@ -2557,14 +2577,14 @@ export function getNewsForPromise(_promiseId: string): MockNewsArticle[] {
 }
 
 /** Compute overall stats */
-export function computeStats() {
-  const total = promises.length;
-  const delivered = promises.filter((p) => p.status === 'delivered').length;
-  const inProgress = promises.filter((p) => p.status === 'in_progress').length;
-  const stalled = promises.filter((p) => p.status === 'stalled').length;
-  const notStarted = promises.filter((p) => p.status === 'not_started').length;
+export function computeStats(records: GovernmentPromise[] = promises) {
+  const total = records.length;
+  const delivered = records.filter((p) => p.status === 'delivered').length;
+  const inProgress = records.filter((p) => p.status === 'in_progress').length;
+  const stalled = records.filter((p) => p.status === 'stalled').length;
+  const notStarted = records.filter((p) => p.status === 'not_started').length;
   const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
-  const avgProgress = total > 0 ? Math.round(promises.reduce((sum, p) => sum + p.progress, 0) / total) : 0;
+  const avgProgress = total > 0 ? Math.round(records.reduce((sum, p) => sum + p.progress, 0) / total) : 0;
 
   return { total, delivered, inProgress, stalled, notStarted, deliveryRate, avgProgress };
 }

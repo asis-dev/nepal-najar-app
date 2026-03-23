@@ -24,9 +24,13 @@ import {
   Fingerprint,
   Briefcase,
   Users,
+  ArrowRight,
+  Eye,
+  Bell,
+  Sparkles,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { usePreferencesStore } from '@/lib/stores/preferences';
+import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences';
 import { useAllPromises } from '@/lib/hooks/use-promises';
 import { categorizePromises } from '@/lib/utils/geo-relevance';
 import type { GovernmentPromise, PromiseStatus } from '@/lib/data/promises';
@@ -162,23 +166,47 @@ function SetLocationPrompt() {
   const { setShowPicker } = usePreferencesStore();
 
   return (
-    <div className="glass-card p-8 text-center">
+    <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(13,34,64,0.92),rgba(8,47,73,0.35))] p-8 text-center shadow-[0_18px_70px_rgba(2,6,23,0.3)]">
       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-cyan-500 flex items-center justify-center mx-auto mb-4 shadow-glow-sm">
         <MapPin className="w-8 h-8 text-white" />
       </div>
       <h2 className="text-xl font-bold text-white mb-2">
         {t('affectsMe.title')}
       </h2>
-      <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
+      <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto leading-7">
         {t('affectsMe.setLocation')}
       </p>
-      <button
-        onClick={() => setShowPicker(true)}
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-cyan-500 text-white font-semibold text-sm hover:shadow-glow transition-all duration-200"
-      >
-        <MapPin className="w-4 h-4" />
-        {t('affectsMe.changeLocation')}
-      </button>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          onClick={() => setShowPicker(true)}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-cyan-500 text-white font-semibold text-sm hover:shadow-glow transition-all duration-200"
+        >
+          <MapPin className="w-4 h-4" />
+          {t('affectsMe.changeLocation')}
+        </button>
+        <Link
+          href="/daily"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08]"
+        >
+          What changed today
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3 text-left">
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Close to home</p>
+          <p className="mt-2 text-sm leading-6 text-gray-300">See which commitments directly affect your place.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-300">Come back faster</p>
+          <p className="mt-2 text-sm leading-6 text-gray-300">Turn the national tracker into something personal and useful.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300">Follow locally</p>
+          <p className="mt-2 text-sm leading-6 text-gray-300">Pair your area with watchlists and notifications for a stronger daily loop.</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -249,12 +277,22 @@ function RelevanceSection({
 export default function AffectsMePage() {
   const { t, locale } = useI18n();
   const { province, district, hasSetHometown, setShowPicker } = usePreferencesStore();
+  const watchedProjectIds = useWatchlistStore((state) => state.watchedProjectIds);
   const { data: allPromises, isLoading } = useAllPromises();
 
   const { direct, indirect, other } = useMemo(() => {
     if (!allPromises) return { direct: [], indirect: [], other: [] };
     return categorizePromises(allPromises, province, district);
   }, [allPromises, province, district]);
+
+  const watchedLocalCount = useMemo(
+    () => direct.filter((promise) => watchedProjectIds.includes(promise.id)).length,
+    [direct, watchedProjectIds],
+  );
+  const livingLocalCount = useMemo(
+    () => direct.filter((promise) => promise.status === 'in_progress' || promise.status === 'delivered').length,
+    [direct],
+  );
 
   return (
     <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 max-w-3xl mx-auto">
@@ -296,6 +334,64 @@ export default function AffectsMePage() {
         </div>
       ) : (
         <>
+          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(13,34,64,0.92),rgba(8,47,73,0.35))] shadow-[0_18px_70px_rgba(2,6,23,0.3)] mb-6">
+            <div className="grid gap-4 p-6 sm:p-7 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,0.85fr)]">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Your civic brief
+                </div>
+                <h2 className="mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                  {province}{district ? ` / ${district}` : ''} inside Nepal Najar
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-gray-300 sm:text-base">
+                  {direct.length} commitments are directly relevant here, {indirect.length} have indirect spillover, and {watchedLocalCount} are already in your watchlist.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link
+                    href="/daily"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
+                  >
+                    What changed today
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/watchlist"
+                    className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-100 transition-colors hover:bg-cyan-500/15"
+                  >
+                    Open watchlist
+                    <Eye className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/notifications"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08]"
+                  >
+                    Notifications
+                    <Bell className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">Direct</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">{direct.length}</p>
+                  <p className="mt-1 text-xs text-gray-400">commitments tied closely to your area</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300">Moving</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">{livingLocalCount}</p>
+                  <p className="mt-1 text-xs text-gray-400">already in progress or delivered</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-300">Watched</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">{watchedLocalCount}</p>
+                  <p className="mt-1 text-xs text-gray-400">local commitments you are following</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Summary strip */}
           <div className="glass-card p-4 mb-6 flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
@@ -344,6 +440,14 @@ export default function AffectsMePage() {
             accent="gray"
             defaultOpen={false}
           />
+
+          <div className="glass-card p-6 mt-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-primary-300">Why return here</p>
+            <h3 className="mt-3 text-xl font-semibold text-white">This page should get sharper as your place matters more</h3>
+            <p className="mt-3 text-sm leading-7 text-gray-300">
+              Nepal Najar becomes much more useful once the national story collapses into your own geography. Keep your location saved, watch the commitments that matter most, and use this page as your local starting point.
+            </p>
+          </div>
         </>
       )}
     </div>

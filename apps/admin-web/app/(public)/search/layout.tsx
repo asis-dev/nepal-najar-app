@@ -2,7 +2,7 @@ import { createMetadata } from '@/lib/seo';
 
 export const metadata = createMetadata({
   title: 'Search',
-  description: 'Search across all government promises, evidence, and news coverage.',
+  description: 'Search across all government commitments, evidence, and news coverage.',
   path: '/search',
 });
 

@@ -20,6 +20,22 @@ import { batchTranslateNepaliSignals } from './translate';
 import { collectSocialEvidence } from './evidence/social-collector';
 import { syncPromiseStatuses } from './promise-status-sync';
 import { computeDailyActivityRollup } from './daily-activity-rollup';
+import { deduplicateSignals } from './dedup';
+import { scrapeFacebookPages } from './collectors/facebook-scraper';
+import { scrapeTikTok } from './collectors/tiktok-scraper';
+import { scrapeReddit } from './collectors/reddit-scraper';
+import { scrapeTelegram } from './collectors/telegram-scraper';
+import { scrapeThreads } from './collectors/threads-scraper';
+import { scrapeParliamentAndGazette } from './collectors/parliament-scraper';
+import { scrapeX } from './collectors/x-scraper';
+import { scrapeGoogleTrends } from './collectors/google-trends';
+import { computePulse, computeTrending } from './trending';
+import {
+  enqueueSignalAnalysisJobs,
+  enqueueDiscoveryJobsForSignals,
+  enqueueStatusPipelineJob,
+  processIntelligenceJobs,
+} from './jobs';
 
 async function upsertDailyQualityMetrics() {
   const supabase = getSupabase();
@@ -60,6 +76,110 @@ async function upsertDailyQualityMetrics() {
   );
 }
 
+async function cleanupStaleSweeps(maxAgeMinutes = 20): Promise<number> {
+  const supabase = getSupabase();
+  const cutoffIso = new Date(
+    Date.now() - maxAgeMinutes * 60_000,
+  ).toISOString();
+
+  const { data: staleSweeps, error } = await supabase
+    .from('intelligence_sweeps')
+    .select('id, started_at')
+    .eq('status', 'running')
+    .lt('started_at', cutoffIso);
+
+  if (error || !staleSweeps || staleSweeps.length === 0) {
+    return 0;
+  }
+
+  const staleIds = staleSweeps.map((row) => row.id);
+  const { error: updateError } = await supabase
+    .from('intelligence_sweeps')
+    .update({
+      status: 'failed',
+      finished_at: new Date().toISOString(),
+      summary: 'Sweep marked failed after exceeding stale runtime threshold.',
+    })
+    .in('id', staleIds);
+
+  if (updateError) {
+    console.warn('[Sweep] Failed to mark stale sweeps:', updateError.message);
+    return 0;
+  }
+
+  return staleIds.length;
+}
+
+async function markDiscoveryOnlySignalsProcessed(): Promise<number> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('intelligence_signals')
+    .select('id, matched_promise_ids')
+    .eq('tier1_processed', true)
+    .eq('tier3_processed', false)
+    .gte('relevance_score', 0.3)
+    .limit(500);
+
+  if (error || !data) {
+    return 0;
+  }
+
+  const ids = data
+    .filter((row) => Array.isArray(row.matched_promise_ids) && row.matched_promise_ids.length === 0)
+    .map((row) => row.id as string);
+
+  if (ids.length === 0) {
+    return 0;
+  }
+
+  const { error: updateError } = await supabase
+    .from('intelligence_signals')
+    .update({
+      tier3_processed: true,
+      review_required: true,
+      review_notes: 'Skipped Tier 3 because the signal is relevant but currently unmatched; routed to discovery/review instead.',
+    })
+    .in('id', ids);
+
+  if (updateError) {
+    console.warn('[Sweep] Failed to mark discovery-only signals:', updateError.message);
+    return 0;
+  }
+
+  return ids.length;
+}
+
+async function getAnalysisBacklog(): Promise<{
+  unclassified: number;
+  tier3Pending: number;
+  total: number;
+}> {
+  const supabase = getSupabase();
+
+  const { count: unclassifiedCount } = await supabase
+    .from('intelligence_signals')
+    .select('id', { count: 'exact', head: true })
+    .eq('tier1_processed', false);
+
+  const { data: tier3Candidates } = await supabase
+    .from('intelligence_signals')
+    .select('matched_promise_ids')
+    .eq('tier1_processed', true)
+    .eq('tier3_processed', false)
+    .gte('relevance_score', 0.3)
+    .limit(1000);
+
+  const tier3Pending = (tier3Candidates || []).filter(
+    (row) => Array.isArray(row.matched_promise_ids) && row.matched_promise_ids.length > 0,
+  ).length;
+
+  return {
+    unclassified: unclassifiedCount || 0,
+    tier3Pending,
+    total: (unclassifiedCount || 0) + tier3Pending,
+  };
+}
+
 interface SweepResult {
   sweepId: string;
   status: 'completed' | 'partial' | 'failed';
@@ -70,6 +190,7 @@ interface SweepResult {
       videosFound: number;
       newVideos: number;
       captionsExtracted: number;
+      groqTranscriptions: number;
       errors: string[];
     };
     search: {
@@ -91,6 +212,16 @@ interface SweepResult {
       newArticles: number;
       errors: string[];
     };
+    tiktok: { videosFound: number; newVideos: number; errors: string[] };
+    reddit: { postsFound: number; newPosts: number; errors: string[] };
+    telegram: { messagesFound: number; newMessages: number; errors: string[] };
+    threads: { postsFound: number; newPosts: number; errors: string[] };
+    parliament: { documentsFound: number; newDocuments: number; errors: string[] };
+    x: { postsFound: number; newPosts: number; errors: string[] };
+    googleTrends: { trendsFound: number; newTrends: number; errors: string[] };
+  };
+  trending: {
+    pulseScore: number;
   };
   analysis: {
     tier1Processed: number;
@@ -129,6 +260,18 @@ export async function runFullSweep(
     sweepType = 'manual',
     rssOnly = false,
   } = options;
+  const sweepStartedAtIso = new Date().toISOString();
+  const autoSyncPromiseStatuses =
+    process.env.INTELLIGENCE_AUTO_STATUS_SYNC === 'true';
+  const inlineStatusWorker =
+    process.env.INTELLIGENCE_INLINE_STATUS_WORKER === 'true';
+  const inlineAnalysisWorker =
+    process.env.INTELLIGENCE_INLINE_ANALYSIS_WORKER === 'true';
+
+  const staleSweepsClosed = await cleanupStaleSweeps();
+  if (staleSweepsClosed > 0) {
+    console.warn(`[Sweep] Closed ${staleSweepsClosed} stale sweep record(s) before starting a new run.`);
+  }
 
   // Create sweep record
   const { data: sweep } = await supabase
@@ -152,6 +295,7 @@ export async function runFullSweep(
         videosFound: 0,
         newVideos: 0,
         captionsExtracted: 0,
+        groqTranscriptions: 0,
         errors: [],
       },
       search: {
@@ -163,6 +307,16 @@ export async function runFullSweep(
       social: { postsFound: 0, newPosts: 0, errors: [] },
       apify: { profilesScraped: 0, totalPosts: 0, newPosts: 0, videosWithTranscript: 0, errors: [] },
       legacy: { articlesFound: 0, newArticles: 0, errors: [] },
+      tiktok: { videosFound: 0, newVideos: 0, errors: [] },
+      reddit: { postsFound: 0, newPosts: 0, errors: [] },
+      telegram: { messagesFound: 0, newMessages: 0, errors: [] },
+      threads: { postsFound: 0, newPosts: 0, errors: [] },
+      parliament: { documentsFound: 0, newDocuments: 0, errors: [] },
+      x: { postsFound: 0, newPosts: 0, errors: [] },
+      googleTrends: { trendsFound: 0, newTrends: 0, errors: [] },
+    },
+    trending: {
+      pulseScore: 0,
     },
     analysis: {
       tier1Processed: 0,
@@ -184,6 +338,8 @@ export async function runFullSweep(
   };
 
   try {
+    let analysisQueued = false;
+
     // ===== COLLECTION PHASE =====
     if (!skipCollection) {
       console.log(`[Sweep] Starting collection phase...${rssOnly ? ' (RSS-only mode)' : ''}`);
@@ -234,6 +390,82 @@ export async function runFullSweep(
           );
         }
 
+        // Run Facebook page scraper (Apify or DuckDuckGo fallback)
+        try {
+          const fbResult = await scrapeFacebookPages();
+          result.collection.social.postsFound += fbResult.postsFound;
+          result.collection.social.newPosts += fbResult.newPosts;
+          if (fbResult.errors.length > 0) {
+            result.collection.social.errors.push(...fbResult.errors.map(e => `[Facebook] ${e}`));
+          }
+          console.log(`[Sweep] Facebook: ${fbResult.newPosts} new posts from ${fbResult.postsFound} found`);
+        } catch (err) {
+          result.collection.social.errors.push(
+            `Facebook scraper: ${err instanceof Error ? err.message : 'error'}`,
+          );
+        }
+
+        // Run X (Twitter) scraper
+        try {
+          const xResult = await scrapeX();
+          result.collection.x = {
+            postsFound: xResult.tweetsFound,
+            newPosts: xResult.newTweets,
+            errors: xResult.errors,
+          };
+          console.log(
+            `[Sweep] X: ${xResult.newTweets} new posts from ${xResult.tweetsFound} found`,
+          );
+        } catch (err) {
+          result.collection.x.errors.push(
+            `X scraper: ${err instanceof Error ? err.message : 'error'}`,
+          );
+        }
+
+        // Run Threads scraper
+        try {
+          const threadsResult = await scrapeThreads();
+          result.collection.threads = threadsResult;
+          console.log(`[Sweep] Threads: ${threadsResult.newPosts} new posts from ${threadsResult.postsFound} found`);
+        } catch (err) {
+          result.collection.threads.errors.push(
+            `Threads scraper: ${err instanceof Error ? err.message : 'error'}`,
+          );
+        }
+
+        // Run TikTok scraper
+        try {
+          const tiktokResult = await scrapeTikTok();
+          result.collection.tiktok = tiktokResult;
+          console.log(`[Sweep] TikTok: ${tiktokResult.newVideos} new videos from ${tiktokResult.videosFound} found`);
+        } catch (err) {
+          result.collection.tiktok.errors.push(
+            `TikTok scraper: ${err instanceof Error ? err.message : 'error'}`,
+          );
+        }
+
+        // Run Reddit scraper
+        try {
+          const redditResult = await scrapeReddit();
+          result.collection.reddit = redditResult;
+          console.log(`[Sweep] Reddit: ${redditResult.newPosts} new posts from ${redditResult.postsFound} found`);
+        } catch (err) {
+          result.collection.reddit.errors.push(
+            `Reddit scraper: ${err instanceof Error ? err.message : 'error'}`,
+          );
+        }
+
+        // Run Telegram scraper
+        try {
+          const telegramResult = await scrapeTelegram();
+          result.collection.telegram = telegramResult;
+          console.log(`[Sweep] Telegram: ${telegramResult.newMessages} new messages from ${telegramResult.messagesFound} found`);
+        } catch (err) {
+          result.collection.telegram.errors.push(
+            `Telegram scraper: ${err instanceof Error ? err.message : 'error'}`,
+          );
+        }
+
         // Run Government Portal scraper
         try {
           const govResult = await collectGovPortals();
@@ -244,6 +476,28 @@ export async function runFullSweep(
         } catch (err) {
           result.collection.legacy.errors.push(
             err instanceof Error ? err.message : 'Gov portal collection failed',
+          );
+        }
+
+        // Run Parliament & Gazette scraper
+        try {
+          const parliamentResult = await scrapeParliamentAndGazette();
+          result.collection.parliament = parliamentResult;
+          console.log(`[Sweep] Parliament: ${parliamentResult.newDocuments} new documents from ${parliamentResult.documentsFound} found`);
+        } catch (err) {
+          result.collection.parliament.errors.push(
+            `Parliament scraper: ${err instanceof Error ? err.message : 'error'}`,
+          );
+        }
+
+        // Run Google Trends (last — metadata about what's trending)
+        try {
+          const trendsResult = await scrapeGoogleTrends();
+          result.collection.googleTrends = trendsResult;
+          console.log(`[Sweep] Google Trends: ${trendsResult.newTrends} new trends from ${trendsResult.trendsFound} found`);
+        } catch (err) {
+          result.collection.googleTrends.errors.push(
+            `Google Trends: ${err instanceof Error ? err.message : 'error'}`,
           );
         }
       }
@@ -281,33 +535,61 @@ export async function runFullSweep(
 
     // ===== ANALYSIS PHASE =====
     if (!skipAnalysis) {
-      console.log('[Sweep] Starting analysis phase...');
+      const discoveryOnlySignals = await markDiscoveryOnlySignalsProcessed();
+      if (discoveryOnlySignals > 0) {
+        console.log(
+          `[Sweep] Marked ${discoveryOnlySignals} relevant unmatched signals as discovery-only.`,
+        );
+      }
 
-      // Process in batches
-      let totalRounds = 0;
-      const maxRounds = 10; // Safety limit
+      const backlog = await getAnalysisBacklog();
+      if (backlog.total === 0) {
+        console.log('[Sweep] No signal-analysis backlog found.');
+      } else if (!inlineAnalysisWorker) {
+        const queuedBatchSize = Math.min(5, analysisBatchSize);
+        const jobsToQueue = Math.min(
+          8,
+          Math.max(1, Math.ceil(backlog.total / queuedBatchSize)),
+        );
+        const jobs = await enqueueSignalAnalysisJobs({
+          batchSize: queuedBatchSize,
+          jobCount: jobsToQueue,
+          trigger: `${sweepType}-${sweepId.slice(0, 8)}`,
+        });
+        analysisQueued = true;
+        console.log(
+          `[Sweep] Queued ${jobs.length} analysis jobs for ${backlog.total} pending signals ` +
+            `(${backlog.unclassified} Tier 1, ${backlog.tier3Pending} Tier 3).`,
+        );
+      } else {
+        console.log(
+          `[Sweep] Starting inline analysis for ${backlog.total} pending signals ` +
+            `(${backlog.unclassified} Tier 1, ${backlog.tier3Pending} Tier 3).`,
+        );
 
-      while (totalRounds < maxRounds) {
-        const batch = await processSignalsBatch(analysisBatchSize);
+        let totalRounds = 0;
+        const maxRounds = 4;
 
-        result.analysis.tier1Processed += batch.tier1Processed;
-        result.analysis.tier3Processed += batch.tier3Processed;
-        result.analysis.promisesUpdated += batch.promisesUpdated;
-        result.analysis.totalCostUsd += batch.totalCostUsd;
-        result.analysis.errors.push(...batch.errors);
+        while (totalRounds < maxRounds) {
+          const batch = await processSignalsBatch(analysisBatchSize);
 
-        // Stop if nothing left to process
-        if (
-          batch.tier1Processed === 0 &&
-          batch.tier3Processed === 0
-        )
-          break;
+          result.analysis.tier1Processed += batch.tier1Processed;
+          result.analysis.tier3Processed += batch.tier3Processed;
+          result.analysis.promisesUpdated += batch.promisesUpdated;
+          result.analysis.totalCostUsd += batch.totalCostUsd;
+          result.analysis.errors.push(...batch.errors);
 
-        totalRounds++;
+          if (batch.tier1Processed === 0 && batch.tier3Processed === 0) {
+            break;
+          }
+
+          totalRounds++;
+        }
       }
 
       // ===== TRANSLATION PHASE =====
       // Translate Nepali signals that were classified as relevant
+      if (!analysisQueued) {
       try {
         console.log('[Sweep] Starting Nepali signal translation...');
         const { data: nepaliSignals } = await supabase
@@ -346,10 +628,13 @@ export async function runFullSweep(
           `Translation error: ${err instanceof Error ? err.message : 'unknown'}`,
         );
       }
+      } else {
+        console.log('[Sweep] Skipping inline translation because analysis is queued for the worker.');
+      }
     }
 
     // ===== EVIDENCE COLLECTION PHASE =====
-    if (!skipAnalysis) {
+    if (!skipAnalysis && !analysisQueued) {
       console.log('[Sweep] Starting evidence collection phase...');
       try {
         const evidenceResult = await collectSocialEvidence({
@@ -371,20 +656,128 @@ export async function runFullSweep(
       }
 
       // ===== STATUS SYNC PHASE =====
-      console.log('[Sweep] Starting promise status sync...');
-      try {
-        const syncResult = await syncPromiseStatuses();
-        result.statusSync = {
-          promisesChecked: syncResult.promisesChecked,
-          statusesUpdated: syncResult.statusesUpdated,
-        };
-        if (syncResult.errors.length > 0) {
-          result.analysis.errors.push(...syncResult.errors.map(e => `[StatusSync] ${e}`));
+      if (autoSyncPromiseStatuses) {
+        console.log('[Sweep] Starting promise status sync...');
+        try {
+          const syncResult = await syncPromiseStatuses({
+            applyStatusChanges: true,
+          });
+          result.statusSync = {
+            promisesChecked: syncResult.promisesChecked,
+            statusesUpdated: syncResult.statusesUpdated,
+          };
+          if (syncResult.errors.length > 0) {
+            result.analysis.errors.push(...syncResult.errors.map(e => `[StatusSync] ${e}`));
+          }
+          console.log(
+            `[Sweep] StatusSync: ${syncResult.statusesUpdated} statuses updated ` +
+            `out of ${syncResult.promisesChecked} checked (status writes enabled)`,
+          );
+        } catch (err) {
+          result.analysis.errors.push(
+            `Status sync error: ${err instanceof Error ? err.message : 'unknown'}`,
+          );
         }
-        console.log(`[Sweep] StatusSync: ${syncResult.statusesUpdated} statuses updated out of ${syncResult.promisesChecked} checked`);
+      } else {
+        console.log('[Sweep] Skipping legacy status sync because review-safe mode is enabled.');
+      }
+    }
+
+    // ===== DEDUPLICATION PHASE =====
+    if (!skipAnalysis && !analysisQueued) {
+      console.log('[Sweep] Starting deduplication phase...');
+      try {
+        const dedupResult = await deduplicateSignals();
+        console.log(`[Sweep] Dedup: ${dedupResult.merged} duplicates merged, ${dedupResult.canonical} canonical groups`);
       } catch (err) {
         result.analysis.errors.push(
-          `Status sync error: ${err instanceof Error ? err.message : 'unknown'}`,
+          `Dedup error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+
+      // ===== STATUS PIPELINE PHASE =====
+      console.log('[Sweep] Queueing status pipeline job...');
+      try {
+        const job = await enqueueStatusPipelineJob(sweepType);
+        console.log(`[Sweep] Status pipeline job queued: ${job.id}`);
+
+        if (inlineStatusWorker) {
+          const workerResult = await processIntelligenceJobs({
+            limit: 1,
+            workerId: 'sweep-inline-status',
+            jobTypes: ['run_status_pipeline'],
+          });
+          console.log(
+            `[Sweep] Inline status worker: ${workerResult.completed} completed, ` +
+              `${workerResult.requeued} requeued, ${workerResult.failed} failed`,
+          );
+        }
+      } catch (err) {
+        result.analysis.errors.push(
+          `Status pipeline error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+    }
+    if (!skipAnalysis && analysisQueued) {
+      console.log('[Sweep] Queueing status pipeline job after queued analysis batches...');
+      try {
+        const job = await enqueueStatusPipelineJob(`${sweepType}-queued-analysis`);
+        console.log(`[Sweep] Status pipeline job queued: ${job.id}`);
+      } catch (err) {
+        result.analysis.errors.push(
+          `Status pipeline error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+    }
+
+    // ===== COMMITMENT DISCOVERY PHASE =====
+    if (!skipAnalysis && !analysisQueued && !rssOnly) {
+      console.log('[Sweep] Queueing commitment discovery jobs...');
+      try {
+        // Get recently classified signals that haven't been scanned for discoveries
+        const { data: recentSignals } = await supabase
+          .from('intelligence_signals')
+          .select('id, source_id, signal_type, title, content, url, published_at, author, media_type, metadata')
+          .eq('tier1_processed', true)
+          .gte('relevance_score', 0.3)
+          .or('metadata.is.null,metadata->>potential_new_commitment.is.null')
+          .order('discovered_at', { ascending: false })
+          .limit(30);
+
+        if (recentSignals && recentSignals.length > 0) {
+          const jobs = await enqueueDiscoveryJobsForSignals(recentSignals);
+          console.log(`[Sweep] Commitment discovery: queued ${jobs.length} discovery jobs`);
+
+          if (process.env.INTELLIGENCE_INLINE_DISCOVERY_WORKER === 'true') {
+            const workerResult = await processIntelligenceJobs({
+              limit: jobs.length,
+              workerId: 'sweep-inline-discovery',
+              jobTypes: ['discover_commitment'],
+            });
+            console.log(
+              `[Sweep] Inline discovery worker: ${workerResult.completed} completed, ` +
+                `${workerResult.requeued} requeued, ${workerResult.failed} failed`,
+            );
+          }
+        }
+      } catch (err) {
+        result.analysis.errors.push(
+          `Commitment discovery error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+    }
+
+    // ===== TRENDING COMPUTATION PHASE =====
+    if (!skipAnalysis && !analysisQueued) {
+      console.log('[Sweep] Computing trending pulse...');
+      try {
+        await computeTrending();
+        const pulseScore = await computePulse();
+        result.trending.pulseScore = pulseScore;
+        console.log(`[Sweep] Trending pulse score: ${pulseScore}`);
+      } catch (err) {
+        result.analysis.errors.push(
+          `Trending computation error: ${err instanceof Error ? err.message : 'unknown'}`,
         );
       }
     }
@@ -396,7 +789,14 @@ export async function runFullSweep(
       result.collection.search.newSignals +
       result.collection.social.newPosts +
       result.collection.apify.newPosts +
-      result.collection.legacy.newArticles;
+      result.collection.legacy.newArticles +
+      result.collection.tiktok.newVideos +
+      result.collection.reddit.newPosts +
+      result.collection.telegram.newMessages +
+      result.collection.threads.newPosts +
+      result.collection.parliament.newDocuments +
+      result.collection.x.newPosts +
+      result.collection.googleTrends.newTrends;
 
     result.totalErrors =
       result.collection.rss.errors.length +
@@ -405,6 +805,13 @@ export async function runFullSweep(
       result.collection.social.errors.length +
       result.collection.apify.errors.length +
       result.collection.legacy.errors.length +
+      result.collection.tiktok.errors.length +
+      result.collection.reddit.errors.length +
+      result.collection.telegram.errors.length +
+      result.collection.threads.errors.length +
+      result.collection.parliament.errors.length +
+      result.collection.x.errors.length +
+      result.collection.googleTrends.errors.length +
       result.analysis.errors.length;
 
     result.status = result.totalErrors > 10 ? 'partial' : 'completed';
@@ -435,6 +842,12 @@ export async function runFullSweep(
 
   result.duration = Date.now() - startTime;
 
+  const { count: relevantSignalsSinceSweep } = await supabase
+    .from('intelligence_signals')
+    .select('id', { count: 'exact', head: true })
+    .gte('discovered_at', sweepStartedAtIso)
+    .gte('relevance_score', 0.3);
+
   // Update sweep record
   await supabase
     .from('intelligence_sweeps')
@@ -447,14 +860,19 @@ export async function runFullSweep(
         (result.collection.search.queriesRun > 0 ? 1 : 0) +
         (result.collection.social.postsFound > 0 ? 1 : 0),
       signals_discovered: result.totalSignals,
-      signals_relevant: result.analysis.tier3Processed,
+      signals_relevant: relevantSignalsSinceSweep || 0,
       promises_updated: result.analysis.promisesUpdated,
       tier1_signals: result.analysis.tier1Processed,
-      tier2_enriched: result.collection.youtube.captionsExtracted,
+      tier2_enriched: result.collection.youtube.captionsExtracted + result.collection.youtube.groqTranscriptions,
       tier3_analyzed: result.analysis.tier3Processed,
       ai_tokens_used: 0,
       ai_cost_usd: result.analysis.totalCostUsd,
-      summary: `Sweep ${result.status}: ${result.totalSignals} new signals, ${result.analysis.promisesUpdated} promises updated, $${result.analysis.totalCostUsd.toFixed(4)} AI cost`,
+      summary:
+        result.analysis.tier1Processed === 0 &&
+        result.analysis.tier3Processed === 0 &&
+        !skipAnalysis
+          ? `Sweep ${result.status}: ${result.totalSignals} new signals, downstream analysis queued for the worker.`
+          : `Sweep ${result.status}: ${result.totalSignals} new signals, ${result.analysis.promisesUpdated} promises updated, $${result.analysis.totalCostUsd.toFixed(4)} AI cost`,
     })
     .eq('id', sweepId);
 

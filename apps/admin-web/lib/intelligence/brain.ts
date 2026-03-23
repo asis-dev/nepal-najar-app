@@ -11,12 +11,16 @@
 
 import { aiComplete } from './ai-router';
 import { getSupabase } from '@/lib/supabase/server';
-import { PROMISES_KNOWLEDGE } from './knowledge-base';
 import {
   type Classification,
   normalizeClassification,
   needsHumanReview,
 } from './types';
+import {
+  getCommitmentCatalogSummary,
+  getCommitmentDetailContext,
+  getCurrentDateContext,
+} from './commitment-context';
 
 interface Signal {
   id: string;
@@ -29,6 +33,7 @@ interface Signal {
   author: string | null;
   media_type: string | null;
   metadata: Record<string, unknown>;
+  matched_promise_ids?: number[] | null;
 }
 
 interface ClassificationResult {
@@ -65,33 +70,119 @@ interface DeepAnalysisResult {
   suggestedProgress?: number;
 }
 
+const OBVIOUSLY_IRRELEVANT_PATTERNS = [
+  /राशिफल/u,
+  /\bhoroscope\b/i,
+  /\bcricket\b/i,
+  /\bfootball\b/i,
+  /\bpremier league\b/i,
+  /\bchampions league\b/i,
+  /\breal madrid\b/i,
+  /\batletico\b/i,
+  /\bcarabao cup\b/i,
+  /\bmovie\b/i,
+  /\bfilm\b/i,
+  /\bsong\b/i,
+  /\bcelebrity\b/i,
+  /\bmatch report\b/i,
+];
+
+const GOVERNMENT_CONTEXT_PATTERNS = [
+  /सरकार/u,
+  /मन्त्रिपरिषद्/u,
+  /मन्त्रालय/u,
+  /नीति/u,
+  /बजेट/u,
+  /संघीय/u,
+  /नगरपालिका/u,
+  /\bgovernment\b/i,
+  /\bministry\b/i,
+  /\bminister\b/i,
+  /\bpolicy\b/i,
+  /\bbudget\b/i,
+  /\bmunicipality\b/i,
+  /\bparliament\b/i,
+];
+
+function getSignalText(signal: Pick<Signal, 'title' | 'content'>): string {
+  return [signal.title, signal.content || ''].join(' ').trim();
+}
+
+function hasGovernmentContext(text: string): boolean {
+  return GOVERNMENT_CONTEXT_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function isObviouslyIrrelevantSignal(
+  signal: Pick<Signal, 'title' | 'content'>,
+): boolean {
+  const text = getSignalText(signal);
+  if (!text) return false;
+  if (hasGovernmentContext(text)) return false;
+  return OBVIOUSLY_IRRELEVANT_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function requiresTier3(matchedPromiseIds: number[]): boolean {
+  return matchedPromiseIds.length > 0;
+}
+
+function sanitizeAnalyses(
+  analyses: DeepAnalysisResult[],
+  allowedPromiseIds: number[],
+): DeepAnalysisResult[] {
+  const allowed = new Set(allowedPromiseIds);
+  const bestByPromise = new Map<number, DeepAnalysisResult>();
+
+  for (const analysis of analyses) {
+    if (!allowed.has(analysis.promiseId)) continue;
+    if (!Number.isFinite(analysis.confidence) || analysis.confidence <= 0) continue;
+    if (!analysis.reasoning || analysis.reasoning.trim().length === 0) continue;
+
+    const normalized: DeepAnalysisResult = {
+      ...analysis,
+      classification: normalizeClassification(analysis.classification),
+      confidence: Math.max(0, Math.min(1, analysis.confidence)),
+      reasoning: analysis.reasoning.trim(),
+    };
+
+    const existing = bestByPromise.get(normalized.promiseId);
+    if (!existing || normalized.confidence > existing.confidence) {
+      bestByPromise.set(normalized.promiseId, normalized);
+    }
+  }
+
+  return [...bestByPromise.values()];
+}
+
 // TIER 1: Quick classification (uses cheap/free model)
 export async function tier1Classify(
   signal: Signal,
 ): Promise<ClassificationResult> {
-  const systemPrompt = `You are an intelligence analyst for Nepal Najar, a government promise tracker.
-You analyze signals (news articles, social media posts, videos, documents) to determine if they are relevant to any of Nepal's 109 government promises.
+  if (isObviouslyIrrelevantSignal(signal)) {
+    return {
+      isRelevant: false,
+      relevanceScore: 0.05,
+      matchedPromiseIds: [],
+      classification: 'neutral',
+      reasoning: 'Rejected by lexical guardrail as obvious non-government content.',
+    };
+  }
 
-Here are the 109 promises (ID: Title — Key aspects):
-${PROMISES_KNOWLEDGE.map((p) => `${p.id}: ${p.title} — ${p.keyAspects}`).join('\n')}
+  const commitmentCatalog = await getCommitmentCatalogSummary();
+  const systemPrompt = `You are an intelligence analyst for Nepal Najar, a government promise tracker.
+You analyze signals (news articles, social media posts, videos, documents, interviews, transcripts, and official notices) to determine if they are relevant to Nepal Najar's tracked government commitments.
+
+Nepal Najar tracks a DYNAMIC commitment universe: seeded commitments plus reviewed or candidate discoveries.
+Known tracked commitments right now (${commitmentCatalog.total} total):
+${commitmentCatalog.lines.join('\n')}
 
 CLASSIFICATION RULES — BE AGGRESSIVE:
 - If a signal mentions ANY government activity, policy, budget, minister, ministry, or government institution → it IS relevant (relevanceScore >= 0.4)
-- If a signal mentions specific sectors like health, education, infrastructure, economy, corruption, tourism, energy, agriculture → match to related promises
+- If a signal mentions specific sectors like health, education, infrastructure, economy, corruption, tourism, energy, agriculture → match to the closest tracked commitments
 - "neutral" should ONLY be used for entertainment, sports (unless government sports policy), celebrity gossip, or completely unrelated content
-- Nepal government forming cabinet? → Relevant to promises 1-6 (governance reform)
-- Budget or spending news? → Relevant to promises 8-11 (economy)
-- Any infrastructure (road, bridge, airport, hydropower, water)? → Relevant to promises 12-15, 17
-- Health/hospital news? → Relevant to promises 22-23
-- Education news? → Relevant to promises 24-26
-- Foreign policy/diplomacy? → Relevant to promise 33
-- Anti-corruption? → Relevant to promise 4
-- Digital/tech/internet? → Relevant to promises 18-20
-- Agriculture/farming? → Relevant to promise 27
-- Tourism? → Relevant to promise 32
-- Election/voting reform? → Relevant to promise 30
 - DEFAULT TO RELEVANT when in doubt. We'd rather have false positives than miss real evidence.
 - A relevanceScore below 0.3 should be RARE — only for truly unrelated content.
+- If a signal appears relevant to government accountability but does NOT clearly match any known commitment, keep it relevant and return an empty matchedPromiseIds array instead of forcing a bad match.
+- Only return commitment IDs from the provided catalog. Do not invent new IDs.
 
 NEPALI CONTENT HANDLING:
 - Many signals will be in Nepali (Devanagari script). You MUST read and understand Nepali text.
@@ -101,11 +192,10 @@ NEPALI CONTENT HANDLING:
 - Dates may be in Bikram Sambat (BS) calendar — note the BS date and approximate AD equivalent in your reasoning.
 - Government ministry names appear in both languages — match them correctly.
 
-CURRENT POLITICAL CONTEXT (as of March 2026):
-- Nepal held snap elections on March 5, 2026. RSP (Rastriya Swatantra Party) won 182/275 seats.
-- Balen Shah is the new Prime Minister (sworn in March 26, 2026).
-- Rabi Lamichhane is RSP Chairman. These are RSP's "बाचा पत्र 2082" campaign promises being tracked.
-- The previous KP Sharma Oli government was replaced after Gen Z protests in September 2025.
+TEMPORAL DISCIPLINE:
+- ${getCurrentDateContext()}
+- Do not rely on stale political memory.
+- If the signal does not establish a fact, say so in reasoning instead of guessing.
 
 Respond in JSON format ONLY:
 {
@@ -137,14 +227,40 @@ Author: ${signal.author || 'unknown'}`;
       };
     }
 
-    return {
+    const normalizedMatches = Array.isArray(parsed.matchedPromiseIds)
+      ? parsed.matchedPromiseIds
+          .map((value) => Number(value))
+          .filter(
+            (value) =>
+              Number.isFinite(value) && commitmentCatalog.knownIds.has(value),
+          )
+      : [];
+
+    const normalizedResult: ClassificationResult = {
       ...parsed,
       classification: normalizeClassification(parsed.classification),
       relevanceScore:
         typeof parsed.relevanceScore === 'number' ? parsed.relevanceScore : 0,
-      matchedPromiseIds: Array.isArray(parsed.matchedPromiseIds)
-        ? parsed.matchedPromiseIds
-        : [],
+      matchedPromiseIds: normalizedMatches,
+    };
+
+    if (isObviouslyIrrelevantSignal(signal)) {
+      return {
+        isRelevant: false,
+        relevanceScore: 0.05,
+        matchedPromiseIds: [],
+        classification: 'neutral',
+        reasoning:
+          'AI output overridden by lexical guardrail due to obvious non-government content.',
+      };
+    }
+
+    return {
+      ...normalizedResult,
+      isRelevant:
+        normalizedResult.isRelevant &&
+        (normalizedResult.relevanceScore >= 0.3 ||
+          normalizedResult.matchedPromiseIds.length > 0),
     };
   } catch (err) {
     return {
@@ -162,6 +278,12 @@ export async function tier3Analyze(
   signal: Signal,
   relatedSignals: Signal[],
 ): Promise<DeepAnalysisResult[]> {
+  const matchedPromiseIds = ((signal.matched_promise_ids as number[] | null) || [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+  const detailedCommitmentContext = await getCommitmentDetailContext(
+    matchedPromiseIds,
+  );
   const systemPrompt = `You are a senior intelligence analyst for Nepal Najar, a government promise tracker for Nepal.
 
 Your job is to deeply analyze evidence and determine its impact on specific government promises. You must:
@@ -182,20 +304,11 @@ ANALYSIS RULES — BE AGGRESSIVE:
 - If measurable outcomes are reported, suggest 50-80% progress
 - Only suggest "stalled" if there is CLEAR evidence of delay, cancellation, or opposition blocking
 - Extract ALL data points — amounts, dates, percentages, officials, organizations. Be thorough.
-- When multiple promises could be affected, create analysis entries for ALL of them, not just the primary one
+- When multiple matched commitments could be affected, create analysis entries for ALL of them, not just the primary one
 - Confidence should be >= 0.4 for any direct government action, >= 0.3 for indirect evidence
 
-Here are the full promise details:
-${PROMISES_KNOWLEDGE.map(
-  (p) => `
-Promise #${p.id}: ${p.title}
-Category: ${p.category}
-Description: ${p.description}
-Key indicators of progress: ${p.progressIndicators}
-Key indicators of stalling: ${p.stallIndicators}
-Current status: ${p.currentStatus || 'unknown'}
-`,
-).join('\n---\n')}
+MATCHED COMMITMENT CONTEXT:
+${detailedCommitmentContext}
 
 ${
   relatedSignals.length > 0
@@ -212,11 +325,10 @@ NEPALI CONTENT:
 - Budget amounts: "अर्ब" = billion, "करोड" = 10 million, "लाख" = 100,000 NPR.
 - Dates in Bikram Sambat (BS): Convert to AD equivalent (BS 2082 ≈ AD 2025-2026).
 
-CURRENT POLITICAL CONTEXT (as of March 2026):
-- Nepal held snap elections on March 5, 2026. RSP (Rastriya Swatantra Party) won 182/275 seats.
-- Balen Shah is the new Prime Minister (sworn in March 26, 2026).
-- Rabi Lamichhane is RSP Chairman. These are RSP's "बाचा पत्र 2082" campaign promises being tracked.
-- The previous KP Sharma Oli government was replaced after Gen Z protests in September 2025.
+TEMPORAL DISCIPLINE:
+- ${getCurrentDateContext()}
+- Do not rely on stale political assumptions or officeholder names unless the signal supports them.
+- If none of the matched commitments are actually affected, return an empty JSON array instead of forcing a weak analysis.
 
 Respond with a JSON array of analysis results, one per matched promise:
 [{
@@ -311,6 +423,8 @@ export async function processSignalsBatch(
           .from('intelligence_signals')
           .update({
             tier1_processed: true,
+            tier3_processed:
+              result.isRelevant && !requiresTier3(result.matchedPromiseIds),
             relevance_score: result.relevanceScore,
             matched_promise_ids: result.matchedPromiseIds,
             classification: normalizeClassification(result.classification),
@@ -330,7 +444,7 @@ export async function processSignalsBatch(
         );
       }
 
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 
@@ -345,24 +459,36 @@ export async function processSignalsBatch(
     .limit(batchSize);
 
   if (relevant) {
-    for (const signal of relevant) {
+    const tier3Candidates = relevant.filter((signal) =>
+      Array.isArray(signal.matched_promise_ids) &&
+      signal.matched_promise_ids.length > 0,
+    );
+
+    for (const signal of tier3Candidates) {
       try {
+        const matchedPromiseIds =
+          ((signal.matched_promise_ids as number[] | null) || [])
+            .map((value) => Number(value))
+            .filter((value) => Number.isFinite(value));
+
         // Find corroborating signals
         const corroborating = await findCorroboratingSignals(
           signal as unknown as Signal,
-          (signal.matched_promise_ids as number[]) || [],
+          matchedPromiseIds,
         );
 
-        const analyses = await tier3Analyze(
-          signal as unknown as Signal,
-          corroborating,
+        const analyses = sanitizeAnalyses(
+          await tier3Analyze(
+            signal as unknown as Signal,
+            corroborating,
+          ),
+          matchedPromiseIds,
         );
 
-        // Update signal with deep analysis
         const primaryAnalysis = analyses[0];
-        const normalizedClass = normalizeClassification(
-          primaryAnalysis?.classification || signal.classification,
-        );
+        const normalizedClass = primaryAnalysis
+          ? normalizeClassification(primaryAnalysis.classification)
+          : normalizeClassification(signal.classification);
         const confidence = primaryAnalysis?.confidence || 0;
 
         await supabase
@@ -378,29 +504,31 @@ export async function processSignalsBatch(
             review_required: needsHumanReview({
               confidence,
               relevanceScore: signal.relevance_score as number | null,
-              matchedPromiseIds: (signal.matched_promise_ids as number[]) || [],
+              matchedPromiseIds,
             }),
           })
           .eq('id', signal.id);
 
         // Create promise updates
         for (const analysis of analyses) {
-          if (analysis.confidence >= 0.3) {
-            await supabase.from('promise_updates').insert({
-              promise_id: analysis.promiseId,
-              article_id: signal.url,
-              field_changed: analysis.classification,
-              new_value: JSON.stringify({
-                confidence: analysis.confidence,
-                suggestedStatus: analysis.suggestedStatus,
-                suggestedProgress: analysis.suggestedProgress,
-                extractedData: analysis.extractedData,
-              }),
-              change_reason: analysis.reasoning,
-            });
+          await supabase.from('promise_updates').insert({
+            promise_id: String(analysis.promiseId),
+            article_id: null,
+            field_changed: analysis.classification,
+            new_value: JSON.stringify({
+              signalId: signal.id,
+              sourceId: signal.source_id,
+              sourceUrl: signal.url,
+              publishedAt: signal.published_at,
+              confidence: analysis.confidence,
+              suggestedStatus: analysis.suggestedStatus,
+              suggestedProgress: analysis.suggestedProgress,
+              extractedData: analysis.extractedData,
+            }),
+            change_reason: analysis.reasoning,
+          });
 
-            promisesUpdated++;
-          }
+          promisesUpdated++;
         }
 
         tier3Processed++;
@@ -410,7 +538,7 @@ export async function processSignalsBatch(
         );
       }
 
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 

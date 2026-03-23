@@ -1,34 +1,36 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import {
   ArrowRight,
+  Bell,
   CalendarDays,
+  Eye,
   Landmark,
   Map as MapIcon,
   MapPinned,
-  Newspaper,
-  ScanSearch,
-  ShieldCheck,
-  TimerReset,
-} from 'lucide-react';
+    Newspaper,
+    ScanSearch,
+    ShieldCheck,
+  } from 'lucide-react';
 import { Target } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { TrustLanes } from '@/components/public/trust-lanes';
+import { TrendingStrip } from '@/components/public/trending-strip';
 import { MeroWardCard } from '@/components/public/mero-ward-card';
 import { LeaderboardWidget } from '@/components/public/leaderboard-widget';
 import { AffectsMePrompt } from '@/components/public/affects-me-prompt';
-import { usePreferencesStore } from '@/lib/stores/preferences';
+import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences';
 import {
-  useArticleCount,
-  useLatestArticles,
-  usePromiseStats,
-  useDailyActivity,
-} from '@/lib/hooks/use-promises';
-import { getDailyPromise } from '@/lib/data/daily-promise';
+    useArticleCount,
+    useLatestArticles,
+    usePromiseStats,
+    useDailyActivity,
+  } from '@/lib/hooks/use-promises';
 
 const NepalGlobe = dynamic(
   () => import('@/components/globe/nepal-globe').then((m) => ({ default: m.NepalGlobe })),
@@ -105,7 +107,7 @@ const provinceOverview: ProvinceOverview[] = [
     delayed: 5,
     progress: 49,
     severity: 'medium',
-    summary: 'Education, logistics, and industrial growth promises are highly watched across the province.',
+    summary: 'Education, logistics, and industrial growth commitments are highly watched across the province.',
     focus: ['Education', 'Economy', 'Transport'],
   },
   {
@@ -149,25 +151,28 @@ export default function LandingPage() {
   const { t } = useI18n();
   const router = useRouter();
   const setShowPicker = usePreferencesStore((s) => s.setShowPicker);
+  const province = usePreferencesStore((s) => s.province);
+  const watchedProjectIds = useWatchlistStore((s) => s.watchedProjectIds);
   const { stats, isLoading: statsLoading } = usePromiseStats();
   const { data: latestArticles, isLoading: articlesLoading } = useLatestArticles(3);
   const { data: articleCount } = useArticleCount();
   const { data: dailyActivity } = useDailyActivity();
   const [selectedProvince, setSelectedProvince] = useState<string>('Bagmati Province');
-  const dailyPromise = useMemo(() => getDailyPromise(), []);
 
   const selectedProvinceData = useMemo(
     () => provinceOverview.find((province) => province.name === selectedProvince) ?? provinceOverview[2],
     [selectedProvince],
   );
+  const dailySpotlight = dailyActivity?.activePromises?.[0];
+  const commitmentCount = statsLoading ? '--' : stats?.total ?? 0;
 
   const activityCards = [
     {
-      title: 'Explore promises',
-      description: 'Browse the biggest public promises, linked evidence, and tracked progress across sectors.',
+      title: 'Explore commitments',
+      description: 'Browse live public commitments, linked evidence, and tracked movement across sectors.',
       href: '/explore/first-100-days',
       icon: ScanSearch,
-      metric: statsLoading ? '--' : `${stats?.total ?? 0} tracked`,
+      metric: statsLoading ? '--' : `${stats?.total ?? 0} live`,
     },
     {
       title: 'Who owns delivery',
@@ -192,6 +197,34 @@ export default function LandingPage() {
     critical: 'text-red-300 bg-red-500/12 border-red-500/25',
   }[selectedProvinceData.severity];
 
+  const returnCards = [
+    {
+      title: 'Come back for daily movement',
+      body: `${dailyActivity?.summary.activeCount ?? 0} commitments moved today. The daily feed turns the tracker into a habit instead of a one-time browse.`,
+      href: '/daily',
+      icon: Newspaper,
+      cta: 'Open daily',
+    },
+    {
+      title: watchedProjectIds.length > 0 ? 'Your watchlist is already live' : 'Build your own watchlist',
+      body: watchedProjectIds.length > 0
+        ? `${watchedProjectIds.length} commitments are already saved. Follow them so the next return feels personal.`
+        : 'Save the commitments you care about and Nepal Najar starts feeling like your own civic dashboard.',
+      href: '/watchlist',
+      icon: Eye,
+      cta: 'Open watchlist',
+    },
+    {
+      title: province ? `${province} can be your entry point` : 'Make it local',
+      body: province
+        ? 'Your saved location can anchor the national tracker in something closer to home.'
+        : 'Set your area, then use the local lens and notifications to keep the product tied to your geography.',
+      href: province ? '/affects-me' : '/notifications',
+      icon: Bell,
+      cta: province ? 'Open affects me' : 'Open notifications',
+    },
+  ];
+
   return (
     <div className="relative min-h-screen overflow-x-clip bg-np-void">
       <div className="absolute inset-0 z-0 nepal-hero-grid" />
@@ -212,11 +245,11 @@ export default function LandingPage() {
                 </div>
 
                 <h1 className="mt-5 max-w-4xl text-balance font-sans text-[2.65rem] font-semibold leading-[0.94] tracking-[-0.045em] text-white sm:text-[3.6rem] lg:text-[4.45rem]">
-                  See what Nepal is building, what is delayed, and what changed today.
+                  The nation&apos;s report card. As Nepal watches.
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base leading-8 text-gray-200 sm:text-lg">
-                  Nepal Najar gives people one place to track Balen&apos;s first 100 days, province-level delivery, accountability, and source-backed updates without mixing official claims with public signals or discovered reporting.
+                  {commitmentCount} public commitments. Tracked daily with source-backed evidence. No spin, no bias, just what moved, what stalled, and what changed today.
                 </p>
 
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -224,8 +257,14 @@ export default function LandingPage() {
                     href="/explore/first-100-days"
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary-400/20 bg-primary-600 px-6 py-4 text-base font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-500"
                   >
-                    Track Balen&apos;s 100 Days
+                    View live commitments
                     <ArrowRight className="h-5 w-5" />
+                  </Link>
+                  <Link
+                    href="/explore/first-100-days?entry=balen"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-gray-200 transition-all duration-300 hover:bg-white/[0.07]"
+                  >
+                    Campaign: Balen 100 Days
                   </Link>
                   <Link
                     href="/explore/map"
@@ -243,10 +282,10 @@ export default function LandingPage() {
                   </button>
                 </div>
 
-                <div className="mt-7 grid gap-3 sm:grid-cols-4">
+                <div className="mt-7 grid gap-3 sm:grid-cols-3">
                   <LandingStat
-                    label="Promises tracked"
-                    value={statsLoading ? '--' : stats?.total ?? 0}
+                    label="Commitments live"
+                    value={commitmentCount}
                   />
                   <LandingStat
                     label="In progress"
@@ -256,51 +295,54 @@ export default function LandingPage() {
                     label="Active today"
                     value={dailyActivity?.summary.activeCount ?? 0}
                   />
-                  <LandingStat
-                    label="Articles scanned"
-                    value={articleCount ?? 0}
-                  />
                 </div>
+                {/* articles scanned — subtle, bottom-right */}
+                <p className="mt-2 text-right text-[10px] text-gray-600">
+                  <span className="relative mr-1 inline-flex h-1 w-1"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" /><span className="relative inline-flex h-1 w-1 rounded-full bg-emerald-500" /></span>
+                  {articleCount ?? 0} sources scanned
+                </p>
               </div>
 
               <div className="grid gap-4">
-                <div className="glass-card p-5 sm:p-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Balen&apos;s first 100 days</p>
-                      <h2 className="mt-2 text-2xl font-semibold leading-tight text-white">
-                        The accountability tracker should be visible from day one
-                      </h2>
+                {/* Balen Hero Image */}
+                <div className="relative mx-auto w-full max-w-sm xl:max-w-none">
+                  <div className="absolute -inset-4 rounded-3xl bg-gradient-to-b from-primary-500/20 via-transparent to-transparent blur-2xl" />
+                  <Image
+                    src="/images/balen.JPG"
+                    alt="Balen Shah campaign spotlight"
+                    width={500}
+                    height={500}
+                    className="relative rounded-2xl border border-white/10 object-cover shadow-2xl shadow-primary-900/30"
+                    loading="lazy"
+                    sizes="(max-width: 1280px) 320px, 420px"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 rounded-b-2xl bg-gradient-to-t from-black/80 via-black/40 to-transparent p-5">
+                    <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Campaign spotlight</p>
+                    <p className="mt-1 text-sm font-medium text-white">Balen&apos;s first 100 days</p>
+                    <div className="mt-2 flex items-center gap-4">
+                      <div>
+                        <p className="text-2xl font-bold text-white">{statsLoading ? '--' : stats?.delivered ?? 0}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-emerald-400">Delivered</p>
+                      </div>
+                      <div className="h-8 w-px bg-white/20" />
+                      <div>
+                        <p className="text-2xl font-bold text-white">{statsLoading ? '--' : stats?.inProgress ?? 0}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-amber-400">In Progress</p>
+                      </div>
+                      <div className="h-8 w-px bg-white/20" />
+                      <div>
+                        <p className="text-2xl font-bold text-white">{statsLoading ? '--' : stats?.stalled ?? 0}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-red-400">Stalled</p>
+                      </div>
                     </div>
-                    <TimerReset className="mt-1 h-5 w-5 shrink-0 text-primary-300" />
+                    <Link
+                      href="/explore/first-100-days?entry=balen"
+                      className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary-300 transition-colors hover:text-primary-200"
+                    >
+                      Open campaign view
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-4">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">Delivered</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">
-                        {statsLoading ? '--' : stats?.delivered ?? 0}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-4">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">Stalled</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">
-                        {statsLoading ? '--' : stats?.stalled ?? 0}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="mt-4 text-sm leading-7 text-gray-400">
-                    Follow the promise tracker to see what has actually moved, what is backed by evidence, and where public pressure is building.
-                  </p>
-
-                  <Link
-                    href="/explore/first-100-days"
-                    className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary-300 transition-colors hover:text-primary-200"
-                  >
-                    Open the first 100 days tracker
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
                 </div>
 
                 <MeroWardCard />
@@ -309,15 +351,24 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Trending Now strip */}
+        <section className="px-4 pt-2 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-7xl">
+            <TrendingStrip />
+          </div>
+        </section>
+
         <section className="public-section pt-2">
           <div className="public-shell">
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
               <div className="glass-card p-5 sm:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Map Nepal</p>
+                    <div>
+                      <div className="inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+                      Regional preview
+                      </div>
                     <h2 className="mt-2 text-2xl font-semibold leading-tight text-white">
-                      Click any province to see where the pressure and progress are building
+                      Explore a regional preview while location coverage is still maturing
                     </h2>
                   </div>
                   <Link
@@ -396,7 +447,7 @@ export default function LandingPage() {
                     <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] px-4 py-4">
                       <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">Why this matters</p>
                       <p className="mt-2 text-sm leading-7 text-gray-400">
-                        Nepal Najar should let people move from the national view to a province-level question fast: what is happening here, who owns it, and what is slowing it down?
+                        Nepal Najar should let people move from the national view to a province-level question fast. Geographic coverage is still catching up, so treat this as an early regional lens rather than a final map.
                       </p>
                     </div>
                   </div>
@@ -474,17 +525,17 @@ export default function LandingPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
-                    Daily promise
+                    Live activity spotlight
                   </p>
                   <h3 className="mt-1 truncate text-lg font-semibold text-white">
-                    {dailyPromise.title}
+                    {dailySpotlight?.title || 'Check what moved today'}
                   </h3>
                   <p className="mt-1 line-clamp-1 text-sm text-gray-400">
-                    {dailyPromise.description}
+                    {dailySpotlight?.topHeadline || 'Follow the freshest reviewed signals across the public tracker.'}
                   </p>
                 </div>
                 <span className="hidden items-center gap-2 text-sm font-medium text-primary-300 transition-colors group-hover:text-primary-200 sm:inline-flex">
-                  Check today&apos;s promise
+                  Open daily activity
                   <ArrowRight className="h-4 w-4" />
                 </span>
               </div>
@@ -524,6 +575,42 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section className="public-section pt-2">
+          <div className="public-shell">
+            <div className="mb-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Why people come back</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">Nepal Najar should feel alive after the first visit</h2>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {returnCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Link
+                    key={card.title}
+                    href={card.href}
+                    className="glass-card-hover block p-5 sm:p-6"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="rounded-2xl bg-white/[0.04] p-3">
+                        <Icon className="h-5 w-5 text-primary-300" />
+                      </div>
+                      <span className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                        Return loop
+                      </span>
+                    </div>
+                    <h3 className="mt-5 text-xl font-semibold text-white">{card.title}</h3>
+                    <p className="mt-2 text-sm leading-7 text-gray-400">{card.body}</p>
+                    <div className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary-300">
+                      {card.cta}
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* What Affects Me */}
         <section className="public-section pt-2">
           <div className="public-shell">
@@ -534,6 +621,15 @@ export default function LandingPage() {
         {/* Most Engaged Areas */}
         <section className="public-section pt-2">
           <div className="public-shell">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Community layer</p>
+                <p className="mt-1 text-sm text-gray-400">These engagement views stay visible, but remain secondary while the tracker leads.</p>
+              </div>
+              <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+                Beta
+              </span>
+            </div>
             <LeaderboardWidget type="areas" limit={5} />
           </div>
         </section>

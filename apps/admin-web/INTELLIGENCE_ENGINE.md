@@ -1,6 +1,6 @@
 # Nepal Najar Intelligence Engine
 
-Complete documentation for the AI-powered intelligence system that tracks Nepal's 109 government promises.
+Complete documentation for the AI-powered intelligence system that tracks Nepal Najar's dynamic government commitment universe.
 
 ## Architecture Overview
 
@@ -19,12 +19,12 @@ Legacy scrapers  ─┘                            Match to promises      Sugges
 ### Pipeline Flow
 
 1. **Collection Phase**: Collectors scrape/fetch signals from all configured sources
-2. **Tier 1 Classification**: Cheap AI model quickly classifies each signal (relevant/irrelevant, which promises)
+2. **Tier 1 Classification**: Cheap AI model quickly classifies each signal (relevant/irrelevant, which commitments)
 3. **Translation Phase**: Nepali signals that pass Tier 1 are translated to English
-4. **Tier 3 Deep Analysis**: Smart AI model deeply analyzes relevant signals, extracts data, suggests promise updates
-5. **Evidence Collection**: Social media evidence is extracted and linked to promises
-6. **Status Sync**: Promise statuses are updated based on accumulated evidence
-7. **Daily Rollup**: Activity metrics are computed per-promise per-day
+4. **Tier 3 Deep Analysis**: Smart AI model deeply analyzes relevant signals, extracts data, suggests commitment updates
+5. **Evidence Collection**: Social/video evidence is extracted and linked to commitments
+6. **Status Pipeline**: Reviewable status recommendations are generated and persisted
+7. **Daily Rollup**: Activity metrics are computed per-commitment per-day
 
 ### Key Files
 
@@ -33,10 +33,14 @@ Legacy scrapers  ─┘                            Match to promises      Sugges
 | `lib/intelligence/ai-router.ts` | AI model selection and routing (OpenClaw > OpenRouter > Gemini > Local) |
 | `lib/intelligence/brain.ts` | Classification (Tier 1) and deep analysis (Tier 3) prompts and logic |
 | `lib/intelligence/sweep.ts` | Full sweep orchestrator — runs all phases end-to-end |
-| `lib/intelligence/knowledge-base.ts` | All 109 promises with metadata, indicators, key officials |
+| `lib/intelligence/knowledge-base.ts` | Seed commitment knowledge with metadata, indicators, key officials |
+| `lib/intelligence/commitment-context.ts` | Live commitment catalog context used by AI prompts |
 | `lib/intelligence/types.ts` | Classification types and normalization |
 | `lib/intelligence/translate.ts` | Nepali-to-English signal translation |
 | `lib/intelligence/promise-status-sync.ts` | Syncs AI suggestions to promise statuses |
+| `lib/intelligence/status-pipeline.ts` | Persists reviewable status recommendations for commitments |
+| `lib/intelligence/jobs.ts` | Queue/worker primitives for recurring intelligence work |
+| `lib/intelligence/feedback-review.ts` | OpenClaw-powered citizen feedback triage, approval flow, and handoff generation |
 | `lib/intelligence/daily-activity-rollup.ts` | Daily per-promise activity aggregation |
 | `lib/intelligence/collectors/rss.ts` | RSS/Atom feed collector (18+ Nepal news feeds) |
 | `lib/intelligence/collectors/youtube.ts` | YouTube channel monitor + caption extraction |
@@ -48,12 +52,37 @@ Legacy scrapers  ─┘                            Match to promises      Sugges
 | `lib/intelligence/evidence/social-collector.ts` | Social media evidence extractor |
 | `lib/intelligence/evidence/youtube-extractor.ts` | YouTube evidence extractor |
 
+### New Components (added March 2026)
+
+| File | Purpose |
+|------|---------|
+| `lib/intelligence/dedup.ts` | Signal deduplication via Jaccard similarity + URL normalization |
+| `lib/intelligence/status-pipeline.ts` | Evidence-based promise status recommendations |
+| `lib/intelligence/commitment-discovery.ts` | Detects NEW commitments in signals (keyword + AI) |
+| `lib/intelligence/collectors/facebook-scraper.ts` | Facebook page scraper (Apify or DuckDuckGo fallback) |
+| `lib/intelligence/collectors/audio-transcriber.ts` | Audio/video transcription via Groq Whisper |
+| `app/(dashboard)/feedback-review/page.tsx` | Operator inbox for reviewing and applying feedback autopilot decisions |
+
 ### API Routes
 
 | Route | Method | Purpose |
 |-------|--------|---------|
 | `/api/intelligence/sweep` | POST | Trigger manual sweep (requires `Bearer SCRAPE_SECRET`) |
-| `/api/intelligence/sweep` | GET | Trigger scheduled sweep (Vercel Cron, requires `x-vercel-cron-secret` or `secret` param) |
+| `/api/intelligence/sweep` | GET | Trigger scheduled sweep (Vercel Cron) |
+| `/api/intelligence/dedup` | POST/GET | Run dedup / get deduplicated count |
+| `/api/intelligence/status-pipeline` | POST | Run status pipeline, list/review recommendations |
+| `/api/intelligence/discoveries` | GET/POST | List pending new commitment discoveries, approve/reject |
+| `/api/intelligence/facebook` | POST | Trigger Facebook page scrape |
+| `/api/intelligence/transcribe` | POST | Transcribe audio/video URLs via Groq Whisper |
+| `/api/intelligence/reclassify` | POST | Reset and reclassify signals |
+| `/api/intelligence/worker` | POST/GET | Process queued intelligence jobs |
+| `/api/admin/feedback` | GET/POST | List citizen feedback, queue autopilot reviews, or run them immediately |
+| `/api/admin/feedback/[id]` | PATCH | Review, approve, reject, or apply a feedback autopilot decision |
+| `/api/intelligence/status` | GET | System health and signal counts |
+| `/api/intelligence/signals/[id]` | GET/PATCH/DELETE | View, edit, or soft-delete individual signals |
+| `/api/admin/signals` | GET | List signals with filters (admin review page) |
+| `/api/admin/signals/stats` | GET | Review stats and classification breakdown |
+| `/api/admin/signals/conflicts` | GET | Commitments with conflicting signals |
 
 ## How to Start / Restart
 
@@ -96,6 +125,30 @@ curl -X POST http://localhost:3001/api/intelligence/sweep \
 curl "http://localhost:3001/api/intelligence/sweep?secret=YOUR_SCRAPE_SECRET&mode=rss-only"
 ```
 
+### Applying the New Intelligence DB Migrations
+
+To enable the queue/worker tables and persisted status recommendations, run:
+
+```bash
+cd apps/admin-web
+npm run db:migrate:intelligence
+```
+
+This applies:
+
+- `supabase/011-commitment-public-model.sql`
+- `supabase/012-intelligence-jobs-and-control.sql`
+- `supabase/013-intelligence-status-recommendations.sql`
+- `supabase/014-feedback-autopilot.sql`
+
+For DB access, provide one of:
+
+- `DATABASE_URL`
+- `SUPABASE_DB_URL`
+- `SUPABASE_DB_PASSWORD`
+
+OpenClaw is not used for database migrations. It powers AI reasoning only.
+
 ## Environment Variables
 
 ### Required
@@ -106,6 +159,14 @@ curl "http://localhost:3001/api/intelligence/sweep?secret=YOUR_SCRAPE_SECRET&mod
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (admin access) |
 | `SCRAPE_SECRET` | Auth token for the sweep API |
 
+### Database Migration Access
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Full PostgreSQL connection string for direct migrations |
+| `SUPABASE_DB_URL` | Alternate full PostgreSQL connection string |
+| `SUPABASE_DB_PASSWORD` | Supabase DB password used to build the pooled PostgreSQL connection |
+
 ### AI Providers (at least one required)
 
 Priority order: OpenClaw > OpenRouter > Gemini > Local
@@ -113,8 +174,10 @@ Priority order: OpenClaw > OpenRouter > Gemini > Local
 | Variable | Description |
 |----------|-------------|
 | `OPENCLAW_AUTH_PATH` | Path to OpenClaw auth profiles JSON. Defaults to `~/.openclaw/agents/main/agent/auth-profiles.json`. Contains OAuth bearer token for GPT 5.3 via OpenAI API. |
+| `OPENCLAW_AGENT` | Dedicated OpenClaw agent ID for CLI mode. Use a separate lane such as `nepal-najar-autopilot` so scheduled runs do not contend with your interactive `main` agent. |
 | `OPENROUTER_API_KEY` | OpenRouter API key (for DeepSeek R1, DeepSeek Chat) |
 | `GEMINI_API_KEY` | Google Gemini API key (free tier Gemini Flash) |
+| `OPENCLAW_API_KEY` / `OPENCLAW_ACCESS_TOKEN` | Optional explicit OpenClaw bearer token. If set, the engine can call OpenClaw without relying on the local CLI. |
 | `AI_BASE_URL` | Local LM Studio URL (default: `http://localhost:1234/v1`) |
 | `AI_API_KEY` | Local LM Studio API key (default: `lm-studio`) |
 | `AI_MODEL` | Local model name (default: `qwen3.5-27b`) |
@@ -127,20 +190,40 @@ Priority order: OpenClaw > OpenRouter > Gemini > Local
 | `GOOGLE_SEARCH_API_KEY` | Google Custom Search API key |
 | `GOOGLE_SEARCH_CX` | Google Custom Search engine ID |
 | `GROQ_API_KEY` | Groq API key (for Whisper transcription) |
-| `APIFY_TOKEN` | Apify token (for Facebook scraping) |
+| `APIFY_API_TOKEN` / `APIFY_TOKEN` | Apify token (for Facebook scraping) |
 | `NEXT_PUBLIC_API_URL` | Base URL for internal API calls (default: `http://localhost:3001`) |
 | `CRON_SECRET` | Vercel Cron secret for scheduled sweeps |
+| `INTELLIGENCE_AUTO_STATUS_SYNC` | Set to `true` to allow automatic promise status writes during sweep status sync. Default is review-safe `false`. |
+| `INTELLIGENCE_INLINE_DISCOVERY_WORKER` | Set to `true` to let the sweep process queued discovery jobs inline after enqueueing them. Default is `false`; queued worker route handles them separately. |
+| `INTELLIGENCE_INLINE_STATUS_WORKER` | Set to `true` to let the sweep process the queued status-pipeline job inline. Default is `false`; queued worker route handles it separately. |
 
 ## OpenClaw Integration
 
-The intelligence engine uses OpenClaw as the primary AI provider. OpenClaw manages OAuth tokens for GPT 5.3 via the OpenAI API.
+The intelligence engine uses OpenClaw as the primary AI provider. It can run in two ways:
+
+1. Token-backed API mode using `OPENCLAW_API_KEY` / `OPENCLAW_ACCESS_TOKEN` or the local auth profile
+2. Local CLI mode using the OpenClaw binary when available
 
 ### How It Works
 
-1. OpenClaw stores auth credentials at `~/.openclaw/agents/main/agent/auth-profiles.json`
-2. The `getOpenClawToken()` function in `ai-router.ts` reads the token from this file on every AI call
-3. The token is used as a Bearer token against `https://api.openai.com/v1` with model `gpt-5.3-codex`
-4. If the token is expired or missing, the system falls back to OpenRouter, then Gemini, then local
+1. The router first looks for `OPENCLAW_API_KEY` / `OPENCLAW_ACCESS_TOKEN`
+2. If those are absent, it reads `OPENCLAW_AUTH_PATH` (default: `~/.openclaw/agents/main/agent/auth-profiles.json`)
+3. If a token is available, it uses a Bearer token against `https://api.openai.com/v1` with model `gpt-5.3-codex`
+4. If no token is available but the local OpenClaw binary exists, it falls back to CLI mode using `OPENCLAW_AGENT` (default: `main`)
+5. If OpenClaw is unavailable, the system falls back to OpenRouter, then Gemini, then local
+
+### Feedback Autopilot
+
+Citizen feedback can now be reviewed by OpenClaw before any operator action is taken.
+
+Flow:
+
+1. Feedback lands in `user_feedback`
+2. OpenClaw scores usefulness, validity, actionability, and confidence
+3. OpenClaw recommends a next action and drafts a handoff prompt
+4. An operator approves, rejects, or applies the recommendation from `/feedback-review`
+
+Low-risk autopilot state changes are stored on the feedback row itself; product or code changes still wait for human approval.
 
 ### Token Format
 
@@ -199,17 +282,17 @@ Set `OPENCLAW_AUTH_PATH` env var to use a different location for the auth profil
 ### Tier 1: Quick Classification
 
 - **Model**: GPT 5.3 (OpenClaw) > DeepSeek Chat (OpenRouter) > Gemini Flash > Local Qwen
-- **Purpose**: Rapidly classify each signal as relevant or irrelevant to any of the 109 promises
-- **Output**: relevance score (0.0-1.0), matched promise IDs, classification type
+- **Purpose**: Rapidly classify each signal as relevant or irrelevant to any tracked commitment
+- **Output**: relevance score (0.0-1.0), matched commitment IDs, classification type
 - **Aggressive by design**: Defaults to relevant when in doubt. Only truly unrelated content (entertainment, sports gossip) gets "neutral"
 - **Cost**: ~$0.002-0.01 per signal depending on model
 
 ### Tier 3: Deep Analysis
 
 - **Model**: GPT 5.3 (OpenClaw) > DeepSeek R1 (OpenRouter) > Gemini Flash > Local Qwen
-- **Purpose**: Extract structured data, cross-reference with other signals, suggest promise status changes
-- **Output**: Per-promise analysis with extracted amounts, dates, percentages, officials, suggested status/progress
-- **Aggressive by design**: Proactively suggests status changes, extracts all data points, creates entries for all affected promises
+- **Purpose**: Extract structured data, cross-reference with other signals, suggest commitment status changes
+- **Output**: Per-commitment analysis with extracted amounts, dates, percentages, officials, suggested status/progress
+- **Aggressive by design**: Proactively suggests status changes, extracts all data points, creates entries for all affected commitments
 - **Cost**: ~$0.01-0.05 per signal depending on model and content length
 
 ### Classification Types
@@ -368,6 +451,116 @@ Edit `lib/intelligence/collectors/gov-portal.ts` and add the portal URL and pars
 ### Adding a Social Media Account
 
 Edit `lib/intelligence/collectors/social.ts` and add the account to the tracked accounts list.
+
+## Full Sweep Pipeline (what happens in order)
+
+When you trigger a sweep, this is the exact sequence:
+
+```
+1. COLLECTION PHASE
+   ├── RSS feeds (18 sources, English + Nepali)
+   ├── YouTube (channel search + caption extraction + Whisper transcription)
+   ├── Web Search (DuckDuckGo, promise-specific queries)
+   ├── Facebook (Apify scrape or DuckDuckGo fallback, 13 pages)
+   ├── Social media (Twitter/X + Facebook accounts)
+   ├── Apify (deep Facebook profile scraping)
+   └── Government portals (10 ministry websites)
+
+2. ANALYSIS PHASE
+   ├── Tier 1 Classification (all unclassified signals)
+   ├── Nepali→English translation (signals with language='ne')
+   └── Tier 3 Deep Analysis (signals with relevance ≥ 0.3)
+
+3. DEDUPLICATION PHASE
+   └── Jaccard similarity + URL normalization → mark duplicates
+
+4. STATUS PIPELINE PHASE
+   └── Analyze all commitments → generate status recommendations
+
+5. COMMITMENT DISCOVERY PHASE
+   └── Scan signals for new commitment language → queue for review
+
+6. QUALITY METRICS
+   └── Daily rollup + sweep record
+```
+
+## OpenClaw as Operator
+
+OpenClaw can run the entire engine by calling these endpoints in sequence.
+The dev server must be running at localhost:3001.
+
+### Scheduled Sweep (run this every 4 hours)
+```bash
+curl -X POST http://localhost:3001/api/intelligence/sweep \
+  -H "Authorization: Bearer nepal-najar-scrape-2024" \
+  -H "Content-Type: application/json" \
+  -d '{"batchSize": 30}'
+```
+
+### RSS-Only Sweep (run this every hour — lightweight)
+```bash
+curl "http://localhost:3001/api/intelligence/sweep?secret=nepal-najar-scrape-2024&mode=rss-only"
+```
+
+### Run Dedup After Any Sweep
+```bash
+curl -X POST http://localhost:3001/api/intelligence/dedup \
+  -H "Authorization: Bearer nepal-najar-scrape-2024"
+```
+
+### Check for New Commitment Discoveries
+```bash
+curl http://localhost:3001/api/intelligence/discoveries \
+  -H "Authorization: Bearer nepal-najar-scrape-2024"
+```
+
+### Check Status Recommendations
+```bash
+curl -X POST http://localhost:3001/api/intelligence/status-pipeline \
+  -H "Authorization: Bearer nepal-najar-scrape-2024" \
+  -H "Content-Type: application/json" \
+  -d '{"list": true}'
+```
+
+### Transcribe Specific Videos
+```bash
+curl -X POST http://localhost:3001/api/intelligence/transcribe \
+  -H "Authorization: Bearer nepal-najar-scrape-2024" \
+  -H "Content-Type: application/json" \
+  -d '{"urls": ["https://youtube.com/watch?v=VIDEO_ID"]}'
+```
+
+### Scrape Facebook Pages
+```bash
+curl -X POST http://localhost:3001/api/intelligence/facebook \
+  -H "Authorization: Bearer nepal-najar-scrape-2024"
+```
+
+### Reclassify All Signals (nuclear option — re-runs AI on everything)
+```bash
+curl -X POST http://localhost:3001/api/intelligence/reclassify \
+  -H "Authorization: Bearer nepal-najar-scrape-2024" \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "all"}'
+```
+
+### Direct Supabase Access (if needed)
+```
+URL: https://kmyftbmtdabuyfampklz.supabase.co
+Service Role Key: (see .env.local SUPABASE_SERVICE_ROLE_KEY)
+
+# Example: Get all signals
+curl "https://kmyftbmtdabuyfampklz.supabase.co/rest/v1/intelligence_signals?select=*&limit=10" \
+  -H "apikey: SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer SERVICE_ROLE_KEY"
+
+# Example: Insert a signal directly
+curl -X POST "https://kmyftbmtdabuyfampklz.supabase.co/rest/v1/intelligence_signals" \
+  -H "apikey: SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"source_id":"openclaw-research","signal_type":"article","title":"...","content":"...","url":"..."}'
+```
 
 ## Cost Estimates (per sweep)
 

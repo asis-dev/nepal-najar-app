@@ -6,7 +6,7 @@ export const runtime = 'edge';
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const title = searchParams.get('title') || 'Nepal Najar';
-  const subtitle = searchParams.get('subtitle') || 'जनताको नजरमा Balenको Nepal';
+  const subtitle = searchParams.get('subtitle') || "Nepal's national report card, in public view";
   const progress = searchParams.get('progress');
   const status = searchParams.get('status');
 
@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
         >
           <span>nepalnajar.com</span>
           <span>·</span>
-          <span>जनताको नजरमा Balenको Nepal</span>
+          <span>Nepal&apos;s national report card</span>
         </div>
       </div>
     ),

@@ -293,8 +293,8 @@ export default function EvidenceVaultPage() {
           title={isNe ? 'के भने, कहिले भने, कसले भने' : 'Who Said What, When'}
           description={
             isNe
-              ? 'नेता र अधिकारीहरूको कथन, वाचा, र दाबीहरूको प्रमाणित संग्रह'
-              : 'Verified archive of statements, promises, and claims by leaders and officials'
+              ? 'नेता र अधिकारीहरूको कथन, वचनबद्धता, र दाबीहरूको प्रमाणित संग्रह'
+              : 'Verified archive of statements, commitments, and claims by leaders and officials'
           }
           stats={
             <div className="flex items-center gap-6 mt-4">
@@ -400,7 +400,7 @@ export default function EvidenceVaultPage() {
                     {/* Promise filter */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1.5">
-                        {isNe ? 'वाचा' : 'Promise'}
+                        {isNe ? 'वचनबद्धता' : 'Commitment'}
                       </label>
                       <div className="relative">
                         <select
@@ -412,7 +412,7 @@ export default function EvidenceVaultPage() {
                           }
                           className="w-full appearance-none px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-primary-500/50"
                         >
-                          <option value="">{isNe ? 'सबै' : 'All Promises'}</option>
+                          <option value="">{isNe ? 'सबै' : 'All Commitments'}</option>
                           {Object.entries(PROMISE_SHORT).map(([id, label]) => (
                             <option key={id} value={id}>
                               #{id} {isNe ? label.ne : label.en}

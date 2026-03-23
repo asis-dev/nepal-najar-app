@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const promise = getPromiseBySlug(id) ?? getPromiseById(id);
 
   if (!promise) {
-    return createMetadata({ title: 'Promise Not Found' });
+    return createMetadata({ title: 'Commitment Not Found' });
   }
 
   const title = `${promise.title_ne} — ${promise.title}`;

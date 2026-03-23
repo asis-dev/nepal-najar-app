@@ -20,6 +20,9 @@ export function createSupabaseBrowserClient(): SupabaseClient | null {
   return _browserClient;
 }
 
+/** Backwards-compatible alias used by older client components. */
+export const getSupabaseBrowser = createSupabaseBrowserClient;
+
 /**
  * Backwards-compatible export — used by hooks that read public data.
  * This is the same client but accessible as a direct import.

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
+import { getPromises } from '@/lib/data';
+import { isPublicCommitment } from '@/lib/data/commitments';
 
 /**
  * GET /api/promises/daily-activity?date=YYYY-MM-DD
@@ -28,17 +30,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Fetch all promises (basic info)
-  const { data: allPromises, error: promisesError } = await supabase
-    .from('promises')
-    .select('id, title, title_ne, status, category, last_activity_date, last_activity_signal_count');
-
-  if (promisesError) {
-    return NextResponse.json(
-      { error: promisesError.message },
-      { status: 500 },
-    );
-  }
+  const allPromises = (await getPromises()).filter((promise) => isPublicCommitment(promise));
 
   const activityMap = new Map(
     (activityRows || []).map((row) => [row.promise_id, row]),
@@ -52,7 +44,12 @@ export async function GET(request: NextRequest) {
     const activity = activityMap.get(promise.id);
     if (activity) {
       activePromises.push({
-        ...promise,
+        promiseId: promise.id,
+        title: promise.title,
+        title_ne: promise.title_ne,
+        slug: promise.slug,
+        status: promise.status,
+        category: promise.category,
         signalCount: activity.signal_count,
         confirmsCount: activity.confirms_count,
         contradictsCount: activity.contradicts_count,
@@ -63,8 +60,8 @@ export async function GET(request: NextRequest) {
       });
       totalSignals += activity.signal_count || 0;
     } else {
-      const lastDate = promise.last_activity_date
-        ? new Date(promise.last_activity_date)
+      const lastDate = promise.lastActivityDate
+        ? new Date(promise.lastActivityDate)
         : null;
       const queryDate = new Date(date);
       const daysSinceLastActivity = lastDate
@@ -74,8 +71,12 @@ export async function GET(request: NextRequest) {
         : null;
 
       inactivePromises.push({
-        ...promise,
+        promiseId: promise.id,
+        title: promise.title,
+        title_ne: promise.title_ne,
+        slug: promise.slug,
         daysSinceLastActivity,
+        lastActivityDate: promise.lastActivityDate || null,
       });
     }
   }

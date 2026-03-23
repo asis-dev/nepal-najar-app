@@ -99,7 +99,7 @@ export const TRACKED_PROFILES: TrackedProfile[] = [
 
 // ─── Apify Integration ──────────────────────────────────────────────────────
 
-const APIFY_TOKEN = process.env.APIFY_API_TOKEN || '';
+const APIFY_TOKEN = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '';
 const APIFY_BASE = 'https://api.apify.com/v2';
 
 // Apify actor for Facebook posts scraping

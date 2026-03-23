@@ -40,6 +40,7 @@ import { ProofGallery } from '@/components/public/proof-gallery';
 import { VerifyProgress } from '@/components/public/verify-progress';
 import { useWatchlistStore } from '@/lib/stores/preferences';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { isPublicCommitment } from '@/lib/data/commitments';
 import {
   getPromiseBySlug,
   getPromiseById,
@@ -48,7 +49,7 @@ import {
   type TrustLevel,
   type GovernmentPromise,
 } from '@/lib/data/promises';
-import { useLatestArticles, usePromiseTodaySignals } from '@/lib/hooks/use-promises';
+import { useAllPromises, useLatestArticles, usePromiseTodaySignals } from '@/lib/hooks/use-promises';
 import { useEvidenceVault } from '@/lib/hooks/use-evidence-vault';
 import { EvidenceStrengthBadge, ConfidenceDot } from '@/components/public/evidence-strength-badge';
 import { ShareButtons } from '@/components/public/share-buttons';
@@ -133,14 +134,18 @@ export default function PromiseDetailPage() {
   const [evidenceModalOpen, setEvidenceModalOpen] = useState(false);
   const { toggleWatch, isWatched } = useWatchlistStore();
   const { isAuthenticated } = useAuth();
+  const { data: livePromises } = useAllPromises();
 
   const isNe = locale === 'ne';
   const idParam = params.id as string;
 
   // Try slug first, fall back to ID lookup
   const promise = useMemo(() => {
-    return getPromiseBySlug(idParam) ?? getPromiseById(idParam);
-  }, [idParam]);
+    const liveMatch = livePromises
+      ?.filter((commitment) => isPublicCommitment(commitment))
+      .find((commitment) => commitment.slug === idParam || commitment.id === idParam);
+    return liveMatch ?? getPromiseBySlug(idParam) ?? getPromiseById(idParam);
+  }, [idParam, livePromises]);
 
   // Get REAL related articles from Supabase (not mock data)
   const { data: realArticles } = useLatestArticles(10, promise?.id);

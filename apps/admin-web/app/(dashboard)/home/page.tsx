@@ -26,8 +26,8 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { stats, isLoading: statsLoading } = usePromiseStats();
-  const { data: allPromises, isLoading: promisesLoading } = useAllPromises();
+  const { stats, isLoading: statsLoading } = usePromiseStats({ publicOnly: false });
+  const { data: allPromises, isLoading: promisesLoading } = useAllPromises({ publicOnly: false });
   const { data: scrapingStatus } = useScrapingStatus();
 
   const isLoading = statsLoading || promisesLoading;
@@ -69,7 +69,7 @@ export default function DashboardPage() {
       <div className="space-y-6 animate-fade-in">
         <div>
           <h1 className="section-title">Dashboard</h1>
-          <p className="section-subtitle">Promise tracking overview</p>
+          <p className="section-subtitle">Commitment tracking overview</p>
         </div>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
@@ -82,14 +82,14 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="section-title">Dashboard</h1>
-        <p className="section-subtitle">Promise tracking overview — all data from verified sources</p>
+        <p className="section-subtitle">Commitment tracking overview — all data from verified sources</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<Eye className="w-5 h-5 text-primary-400" />}
-          label="Total Promises"
+          label="Total Commitments"
           value={stats?.total?.toString() ?? '—'}
           accentColor="blue"
         />
@@ -117,7 +117,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Promises by Status Pie */}
         <div className="glass-card p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Promises by Status</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Commitments by Status</h2>
           {statusData.length > 0 ? (
             <>
               <div className="h-64">
@@ -139,7 +139,7 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number, name: string) => [`${value} promises`, name]}
+                      formatter={(value: number, name: string) => [`${value} commitments`, name]}
                       contentStyle={{
                         background: '#151d35',
                         border: '1px solid rgba(255,255,255,0.1)',
@@ -176,7 +176,7 @@ export default function DashboardPage() {
 
         {/* Promises by Category */}
         <div className="glass-card p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Promises by Sector</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Commitments by Sector</h2>
           {categoryData.length > 0 ? (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
@@ -199,7 +199,7 @@ export default function DashboardPage() {
                     axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`${value}`, 'Promises']}
+                    formatter={(value: number) => [`${value}`, 'Commitments']}
                     contentStyle={{
                       background: '#151d35',
                       border: '1px solid rgba(255,255,255,0.1)',

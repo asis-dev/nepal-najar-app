@@ -63,27 +63,40 @@ export async function GET(request: NextRequest) {
 
   // type === 'areas': compute engagement per province
   // Fetch proposal counts by province
-  const { data: proposals } = await supabase
+  const { data: proposals, error: proposalsError } = await supabase
     .from('community_proposals')
-    .select('province')
+    .select('id, province')
     .eq('is_hidden', false)
     .neq('status', 'draft');
 
   // Fetch ward report counts by province
-  const { data: reports } = await supabase
+  const { data: reports, error: reportsError } = await supabase
     .from('ward_reports')
     .select('province')
     .eq('is_approved', true);
 
   // Fetch vote counts by province (join through proposals)
-  const { data: votes } = await supabase
+  const { data: votes, error: votesError } = await supabase
     .from('proposal_votes')
     .select('proposal_id');
+
+  const relationMissing = [proposalsError, reportsError, votesError].some((error) => error?.code === '42P01');
+  if (relationMissing) {
+    return NextResponse.json({ leaderboard: [] });
+  }
+  const firstUnexpectedError = [proposalsError, reportsError, votesError].find(Boolean);
+  if (firstUnexpectedError) {
+    return NextResponse.json({ error: firstUnexpectedError.message }, { status: 500 });
+  }
 
   // Build proposal ID -> province map
   const proposalProvinceMap: Record<string, string> = {};
   for (const p of (proposals ?? []) as Array<Record<string, unknown>>) {
-    // We don't have proposal_id here, so we'll count proposals per province
+    const id = p.id as string | undefined;
+    const province = p.province as string | undefined;
+    if (id && province) {
+      proposalProvinceMap[id] = province;
+    }
   }
 
   // Count proposals per province
@@ -100,21 +113,25 @@ export async function GET(request: NextRequest) {
     reportCounts[prov] = (reportCounts[prov] || 0) + 1;
   }
 
-  // Total vote count (simplified — just count all votes)
-  const totalVotes = (votes ?? []).length;
+  // Count votes by province using the real proposal -> province map
+  const voteCounts: Record<string, number> = {};
+  for (const vote of (votes ?? []) as Array<Record<string, unknown>>) {
+    const province = proposalProvinceMap[vote.proposal_id as string];
+    if (!province) continue;
+    voteCounts[province] = (voteCounts[province] || 0) + 1;
+  }
 
   // Combine into area scores
   const allProvinces = new Set([
     ...Object.keys(proposalCounts),
     ...Object.keys(reportCounts),
+    ...Object.keys(voteCounts),
   ]);
 
   const areaScores: AreaScore[] = Array.from(allProvinces).map((province) => {
     const pc = proposalCounts[province] || 0;
     const rc = reportCounts[province] || 0;
-    // Distribute votes proportionally (simplified)
-    const totalActivity = Object.values(proposalCounts).reduce((a, b) => a + b, 0) || 1;
-    const vc = Math.round((pc / totalActivity) * totalVotes);
+    const vc = voteCounts[province] || 0;
 
     return {
       province,

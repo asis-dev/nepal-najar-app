@@ -176,8 +176,8 @@ export default function AnalyticsPage() {
               </h1>
               <p className="text-sm text-gray-400">
                 {locale === 'ne'
-                  ? 'सरकारी वाचाहरूको विश्लेषण'
-                  : 'Analysis of government promises'}
+                  ? 'सरकारी वचनबद्धताहरूको विश्लेषण'
+                  : 'Analysis of government commitments'}
               </p>
             </div>
           </div>
@@ -185,7 +185,7 @@ export default function AnalyticsPage() {
           {/* Key Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <StatCard
-              label={locale === 'ne' ? 'जम्मा वाचा' : 'Total Promises'}
+              label={locale === 'ne' ? 'जम्मा वचनबद्धता' : 'Total Commitments'}
               value={totalPromises}
               icon={<FileText className="w-4 h-4" />}
               color="text-white"
@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
           {/* Chart 2: Promises by Category (Stacked Horizontal Bar) */}
           <div className="glass-card p-5">
             <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
-              {locale === 'ne' ? 'विषय अनुसार वाचा' : 'Promises by Category'}
+              {locale === 'ne' ? 'विषय अनुसार वचनबद्धता' : 'Commitments by Category'}
             </h2>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -411,7 +411,7 @@ export default function AnalyticsPage() {
                 <div className="space-y-2 mt-3">
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400">
-                      {locale === 'ne' ? 'वाचा' : 'Promises'}
+                      {locale === 'ne' ? 'वचनबद्धता' : 'Commitments'}
                     </span>
                     <span className="text-white font-medium">{prov.promises}</span>
                   </div>
