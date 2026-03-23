@@ -11,6 +11,7 @@ ALTER TABLE intelligence_jobs
       'discover_commitment',
       'transcribe_url',
       'run_status_pipeline',
-      'review_feedback'
+      'review_feedback',
+      'summarize_pilot_tracker'
     )
   );

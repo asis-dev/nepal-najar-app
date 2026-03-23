@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS intelligence_jobs (
       'discover_commitment',
       'transcribe_url',
       'run_status_pipeline',
-      'review_feedback'
+      'review_feedback',
+      'summarize_pilot_tracker'
     )
   ),
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'canceled')),

@@ -6,6 +6,7 @@ import {
 import { transcribeAndIngest } from './collectors/audio-transcriber';
 import { runStatusPipeline } from './status-pipeline';
 import { reviewFeedbackItem } from './feedback-review';
+import { summarizePilotTracker } from './pilot-summary';
 import { processSignalsBatch } from './brain';
 
 export type IntelligenceJobType =
@@ -13,7 +14,8 @@ export type IntelligenceJobType =
   | 'discover_commitment'
   | 'transcribe_url'
   | 'run_status_pipeline'
-  | 'review_feedback';
+  | 'review_feedback'
+  | 'summarize_pilot_tracker';
 export type IntelligenceJobStatus =
   | 'pending'
   | 'running'
@@ -27,6 +29,7 @@ interface JobPayloadMap {
   transcribe_url: { url: string };
   run_status_pipeline: { trigger: string };
   review_feedback: { feedbackId: string };
+  summarize_pilot_tracker: { days: number; trigger: string };
 }
 
 export interface IntelligenceJobRow<T extends IntelligenceJobType = IntelligenceJobType> {
@@ -92,6 +95,12 @@ function buildDedupeKey<T extends IntelligenceJobType>(
   if (jobType === 'review_feedback') {
     const feedbackPayload = payload as JobPayloadMap['review_feedback'];
     return `feedback-review:${feedbackPayload.feedbackId}`;
+  }
+
+  if (jobType === 'summarize_pilot_tracker') {
+    const summaryPayload = payload as JobPayloadMap['summarize_pilot_tracker'];
+    const bucket = new Date().toISOString().slice(0, 13);
+    return `pilot-summary:${summaryPayload.days}:${summaryPayload.trigger}:${bucket}`;
   }
 
   const transcribePayload = payload as JobPayloadMap['transcribe_url'];
@@ -228,6 +237,20 @@ export async function enqueueFeedbackReviewJobs(
   }
 
   return jobs;
+}
+
+export async function enqueuePilotSummaryJob(
+  days = 14,
+  trigger = 'manual',
+): Promise<IntelligenceJobRow<'summarize_pilot_tracker'>> {
+  return enqueueIntelligenceJob({
+    jobType: 'summarize_pilot_tracker',
+    payload: {
+      days: Math.max(1, Math.min(days, 90)),
+      trigger,
+    },
+    priority: 25,
+  });
 }
 
 async function releaseStaleRunningJobs(maxAgeMinutes = 20): Promise<number> {
@@ -449,6 +472,21 @@ async function processSingleJob(
       reviewStatus: reviewed.ai_review_status,
       recommendation: reviewed.ai_recommendation,
       priority: reviewed.ai_priority,
+    };
+  }
+
+  if (job.job_type === 'summarize_pilot_tracker') {
+    const payload = job.payload as JobPayloadMap['summarize_pilot_tracker'];
+    const summary = await summarizePilotTracker(payload.days, {
+      trigger: payload.trigger,
+      generatedByJobId: job.id,
+    });
+    return {
+      days: payload.days,
+      trigger: payload.trigger,
+      summaryId: summary.id,
+      overallHealth: summary.overallHealth,
+      confidence: summary.confidence,
     };
   }
 

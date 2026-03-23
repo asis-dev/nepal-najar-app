@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { trackPilotEvent } from '@/lib/analytics/client';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
 
@@ -58,6 +59,13 @@ export function VerifyProgress({ promiseId }: { promiseId: string }) {
       });
 
       if (res.ok) {
+        trackPilotEvent('verify_progress', {
+          metadata: {
+            promiseId,
+            verification,
+            hasReason: verification === 'disputed' ? Boolean(reason.trim()) : false,
+          },
+        });
         setJustVoted(verification);
         setShowReason(false);
         setReason('');

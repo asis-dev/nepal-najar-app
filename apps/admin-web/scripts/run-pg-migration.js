@@ -52,6 +52,7 @@ const DEFAULT_FILES = [
   'supabase/014-feedback-autopilot.sql',
   'supabase/015-intelligence-job-type-expansion.sql',
   'supabase/016-pilot-analytics.sql',
+  'supabase/017-pilot-summary-autopilot.sql',
 ];
 
 function buildConnectionString() {

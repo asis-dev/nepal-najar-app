@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { trackPilotEvent } from '@/lib/analytics/client';
 import { syncToCloud } from '@/lib/services/preferences-sync';
 
 /* ═══════════════════════════════════════════════
@@ -40,6 +41,13 @@ export const usePreferencesStore = create<HometownPreferences & PreferencesActio
           municipality: municipality ?? null,
           hasSetHometown: true,
           showPicker: false,
+        });
+        trackPilotEvent('hometown_set', {
+          metadata: {
+            province,
+            district: district ?? null,
+            municipality: municipality ?? null,
+          },
         });
         // Cloud sync if logged in
         try {
@@ -103,6 +111,13 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
           const newList = exists
             ? state.watchedProjectIds.filter((id) => id !== projectId)
             : [...state.watchedProjectIds, projectId];
+
+          trackPilotEvent(exists ? 'watchlist_remove' : 'watchlist_add', {
+            metadata: {
+              projectId,
+              watchlistSize: newList.length,
+            },
+          });
 
           // Cloud sync if logged in
           try {

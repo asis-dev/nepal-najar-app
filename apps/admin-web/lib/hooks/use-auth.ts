@@ -14,6 +14,14 @@ export interface UserProfile {
   district: string | null;
 }
 
+interface SignUpData {
+  email: string;
+  password: string;
+  displayName: string;
+  province?: string;
+  district?: string;
+}
+
 interface AuthState {
   user: UserProfile | null;
   session: Session | null;
@@ -25,6 +33,10 @@ interface AuthState {
 
   initialize: () => Promise<void>;
   signInWithOtp: (identifier: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  signUpWithPassword: (data: SignUpData) => Promise<{ needsVerification: boolean }>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   verifyOtp: (identifier: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
@@ -107,6 +119,129 @@ export const useAuth = create<AuthState>((set, get) => ({
       if (error) throw error;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to send OTP';
+      set({ error: message });
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  signInWithPassword: async (email: string, password: string) => {
+    set({ isLoading: true, error: null });
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      set({ isLoading: false, error: 'Authentication not configured' });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      if (data.user) {
+        const profile = await get().fetchProfile(data.user.id);
+        set({
+          session: data.session,
+          user: profile,
+          isAuthenticated: true,
+          isAdmin: profile?.role === 'admin',
+        });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to sign in';
+      set({ error: message });
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  signUpWithPassword: async (data: SignUpData) => {
+    set({ isLoading: true, error: null });
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      set({ isLoading: false, error: 'Authentication not configured' });
+      return { needsVerification: false };
+    }
+
+    try {
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            display_name: data.displayName,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+
+      // Try to update the profile with province/district if user was created
+      if (authData.user) {
+        try {
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: authData.user.id,
+              display_name: data.displayName,
+              email: data.email,
+              province: data.province || null,
+              district: data.district || null,
+            }, { onConflict: 'id' });
+        } catch {
+          // profiles table might not exist yet — ignore
+        }
+      }
+
+      // If identities is empty, user already exists
+      const needsVerification = !!(authData.user && authData.user.identities && authData.user.identities.length > 0);
+
+      return { needsVerification };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create account';
+      set({ error: message });
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  resetPassword: async (email: string) => {
+    set({ isLoading: true, error: null });
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      set({ isLoading: false, error: 'Authentication not configured' });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      });
+      if (error) throw error;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to send reset email';
+      set({ error: message });
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  updatePassword: async (newPassword: string) => {
+    set({ isLoading: true, error: null });
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      set({ isLoading: false, error: 'Authentication not configured' });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update password';
       set({ error: message });
       throw err;
     } finally {

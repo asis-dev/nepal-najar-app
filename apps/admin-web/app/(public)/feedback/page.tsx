@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { MessageSquarePlus, Send, CheckCircle2, LogIn, Star } from 'lucide-react';
 import Link from 'next/link';
+import { trackPilotEvent } from '@/lib/analytics/client';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { getSupabaseBrowser } from '@/lib/supabase/client';
 
@@ -50,6 +51,14 @@ export default function FeedbackPage() {
       });
 
       if (insertError) throw insertError;
+      trackPilotEvent('feedback_submit', {
+        metadata: {
+          feedbackType: type,
+          rating: rating || null,
+          pageContext: page.trim() || null,
+          messageLength: message.trim().length,
+        },
+      });
       setSubmitted(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';

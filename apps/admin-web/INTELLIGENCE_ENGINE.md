@@ -41,6 +41,7 @@ Legacy scrapers  ─┘                            Match to promises      Sugges
 | `lib/intelligence/status-pipeline.ts` | Persists reviewable status recommendations for commitments |
 | `lib/intelligence/jobs.ts` | Queue/worker primitives for recurring intelligence work |
 | `lib/intelligence/feedback-review.ts` | OpenClaw-powered citizen feedback triage, approval flow, and handoff generation |
+| `lib/intelligence/pilot-summary.ts` | OpenClaw-powered pilot tracker monitoring and founder summary generation |
 | `lib/intelligence/daily-activity-rollup.ts` | Daily per-promise activity aggregation |
 | `lib/intelligence/collectors/rss.ts` | RSS/Atom feed collector (18+ Nepal news feeds) |
 | `lib/intelligence/collectors/youtube.ts` | YouTube channel monitor + caption extraction |
@@ -62,6 +63,7 @@ Legacy scrapers  ─┘                            Match to promises      Sugges
 | `lib/intelligence/collectors/facebook-scraper.ts` | Facebook page scraper (Apify or DuckDuckGo fallback) |
 | `lib/intelligence/collectors/audio-transcriber.ts` | Audio/video transcription via Groq Whisper |
 | `app/(dashboard)/feedback-review/page.tsx` | Operator inbox for reviewing and applying feedback autopilot decisions |
+| `app/(dashboard)/pilot/page.tsx` | Pilot tracker with live product facts plus OpenClaw operator summary |
 
 ### API Routes
 
@@ -78,6 +80,7 @@ Legacy scrapers  ─┘                            Match to promises      Sugges
 | `/api/intelligence/worker` | POST/GET | Process queued intelligence jobs |
 | `/api/admin/feedback` | GET/POST | List citizen feedback, queue autopilot reviews, or run them immediately |
 | `/api/admin/feedback/[id]` | PATCH | Review, approve, reject, or apply a feedback autopilot decision |
+| `/api/admin/pilot-summary` | GET/POST | Load the latest OpenClaw pilot summary, queue it, or run it immediately |
 | `/api/intelligence/status` | GET | System health and signal counts |
 | `/api/intelligence/signals/[id]` | GET/PATCH/DELETE | View, edit, or soft-delete individual signals |
 | `/api/admin/signals` | GET | List signals with filters (admin review page) |
@@ -140,6 +143,8 @@ This applies:
 - `supabase/012-intelligence-jobs-and-control.sql`
 - `supabase/013-intelligence-status-recommendations.sql`
 - `supabase/014-feedback-autopilot.sql`
+- `supabase/016-pilot-analytics.sql`
+- `supabase/017-pilot-summary-autopilot.sql`
 
 For DB access, provide one of:
 

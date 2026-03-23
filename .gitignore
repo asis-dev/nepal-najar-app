@@ -18,3 +18,4 @@ public/workbox-*.js
 .playwright-cli/
 apps/admin-web/.next.prepush-check/
 output/
+.vercel

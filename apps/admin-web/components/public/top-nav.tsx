@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Calendar,
   Globe,
   Menu,
   X,
   LogIn,
+  LogOut,
   Eye,
   ClipboardCheck,
   Target,
@@ -18,8 +19,12 @@ import {
   Map,
   Megaphone,
   TrendingUp,
+  User,
+  Settings,
+  ChevronDown,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
 import { NotificationBell } from '@/components/public/notification-bell';
 import { useTrending } from '@/lib/hooks/use-trending';
@@ -49,10 +54,32 @@ const mobileOnlyLinks = [
 
 export function TopNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { locale, setLocale, t } = useI18n();
   const { pulseLevel } = useTrending();
   const pulseDotColor = PULSE_COLORS[pulseLevel];
+  const { user, isAuthenticated, signOut } = useAuth();
+
+  // Close user menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSignOut = async () => {
+    setUserMenuOpen(false);
+    setMobileOpen(false);
+    await signOut();
+    router.push('/');
+  };
 
   const toggleLang = () => setLocale(locale === 'en' ? 'ne' : 'en');
   const isActivePath = (href: string) => {
@@ -121,13 +148,46 @@ export function TopNav() {
               <span>{locale === 'en' ? 'EN' : 'ने'} | {locale === 'en' ? 'ने' : 'EN'}</span>
             </button>
 
-            <Link
-              href="/admin-login"
-              className="flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-gray-300"
-            >
-              <LogIn className="h-4 w-4" />
-              {t('nav.operatorLogin')}
-            </Link>
+            {isAuthenticated && user ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 rounded-xl border border-white/[0.08] px-3 py-1.5 text-sm text-gray-300 transition-colors hover:border-white/[0.15] hover:text-white"
+                >
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/20 text-xs font-semibold text-primary-300">
+                    {(user.displayName || user.email || '?')[0].toUpperCase()}
+                  </div>
+                  <span className="max-w-[120px] truncate">{user.displayName || user.email}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border border-np-border bg-np-surface/95 shadow-xl backdrop-blur-xl">
+                    <div className="border-b border-np-border px-4 py-3">
+                      <p className="truncate text-sm font-medium text-white">{user.displayName || t('auth.myAccount')}</p>
+                      <p className="truncate text-xs text-gray-500">{user.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={handleSignOut}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-red-400"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {t('auth.signOut')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 rounded-xl border border-primary-500/30 bg-primary-500/10 px-3 py-2 text-sm font-medium text-primary-300 transition-colors hover:bg-primary-500/20 hover:text-primary-200"
+              >
+                <LogIn className="h-4 w-4" />
+                {t('auth.signIn')}
+              </Link>
+            )}
           </div>
 
           <button
@@ -178,14 +238,24 @@ export function TopNav() {
               {locale === 'en' ? 'EN | ने' : 'ने | EN'}
             </button>
 
-            <Link
-              href="/admin-login"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-gray-500 transition-colors hover:bg-white/[0.04] hover:text-gray-300"
-            >
-              <LogIn className="h-4 w-4" />
-              {t('nav.operatorLogin')}
-            </Link>
+            {isAuthenticated && user ? (
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-red-400"
+              >
+                <LogOut className="h-4 w-4" />
+                {t('auth.signOut')}
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 rounded-2xl border border-primary-500/30 bg-primary-500/10 px-3 py-3 text-sm font-medium text-primary-300 transition-colors hover:bg-primary-500/20"
+              >
+                <LogIn className="h-4 w-4" />
+                {t('auth.signIn')}
+              </Link>
+            )}
             </div>
           </div>
         </div>

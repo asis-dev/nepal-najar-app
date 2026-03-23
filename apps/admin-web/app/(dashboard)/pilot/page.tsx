@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import { Activity, Bot, CheckCircle2, Gauge, MessageSquare, Radar, ShieldCheck, Users } from 'lucide-react';
 import { getPilotTracker } from '@/lib/data/pilot-tracker';
+import { PilotSummaryPanel } from '@/components/dashboard/pilot-summary-panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +27,7 @@ function StatCard({
   label: string;
   value: string;
   note: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <div className="glass-card p-5">
@@ -92,6 +94,8 @@ export default async function PilotPage() {
           icon={<Bot className="h-5 w-5" />}
         />
       </div>
+
+      <PilotSummaryPanel days={tracker.window.days} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_0.9fr]">
         <div className="glass-card p-6">

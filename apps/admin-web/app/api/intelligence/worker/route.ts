@@ -28,6 +28,7 @@ function parseJobTypes(value: unknown): IntelligenceJobType[] | undefined {
     'transcribe_url',
     'run_status_pipeline',
     'review_feedback',
+    'summarize_pilot_tracker',
   ];
   const parsed = value.filter((item): item is IntelligenceJobType =>
     allowed.includes(item as IntelligenceJobType),

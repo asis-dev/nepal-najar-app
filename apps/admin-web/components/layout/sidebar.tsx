@@ -42,6 +42,7 @@ const sections: NavSection[] = [
       { name: 'Evidence', href: '/evidence', icon: FileText },
       { name: 'Budget', href: '/budget', icon: TrendingUp },
       { name: 'Verification', href: '/verification', icon: Shield },
+      { name: 'Pilot Tracker', href: '/pilot', icon: BarChart3 },
       { name: 'Review Queue', href: '/review', icon: ListChecks },
       { name: 'Audit Log', href: '/audit', icon: Eye },
     ],

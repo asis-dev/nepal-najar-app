@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Camera, X, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { trackPilotEvent } from '@/lib/analytics/client';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
 
@@ -49,6 +50,14 @@ export function ShareProofButton({ promiseId }: ShareProofButtonProps) {
         throw new Error(data.error || 'Failed to submit');
       }
 
+      trackPilotEvent('evidence_submit', {
+        metadata: {
+          promiseId,
+          classification,
+          mediaUrlCount: urls.length,
+          hasCaption: Boolean(caption.trim()),
+        },
+      });
       setSubmitted(true);
       setTimeout(() => {
         setIsOpen(false);
