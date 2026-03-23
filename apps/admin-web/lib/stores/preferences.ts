@@ -87,23 +87,43 @@ export const usePreferencesStore = create<HometownPreferences & PreferencesActio
 
 /* ═══════════════════════════════════════════════
    WATCHLIST STORE
-   Bookmark projects — localStorage for anonymous
+   Bookmark projects — localStorage for anonymous,
+   synced to /api/watchlist for authenticated users
    ═══════════════════════════════════════════════ */
 
 interface WatchlistState {
   watchedProjectIds: string[];
+  /** True while an initial server fetch is in flight */
+  _syncing: boolean;
 }
 
 interface WatchlistActions {
   toggleWatch: (projectId: string) => void;
   isWatched: (projectId: string) => boolean;
   clearWatchlist: () => void;
+  /** Fetch watchlist from the server, merge with localStorage */
+  syncFromServer: () => Promise<void>;
+  /** Push entire localStorage watchlist to the server (bulk) */
+  syncToServer: () => Promise<void>;
+}
+
+/** Fire-and-forget helper to add/remove a single item on the server */
+function serverToggle(promiseId: string, action: 'add' | 'remove') {
+  const method = action === 'add' ? 'POST' : 'DELETE';
+  fetch('/api/watchlist', {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ promise_id: promiseId }),
+  }).catch(() => {
+    /* silent — localStorage is the source of truth for offline */
+  });
 }
 
 export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
   persist(
     (set, get) => ({
       watchedProjectIds: [],
+      _syncing: false,
 
       toggleWatch: (projectId) => {
         set((state) => {
@@ -119,11 +139,13 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
             },
           });
 
-          // Cloud sync if logged in
+          // Sync individual toggle to server if logged in
           try {
             const { useAuth } = require('@/lib/hooks/use-auth');
             const { user } = useAuth.getState();
             if (user?.id) {
+              serverToggle(projectId, exists ? 'remove' : 'add');
+              // Also keep legacy user_preferences in sync
               syncToCloud(user.id, { watchlist: newList });
             }
           } catch { /* not logged in or SSR */ }
@@ -134,12 +156,68 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
 
       isWatched: (projectId) => get().watchedProjectIds.includes(projectId),
 
-      clearWatchlist: () => set({ watchedProjectIds: [] }),
+      clearWatchlist: () => {
+        const current = get().watchedProjectIds;
+        set({ watchedProjectIds: [] });
+
+        // Remove all from server if logged in
+        try {
+          const { useAuth } = require('@/lib/hooks/use-auth');
+          const { user } = useAuth.getState();
+          if (user?.id) {
+            for (const id of current) {
+              serverToggle(id, 'remove');
+            }
+            syncToCloud(user.id, { watchlist: [] });
+          }
+        } catch { /* not logged in or SSR */ }
+      },
+
+      syncFromServer: async () => {
+        if (get()._syncing) return;
+        set({ _syncing: true });
+
+        try {
+          const res = await fetch('/api/watchlist');
+          if (!res.ok) {
+            set({ _syncing: false });
+            return;
+          }
+
+          const { promise_ids } = (await res.json()) as { promise_ids: string[] };
+          const local = get().watchedProjectIds;
+
+          // Merge: union of server + local (server is authoritative, but keep any local-only items)
+          const merged = Array.from(new Set([...promise_ids, ...local]));
+
+          set({ watchedProjectIds: merged, _syncing: false });
+
+          // Push any local-only items to the server so they persist
+          const serverSet = new Set(promise_ids);
+          const localOnly = local.filter((id) => !serverSet.has(id));
+          for (const id of localOnly) {
+            serverToggle(id, 'add');
+          }
+        } catch {
+          set({ _syncing: false });
+        }
+      },
+
+      syncToServer: async () => {
+        const ids = get().watchedProjectIds;
+        // Push all items — upsert is idempotent so dupes are safe
+        for (const id of ids) {
+          serverToggle(id, 'add');
+        }
+      },
     }),
     {
       name: 'nepal-najar-watchlist',
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
+      partialize: (state) => ({
+        watchedProjectIds: state.watchedProjectIds,
+      }),
     },
   ),
 );

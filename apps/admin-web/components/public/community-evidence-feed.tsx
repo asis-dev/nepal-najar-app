@@ -17,11 +17,14 @@ import {
   Inbox,
   Send,
   ChevronDown,
+  Upload,
+  Link2,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CommunityEvidence, EvidenceClassification } from '@/lib/hooks/use-evidence-review';
+import { PhotoUpload } from './photo-upload';
 
 /* ═══════════════════════════════════════════
    TYPES & CONSTANTS
@@ -140,23 +143,31 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [caption, setCaption] = useState('');
   const [classification, setClassification] = useState<EvidenceClassification>('confirms');
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaMode, setMediaMode] = useState<'upload' | 'url'>('upload');
   const [proofUrl, setProofUrl] = useState('');
 
   const evidenceList = data?.evidence ?? [];
 
   const handleSubmit = async () => {
     if (!caption.trim()) return;
+    // Combine uploaded photo URLs with any manually pasted URL
+    const allMediaUrls = [
+      ...mediaUrls,
+      ...(mediaMode === 'url' && mediaUrl.trim() ? [mediaUrl.trim()] : []),
+    ];
     try {
       await submitMutation.mutateAsync({
         promise_id: promiseId,
         caption: caption.trim(),
         classification,
-        media_urls: mediaUrl.trim() ? [mediaUrl.trim()] : [],
+        media_urls: allMediaUrls,
         proof_url: proofUrl.trim() || undefined,
       });
       setShowSubmitForm(false);
       setCaption('');
+      setMediaUrls([]);
       setMediaUrl('');
       setProofUrl('');
     } catch {
@@ -235,17 +246,80 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
             </div>
           </div>
 
+          {/* ── Media: Upload / Paste URL toggle ── */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
-              {isNe ? 'मिडिया URL' : 'Media URL'} ({isNe ? 'वैकल्पिक' : 'optional'})
-            </label>
-            <input
-              type="url"
-              value={mediaUrl}
-              onChange={(e) => setMediaUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/40 transition-all"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs text-gray-500">
+                {isNe ? 'मिडिया' : 'Media'} ({isNe ? 'वैकल्पिक' : 'optional'})
+              </label>
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setMediaMode('upload')}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                    mediaMode === 'upload'
+                      ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  <Upload className="w-3 h-3" />
+                  {isNe ? 'अपलोड' : 'Upload'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaMode('url')}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                    mediaMode === 'url'
+                      ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  <Link2 className="w-3 h-3" />
+                  {isNe ? 'URL टाँस्नुहोस्' : 'Paste URL'}
+                </button>
+              </div>
+            </div>
+
+            {mediaMode === 'upload' ? (
+              <div className="space-y-2">
+                <PhotoUpload
+                  onUpload={(urls) => setMediaUrls((prev) => [...prev, ...urls])}
+                  disabled={submitMutation.isPending}
+                  isNe={isNe}
+                />
+                {/* Show already-uploaded URLs */}
+                {mediaUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {mediaUrls.map((url, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                      >
+                        <ImageIcon className="w-2.5 h-2.5" />
+                        {isNe ? `अपलोड ${i + 1}` : `Upload ${i + 1}`}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setMediaUrls((prev) => prev.filter((_, idx) => idx !== i))
+                          }
+                          className="ml-0.5 hover:text-red-400 transition-colors"
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <input
+                type="url"
+                value={mediaUrl}
+                onChange={(e) => setMediaUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/40 transition-all"
+              />
+            )}
           </div>
 
           <div>

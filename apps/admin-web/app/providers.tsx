@@ -8,6 +8,7 @@ import { PersistHydrator } from '@/components/public/persist-hydrator';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { mergeOnLogin } from '@/lib/services/preferences-sync';
+import { useWatchlistStore } from '@/lib/stores/preferences';
 import { CompareFab } from '@/components/public/compare-fab';
 
 /** Initialize Supabase auth session on app load + merge preferences on sign-in */
@@ -16,7 +17,13 @@ function AuthInitializer() {
   const subscribed = useRef(false);
 
   useEffect(() => {
-    initialize();
+    initialize().then(() => {
+      // If user is already logged in on page load, sync watchlist from server
+      const { isAuthenticated } = useAuth.getState();
+      if (isAuthenticated) {
+        useWatchlistStore.getState().syncFromServer();
+      }
+    });
 
     // Subscribe to auth state changes for cloud preference merge
     if (subscribed.current) return;
@@ -30,6 +37,8 @@ function AuthInitializer() {
         if (event === 'SIGNED_IN' && session?.user) {
           // Merge local preferences with cloud on sign-in
           await mergeOnLogin(session.user.id);
+          // Sync watchlist from dedicated user_watchlist table
+          useWatchlistStore.getState().syncFromServer();
         }
       },
     );
