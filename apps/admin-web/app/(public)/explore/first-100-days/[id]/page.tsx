@@ -393,8 +393,9 @@ export default function PromiseDetailPage() {
     }> = [];
 
     // Add today's signals
-    if (todaySignals) {
-      for (const s of todaySignals) {
+    const signalsList = Array.isArray(todaySignals) ? todaySignals : [];
+    if (signalsList.length > 0) {
+      for (const s of signalsList) {
         items.push({
           id: s.id,
           headline: s.headline,
@@ -408,9 +409,10 @@ export default function PromiseDetailPage() {
     }
 
     // Add scraped articles not already in signals
-    if (realArticles) {
+    const articlesList = Array.isArray(realArticles) ? realArticles : [];
+    if (articlesList.length > 0) {
       const signalIds = new Set(items.map((i) => i.id));
-      for (const a of realArticles) {
+      for (const a of articlesList) {
         if (!signalIds.has(a.id)) {
           items.push({
             id: a.id,

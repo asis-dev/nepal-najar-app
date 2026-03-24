@@ -884,6 +884,53 @@ export async function runFullSweep(
       }
     }
 
+    // ===== BRIEFING PRE-GENERATION PHASE =====
+    if (!skipAnalysis && !rssOnly && !analysisQueued) {
+      console.log('[Sweep] Pre-generating commitment briefings...');
+      try {
+        const { generateCommitmentBriefing } = await import('./commitment-briefing');
+        const { generateDailyBrief } = await import('./daily-brief');
+
+        // Regenerate daily brief
+        await generateDailyBrief();
+        console.log('[Sweep] Daily brief regenerated');
+
+        // Pre-generate briefings for commitments with recent signals (top 20 by activity)
+        const supabase = (await import('@/lib/supabase/server')).getSupabase();
+        const { data: activeCommitments } = await supabase
+          .from('intelligence_signals')
+          .select('matched_promise_ids')
+          .not('matched_promise_ids', 'eq', '{}')
+          .order('discovered_at', { ascending: false })
+          .limit(200);
+
+        if (activeCommitments) {
+          const idCounts: Record<string, number> = {};
+          for (const s of activeCommitments) {
+            for (const id of (s.matched_promise_ids || [])) {
+              idCounts[String(id)] = (idCounts[String(id)] || 0) + 1;
+            }
+          }
+          const topIds = Object.entries(idCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20)
+            .map(([id]) => Number(id));
+
+          let briefingsGenerated = 0;
+          for (const cid of topIds) {
+            try {
+              await generateCommitmentBriefing(cid);
+              briefingsGenerated++;
+            } catch { /* skip failed */ }
+            await new Promise(r => setTimeout(r, 1000)); // rate limit
+          }
+          console.log(`[Sweep] Pre-generated ${briefingsGenerated} commitment briefings`);
+        }
+      } catch (err) {
+        console.warn('[Sweep] Briefing pre-generation error:', err instanceof Error ? err.message : 'unknown');
+      }
+    }
+
     // Calculate totals
     result.totalSignals =
       result.collection.rss.newItems +

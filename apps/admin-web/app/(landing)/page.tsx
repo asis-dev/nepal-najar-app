@@ -879,7 +879,7 @@ export default function LandingPage() {
                       <span>{'\uD83D\uDCCB'}</span>
                       Today&apos;s brief
                     </div>
-                    <p className="text-xs md:text-sm leading-relaxed text-gray-300 line-clamp-1 md:line-clamp-none">
+                    <p className="text-xs md:text-sm leading-relaxed text-gray-300 line-clamp-3 md:line-clamp-none">
                       {locale === 'ne' && brief.summaryNe
                         ? brief.summaryNe.split('\n').slice(0, 3).join(' ')
                         : brief.summaryEn.split('\n').slice(0, 3).join(' ')}
