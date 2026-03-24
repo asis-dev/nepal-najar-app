@@ -356,10 +356,20 @@ async function fetchApifyDataset(
 async function scrapeViaDuckDuckGo(account: ThreadsAccountConfig): Promise<ScrapedThreadsPost[]> {
   const posts: ScrapedThreadsPost[] = [];
 
+  // DDG often blocks site: for Threads, so use broader queries
   const queries = [
+    `threads.net ${account.name} nepal`,
+    `threads "${account.username}" nepal politics`,
     `site:threads.net "@${account.username}"`,
-    `site:threads.net "${account.name}"`,
   ];
+
+  // Also try fetching the profile page directly and parsing HTML
+  try {
+    const profilePosts = await scrapeThreadsProfileDirectly(account);
+    posts.push(...profilePosts);
+  } catch {
+    // Silently skip direct profile scrape failures
+  }
 
   for (const query of queries) {
     try {
@@ -395,15 +405,83 @@ async function scrapeViaDuckDuckGo(account: ThreadsAccountConfig): Promise<Scrap
   });
 }
 
+// ─── Direct Threads profile scraping ─────────────────────────────────────────
+
+/**
+ * Try fetching a Threads profile page directly and parsing HTML for posts.
+ * Threads renders some content server-side that we can extract.
+ */
+async function scrapeThreadsProfileDirectly(account: ThreadsAccountConfig): Promise<ScrapedThreadsPost[]> {
+  const posts: ScrapedThreadsPost[] = [];
+
+  try {
+    const res = await fetch(`https://www.threads.net/@${account.username}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    if (!res.ok) return [];
+
+    const html = await res.text();
+
+    // Threads embeds JSON-LD or meta tags with post content
+    // Look for og:description or JSON content in script tags
+    const metaDescMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/i);
+    if (metaDescMatch && metaDescMatch[1].length > 20) {
+      posts.push({
+        externalId: `direct-${hashString(`threads-${account.username}-profile`)}`,
+        text: metaDescMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"'),
+        url: `https://www.threads.net/@${account.username}`,
+        author: account.username,
+        publishedAt: new Date().toISOString(),
+        likes: 0,
+        replies: 0,
+        reposts: 0,
+      });
+    }
+
+    // Try to extract post text from server-rendered content
+    const postTextRegex = /<div[^>]*class="[^"]*"[^>]*data-pressable-container[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/g;
+    let postMatch: RegExpExecArray | null;
+    let count = 0;
+    while ((postMatch = postTextRegex.exec(html)) !== null && count < 10) {
+      const text = stripHtml(postMatch[1]).trim();
+      if (text.length > 20) {
+        posts.push({
+          externalId: `direct-${hashString(text)}`,
+          text,
+          url: `https://www.threads.net/@${account.username}`,
+          author: account.username,
+          publishedAt: new Date().toISOString(),
+          likes: 0,
+          replies: 0,
+          reposts: 0,
+        });
+        count++;
+      }
+    }
+  } catch {
+    // Silently fail
+  }
+
+  return posts;
+}
+
 // ─── Broader free search queries ─────────────────────────────────────────────
 
 const BROAD_SEARCH_QUERIES = [
-  'site:threads.net "Nepal government" OR "Balen" OR "RSP"',
-  'site:threads.net "Balen Shah" Kathmandu',
-  'site:threads.net "Rastriya Swatantra Party"',
-  'site:threads.net "Nepal budget" OR "Nepal infrastructure"',
-  'site:threads.net "Kathmandu development" OR "KMC"',
-  'site:threads.net "नेपाल सरकार" OR "बालेन"',
+  // DDG often blocks site: for Threads, so use broader queries
+  'threads.net nepal politics balen',
+  'threads "Balen Shah" nepal',
+  'threads.net "Rastriya Swatantra Party"',
+  'threads nepal government news',
+  'threads.net kathmandu development KMC',
+  'threads "नेपाल सरकार" OR "बालेन"',
 ];
 
 /**

@@ -7,6 +7,7 @@
  */
 
 import { getSupabase } from '@/lib/supabase/server';
+import { computeCommitmentProgress } from './progress-extractor';
 
 export interface StatusRecommendation {
   id?: string;
@@ -19,6 +20,9 @@ export interface StatusRecommendation {
   signalCount: number;
   confirmsCount: number;
   contradictsCount: number;
+  progressPercent?: number | null;
+  progressConfidence?: number | null;
+  progressMethod?: string | null;
   reviewState?: 'pending' | 'approved' | 'rejected' | 'applied';
   createdAt?: string;
 }
@@ -366,6 +370,40 @@ export async function analyzePromiseStatus(
     reason = `${statement} official statement-type signals suggest early movement but limited implementation evidence.`;
   }
 
+  // Compute progress percentage from signal content (regex-based, no AI cost)
+  let progressPercent: number | null = null;
+  let progressConfidence: number | null = null;
+  let progressMethod: string | null = null;
+
+  try {
+    const progressResult = await computeCommitmentProgress(promiseId);
+    if (progressResult) {
+      progressPercent = progressResult.progress;
+      progressConfidence = progressResult.confidence;
+      progressMethod = progressResult.method;
+
+      // Override status based on progress if applicable
+      if (progressPercent >= 80 && recommendedStatus !== 'delivered') {
+        recommendedStatus = 'delivered';
+        confidence = Math.max(confidence, progressResult.confidence);
+        reason = `${reason} Progress extraction indicates ${progressPercent}% completion (method: ${progressMethod}).`;
+      } else if (
+        progressPercent > 0 &&
+        progressPercent < 80 &&
+        (recommendedStatus === null || recommendedStatus === 'not_started')
+      ) {
+        recommendedStatus = 'in_progress';
+        confidence = Math.max(confidence, 0.4);
+        reason = `Progress extraction indicates ${progressPercent}% completion (method: ${progressMethod}).`;
+      }
+    }
+  } catch (err) {
+    console.warn(
+      `[StatusPipeline] Progress extraction failed for promise ${promiseId}:`,
+      err instanceof Error ? err.message : 'unknown',
+    );
+  }
+
   if (recommendedStatus === null || recommendedStatus === currentStatus) {
     return null;
   }
@@ -380,6 +418,9 @@ export async function analyzePromiseStatus(
     signalCount,
     confirmsCount: confirms,
     contradictsCount: contradicts,
+    progressPercent,
+    progressConfidence,
+    progressMethod,
     reviewState: 'pending',
   };
 }

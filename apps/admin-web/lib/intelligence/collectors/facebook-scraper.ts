@@ -391,7 +391,7 @@ async function scrapeViaApify(page: FacebookPageConfig): Promise<ScrapedPost[]> 
 
     if (!res.ok) {
       const errText = await res.text().catch(() => 'unknown');
-      console.error(`[FacebookScraper/Apify] Failed to start run for ${page.name}: ${res.status} ${errText}`);
+      console.error(`[FacebookScraper/Apify] Failed to start run for ${page.name}: HTTP ${res.status} — Actor: ${FB_POSTS_ACTOR} — Response: ${errText.slice(0, 500)}`);
       return [];
     }
 
@@ -625,10 +625,10 @@ function parseDDGResults(html: string): DDGResult[] {
  */
 async function scrapeBroadSearches(): Promise<ScrapedPost[]> {
   const broadQueries = [
+    'facebook.com nepal government news 2026',
     'site:facebook.com "Nepal government" OR "RSP" OR "बालेन"',
-    'site:facebook.com "Rastriya Swatantra Party" Nepal',
-    'site:facebook.com "नेपाल सरकार" announcement',
-    'site:facebook.com "Balen Shah" Kathmandu',
+    'facebook.com "Rastriya Swatantra Party" Nepal news',
+    'facebook.com nepal politics balen shah kathmandu',
   ];
 
   const posts: ScrapedPost[] = [];

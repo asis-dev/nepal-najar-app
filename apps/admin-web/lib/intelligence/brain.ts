@@ -21,6 +21,9 @@ import {
   getCommitmentDetailContext,
   getCurrentDateContext,
 } from './commitment-context';
+import { extractEntities, type ExtractedEntities } from './entity-extractor';
+import { extractProgress } from './progress-extractor';
+import { getRelevantCorrections } from './ai-feedback';
 
 interface Signal {
   id: string;
@@ -206,16 +209,32 @@ Respond in JSON format ONLY:
   "reasoning": "brief explanation"
 }`;
 
+  // Extract entities from signal text for better classification context
+  const signalText = getSignalText(signal);
+  const entities = extractEntities(signalText);
+  const entityContext = formatEntityContext(entities);
+
+  // Fetch relevant past corrections to improve classification
+  const corrections = await getRelevantCorrections({
+    signalContent: signalText,
+  });
+
   const userPrompt = `Analyze this signal:
 Type: ${signal.signal_type}
 Title: ${signal.title}
 Content: ${(signal.content || '').slice(0, 2000)}
 Source: ${signal.source_id}
 Date: ${signal.published_at || 'unknown'}
-Author: ${signal.author || 'unknown'}`;
+Author: ${signal.author || 'unknown'}
+${entityContext}`;
+
+  // Append corrections context to the system prompt if available
+  const fullSystemPrompt = corrections
+    ? `${systemPrompt}\n\nIMPORTANT — Learn from these past corrections by the admin:\n${corrections}\n\nApply these lessons to your classification.`
+    : systemPrompt;
 
   try {
-    const response = await aiComplete('classify', systemPrompt, userPrompt);
+    const response = await aiComplete('classify', fullSystemPrompt, userPrompt);
     const parsed = parseJSON<ClassificationResult>(response.content);
     if (!parsed) {
       return {
@@ -347,6 +366,18 @@ Respond with a JSON array of analysis results, one per matched promise:
   "suggestedProgress": 0-100 or null
 }]`;
 
+  // Fetch relevant past corrections for matched commitments
+  const signalTextForCorrections = getSignalText(signal);
+  const primaryCommitmentId = matchedPromiseIds[0] || undefined;
+  const tier3Corrections = await getRelevantCorrections({
+    signalContent: signalTextForCorrections,
+    commitmentId: primaryCommitmentId,
+  });
+
+  const fullSystemPrompt = tier3Corrections
+    ? `${systemPrompt}\n\nIMPORTANT — Learn from these past corrections by the admin:\n${tier3Corrections}\n\nApply these lessons to your analysis.`
+    : systemPrompt;
+
   const userPrompt = `ANALYZE THIS SIGNAL IN DEPTH:
 
 Type: ${signal.signal_type}
@@ -362,7 +393,7 @@ URL: ${signal.url}
 What does this mean for the government promises? Be thorough and specific.`;
 
   try {
-    const response = await aiComplete('reason', systemPrompt, userPrompt);
+    const response = await aiComplete('reason', fullSystemPrompt, userPrompt);
     const parsed = parseJSON<DeepAnalysisResult[]>(response.content);
     return parsed || [];
   } catch {
@@ -437,6 +468,15 @@ export async function processSignalsBatch(
           })
           .eq('id', signal.id);
 
+        // Generate AI summary for relevant signals
+        if (result.isRelevant && result.relevanceScore >= 0.3) {
+          try {
+            await generateSignalSummary(signal.id);
+          } catch {
+            // Non-fatal — summary generation failure shouldn't block processing
+          }
+        }
+
         tier1Processed++;
       } catch (err) {
         errors.push(
@@ -491,6 +531,28 @@ export async function processSignalsBatch(
           : normalizeClassification(signal.classification);
         const confidence = primaryAnalysis?.confidence || 0;
 
+        // Extract progress percentage (regex only, no AI cost)
+        const signalText = getSignalText(signal as unknown as Signal);
+        const progressExtraction = await extractProgress(
+          signal.id,
+          signalText,
+        );
+
+        const extractedData = primaryAnalysis?.extractedData || {};
+        const signalMetadata = (signal.metadata || {}) as Record<string, unknown>;
+
+        // Merge progress extraction into metadata and extracted_data
+        if (progressExtraction) {
+          signalMetadata.progress_extraction = progressExtraction;
+          (extractedData as Record<string, unknown>).progress = {
+            value: progressExtraction.progress,
+            confidence: progressExtraction.confidence,
+            method: progressExtraction.method,
+            evidence: progressExtraction.evidence,
+            breakdown: progressExtraction.breakdown || null,
+          };
+        }
+
         await supabase
           .from('intelligence_signals')
           .update({
@@ -499,7 +561,8 @@ export async function processSignalsBatch(
             classification: normalizedClass,
             reasoning:
               primaryAnalysis?.reasoning || signal.reasoning,
-            extracted_data: primaryAnalysis?.extractedData || {},
+            extracted_data: extractedData,
+            metadata: signalMetadata,
             corroborated_by: corroborating.map((s) => s.id),
             review_required: needsHumanReview({
               confidence,
@@ -549,6 +612,98 @@ export async function processSignalsBatch(
     totalCostUsd,
     errors,
   };
+}
+
+function formatEntityContext(entities: ExtractedEntities): string {
+  const parts: string[] = [];
+
+  if (entities.people.length > 0) {
+    parts.push(`People: ${entities.people.join(', ')}`);
+  }
+  if (entities.organizations.length > 0) {
+    parts.push(`Organizations: ${entities.organizations.join(', ')}`);
+  }
+  if (entities.amounts.length > 0) {
+    parts.push(`Amounts: ${entities.amounts.join(', ')}`);
+  }
+  if (entities.locations.length > 0) {
+    parts.push(`Locations: ${entities.locations.join(', ')}`);
+  }
+  if (entities.dates.length > 0) {
+    parts.push(`Dates: ${entities.dates.join(', ')}`);
+  }
+  if (entities.percentages.length > 0) {
+    parts.push(`Percentages: ${entities.percentages.join(', ')}`);
+  }
+  if (entities.commitmentKeywords.length > 0) {
+    parts.push(`Commitment Keywords: ${entities.commitmentKeywords.join(', ')}`);
+  }
+
+  if (parts.length === 0) return '';
+
+  return `\nHere are the entities extracted from this article:\n${parts.join('\n')}\n\nUse these to make a more accurate classification.`;
+}
+
+// Generate a concise AI summary for relevant signals (score >= 0.3)
+export async function generateSignalSummary(
+  signalId: string,
+): Promise<string | null> {
+  const supabase = getSupabase();
+
+  const { data: signal } = await supabase
+    .from('intelligence_signals')
+    .select('id, title, content, extracted_data, relevance_score')
+    .eq('id', signalId)
+    .single();
+
+  if (!signal) return null;
+  if ((signal.relevance_score || 0) < 0.3) return null;
+
+  const content = (signal.content || signal.title || '').slice(0, 4000);
+  const entities = signal.extracted_data as ExtractedEntities | null;
+
+  let entitySection = '';
+  if (entities) {
+    const parts: string[] = [];
+    if (entities.people?.length) parts.push(`People: ${entities.people.join(', ')}`);
+    if (entities.organizations?.length) parts.push(`Organizations: ${entities.organizations.join(', ')}`);
+    if (entities.amounts?.length) parts.push(`Amounts: ${entities.amounts.join(', ')}`);
+    if (entities.locations?.length) parts.push(`Locations: ${entities.locations.join(', ')}`);
+    if (entitySection) entitySection = `\n\nExtracted entities:\n${parts.join('\n')}`;
+    if (parts.length > 0) entitySection = `\n\nExtracted entities:\n${parts.join('\n')}`;
+  }
+
+  const systemPrompt = `You are a concise news analyst for Nepal Najar, a government promise tracker.
+Summarize the following article in 2-3 sentences focusing on:
+- What happened
+- Who is involved
+- What government commitment does it relate to
+- Any specific numbers or dates
+
+Be factual and brief. Respond with ONLY the summary text, no JSON.`;
+
+  const userPrompt = `Article content:
+${content}${entitySection}`;
+
+  try {
+    const response = await aiComplete('summarize', systemPrompt, userPrompt);
+    const summary = response.content.trim();
+
+    if (summary.length < 10) return null;
+
+    // Store the summary
+    await supabase
+      .from('intelligence_signals')
+      .update({ content_summary: summary })
+      .eq('id', signalId);
+
+    return summary;
+  } catch (err) {
+    console.warn(
+      `[Brain] Failed to generate summary for ${signalId}: ${err instanceof Error ? err.message : 'unknown'}`,
+    );
+    return null;
+  }
 }
 
 function parseJSON<T>(text: string): T | null {

@@ -22,7 +22,7 @@ interface RSSSource {
   relatedPromiseIds: number[];
 }
 
-// Nepal news RSS feeds (18 active sources: 10 English, 8 Nepali — 4 commented out due to feed/site issues)
+// Nepal news RSS feeds (44 active sources — 4 commented out due to feed/site issues)
 export const RSS_FEEDS: RSSSource[] = [
   // ── English feeds ──────────────────────────────────────
   {
@@ -270,6 +270,101 @@ export const RSS_FEEDS: RSSSource[] = [
     id: 'nepal-samaya-ne',
     name: 'Nepal Samaya',
     feedUrl: 'https://nepalsamaya.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+
+  // ── Additional English feeds (batch 2) ──────────────────────────────────────
+  {
+    id: 'rss-dcnepal',
+    name: 'DC Nepal English',
+    feedUrl: 'https://dcnepal.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-south-asia-check',
+    name: 'South Asia Check',
+    feedUrl: 'https://southasiacheck.org/feed/',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nepal-monitor',
+    name: 'Nepal Monitor',
+    feedUrl: 'https://nepalmonitor.org/feed',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nepali-sansar',
+    name: 'Nepali Sansar',
+    feedUrl: 'https://www.nepalisansar.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-spotlight-nepal',
+    name: 'Spotlight Nepal',
+    feedUrl: 'https://www.spotlightnepal.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [],
+  },
+
+  // ── Additional Nepali feeds (batch 2) ─────────────────────────────────────
+  {
+    id: 'rss-lokantar',
+    name: 'Lokantar',
+    feedUrl: 'https://lokantar.com/feed',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-arthadabali',
+    name: 'Arthadabali',
+    feedUrl: 'https://arthadabali.com/feed/',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-bizmandu',
+    name: 'Bizmandu',
+    feedUrl: 'https://bizmandu.com/feed/',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-swasthya-khabar',
+    name: 'Swasthya Khabar',
+    feedUrl: 'https://swasthyakhabar.com/feed/',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-arthapath',
+    name: 'Arthapath',
+    feedUrl: 'https://arthapath.com/feed/',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-hamrakura',
+    name: 'Hamrakura',
+    feedUrl: 'https://hamrakura.com/feed/',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-nepalpress-ne',
+    name: 'Nepal Press Nepali',
+    feedUrl: 'https://nepalpress.com/feed/',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'rss-techmandu',
+    name: 'Techmandu',
+    feedUrl: 'https://techmandu.com/feed/',
     language: 'ne',
     relatedPromiseIds: [],
   },

@@ -460,11 +460,41 @@ async function fetchPage(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
       headers: {
+        // Use a real browser User-Agent — Nepal gov sites block non-browser UAs
         'User-Agent':
-          'NepalNajar/2.0 (intelligence-engine; +https://nepalnajar.com)',
-        Accept: 'text/html,application/xhtml+xml',
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9,ne;q=0.8',
       },
       signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!res.ok) {
+      // If blocked, try Google Cache as fallback
+      console.warn(`[ParliamentScraper] HTTP ${res.status} for ${url}, trying Google Cache fallback`);
+      return await fetchViaGoogleCache(url);
+    }
+    return await res.text();
+  } catch {
+    // If network error, try Google Cache as fallback
+    return await fetchViaGoogleCache(url);
+  }
+}
+
+/**
+ * Fallback: fetch the page via Google's web cache.
+ */
+async function fetchViaGoogleCache(url: string): Promise<string | null> {
+  try {
+    const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
+    const res = await fetch(cacheUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9,ne;q=0.8',
+      },
+      signal: AbortSignal.timeout(20_000),
     });
 
     if (!res.ok) return null;

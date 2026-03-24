@@ -15,6 +15,8 @@ import { collectAllWebSearch } from './collectors/web-search';
 import { collectAllSocial } from './collectors/social';
 import { collectAllApify } from './collectors/apify';
 import { collectGovPortals } from './collectors/gov-portal';
+import { enrichUnprocessedSignals } from './collectors/article-fetcher';
+import { extractAndStoreEntities } from './entity-extractor';
 import { processSignalsBatch } from './brain';
 import { batchTranslateNepaliSignals } from './translate';
 import { collectSocialEvidence } from './evidence/social-collector';
@@ -30,6 +32,7 @@ import { scrapeParliamentAndGazette } from './collectors/parliament-scraper';
 import { scrapeX } from './collectors/x-scraper';
 import { scrapeGoogleTrends } from './collectors/google-trends';
 import { computePulse, computeTrending } from './trending';
+import { computeTruthScoreBatch } from './truth-meter';
 import {
   enqueueSignalAnalysisJobs,
   enqueueDiscoveryJobsForSignals,
@@ -533,6 +536,51 @@ export async function runFullSweep(
       } // end if (!rssOnly) for legacy
     }
 
+    // ===== ENRICHMENT PHASE =====
+    // Fetch full article content and extract entities before analysis
+    if (!skipCollection) {
+      console.log('[Sweep] Starting enrichment phase...');
+      try {
+        const enrichResult = await enrichUnprocessedSignals(100);
+        console.log(
+          `[Sweep] Enriched ${enrichResult.enriched} signals, ` +
+            `${enrichResult.failed} failed, ${enrichResult.skipped} skipped`,
+        );
+
+        // Extract entities from recently enriched signals
+        const { data: enrichedSignals } = await supabase
+          .from('intelligence_signals')
+          .select('id, content')
+          .eq('signal_type', 'article')
+          .not('content', 'is', null)
+          .is('extracted_data', null)
+          .order('discovered_at', { ascending: false })
+          .limit(200);
+
+        let entitiesExtracted = 0;
+        if (enrichedSignals) {
+          for (const signal of enrichedSignals) {
+            if (signal.content && signal.content.length > 50) {
+              try {
+                await extractAndStoreEntities(signal.id, signal.content);
+                entitiesExtracted++;
+              } catch {
+                // Non-fatal — continue with other signals
+              }
+            }
+          }
+        }
+
+        console.log(
+          `[Sweep] Enriched ${enrichResult.enriched} signals, extracted entities from ${entitiesExtracted}`,
+        );
+      } catch (err) {
+        result.analysis.errors.push(
+          `Enrichment error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+    }
+
     // ===== ANALYSIS PHASE =====
     if (!skipAnalysis) {
       const discoveryOnlySignals = await markDiscoveryOnlySignalsProcessed();
@@ -692,6 +740,60 @@ export async function runFullSweep(
       } catch (err) {
         result.analysis.errors.push(
           `Dedup error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+
+      // ===== TRUTH SCORING PHASE =====
+      console.log('[Sweep] Computing truth scores for newly classified signals...');
+      try {
+        const { data: scorableSignals } = await supabase
+          .from('intelligence_signals')
+          .select('id')
+          .eq('tier1_processed', true)
+          .gte('relevance_score', 0.3)
+          .or('metadata.is.null,metadata->>truth_score.is.null')
+          .order('discovered_at', { ascending: false })
+          .limit(30);
+
+        if (scorableSignals && scorableSignals.length > 0) {
+          const ids = scorableSignals.map((s) => s.id as string);
+          const scores = await computeTruthScoreBatch(ids);
+
+          let truthScored = 0;
+          for (const [signalId, truthScore] of scores) {
+            const { data: existing } = await supabase
+              .from('intelligence_signals')
+              .select('metadata')
+              .eq('id', signalId)
+              .single();
+
+            const existingMeta =
+              typeof existing?.metadata === 'object' && existing?.metadata !== null
+                ? existing.metadata
+                : {};
+
+            await supabase
+              .from('intelligence_signals')
+              .update({
+                metadata: {
+                  ...(existingMeta as Record<string, unknown>),
+                  truth_score: truthScore.score,
+                  truth_label: truthScore.label,
+                  truth_factors: truthScore.factors,
+                },
+              })
+              .eq('id', signalId);
+
+            truthScored++;
+          }
+
+          console.log(`[Sweep] Truth scoring: scored ${truthScored} signals`);
+        } else {
+          console.log('[Sweep] Truth scoring: no new signals to score');
+        }
+      } catch (err) {
+        result.analysis.errors.push(
+          `Truth scoring error: ${err instanceof Error ? err.message : 'unknown'}`,
         );
       }
 

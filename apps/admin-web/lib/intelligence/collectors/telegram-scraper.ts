@@ -60,10 +60,25 @@ interface ScrapeResult {
 // Add new channels here. The URL must be the public web preview format.
 
 export const TELEGRAM_CHANNELS: TelegramChannelConfig[] = [
+  // Known active Nepali news/political channels (using t.me/s/ public preview)
+  {
+    id: 'telegram-nepal-samacharpatra',
+    name: 'Nepal Samacharpatra',
+    url: 'https://t.me/s/nepalsamacharpatra',
+    category: 'news',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'telegram-ratopati-news',
+    name: 'Ratopati News',
+    url: 'https://t.me/s/ratopatinews',
+    category: 'news',
+    relatedPromiseIds: [],
+  },
   {
     id: 'telegram-nepal-news',
     name: 'Nepal News',
-    url: 'https://t.me/s/nepaborad',
+    url: 'https://t.me/s/nepalnews',
     category: 'news',
     relatedPromiseIds: [],
   },
@@ -78,6 +93,27 @@ export const TELEGRAM_CHANNELS: TelegramChannelConfig[] = [
     id: 'telegram-kathmandu-updates',
     name: 'Kathmandu Updates',
     url: 'https://t.me/s/kathmanduupdates',
+    category: 'news',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'telegram-onlinekhabar',
+    name: 'Online Khabar',
+    url: 'https://t.me/s/onlinekhabar',
+    category: 'news',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'telegram-setopati',
+    name: 'Setopati',
+    url: 'https://t.me/s/setopati',
+    category: 'news',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'telegram-kantipur',
+    name: 'Kantipur Daily',
+    url: 'https://t.me/s/kantipurdaily',
     category: 'news',
     relatedPromiseIds: [],
   },

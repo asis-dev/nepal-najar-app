@@ -123,18 +123,24 @@ async function fetchTrendsAPI(url: string): Promise<string | null> {
 
 /**
  * Parse a raw Google Trends response into JSON.
+ * Handles both with and without the XSSI prefix.
  */
 function parseTrendsResponse<T>(raw: string | null): T | null {
   if (!raw) return null;
   try {
     const cleaned = stripGooglePrefix(raw);
     return JSON.parse(cleaned) as T;
-  } catch (err) {
-    console.warn(
-      '[GoogleTrends] JSON parse failed:',
-      err instanceof Error ? err.message : 'unknown',
-    );
-    return null;
+  } catch {
+    // The XSSI prefix format may have changed — try parsing raw directly
+    try {
+      return JSON.parse(raw) as T;
+    } catch (err2) {
+      console.warn(
+        '[GoogleTrends] JSON parse failed (both stripped and raw):',
+        err2 instanceof Error ? err2.message : 'unknown',
+      );
+      return null;
+    }
   }
 }
 
@@ -309,8 +315,8 @@ async function fetchDailyTrends(): Promise<DailyTrendTopic[]> {
   }>(raw);
 
   if (!data?.default?.trendingSearchesDays) {
-    console.warn('[GoogleTrends] No daily trends data returned');
-    return [];
+    console.warn('[GoogleTrends] No daily trends data from API, trying public trending page fallback');
+    return await fetchTrendingPageFallback();
   }
 
   const topics: DailyTrendTopic[] = [];
@@ -339,6 +345,74 @@ async function fetchDailyTrends(): Promise<DailyTrendTopic[]> {
   }
 
   return topics;
+}
+
+/**
+ * Fallback: scrape the public Google Trends trending page for Nepal.
+ * Used when the internal API fails or returns no data.
+ */
+async function fetchTrendingPageFallback(): Promise<DailyTrendTopic[]> {
+  try {
+    const res = await fetch('https://trends.google.com/trending?geo=NP', {
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      console.warn(`[GoogleTrends] Trending page fallback HTTP ${res.status}`);
+      return [];
+    }
+
+    const html = await res.text();
+    const topics: DailyTrendTopic[] = [];
+
+    // The trending page embeds JSON data in script tags or renders trend titles
+    // Try to extract from the page structure
+    const titleRegex = /<div[^>]*class="[^"]*mZ3RIc[^"]*"[^>]*>([^<]+)<\/div>/g;
+    let match: RegExpExecArray | null;
+    while ((match = titleRegex.exec(html)) !== null) {
+      const title = match[1].trim();
+      if (title && title.length > 2) {
+        topics.push({
+          title,
+          formattedTraffic: '0',
+          searchVolume: 0,
+          relatedQueries: [],
+          articles: [],
+        });
+      }
+    }
+
+    // Alternative pattern: look for trending search text in other structures
+    if (topics.length === 0) {
+      const altRegex = /<a[^>]*href="\/trends\/explore\?q=([^"&]+)[^"]*"[^>]*>/g;
+      while ((match = altRegex.exec(html)) !== null) {
+        const title = decodeURIComponent(match[1]).trim();
+        if (title && title.length > 2) {
+          topics.push({
+            title,
+            formattedTraffic: '0',
+            searchVolume: 0,
+            relatedQueries: [],
+            articles: [],
+          });
+        }
+      }
+    }
+
+    console.log(`[GoogleTrends] Trending page fallback found ${topics.length} topics`);
+    return topics;
+  } catch (err) {
+    console.warn(
+      '[GoogleTrends] Trending page fallback failed:',
+      err instanceof Error ? err.message : 'unknown',
+    );
+    return [];
+  }
 }
 
 /**

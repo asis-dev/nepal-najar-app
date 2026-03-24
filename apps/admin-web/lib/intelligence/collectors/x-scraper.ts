@@ -228,9 +228,9 @@ export const X_QUERIES: string[] = [
 // ─── Nitter Instances ────────────────────────────────────────────────────────
 
 const NITTER_INSTANCES = [
-  'https://nitter.privacydev.net',
   'https://nitter.poast.org',
-  'https://nitter.space',
+  'https://nitter.privacydev.net',
+  'https://xcancel.com',
 ];
 
 // ─── Apify Config ────────────────────────────────────────────────────────────
@@ -681,7 +681,7 @@ async function scrapeAccountViaDuckDuckGo(account: XAccountConfig): Promise<Scra
   const posts: ScrapedTweet[] = [];
 
   const queries = [
-    `site:twitter.com OR site:x.com "@${account.username}"`,
+    `site:x.com "@${account.username}"`,
     `site:x.com "${account.name}"`,
   ];
 
@@ -730,7 +730,7 @@ async function scrapeAccountViaDuckDuckGo(account: XAccountConfig): Promise<Scra
  */
 async function scrapeSearchViaDuckDuckGo(query: string): Promise<ScrapedTweet[]> {
   const posts: ScrapedTweet[] = [];
-  const ddgQuery = `site:twitter.com OR site:x.com "${query}"`;
+  const ddgQuery = `site:x.com "${query}"`;
 
   try {
     const results = await duckDuckGoSearch(ddgQuery);
@@ -836,12 +836,12 @@ function parseDDGResults(html: string): DDGResult[] {
 // ─── Broad search queries ────────────────────────────────────────────────────
 
 const BROAD_SEARCH_QUERIES = [
-  'site:twitter.com OR site:x.com "Nepal government" OR "RSP" OR "बालेन"',
-  'site:twitter.com OR site:x.com "Balen Shah" Kathmandu',
-  'site:twitter.com OR site:x.com "Rastriya Swatantra Party"',
-  'site:twitter.com OR site:x.com "Nepal budget" OR "Nepal infrastructure"',
-  'site:twitter.com OR site:x.com "#NepalPolitics" OR "#BalenShah"',
-  'site:twitter.com OR site:x.com "नेपाल सरकार" OR "काठमाडौं"',
+  'site:x.com "Nepal government" OR "RSP" OR "बालेन"',
+  'site:x.com "Balen Shah" Kathmandu',
+  'site:x.com "Rastriya Swatantra Party"',
+  'site:x.com "Nepal budget" OR "Nepal infrastructure"',
+  'site:x.com "#NepalPolitics" OR "#BalenShah"',
+  'site:x.com "नेपाल सरकार" OR "काठमाडौं"',
 ];
 
 /**

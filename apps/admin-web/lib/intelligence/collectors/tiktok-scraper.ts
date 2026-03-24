@@ -375,11 +375,14 @@ async function fetchApifyTikTokDataset(runId: string, defaultUsername?: string):
  */
 async function scrapeProfileViaDuckDuckGo(account: TikTokAccountConfig): Promise<ScrapedVideo[]> {
   const queries = [
-    `site:tiktok.com "@${account.username}"`,
+    // DDG often blocks site: for TikTok, so use broader queries
+    `tiktok ${account.name} nepal`,
+    `tiktok.com/@${account.username}`,
+    `site:tiktok.com/@${account.username}`,
   ];
 
   if (account.nameNe) {
-    queries.push(`site:tiktok.com "${account.nameNe}"`);
+    queries.push(`tiktok "${account.nameNe}"`);
   }
 
   const videos: ScrapedVideo[] = [];
@@ -424,11 +427,13 @@ async function scrapeProfileViaDuckDuckGo(account: TikTokAccountConfig): Promise
  */
 async function scrapeBroadSearches(): Promise<ScrapedVideo[]> {
   const broadQueries = [
-    'site:tiktok.com "Nepal government" OR "बालेन" OR "RSP"',
-    'site:tiktok.com "Rastriya Swatantra Party" Nepal',
-    'site:tiktok.com "नेपाल सरकार" OR "बालेनशाह"',
-    'site:tiktok.com "Balen Shah" Kathmandu',
-    'site:tiktok.com "Nepal politics" OR "NepalProgress"',
+    // DDG often blocks site: for TikTok, so use broader queries without site: restriction
+    'tiktok nepal politics balen',
+    'tiktok nepal government RSP',
+    'tiktok "Rastriya Swatantra Party" nepal',
+    'tiktok "बालेन शाह" OR "नेपाल सरकार"',
+    'tiktok "Nepal politics" OR "NepalProgress"',
+    'tiktok kathmandu development balen shah',
   ];
 
   const videos: ScrapedVideo[] = [];
