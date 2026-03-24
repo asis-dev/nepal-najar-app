@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -31,6 +31,7 @@ import { ShieldCheck, Award, Star } from 'lucide-react';
 import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
 import { NotificationBell } from '@/components/public/notification-bell';
 import { useTrending } from '@/lib/hooks/use-trending';
+import { SearchOverlay } from '@/components/public/search-overlay';
 
 const PULSE_COLORS = {
   low: 'bg-blue-400',
@@ -65,6 +66,37 @@ export function TopNav() {
   const { pulseLevel } = useTrending();
   const pulseDotColor = PULSE_COLORS[pulseLevel];
   const { user, isAuthenticated, isVerifier, signOut, karma, level } = useAuth();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const desktopSearchInputRef = useRef<HTMLInputElement>(null);
+
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+
+  // Keyboard shortcuts: / and Cmd+K / Ctrl+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K / Ctrl+K — always opens search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+      // / key — only if not already in an input/textarea/contenteditable
+      if (e.key === '/' && !searchOpen) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        const isEditable =
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          (e.target as HTMLElement)?.isContentEditable;
+        if (!isEditable) {
+          e.preventDefault();
+          setSearchOpen(true);
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [searchOpen]);
 
   // Close user menu on outside click
   useEffect(() => {
@@ -136,13 +168,17 @@ export function TopNav() {
               <TrendingUp className="h-3.5 w-3.5" />
             </Link>
             <NotificationBell />
-            <Link
-              href="/search"
-              className="flex items-center justify-center rounded-xl border border-white/[0.08] p-2 text-gray-400 transition-colors hover:border-white/[0.15] hover:text-gray-200"
-              aria-label="Search"
+            {/* Desktop search bar */}
+            <button
+              onClick={openSearch}
+              className="group flex w-[250px] items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] px-3 py-1.5 text-sm text-gray-500 transition-all duration-200 hover:border-white/[0.18] hover:bg-white/[0.08] hover:text-gray-300 focus:w-[400px] focus:border-primary-500/30"
             >
-              <Search className="h-4 w-4" />
-            </Link>
+              <Search className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="truncate">{locale === 'ne' ? 'खोज्नुहोस्...' : 'Search...'}</span>
+              <kbd className="ml-auto hidden rounded border border-white/[0.1] bg-white/[0.05] px-1.5 py-0.5 text-[10px] text-gray-600 lg:inline-block">
+                /
+              </kbd>
+            </button>
             <button
               onClick={toggleLang}
               className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] px-3 py-1.5 text-sm text-gray-400 transition-colors hover:border-white/[0.15] hover:text-gray-200"
@@ -229,13 +265,31 @@ export function TopNav() {
             )}
           </div>
 
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="justify-self-end rounded-xl border border-white/[0.08] p-2 text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white md:hidden"
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {/* Mobile: search + language toggle + hamburger always visible */}
+          <div className="flex items-center gap-2 justify-self-end md:hidden">
+            <button
+              onClick={openSearch}
+              className="flex items-center justify-center rounded-xl border border-white/[0.08] p-2 text-gray-300 transition-colors hover:border-white/[0.15] hover:text-white"
+              aria-label="Search"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+            <button
+              onClick={toggleLang}
+              className="flex items-center gap-1 rounded-xl border border-white/[0.08] px-2.5 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:border-white/[0.15] hover:text-white"
+              aria-label="Toggle language"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span>{locale === 'en' ? 'ने' : 'EN'}</span>
+            </button>
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="rounded-xl border border-white/[0.08] p-2 text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -299,6 +353,8 @@ export function TopNav() {
           </div>
         </div>
       )}
+
+      <SearchOverlay isOpen={searchOpen} onClose={closeSearch} />
     </nav>
   );
 }

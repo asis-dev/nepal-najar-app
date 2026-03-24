@@ -139,8 +139,8 @@ async function fetchRecentSignals(): Promise<RawSignal[]> {
       'content, content_summary, author',
     )
     .gte('discovered_at', cutoff)
-    .gte('relevance_score', 0.2)
-    .order('relevance_score', { ascending: false })
+    .not('classification', 'eq', 'neutral')
+    .order('discovered_at', { ascending: false })
     .limit(500);
 
   if (error) {

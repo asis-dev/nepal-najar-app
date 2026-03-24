@@ -53,12 +53,16 @@
   }
 
   .glass-card-hover {
-    @apply glass-card transition-all duration-300;
+    @apply glass-card transition-opacity duration-200;
   }
   .glass-card-hover:hover {
     @apply border-np-border-bright;
     box-shadow: 0 18px 42px rgba(2, 8, 20, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    transform: translateY(-2px);
+  }
+  @media (min-width: 768px) {
+    .glass-card-hover:hover {
+      transform: translateY(-2px);
+    }
   }
 
   .glass-card-interactive {
@@ -181,7 +185,7 @@
     background: rgba(255, 255, 255, 0.06);
   }
   .progress-bar-fill {
-    @apply h-full rounded-full transition-all duration-700 ease-out;
+    @apply h-full rounded-full transition-all duration-200 ease-out;
     background: linear-gradient(90deg, #2563eb, #06b6d4);
     box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
   }
@@ -349,10 +353,10 @@
   .nepal-map-svg {
     transform: rotateX(12deg) rotateZ(-1deg);
     filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.4));
-    transition: transform 0.5s ease;
+    transition: transform 0.3s ease;
   }
   .province-path {
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
     cursor: pointer;
   }
@@ -375,6 +379,15 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Scrollbar hide — used for mobile horizontal scroll filters */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
   /* Frosted glass overlay */
@@ -531,7 +544,7 @@
   50% { transform: scale(1.8); opacity: 0; }
 }
 .trending-pulse {
-  animation: trending-pulse-anim 3s ease-in-out infinite;
+  animation: trending-pulse-anim 2s ease-in-out infinite;
 }
 .trending-badge {
   @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold;
@@ -546,7 +559,21 @@
   50% { transform: scale(2); opacity: 0; }
 }
 .nav-pulse-outer {
-  animation: nav-pulse-anim 4s ease-in-out infinite;
+  animation: nav-pulse-anim 2s ease-in-out infinite;
+}
+
+/* ── Interest Filter Animations ── */
+@keyframes filterDropdownIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes filterBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes filterSheetIn {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 /* Reduce blur on mobile for performance */
@@ -556,5 +583,20 @@
   .glass-card-interactive {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* ── Mobile-specific spacing overrides ── */
+@media (max-width: 767px) {
+  .glass-card {
+    padding: 0.75rem; /* p-3 instead of p-4/p-5/p-6 */
+  }
+  .public-shell {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  /* Tighter section gaps */
+  .space-y-6 > * + * {
+    margin-top: 0.5rem;
   }
 }

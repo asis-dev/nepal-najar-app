@@ -246,14 +246,20 @@ export default function PromiseDetailPage() {
   const [briefing, setBriefing] = useState<CommitmentBriefing | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(true);
   const [briefingError, setBriefingError] = useState(false);
+  const [activeTab, setActiveTab] = useState<'brief' | 'sources' | 'evidence'>('brief');
 
-  // Resolve the commitment
+  // Resolve the commitment — static data always available as fallback
+  const staticPromise = useMemo(
+    () => getPromiseBySlug(idParam) ?? getPromiseById(idParam),
+    [idParam],
+  );
   const promise = useMemo(() => {
-    const liveMatch = livePromises
-      ?.filter((c) => isPublicCommitment(c))
-      .find((c) => c.slug === idParam || c.id === idParam);
-    return liveMatch ?? getPromiseBySlug(idParam) ?? getPromiseById(idParam);
-  }, [idParam, livePromises]);
+    if (!livePromises || livePromises.length === 0) return staticPromise;
+    const liveMatch = livePromises.find(
+      (c) => c.slug === idParam || c.id === idParam || String(c.id) === idParam,
+    );
+    return liveMatch ?? staticPromise;
+  }, [idParam, livePromises, staticPromise]);
 
   // Fetch briefing immediately on page load
   useEffect(() => {
@@ -491,7 +497,7 @@ export default function PromiseDetailPage() {
             <div className="flex items-center gap-3">
               <div className="flex-1 h-2 rounded-full overflow-hidden bg-white/[0.06]">
                 <div
-                  className="h-full rounded-full transition-all duration-1000 ease-out"
+                  className="h-full rounded-full transition-all duration-200 ease-out"
                   style={{
                     width: `${promise.progress}%`,
                     background: status.barGradient,
@@ -522,12 +528,36 @@ export default function PromiseDetailPage() {
         </section>
 
         {/* Subtle divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-8" />
+        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-4 md:mb-8" />
 
         {/* ═══════════════════════════════════════
-           SECTION 2: FULL BRIEFING (immediately visible)
+           MOBILE TAB BAR (sticky below header)
            ═══════════════════════════════════════ */}
-        <section className="pb-8">
+        <div className="md:hidden sticky top-0 z-20 mb-4">
+          <div className="flex rounded-xl border border-white/[0.08] bg-np-void/90 backdrop-blur-xl overflow-hidden">
+            {(['brief', 'sources', 'evidence'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
+                  activeTab === tab
+                    ? 'text-white'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {tab === 'brief' ? (isNe ? 'सारांश' : 'Brief') : tab === 'sources' ? (isNe ? 'स्रोत' : 'Sources') : (isNe ? 'प्रमाण' : 'Evidence')}
+                {activeTab === tab && (
+                  <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full bg-primary-400" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════
+           SECTION 2: FULL BRIEFING
+           ═══════════════════════════════════════ */}
+        <section className={`pb-8 ${activeTab !== 'brief' ? 'hidden md:block' : ''}`}>
           <SectionHeader icon={'\uD83D\uDCCB'} title={isNe ? 'सारांश' : 'Intelligence Briefing'} />
 
           {briefingLoading ? (
@@ -676,7 +706,7 @@ export default function PromiseDetailPage() {
         {/* ═══════════════════════════════════════
            SECTION 3: LATEST SOURCES (with voting)
            ═══════════════════════════════════════ */}
-        <section className="pb-8">
+        <section className={`pb-8 ${activeTab !== 'sources' ? 'hidden md:block' : ''}`}>
           <SectionHeader icon={'\uD83D\uDCF0'} title={isNe ? 'ताजा स्रोतहरू' : 'Latest Sources'} />
 
           {signalsLoading ? (
@@ -755,7 +785,7 @@ export default function PromiseDetailPage() {
         {/* ═══════════════════════════════════════
            SECTION 4: COMMUNITY EVIDENCE
            ═══════════════════════════════════════ */}
-        <section ref={evidenceRef} id="community-evidence" className="pb-8 scroll-mt-6">
+        <section ref={evidenceRef} id="community-evidence" className={`pb-8 scroll-mt-6 ${activeTab !== 'evidence' ? 'hidden md:block' : ''}`}>
           <SectionHeader icon={'\uD83D\uDCF8'} title={isNe ? 'समुदाय प्रमाण' : 'Community Evidence'} />
           <CommunityEvidenceFeed promiseId={promise.id} />
         </section>
@@ -763,7 +793,7 @@ export default function PromiseDetailPage() {
         {/* ═══════════════════════════════════════
            SECTION 5: DISCUSSION
            ═══════════════════════════════════════ */}
-        <section className="pb-8">
+        <section className={`pb-8 ${activeTab !== 'evidence' ? 'hidden md:block' : ''}`}>
           <SectionHeader icon={'\uD83D\uDCAC'} title={isNe ? 'छलफल' : 'Discussion'} />
           <CommentsSection promiseId={promise.id} />
         </section>

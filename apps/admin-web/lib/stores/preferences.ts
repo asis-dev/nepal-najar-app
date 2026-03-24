@@ -3,11 +3,262 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { trackPilotEvent } from '@/lib/analytics/client';
-import { syncToCloud } from '@/lib/services/preferences-sync';
 
 /* ═══════════════════════════════════════════════
-   HOMETOWN PREFERENCES STORE
-   Persisted to localStorage — no account needed
+   USER PREFERENCES — UNIFIED STORE
+   Persisted to localStorage for all users.
+   Synced to server (profiles.preferences JSONB)
+   for authenticated users via debounced API calls.
+   ═══════════════════════════════════════════════ */
+
+export interface UserPreferences {
+  locale: 'en' | 'ne';
+  province?: string;
+  district?: string;
+  categoriesOfInterest?: string[];
+  feedTab: 'for-you' | 'following' | 'trending';
+  lastSeenTimestamp?: string;
+  onboardingComplete?: boolean;
+  theme?: 'dark' | 'light';
+}
+
+const DEFAULT_PREFERENCES: UserPreferences = {
+  locale: 'en',
+  feedTab: 'for-you',
+};
+
+/* ─── Debounced server sync ─── */
+
+let _prefSyncTimer: ReturnType<typeof setTimeout> | null = null;
+const PREF_SYNC_DEBOUNCE_MS = 500;
+
+function debouncedServerSync(partial: Partial<UserPreferences>) {
+  if (_prefSyncTimer) clearTimeout(_prefSyncTimer);
+  _prefSyncTimer = setTimeout(async () => {
+    try {
+      await fetch('/api/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(partial),
+      });
+    } catch {
+      /* offline or not logged in — localStorage is source of truth */
+    }
+  }, PREF_SYNC_DEBOUNCE_MS);
+}
+
+/** Check if user is authenticated (lazy import to avoid circular deps) */
+function isLoggedIn(): boolean {
+  try {
+    const { useAuth } = require('@/lib/hooks/use-auth');
+    return !!useAuth.getState().user?.id;
+  } catch {
+    return false;
+  }
+}
+
+function syncIfLoggedIn(partial: Partial<UserPreferences>) {
+  if (isLoggedIn()) {
+    debouncedServerSync(partial);
+  }
+}
+
+/* ─── Store types ─── */
+
+interface UserPreferencesState extends UserPreferences {
+  /** True while server fetch is in-flight */
+  _syncing: boolean;
+}
+
+interface UserPreferencesActions {
+  setLocale: (locale: 'en' | 'ne') => void;
+  setProvince: (province: string | undefined) => void;
+  setDistrict: (district: string | undefined) => void;
+  setLocation: (province?: string, district?: string) => void;
+  setCategoriesOfInterest: (categories: string[]) => void;
+  setFeedTab: (tab: 'for-you' | 'following' | 'trending') => void;
+  setLastSeenTimestamp: (ts: string) => void;
+  setOnboardingComplete: (complete: boolean) => void;
+  setTheme: (theme: 'dark' | 'light') => void;
+  /** Bulk-update multiple preferences at once */
+  updatePreferences: (partial: Partial<UserPreferences>) => void;
+  /** Fetch from server and merge (local wins for conflicts) */
+  syncFromServer: () => Promise<void>;
+  /** Push current local state to server */
+  syncToServer: () => Promise<void>;
+  /** Get a plain UserPreferences object (no actions/internal state) */
+  getPreferences: () => UserPreferences;
+}
+
+export const useUserPreferencesStore = create<UserPreferencesState & UserPreferencesActions>()(
+  persist(
+    (set, get) => ({
+      ...DEFAULT_PREFERENCES,
+      _syncing: false,
+
+      setLocale: (locale) => {
+        set({ locale });
+        syncIfLoggedIn({ locale });
+        trackPilotEvent('preference_changed', { metadata: { key: 'locale', value: locale } });
+      },
+
+      setProvince: (province) => {
+        set({ province });
+        syncIfLoggedIn({ province });
+      },
+
+      setDistrict: (district) => {
+        set({ district });
+        syncIfLoggedIn({ district });
+      },
+
+      setLocation: (province, district) => {
+        set({ province, district });
+        syncIfLoggedIn({ province, district });
+        trackPilotEvent('preference_changed', {
+          metadata: { key: 'location', province: province ?? '', district: district ?? '' },
+        });
+      },
+
+      setCategoriesOfInterest: (categories) => {
+        set({ categoriesOfInterest: categories });
+        syncIfLoggedIn({ categoriesOfInterest: categories });
+      },
+
+      setFeedTab: (tab) => {
+        set({ feedTab: tab });
+        syncIfLoggedIn({ feedTab: tab });
+      },
+
+      setLastSeenTimestamp: (ts) => {
+        set({ lastSeenTimestamp: ts });
+        syncIfLoggedIn({ lastSeenTimestamp: ts });
+      },
+
+      setOnboardingComplete: (complete) => {
+        set({ onboardingComplete: complete });
+        syncIfLoggedIn({ onboardingComplete: complete });
+      },
+
+      setTheme: (theme) => {
+        set({ theme });
+        syncIfLoggedIn({ theme });
+      },
+
+      updatePreferences: (partial) => {
+        set(partial);
+        syncIfLoggedIn(partial);
+      },
+
+      syncFromServer: async () => {
+        if (get()._syncing) return;
+        set({ _syncing: true });
+
+        try {
+          const res = await fetch('/api/preferences');
+          if (!res.ok) {
+            set({ _syncing: false });
+            return;
+          }
+
+          const { preferences: serverPrefs } = (await res.json()) as {
+            preferences: Partial<UserPreferences> | null;
+          };
+
+          if (!serverPrefs) {
+            set({ _syncing: false });
+            return;
+          }
+
+          // Merge: local wins for conflicts (user just set them locally)
+          const local = get().getPreferences();
+          const merged: Partial<UserPreferences> = { ...serverPrefs };
+
+          // Local overrides server for these fields if locally set
+          if (local.locale) merged.locale = local.locale;
+          if (local.province) merged.province = local.province;
+          if (local.district) merged.district = local.district;
+          if (local.feedTab && local.feedTab !== DEFAULT_PREFERENCES.feedTab) {
+            merged.feedTab = local.feedTab;
+          }
+          if (local.categoriesOfInterest?.length) {
+            merged.categoriesOfInterest = local.categoriesOfInterest;
+          }
+          if (local.onboardingComplete !== undefined) {
+            merged.onboardingComplete = local.onboardingComplete;
+          }
+          if (local.theme) merged.theme = local.theme;
+
+          // Server wins for lastSeenTimestamp (take the more recent one)
+          if (serverPrefs.lastSeenTimestamp && local.lastSeenTimestamp) {
+            merged.lastSeenTimestamp =
+              serverPrefs.lastSeenTimestamp > local.lastSeenTimestamp
+                ? serverPrefs.lastSeenTimestamp
+                : local.lastSeenTimestamp;
+          }
+
+          set({ ...merged, _syncing: false });
+
+          // Push merged result back to server
+          try {
+            await fetch('/api/preferences', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(merged),
+            });
+          } catch { /* best-effort */ }
+        } catch {
+          set({ _syncing: false });
+        }
+      },
+
+      syncToServer: async () => {
+        const prefs = get().getPreferences();
+        try {
+          await fetch('/api/preferences', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(prefs),
+          });
+        } catch { /* silent */ }
+      },
+
+      getPreferences: (): UserPreferences => {
+        const s = get();
+        return {
+          locale: s.locale,
+          province: s.province,
+          district: s.district,
+          categoriesOfInterest: s.categoriesOfInterest,
+          feedTab: s.feedTab,
+          lastSeenTimestamp: s.lastSeenTimestamp,
+          onboardingComplete: s.onboardingComplete,
+          theme: s.theme,
+        };
+      },
+    }),
+    {
+      name: 'nepal-najar-user-preferences',
+      storage: createJSONStorage(() => localStorage),
+      skipHydration: true,
+      partialize: (state) => ({
+        locale: state.locale,
+        province: state.province,
+        district: state.district,
+        categoriesOfInterest: state.categoriesOfInterest,
+        feedTab: state.feedTab,
+        lastSeenTimestamp: state.lastSeenTimestamp,
+        onboardingComplete: state.onboardingComplete,
+        theme: state.theme,
+      }),
+    },
+  ),
+);
+
+
+/* ═══════════════════════════════════════════════
+   HOMETOWN PREFERENCES STORE (legacy — kept for
+   backward compat; delegates to unified store)
    ═══════════════════════════════════════════════ */
 
 interface HometownPreferences {
@@ -42,6 +293,10 @@ export const usePreferencesStore = create<HometownPreferences & PreferencesActio
           hasSetHometown: true,
           showPicker: false,
         });
+
+        // Also update the unified preferences store
+        useUserPreferencesStore.getState().setLocation(province, district);
+
         trackPilotEvent('hometown_set', {
           metadata: {
             province,
@@ -49,8 +304,10 @@ export const usePreferencesStore = create<HometownPreferences & PreferencesActio
             municipality: municipality ?? null,
           },
         });
-        // Cloud sync if logged in
+
+        // Legacy cloud sync
         try {
+          const { syncToCloud } = require('@/lib/services/preferences-sync');
           const { useAuth } = require('@/lib/hooks/use-auth');
           const { user } = useAuth.getState();
           if (user?.id) {
@@ -59,13 +316,15 @@ export const usePreferencesStore = create<HometownPreferences & PreferencesActio
         } catch { /* not logged in or SSR */ }
       },
 
-      clearHometown: () =>
+      clearHometown: () => {
         set({
           province: null,
           district: null,
           municipality: null,
           hasSetHometown: false,
-        }),
+        });
+        useUserPreferencesStore.getState().setLocation(undefined, undefined);
+      },
 
       setShowPicker: (show) => set({ showPicker: show }),
 
@@ -146,6 +405,7 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
             if (user?.id) {
               serverToggle(projectId, exists ? 'remove' : 'add');
               // Also keep legacy user_preferences in sync
+              const { syncToCloud } = require('@/lib/services/preferences-sync');
               syncToCloud(user.id, { watchlist: newList });
             }
           } catch { /* not logged in or SSR */ }
@@ -168,6 +428,7 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
             for (const id of current) {
               serverToggle(id, 'remove');
             }
+            const { syncToCloud } = require('@/lib/services/preferences-sync');
             syncToCloud(user.id, { watchlist: [] });
           }
         } catch { /* not logged in or SSR */ }

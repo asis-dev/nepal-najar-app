@@ -6,6 +6,7 @@ export const PILOT_EVENT_NAMES = [
   'feedback_submit',
   'evidence_submit',
   'verify_progress',
+  'preference_changed',
 ] as const;
 
 export type PilotEventName = (typeof PILOT_EVENT_NAMES)[number];

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Eye, ClipboardList, BarChart3, User, X, BookmarkIcon, Star, Globe, HelpCircle, MessageSquare, LogOut } from 'lucide-react';
+import { Eye, ClipboardList, BarChart3, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut } from 'lucide-react';
 import { useTrending } from '@/lib/hooks/use-trending';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
@@ -94,8 +94,8 @@ export function BottomNav() {
             <div className="space-y-1">
               <MeSheetLink
                 href="/watchlist"
-                icon={BookmarkIcon}
-                label={locale === 'ne' ? 'वाचलिस्ट' : 'Watchlist'}
+                icon={Heart}
+                label={locale === 'ne' ? 'फलो गरिएका' : 'Following'}
                 onClick={() => setShowMeSheet(false)}
                 isActive={pathname.startsWith('/watchlist')}
               />
@@ -155,7 +155,7 @@ export function BottomNav() {
             <span className={`relative inline-flex h-2 w-2 rounded-full ${pulseDotColor}`} />
           </div>
         </div>
-        <div className="mx-auto flex h-[4.25rem] max-w-md items-center justify-around rounded-2xl border border-white/[0.1] bg-np-void/95 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+        <div className="mx-auto flex h-14 max-w-md items-center justify-around rounded-2xl border border-white/[0.1] bg-np-void/95 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
           {navItems.map(({ href, icon: Icon, label, isMe, hasPulse }) => {
             const isActive = isMe
               ? showMeSheet
@@ -172,10 +172,10 @@ export function BottomNav() {
                     isActive ? '' : 'opacity-50 hover:opacity-75'
                   }`}
                 >
-                  <div className={`rounded-xl p-1.5 transition-colors ${
+                  <div className={`rounded-xl p-1 transition-colors ${
                     isActive ? 'bg-primary-500/15' : ''
                   }`}>
-                    <Icon className={`h-5 w-5 transition-colors ${
+                    <Icon className={`h-[18px] w-[18px] transition-colors ${
                       isActive ? 'text-primary-400' : 'text-gray-400'
                     }`} />
                   </div>
@@ -198,7 +198,7 @@ export function BottomNav() {
                   isActive ? '' : 'opacity-50 hover:opacity-75'
                 }`}
               >
-                <div className={`relative rounded-xl p-1.5 transition-colors ${
+                <div className={`relative rounded-xl p-1 transition-colors ${
                   isActive ? 'bg-primary-500/15' : ''
                 }`}>
                   <Icon className={`h-5 w-5 transition-colors ${

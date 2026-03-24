@@ -60,15 +60,21 @@ export async function GET(request: Request) {
  */
 export async function POST() {
   try {
-    // Check auth
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Check auth — accept either user session or service secret
+    const headersList = await import('next/headers').then(m => m.headers());
+    const authHeader = headersList.get('authorization') || '';
+    const secret = process.env.SCRAPE_SECRET || process.env.ADMIN_SECRET;
+    const hasServiceAuth = secret && authHeader === `Bearer ${secret}`;
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 },
-      );
+    if (!hasServiceAuth) {
+      const supabase = await createSupabaseServerClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 },
+        );
+      }
     }
 
     const brief = await generateDailyBrief();
