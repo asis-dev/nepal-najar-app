@@ -266,7 +266,7 @@ export async function runFullSweep(
   const inlineStatusWorker =
     process.env.INTELLIGENCE_INLINE_STATUS_WORKER === 'true';
   const inlineAnalysisWorker =
-    process.env.INTELLIGENCE_INLINE_ANALYSIS_WORKER === 'true';
+    process.env.INTELLIGENCE_INLINE_ANALYSIS_WORKER !== 'false';
 
   const staleSweepsClosed = await cleanupStaleSweeps();
   if (staleSweepsClosed > 0) {

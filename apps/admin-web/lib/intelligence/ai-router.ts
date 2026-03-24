@@ -106,19 +106,8 @@ function getModelConfig(task: TaskType): AIConfig {
     };
   }
 
-  // Priority 1: OpenClaw (token-backed API preferred, CLI fallback)
-  if (isOpenClawAvailable()) {
-    return {
-      provider: 'openclaw',
-      model: OPENCLAW_MODEL,
-      apiKey: getOpenClawAccessToken() || '',
-      baseUrl: OPENCLAW_BASE_URL,
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
-    };
-  }
-
-  // Priority 2: OpenAI direct (GPT-4.1-nano for classify, GPT-4.1-mini for reasoning)
+  // Priority 1: OpenAI direct (GPT-4.1-nano for classify, GPT-4.1-mini for reasoning)
+  // OpenClaw token exists but lacks chat/completions scope — use direct API key instead
   if (process.env.OPENAI_API_KEY) {
     return {
       provider: 'openai',

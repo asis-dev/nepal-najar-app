@@ -19,6 +19,8 @@ import {
   Map,
   Megaphone,
   TrendingUp,
+  Landmark,
+  Activity,
   User,
   Settings,
   ChevronDown,
@@ -40,9 +42,9 @@ const PULSE_COLORS = {
 const primaryNavLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
   { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
-  { href: '/trending', labelKey: 'nav.trending', icon: TrendingUp },
-  { href: '/daily', labelKey: 'nav.daily', icon: Calendar },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
+  { href: '/trending', labelKey: 'nav.trending', icon: Activity },
+  { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
   { href: '/watchlist', labelKey: 'nav.watchlist', icon: Bookmark },
 ];
 
