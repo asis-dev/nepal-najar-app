@@ -45,7 +45,7 @@ export interface DailyBrief {
 interface RawSignal {
   id: string;
   title: string;
-  title_en: string | null;
+  title_ne: string | null;
   url: string;
   source_id: string;
   signal_type: string;
@@ -143,7 +143,7 @@ async function fetchRecentSignals(): Promise<FetchResult> {
   const windowLabels: TimeWindowUsed[] = ['24h', '48h', '72h'];
 
   const selectCols =
-    'id, title, title_en, url, source_id, signal_type, published_at, discovered_at, ' +
+    'id, title, title_ne, url, source_id, signal_type, published_at, discovered_at, ' +
     'matched_promise_ids, relevance_score, classification, extracted_data, metadata, ' +
     'content, content_summary, author';
 
@@ -242,7 +242,7 @@ function groupByTopic(signals: RawSignal[]): TopicGroup[] {
 
   for (const signal of signals) {
     signalMap.set(signal.id, signal);
-    const text = [signal.title_en || signal.title, signal.content_summary || ''].join(' ');
+    const text = [signal.title_ne || signal.title, signal.content_summary || ''].join(' ');
     const keywords = extractKeywords(text);
     const seen = new Set<string>();
 
@@ -356,7 +356,7 @@ async function generateAISummary(
   // Build context from top 20 most relevant signals
   const topSignals = signals.slice(0, 20);
   const signalContext = topSignals.map((s, i) =>
-    `${i + 1}. [${s.signal_type}] "${s.title_en || s.title}" (source: ${s.source_id}, ` +
+    `${i + 1}. [${s.signal_type}] "${s.title_ne || s.title}" (source: ${s.source_id}, ` +
     `relevance: ${s.relevance_score?.toFixed(2)}, classification: ${s.classification || 'unknown'}, ` +
     `commitments: ${(s.matched_promise_ids || []).join(',') || 'none'})\n` +
     `   Summary: ${s.content_summary || (s.content || '').slice(0, 200)}`
@@ -526,7 +526,7 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
       const topSignal = group.signals[0];
       topStories.push({
         title: group.topic,
-        summary: topSignal?.content_summary || topSignal?.title_en || topSignal?.title || '',
+        summary: topSignal?.content_summary || topSignal?.title_ne || topSignal?.title || '',
         signalCount: group.signals.length,
         sources: [...group.sources],
         relatedCommitments: [...group.relatedCommitments],
@@ -548,7 +548,7 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
         title: commitmentTitles.get(update.commitmentId) || `Commitment #${update.commitmentId}`,
         direction: update.direction,
         signalCount: group?.signals.length || 0,
-        keySignal: keySignal?.title_en || keySignal?.title || update.keyFinding,
+        keySignal: keySignal?.title_ne || keySignal?.title || update.keyFinding,
       });
     }
   } else {
@@ -564,7 +564,7 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
         title: commitmentTitles.get(group.commitmentId) || `Commitment #${group.commitmentId}`,
         direction,
         signalCount: group.signals.length,
-        keySignal: keySignal?.title_en || keySignal?.title || '',
+        keySignal: keySignal?.title_ne || keySignal?.title || '',
       });
     }
   }
@@ -670,7 +670,7 @@ export async function generateCategorySummaries(): Promise<
     const cutoff = new Date(Date.now() - windowMs).toISOString();
     const { data } = await supabase
       .from('intelligence_signals')
-      .select('id, title, title_en, content_summary, matched_promise_ids, source_id, relevance_score')
+      .select('id, title, title_ne, content_summary, matched_promise_ids, source_id, relevance_score')
       .gte('discovered_at', cutoff)
       .gte('relevance_score', 0.2)
       .order('relevance_score', { ascending: false })
@@ -685,7 +685,7 @@ export async function generateCategorySummaries(): Promise<
   if (!signals || signals.length === 0) {
     const { data } = await supabase
       .from('intelligence_signals')
-      .select('id, title, title_en, content_summary, matched_promise_ids, source_id, relevance_score')
+      .select('id, title, title_ne, content_summary, matched_promise_ids, source_id, relevance_score')
       .gte('relevance_score', 0.2)
       .order('discovered_at', { ascending: false })
       .limit(50);
@@ -734,7 +734,7 @@ export async function generateCategorySummaries(): Promise<
 
     // Use AI to summarize the category
     const signalTexts = categorySignals.slice(0, 10).map((s) =>
-      `- "${s.title_en || s.title}" (${s.source_id}): ${s.content_summary || ''}`
+      `- "${s.title_ne || s.title}" (${s.source_id}): ${s.content_summary || ''}`
     ).join('\n');
 
     try {

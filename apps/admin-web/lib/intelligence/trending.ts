@@ -27,7 +27,7 @@ export interface TrendingItem {
 interface RawSignal {
   id: string;
   title: string;
-  title_en: string | null;
+  title_ne: string | null;
   url: string;
   source_id: string;
   signal_type: string;
@@ -214,7 +214,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
   const { data: rawSignals, error } = await supabase
     .from('intelligence_signals')
     .select(
-      'id, title, title_en, url, source_id, signal_type, published_at, discovered_at, ' +
+      'id, title, title_ne, url, source_id, signal_type, published_at, discovered_at, ' +
       'matched_promise_ids, relevance_score, classification, extracted_data, metadata, content, author',
     )
     .gte('discovered_at', cutoff48h)
@@ -315,7 +315,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
       .slice(0, 3)
       .map((s) => ({
         id: s.id,
-        title: s.title_en || s.title,
+        title: s.title_ne || s.title,
         url: s.url,
         source: s.source_id,
       }));
@@ -360,7 +360,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
       .slice(0, 3)
       .map((s) => ({
         id: s.id,
-        title: s.title_en || s.title,
+        title: s.title_ne || s.title,
         url: s.url,
         source: s.source_id,
       }));
@@ -391,7 +391,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
   const keywordFreq = new Map<string, { count: number; signalIds: Set<string> }>();
 
   for (const signal of unmatchedCurrent) {
-    const text = [signal.title_en || signal.title, signal.content || ''].join(' ');
+    const text = [signal.title_ne || signal.title, signal.content || ''].join(' ');
     const keywords = extractKeywords(text);
     const seen = new Set<string>(); // dedupe within a signal
 
@@ -444,7 +444,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
     // Count previous period signals mentioning this keyword
     let prevCount = 0;
     for (const signal of prevSignals) {
-      const text = [signal.title_en || signal.title, signal.content || ''].join(' ');
+      const text = [signal.title_ne || signal.title, signal.content || ''].join(' ');
       if (extractKeywords(text).includes(keyword)) prevCount++;
     }
 
@@ -458,7 +458,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
       .slice(0, 3)
       .map((s) => ({
         id: s.id,
-        title: s.title_en || s.title,
+        title: s.title_ne || s.title,
         url: s.url,
         source: s.source_id,
       }));

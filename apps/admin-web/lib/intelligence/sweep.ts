@@ -646,7 +646,7 @@ export async function runFullSweep(
           .eq('language', 'ne')
           .eq('tier1_processed', true)
           .gte('relevance_score', 0.3)
-          .is('title_en', null)
+          .is('title_ne', null)
           .limit(20);
 
         if (nepaliSignals && nepaliSignals.length > 0) {
@@ -663,7 +663,7 @@ export async function runFullSweep(
             await supabase
               .from('intelligence_signals')
               .update({
-                title_en: translation.titleEn,
+                title_ne: translation.titleEn,
                 summary_en: translation.summaryEn,
               })
               .eq('id', signalId);
