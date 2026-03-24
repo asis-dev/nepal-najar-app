@@ -81,10 +81,12 @@ export async function POST() {
       .update({ regenerated_count: brief.date ? 1 : 1 })
       .eq('date', brief.date);
 
-    // Use raw SQL to increment
-    await serviceClient.rpc('increment_brief_regen_count', { brief_date: brief.date }).catch(() => {
+    // Increment regen count — non-fatal
+    try {
+      await serviceClient.rpc('increment_brief_regen_count', { brief_date: brief.date });
+    } catch {
       // RPC may not exist — non-fatal
-    });
+    }
 
     return NextResponse.json({
       ...brief,
