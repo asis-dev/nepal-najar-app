@@ -16,7 +16,7 @@ import { useUserPreferencesStore } from '@/lib/stores/preferences';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import { getPromiseRelevance } from '@/lib/utils/geo-relevance';
-import { InterestFilter, resolveGroupsToCategories } from '@/components/public/interest-filter';
+import { InterestFilter, resolveCategories } from '@/components/public/interest-filter';
 import type { GovernmentPromise } from '@/lib/data/promises';
 
 /* ═══════════════════════════════════════════
@@ -678,7 +678,7 @@ export default function LandingPage() {
 
   /* ── Resolve selected group IDs to actual PromiseCategory values ── */
   const resolvedCategories = useMemo(
-    () => resolveGroupsToCategories(categoriesOfInterest),
+    () => resolveCategories(categoriesOfInterest),
     [categoriesOfInterest],
   );
 
