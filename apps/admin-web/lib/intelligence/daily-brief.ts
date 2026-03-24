@@ -79,6 +79,9 @@ interface AIBriefResponse {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const HOURS_24_MS = 24 * 60 * 60 * 1000;
+const HOURS_48_MS = 48 * 60 * 60 * 1000;
+const HOURS_72_MS = 72 * 60 * 60 * 1000;
+const TIME_WINDOWS_MS = [HOURS_24_MS, HOURS_48_MS, HOURS_72_MS] as const;
 
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
@@ -127,28 +130,60 @@ function parseJSON<T>(text: string): T | null {
 
 // ── Core: fetch recent signals ───────────────────────────────────────────────
 
-async function fetchRecentSignals(): Promise<RawSignal[]> {
+/** Which time window was actually used — affects brief wording */
+type TimeWindowUsed = '24h' | '48h' | '72h' | 'recent';
+
+interface FetchResult {
+  signals: RawSignal[];
+  windowUsed: TimeWindowUsed;
+}
+
+async function fetchRecentSignals(): Promise<FetchResult> {
   const supabase = getSupabase();
-  const cutoff = new Date(Date.now() - HOURS_24_MS).toISOString();
+  const windowLabels: TimeWindowUsed[] = ['24h', '48h', '72h'];
 
-  const { data, error } = await supabase
-    .from('intelligence_signals')
-    .select(
-      'id, title, title_en, url, source_id, signal_type, published_at, discovered_at, ' +
-      'matched_promise_ids, relevance_score, classification, extracted_data, metadata, ' +
-      'content, content_summary, author',
-    )
-    .gte('discovered_at', cutoff)
-    .not('classification', 'eq', 'neutral')
-    .order('discovered_at', { ascending: false })
-    .limit(500);
+  const selectCols =
+    'id, title, title_en, url, source_id, signal_type, published_at, discovered_at, ' +
+    'matched_promise_ids, relevance_score, classification, extracted_data, metadata, ' +
+    'content, content_summary, author';
 
-  if (error) {
-    console.error('[DailyBrief] Failed to fetch signals:', error.message);
-    return [];
+  // Try 24h, then 48h, then 72h
+  for (let i = 0; i < TIME_WINDOWS_MS.length; i++) {
+    const cutoff = new Date(Date.now() - TIME_WINDOWS_MS[i]).toISOString();
+
+    const { data, error } = await supabase
+      .from('intelligence_signals')
+      .select(selectCols)
+      .gte('discovered_at', cutoff)
+      .not('classification', 'eq', 'neutral')
+      .order('discovered_at', { ascending: false })
+      .limit(500);
+
+    if (error) {
+      console.error(`[DailyBrief] Failed to fetch signals (${windowLabels[i]}):`, error.message);
+      continue;
+    }
+
+    if (data && data.length > 0) {
+      return { signals: data as unknown as RawSignal[], windowUsed: windowLabels[i] };
+    }
   }
 
-  return (data || []) as unknown as RawSignal[];
+  // Final fallback: most recent 50 classified signals regardless of date
+  const { data: fallbackData, error: fallbackError } = await supabase
+    .from('intelligence_signals')
+    .select(selectCols)
+    .not('classification', 'eq', 'neutral')
+    .not('classification', 'is', null)
+    .order('discovered_at', { ascending: false })
+    .limit(50);
+
+  if (fallbackError) {
+    console.error('[DailyBrief] Fallback fetch failed:', fallbackError.message);
+    return { signals: [], windowUsed: 'recent' };
+  }
+
+  return { signals: (fallbackData || []) as unknown as RawSignal[], windowUsed: 'recent' };
 }
 
 // ── Core: group signals by commitment ────────────────────────────────────────
@@ -316,6 +351,7 @@ async function generateAISummary(
   signals: RawSignal[],
   commitmentGroups: CommitmentGroup[],
   topicGroups: TopicGroup[],
+  windowUsed: TimeWindowUsed = '24h',
 ): Promise<AIBriefResponse | null> {
   // Build context from top 20 most relevant signals
   const topSignals = signals.slice(0, 20);
@@ -334,8 +370,9 @@ async function generateAISummary(
     `- "${g.topic}": ${g.signals.length} signals from ${g.sources.size} sources`
   ).join('\n');
 
+  const timeLabel = windowUsed === '24h' ? 'last 24 hours' : windowUsed === '48h' ? 'last 48 hours' : windowUsed === '72h' ? 'last 72 hours' : 'most recent available';
   const systemPrompt = `You are a Nepal political news briefing generator for Nepal Najar, a government promise tracker.
-Given signals from the last 24 hours, generate a structured daily brief.
+Given signals from the ${timeLabel}, generate a structured daily brief.
 
 Rules:
 1. Generate 3-5 bullet points summarizing the most important political developments
@@ -365,7 +402,7 @@ Respond in JSON format ONLY:
   ]
 }`;
 
-  const userPrompt = `Generate today's daily brief from these signals:
+  const userPrompt = `Generate ${windowUsed === '24h' ? "today's" : 'a recent'} daily brief from these signals:
 
 SIGNALS (top 20 by relevance):
 ${signalContext}
@@ -376,7 +413,7 @@ ${commitmentContext || 'No commitment activity detected.'}
 TOPIC CLUSTERS:
 ${topicContext || 'No clear topic clusters detected.'}
 
-Total signals in last 24h: ${signals.length}`;
+Total signals in ${timeLabel}: ${signals.length}`;
 
   try {
     const response = await aiComplete('summarize', systemPrompt, userPrompt);
@@ -404,7 +441,7 @@ Respond with ONLY the translated text, no JSON or explanation.`;
 // ── Main: generate daily brief ───────────────────────────────────────────────
 
 export async function generateDailyBrief(): Promise<DailyBrief> {
-  const signals = await fetchRecentSignals();
+  const { signals, windowUsed } = await fetchRecentSignals();
   const commitmentGroups = groupByCommitment(signals);
   const topicGroups = groupByTopic(signals);
   const stats = computeStats(signals);
@@ -431,16 +468,18 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
   }
 
   // Generate AI summary
-  const aiSummary = await generateAISummary(signals, commitmentGroups, topicGroups);
+  const aiSummary = await generateAISummary(signals, commitmentGroups, topicGroups, windowUsed);
 
   // Build summaryEn from AI or fallback
+  const isWiderWindow = windowUsed !== '24h';
+  const periodLabel = isWiderWindow ? 'Recent developments' : 'Today';
   let summaryEn: string;
   if (aiSummary?.summaryBullets?.length) {
     summaryEn = aiSummary.summaryBullets.map((b) => `- ${b}`).join('\n');
   } else {
     // Fallback: generate a basic summary from data
     const bullets: string[] = [];
-    bullets.push(`${signals.length} intelligence signals collected from ${stats.sourcesActive} sources.`);
+    bullets.push(`${periodLabel}: ${signals.length} intelligence signals collected from ${stats.sourcesActive} sources.`);
     if (commitmentGroups.length > 0) {
       bullets.push(`${commitmentGroups.length} government commitments had new activity.`);
     }
@@ -624,16 +663,34 @@ export async function generateCategorySummaries(): Promise<
   { category: string; signalCount: number; summary: string }[]
 > {
   const supabase = getSupabase();
-  const cutoff = new Date(Date.now() - HOURS_24_MS).toISOString();
 
-  // Fetch recent signals with their matched commitments
-  const { data: signals } = await supabase
-    .from('intelligence_signals')
-    .select('id, title, title_en, content_summary, matched_promise_ids, source_id, relevance_score')
-    .gte('discovered_at', cutoff)
-    .gte('relevance_score', 0.2)
-    .order('relevance_score', { ascending: false })
-    .limit(200);
+  // Try cascading time windows: 24h -> 48h -> 72h -> most recent
+  let signals: any[] | null = null;
+  for (const windowMs of TIME_WINDOWS_MS) {
+    const cutoff = new Date(Date.now() - windowMs).toISOString();
+    const { data } = await supabase
+      .from('intelligence_signals')
+      .select('id, title, title_en, content_summary, matched_promise_ids, source_id, relevance_score')
+      .gte('discovered_at', cutoff)
+      .gte('relevance_score', 0.2)
+      .order('relevance_score', { ascending: false })
+      .limit(200);
+    if (data && data.length > 0) {
+      signals = data;
+      break;
+    }
+  }
+
+  // Final fallback: most recent 50 regardless of date
+  if (!signals || signals.length === 0) {
+    const { data } = await supabase
+      .from('intelligence_signals')
+      .select('id, title, title_en, content_summary, matched_promise_ids, source_id, relevance_score')
+      .gte('relevance_score', 0.2)
+      .order('discovered_at', { ascending: false })
+      .limit(50);
+    signals = data;
+  }
 
   if (!signals || signals.length === 0) return [];
 

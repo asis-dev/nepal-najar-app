@@ -30,6 +30,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { CommitmentBriefing } from '@/lib/intelligence/commitment-briefing';
+import type { ImpactPrediction } from '@/lib/intelligence/impact-predictor';
 import { useI18n } from '@/lib/i18n';
 import { TruthMeter } from '@/components/public/truth-meter';
 import { CommunityEvidenceFeed } from '@/components/public/community-evidence-feed';
@@ -212,6 +213,37 @@ function BriefingSkeleton() {
   );
 }
 
+function ImpactSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="glass-card p-5 sm:p-6">
+        <div className="space-y-2">
+          <div className="h-4 w-full rounded bg-white/[0.06]" />
+          <div className="h-4 w-5/6 rounded bg-white/[0.06]" />
+          <div className="h-4 w-3/6 rounded bg-white/[0.06]" />
+        </div>
+        <div className="h-3 w-40 rounded bg-white/[0.06] mt-4" />
+      </div>
+      <div className="glass-card p-5 sm:p-6">
+        <div className="h-3 w-28 rounded bg-white/[0.06] mb-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-14 rounded-xl bg-white/[0.04]" />
+          ))}
+        </div>
+      </div>
+      <div className="glass-card p-5 sm:p-6">
+        <div className="h-3 w-24 rounded bg-white/[0.06] mb-4" />
+        <div className="space-y-2.5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-20 rounded-xl bg-white/[0.04]" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    SECTION HEADER
    ═══════════════════════════════════════════════ */
@@ -247,6 +279,11 @@ export default function PromiseDetailPage() {
   const [briefingLoading, setBriefingLoading] = useState(true);
   const [briefingError, setBriefingError] = useState(false);
   const [activeTab, setActiveTab] = useState<'brief' | 'sources' | 'evidence'>('brief');
+  const [impact, setImpact] = useState<ImpactPrediction | null>(null);
+  const [impactLoading, setImpactLoading] = useState(false);
+  const [impactError, setImpactError] = useState(false);
+  const impactRef = useRef<HTMLDivElement>(null);
+  const impactFetchedRef = useRef(false);
 
   // Resolve the commitment — static data always available as fallback
   const staticPromise = useMemo(
@@ -294,6 +331,48 @@ export default function PromiseDetailPage() {
 
     return () => controller.abort();
   }, [promise?.id]);
+
+  // Lazy-load impact prediction (fetch when section scrolls into view or after briefing loads)
+  useEffect(() => {
+    if (!promise?.id || impactFetchedRef.current) return;
+
+    const node = impactRef.current;
+    if (!node) {
+      // Fallback: fetch after briefing loads
+      if (!briefingLoading) {
+        impactFetchedRef.current = true;
+        fetchImpact(promise.id);
+      }
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !impactFetchedRef.current) {
+          impactFetchedRef.current = true;
+          observer.disconnect();
+          fetchImpact(promise.id);
+        }
+      },
+      { rootMargin: '200px' },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+
+    function fetchImpact(id: string | number) {
+      setImpactLoading(true);
+      setImpactError(false);
+      fetch(`/api/impact?commitment_id=${id}`)
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error('Failed');
+        })
+        .then((data) => setImpact(data))
+        .catch(() => setImpactError(true))
+        .finally(() => setImpactLoading(false));
+    }
+  }, [promise?.id, briefingLoading]);
 
   // Fetch signals (latest sources)
   const { data: todaySignals, isLoading: signalsLoading } = usePromiseTodaySignals(promise?.id ?? '');
@@ -499,16 +578,21 @@ export default function PromiseDetailPage() {
                 <div
                   className="h-full rounded-full transition-all duration-200 ease-out"
                   style={{
-                    width: `${promise.progress}%`,
+                    width: `${Math.min(100, Math.max(0, promise.progress ?? 0))}%`,
                     background: status.barGradient,
-                    boxShadow: '0 0 10px rgba(59, 130, 246, 0.3)',
+                    boxShadow: (promise.progress ?? 0) > 0 ? '0 0 10px rgba(59, 130, 246, 0.3)' : 'none',
                   }}
                 />
               </div>
               <span className="text-sm font-bold text-white tabular-nums min-w-[3ch] text-right">
-                {promise.progress}%
+                {promise.progress ?? 0}%
               </span>
             </div>
+            {(promise.progress ?? 0) === 0 && promise.status === 'not_started' && (
+              <p className="text-xs text-gray-500 mt-1">
+                {isNe ? 'अहिलेसम्म कुनै प्रगति डेटा छैन' : 'No progress data yet'}
+              </p>
+            )}
           </div>
 
           {/* Blocker */}
@@ -704,6 +788,140 @@ export default function PromiseDetailPage() {
         </section>
 
         {/* ═══════════════════════════════════════
+           SECTION 2.5: WHEN THIS IS DONE (Impact Prediction)
+           ═══════════════════════════════════════ */}
+        <section ref={impactRef} className={`pb-8 ${activeTab !== 'brief' ? 'hidden md:block' : ''}`}>
+          <SectionHeader icon={'\u2728'} title={isNe ? '\u092F\u094B \u092A\u0942\u0930\u093E \u092D\u090F\u092A\u091B\u093F' : 'When This Is Done'} />
+
+          {impactLoading ? (
+            <ImpactSkeleton />
+          ) : impactError ? (
+            /* Error: hide the section entirely as requested */
+            null
+          ) : !impact ? (
+            /* No data yet: hide the section entirely */
+            null
+          ) : (
+            <div className="space-y-4">
+              {/* Vision summary */}
+              <div className="glass-card p-5 sm:p-6">
+                <p className="text-[15px] sm:text-base text-gray-200 leading-relaxed italic">
+                  &ldquo;{isNe && impact.summaryNe ? impact.summaryNe : impact.summaryEn}&rdquo;
+                </p>
+                {impact.estimatedCompletion && (
+                  <p className="text-xs text-gray-500 mt-3">
+                    {'\uD83D\uDCC5'} {isNe ? '\u0905\u0928\u0941\u092E\u093E\u0928\u093F\u0924 \u0938\u092E\u094D\u092A\u0928\u094D\u0928' : 'Est. completion'}: {impact.estimatedCompletion}
+                  </p>
+                )}
+              </div>
+
+              {/* Before → After */}
+              {impact.beforeAfter && impact.beforeAfter.length > 0 && (
+                <div className="glass-card p-5 sm:p-6">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-4">
+                    {'\uD83D\uDCCA'} {isNe ? '\u092A\u0939\u093F\u0932\u0947 \u2192 \u092A\u091B\u093F' : 'Before \u2192 After'}
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {impact.beforeAfter.map((item, i) => (
+                      <div
+                        key={i}
+                        className="flex items-stretch rounded-xl overflow-hidden border border-white/[0.06]"
+                      >
+                        <div className="flex-1 px-3 py-2.5 bg-red-500/[0.06]">
+                          <p className="text-[10px] text-gray-500 mb-0.5">{item.metric}</p>
+                          <p className="text-xs font-semibold text-red-300">{item.before}</p>
+                        </div>
+                        <div className="flex items-center px-1.5 text-gray-600 text-xs">{'\u2192'}</div>
+                        <div className="flex-1 px-3 py-2.5 bg-emerald-500/[0.06]">
+                          <p className="text-[10px] text-gray-500 mb-0.5">{item.metric}</p>
+                          <p className="text-xs font-semibold text-emerald-300">{item.after}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Impacts */}
+              {impact.impacts && impact.impacts.length > 0 && (
+                <div className="glass-card p-5 sm:p-6">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-4">
+                    {'\uD83D\uDCA1'} {isNe ? '\u092E\u0941\u0916\u094D\u092F \u092A\u094D\u0930\u092D\u093E\u0935\u0939\u0930\u0942' : 'Key Impacts'}
+                  </h3>
+                  <div className="space-y-2.5">
+                    {impact.impacts.map((item, i) => {
+                      const confidenceColor =
+                        item.confidence === 'high'
+                          ? 'bg-emerald-400'
+                          : item.confidence === 'medium'
+                            ? 'bg-amber-400'
+                            : 'bg-gray-500';
+                      const confidenceLabel =
+                        item.confidence === 'high'
+                          ? isNe ? '\u0909\u091A\u094D\u091A' : 'High'
+                          : item.confidence === 'medium'
+                            ? isNe ? '\u092E\u0927\u094D\u092F\u092E' : 'Medium'
+                            : isNe ? '\u0905\u0928\u0941\u092E\u093E\u0928\u093F\u0924' : 'Speculative';
+
+                      return (
+                        <div
+                          key={i}
+                          className="pl-4 py-3 pr-4 bg-white/[0.02] border border-white/[0.06] rounded-xl"
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base flex-shrink-0">{item.icon}</span>
+                              <span className="text-sm font-semibold text-white">
+                                {isNe && item.titleNe ? item.titleNe : item.titleEn}
+                              </span>
+                            </div>
+                            <span className="flex items-center gap-1.5 text-[10px] text-gray-500 whitespace-nowrap flex-shrink-0">
+                              <span className={`w-1.5 h-1.5 rounded-full ${confidenceColor}`} />
+                              {confidenceLabel}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 leading-relaxed mb-1.5">
+                            {isNe && item.descriptionNe ? item.descriptionNe : item.descriptionEn}
+                          </p>
+                          <p className="text-[10px] text-gray-600">
+                            {'\uD83D\uDC65'} {item.affectedPeople}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Who benefits most */}
+              {impact.primaryBeneficiaries && impact.primaryBeneficiaries.length > 0 && (
+                <div className="glass-card p-5 sm:p-6">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3">
+                    {isNe ? '\u0915\u0938\u0932\u093E\u0908 \u0938\u092C\u0948\u092D\u0928\u094D\u0926\u093E \u092C\u0922\u0940 \u092B\u093E\u0907\u0926\u093E' : 'Who benefits most'}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {impact.primaryBeneficiaries.map((b, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary-500/10 text-primary-300 border border-primary-500/20"
+                      >
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Meta */}
+              <div className="text-[10px] text-gray-600 text-center">
+                {isNe ? 'AI \u0926\u094D\u0935\u093E\u0930\u093E \u0909\u0924\u094D\u092A\u0928\u094D\u0928' : 'AI-generated prediction'} &middot;{' '}
+                {new Date(impact.generatedAt).toLocaleDateString()}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ═══════════════════════════════════════
            SECTION 3: LATEST SOURCES (with voting)
            ═══════════════════════════════════════ */}
         <section className={`pb-8 ${activeTab !== 'sources' ? 'hidden md:block' : ''}`}>
@@ -771,7 +989,7 @@ export default function PromiseDetailPage() {
           ) : (
             <div className="glass-card p-6 text-center">
               <p className="text-sm text-gray-500">
-                {isNe ? 'अहिलेसम्म कुनै स्रोत भेटिएको छैन।' : 'No sources found yet.'}
+                {isNe ? 'अहिलेसम्म कुनै स्रोत उपलब्ध छैन।' : 'No sources available yet'}
               </p>
               <p className="text-xs text-gray-600 mt-1">
                 {isNe

@@ -16,7 +16,7 @@ import { useUserPreferencesStore } from '@/lib/stores/preferences';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import { getPromiseRelevance } from '@/lib/utils/geo-relevance';
-import { InterestFilter } from '@/components/public/interest-filter';
+import { InterestFilter, resolveGroupsToCategories } from '@/components/public/interest-filter';
 import type { GovernmentPromise } from '@/lib/data/promises';
 
 /* ═══════════════════════════════════════════
@@ -676,16 +676,22 @@ export default function LandingPage() {
     return trendingItems;
   }, [publicPromises, trendingScoreMap]);
 
+  /* ── Resolve selected group IDs to actual PromiseCategory values ── */
+  const resolvedCategories = useMemo(
+    () => resolveGroupsToCategories(categoriesOfInterest),
+    [categoriesOfInterest],
+  );
+
   /* ── Apply interest-category filter on "For You" feed ── */
   const filteredForYouActive = useMemo(() => {
-    if (!categoriesOfInterest.length) return forYouFeed.active;
-    return forYouFeed.active.filter((c) => categoriesOfInterest.includes(c.category));
-  }, [forYouFeed.active, categoriesOfInterest]);
+    if (!resolvedCategories.length) return forYouFeed.active;
+    return forYouFeed.active.filter((c) => resolvedCategories.includes(c.category));
+  }, [forYouFeed.active, resolvedCategories]);
 
   const filteredForYouStale = useMemo(() => {
-    if (!categoriesOfInterest.length) return forYouFeed.stale;
-    return forYouFeed.stale.filter((c) => categoriesOfInterest.includes(c.category));
-  }, [forYouFeed.stale, categoriesOfInterest]);
+    if (!resolvedCategories.length) return forYouFeed.stale;
+    return forYouFeed.stale.filter((c) => resolvedCategories.includes(c.category));
+  }, [forYouFeed.stale, resolvedCategories]);
 
   /* ── Choose which feed to show ── */
   const currentFeedItems = feedTab === 'for-you'

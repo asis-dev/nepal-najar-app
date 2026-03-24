@@ -98,6 +98,9 @@ export function CommitmentCard({
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.not_started;
   const progress = Math.min(100, Math.max(0, commitment.progress ?? 0));
 
+  // Resolve display summary: prefer AI summary, fall back to static data
+  const displaySummary = summary || commitment.summary || commitment.description || null;
+
   /* ── COMPACT MODE (mobile) ── */
   if (compact) {
     return (
@@ -122,9 +125,9 @@ export function CommitmentCard({
         </h3>
 
         {/* Row 3: Summary (1 line) */}
-        {summary && (
+        {displaySummary && (
           <p className="text-xs leading-relaxed text-gray-400 italic line-clamp-1">
-            &ldquo;{summary}&rdquo;
+            &ldquo;{displaySummary}&rdquo;
           </p>
         )}
 
@@ -152,7 +155,7 @@ export function CommitmentCard({
             truthLabel === 'high' ? 'bg-blue-400' :
             truthLabel === 'moderate' ? 'bg-amber-400' :
             truthLabel === 'low' ? 'bg-red-400' : 'bg-gray-500'
-          }`} title={`Truth: ${truthLabel}`} />
+          }`} title={`Truth: ${truthLabel === 'unverified' ? 'Unverified' : truthLabel}`} />
         </div>
 
         {/* Row 5: Blocker (1 line, stalled only) */}
@@ -243,11 +246,14 @@ export function CommitmentCard({
           {progress}%
         </span>
       </div>
+      {progress === 0 && status === 'not_started' && (
+        <p className="text-[10px] text-gray-500">No progress data yet</p>
+      )}
 
       {/* ── Row 6: AI Summary ── */}
-      {summary && (
+      {displaySummary && (
         <p className="text-[13px] leading-relaxed text-gray-400 italic line-clamp-2">
-          &ldquo;{summary}&rdquo;
+          &ldquo;{displaySummary}&rdquo;
         </p>
       )}
 
