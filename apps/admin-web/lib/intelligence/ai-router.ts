@@ -45,6 +45,9 @@ const OPENCLAW_BASE_URL =
   process.env.OPENCLAW_BASE_URL || 'https://api.openai.com/v1';
 const OPENCLAW_FORCE_CLI = process.env.OPENCLAW_FORCE_CLI === 'true';
 const OPENCLAW_AGENT = process.env.OPENCLAW_AGENT || 'main';
+const OPENCLAW_ONLY =
+  process.env.INTELLIGENCE_OPENCLAW_ONLY === 'true' ||
+  process.env.OPENCLAW_ONLY === 'true';
 
 function resolveHomePath(filePath: string): string {
   if (filePath.startsWith('~/')) {
@@ -91,6 +94,7 @@ function isOpenClawCliAvailable(): boolean {
 }
 
 function isOpenClawAvailable(): boolean {
+  if (process.env.OPENCLAW_DISABLED === 'true') return false;
   return Boolean(getOpenClawAccessToken()) || isOpenClawCliAvailable();
 }
 
@@ -106,8 +110,19 @@ function getModelConfig(task: TaskType): AIConfig {
     };
   }
 
-  // Priority 1: OpenAI direct (GPT-4.1-nano for classify, GPT-4.1-mini for reasoning)
-  // OpenClaw token exists but lacks chat/completions scope — use direct API key instead
+  // Priority 1: OpenClaw (API token or local CLI)
+  if (isOpenClawAvailable()) {
+    return {
+      provider: 'openclaw',
+      model: OPENCLAW_MODEL,
+      apiKey: getOpenClawAccessToken() || '',
+      baseUrl: OPENCLAW_BASE_URL,
+      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
+      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+    };
+  }
+
+  // Priority 2: OpenAI direct (GPT-4.1-nano for classify, GPT-4.1-mini for reasoning)
   if (process.env.OPENAI_API_KEY) {
     return {
       provider: 'openai',
@@ -119,7 +134,7 @@ function getModelConfig(task: TaskType): AIConfig {
     };
   }
 
-  // Priority 3: Gemini 2.5 Flash (free tier)
+  // Priority 3: Gemini 2.5 Flash
   if (process.env.GEMINI_API_KEY) {
     return {
       provider: 'gemini',
@@ -149,6 +164,80 @@ function getModelConfig(task: TaskType): AIConfig {
   return getLocalConfig(task);
 }
 
+function buildProviderChain(task: TaskType): AIConfig[] {
+  if (task === 'transcribe') {
+    return [getModelConfig(task)];
+  }
+
+  if (OPENCLAW_ONLY) {
+    if (!isOpenClawAvailable()) {
+      return [];
+    }
+
+    return [
+      {
+        provider: 'openclaw',
+        model: OPENCLAW_MODEL,
+        apiKey: getOpenClawAccessToken() || '',
+        baseUrl: OPENCLAW_BASE_URL,
+        maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
+        temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+      },
+    ];
+  }
+
+  const chain: AIConfig[] = [];
+
+  if (isOpenClawAvailable()) {
+    chain.push({
+      provider: 'openclaw',
+      model: OPENCLAW_MODEL,
+      apiKey: getOpenClawAccessToken() || '',
+      baseUrl: OPENCLAW_BASE_URL,
+      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
+      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+    });
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    chain.push({
+      provider: 'openai',
+      model: task === 'reason' || task === 'extract' ? 'gpt-4.1-mini' : 'gpt-4.1-nano',
+      apiKey: process.env.OPENAI_API_KEY,
+      baseUrl: 'https://api.openai.com/v1',
+      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
+      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+    });
+  }
+
+  if (process.env.GEMINI_API_KEY) {
+    chain.push({
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
+      apiKey: process.env.GEMINI_API_KEY,
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
+      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+    });
+  }
+
+  if (process.env.OPENROUTER_API_KEY) {
+    chain.push({
+      provider: 'openrouter',
+      model: task === 'reason' || task === 'extract'
+        ? 'deepseek/deepseek-r1'
+        : 'deepseek/deepseek-chat-v3-0324',
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseUrl: 'https://openrouter.ai/api/v1',
+      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
+      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+    });
+  }
+
+  chain.push(getLocalConfig(task));
+  return chain;
+}
+
 function getLocalConfig(task?: TaskType): AIConfig {
   return {
     provider: 'local',
@@ -163,6 +252,8 @@ function getLocalConfig(task?: TaskType): AIConfig {
 // Cost tracking
 const COST_PER_1M_TOKENS: Record<string, { input: number; output: number }> = {
   'gpt-5.3-codex': { input: 2.0, output: 8.0 },
+  'gpt-4.1-mini': { input: 0.4, output: 1.6 },
+  'gpt-4.1-nano': { input: 0.1, output: 0.4 },
   'deepseek/deepseek-r1': { input: 0.55, output: 2.19 },
   'deepseek/deepseek-chat-v3-0324': { input: 0.27, output: 1.1 },
   'gemini-2.5-flash': { input: 0, output: 0 },
@@ -193,20 +284,20 @@ async function callOpenClaw(
     try {
       return await callOpenAICompatible(config, systemPrompt, userPrompt);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      const canFallbackToCli = isOpenClawCliAvailable();
-
-      const isRecoverableAuthFailure =
-        message.includes('401') ||
+      const message = err instanceof Error ? err.message : 'unknown';
+      const authScopeFailure =
+        message.includes(' 401') ||
+        message.includes(' 403') ||
         message.toLowerCase().includes('insufficient permissions') ||
-        message.toLowerCase().includes('missing scopes');
+        message.toLowerCase().includes('missing scopes') ||
+        message.toLowerCase().includes('invalid api key');
 
-      if (!canFallbackToCli || !isRecoverableAuthFailure) {
+      if (!authScopeFailure || !execFileSync || !isOpenClawCliAvailable()) {
         throw err;
       }
 
       console.warn(
-        '[AI Router] OpenClaw API auth failed, falling back to local CLI.',
+        '[AI Router] OpenClaw API auth failed; falling back to OpenClaw CLI.',
       );
     }
   }
@@ -263,8 +354,8 @@ async function callOpenAICompatible(
   };
 
   if (config.provider === 'openrouter') {
-    headers['HTTP-Referer'] = 'https://nepalnajar.com';
-    headers['X-Title'] = 'Nepal Najar Intelligence';
+    headers['HTTP-Referer'] = 'https://ghanticard.com';
+    headers['X-Title'] = 'GhantiCard Intelligence';
   }
 
   const res = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -385,48 +476,34 @@ export async function aiComplete(
   systemPrompt: string,
   userPrompt: string,
 ): Promise<AIResponse> {
-  const config = getModelConfig(task);
-
-  // Try primary model
-  try {
-    if (config.provider === 'openclaw') {
-      return await callOpenClaw(config, systemPrompt, userPrompt);
+  const chain = buildProviderChain(task);
+  if (chain.length === 0) {
+    if (OPENCLAW_ONLY && task !== 'transcribe') {
+      throw new Error(
+        'OpenClaw-only mode is enabled, but OpenClaw is not configured. Set OPENCLAW_AUTH_PATH or OPENCLAW_API_KEY/OPENCLAW_ACCESS_TOKEN, or install the OpenClaw CLI.',
+      );
     }
-    if (config.provider === 'gemini') {
-      return await callGeminiWithRetry(config, systemPrompt, userPrompt);
-    }
-    return await callOpenAICompatible(config, systemPrompt, userPrompt);
-  } catch (primaryErr) {
-    console.warn(`[AI Router] Primary ${config.provider}/${config.model} failed: ${primaryErr instanceof Error ? primaryErr.message : primaryErr}`);
+    throw new Error('No AI providers configured.');
   }
+  const failures: string[] = [];
 
-  // Fallback chain: Gemini → Local
-  if (config.provider !== 'gemini' && process.env.GEMINI_API_KEY) {
+  for (const config of chain) {
     try {
-      const geminiConfig: AIConfig = {
-        provider: 'gemini',
-        model: 'gemini-2.5-flash',
-        apiKey: process.env.GEMINI_API_KEY,
-        baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-        maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-        temperature: 0.1,
-      };
-      return await callGeminiWithRetry(geminiConfig, systemPrompt, userPrompt);
-    } catch {
-      console.warn('[AI Router] Gemini fallback failed');
+      if (config.provider === 'openclaw') {
+        return await callOpenClaw(config, systemPrompt, userPrompt);
+      }
+      if (config.provider === 'gemini') {
+        return await callGeminiWithRetry(config, systemPrompt, userPrompt);
+      }
+      return await callOpenAICompatible(config, systemPrompt, userPrompt);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      failures.push(`${config.provider}/${config.model}: ${message}`);
+      console.warn(`[AI Router] ${config.provider}/${config.model} failed: ${message}`);
     }
   }
 
-  if (config.provider !== 'local') {
-    try {
-      const localConfig = getLocalConfig(task);
-      return await callOpenAICompatible(localConfig, systemPrompt, userPrompt);
-    } catch {
-      console.warn('[AI Router] Local fallback failed');
-    }
-  }
-
-  throw new Error('All AI providers failed');
+  throw new Error(`All AI providers failed: ${failures.join(' | ')}`);
 }
 
 export { getModelConfig, type TaskType, type AIResponse, type AIConfig };

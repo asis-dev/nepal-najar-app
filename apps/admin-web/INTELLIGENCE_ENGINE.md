@@ -180,6 +180,7 @@ Priority order: OpenClaw > OpenRouter > Gemini > Local
 |----------|-------------|
 | `OPENCLAW_AUTH_PATH` | Path to OpenClaw auth profiles JSON. Defaults to `~/.openclaw/agents/main/agent/auth-profiles.json`. Contains OAuth bearer token for GPT 5.3 via OpenAI API. |
 | `OPENCLAW_AGENT` | Dedicated OpenClaw agent ID for CLI mode. Use a separate lane such as `nepal-najar-autopilot` so scheduled runs do not contend with your interactive `main` agent. |
+| `INTELLIGENCE_OPENCLAW_ONLY` | Set to `true` to force all non-transcription AI calls through OpenClaw only (no fallback to OpenAI/Gemini/OpenRouter/local). |
 | `OPENROUTER_API_KEY` | OpenRouter API key (for DeepSeek R1, DeepSeek Chat) |
 | `GEMINI_API_KEY` | Google Gemini API key (free tier Gemini Flash) |
 | `OPENCLAW_API_KEY` / `OPENCLAW_ACCESS_TOKEN` | Optional explicit OpenClaw bearer token. If set, the engine can call OpenClaw without relying on the local CLI. |
@@ -341,8 +342,9 @@ Main table storing all collected signals.
 | `corroborated_by` | uuid[] | IDs of corroborating signals |
 | `review_required` | boolean | Needs human review |
 | `review_status` | text | Human review status |
-| `title_en` | text | English translation of title (for Nepali signals) |
-| `summary_en` | text | English summary (for Nepali signals) |
+| `title_ne` | text | Optional Nepali title variant |
+| `content_summary` | text | AI-generated summary (used for Nepali->English translation output too) |
+| `metadata.translation.title_en` | jsonb path | English title translation for Nepali signals |
 
 ### `intelligence_sweeps`
 Records each sweep run.
@@ -414,7 +416,7 @@ Daily quality metrics for monitoring.
 ### Nepali content not being matched
 - **Cause**: AI model may not understand Nepali well
 - **Fix**: GPT 5.3 handles Nepali better than smaller models. Ensure OpenClaw is the active provider.
-- **Check**: Look at `title_en` and `summary_en` columns — are translations being generated?
+- **Check**: Look at `content_summary` and `metadata.translation.title_en` in `intelligence_signals` — are translations being generated?
 
 ### OpenClaw token expired
 - **Symptom**: 401 errors from OpenAI API
