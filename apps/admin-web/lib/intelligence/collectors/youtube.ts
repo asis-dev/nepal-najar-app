@@ -34,61 +34,85 @@ interface YouTubeChannel {
 
 // Key Nepal YouTube channels to monitor
 export const YOUTUBE_CHANNELS: YouTubeChannel[] = [
-  // Government
+  // Government / official
   {
-    id: 'yt-gov-nepal',
-    name: 'Government of Nepal',
-    channelId: 'UCq6JI-0X8f5CgYKj_4J1Q8Q',
+    id: 'yt-balen-shah',
+    name: 'Balen',
+    channelId: 'UCJgcDT2XI3cQJhGe01AFaHQ',
     type: 'government',
     relatedPromiseIds: [],
     relatedOfficialIds: [],
   },
-  {
-    id: 'yt-parliament',
-    name: 'Nepal Parliament',
-    channelId: 'UCPfU3zM5s8Y6M8bMYDfKmWA',
-    type: 'government',
-    relatedPromiseIds: [1, 2, 5, 29, 30],
-    relatedOfficialIds: [],
-  },
 
-  // News channels
+  // News channels (validated IDs)
   {
-    id: 'yt-kantipur-tv',
-    name: 'Kantipur TV',
-    channelId: 'UCSRxYHJiAX3GqG-c2VbJbHQ',
+    id: 'yt-kantipur-tv-hd',
+    name: 'Kantipur TV HD',
+    channelId: 'UC3yDoaqQzOd1bNP74ZrGPTA',
     type: 'news',
     relatedPromiseIds: [],
     relatedOfficialIds: [],
   },
   {
     id: 'yt-ap1-tv',
-    name: 'AP1 TV',
-    channelId: 'UCsKTOBPSMqoQbPYiTzTqMbQ',
+    name: 'AP1HD',
+    channelId: 'UCFlPB2adH_uHaJfUCODTdrQ',
     type: 'news',
     relatedPromiseIds: [],
     relatedOfficialIds: [],
   },
   {
-    id: 'yt-himalaya-tv',
-    name: 'Himalaya TV',
-    channelId: 'UCMhIEwx5axkVIXVEiKJTb8A',
+    id: 'yt-prime-times',
+    name: 'Prime Television',
+    channelId: 'UCL1Zr3XniRSwZOcqnpAKtfg',
     type: 'news',
     relatedPromiseIds: [],
     relatedOfficialIds: [],
   },
   {
-    id: 'yt-news24-nepal',
+    id: 'yt-news24-nepal-main',
     name: 'News24 Nepal',
-    channelId: 'UCPdYLLm_kVwMFSRiB5nh-Wg',
+    channelId: 'UCjG2HX7jfwqIjzTlaF1CPGA',
     type: 'news',
     relatedPromiseIds: [],
     relatedOfficialIds: [],
   },
   {
-    id: 'yt-online-khabar',
-    name: 'Online Khabar TV',
-    channelId: 'UCbLVKI88BkwFm0hXhp5Z6Bg',
+    id: 'yt-nepal-television',
+    name: 'Nepal Television',
+    channelId: 'UCTGVQIvtPu5kqNI5ABmN8Fw',
+    type: 'news',
+    relatedPromiseIds: [],
+    relatedOfficialIds: [],
+  },
+  {
+    id: 'yt-onlinetv-nepal',
+    name: 'Onlinetv Nepal',
+    channelId: 'UCbzFzlBEU_xFahqhGbEMJXQ',
+    type: 'news',
+    relatedPromiseIds: [],
+    relatedOfficialIds: [],
+  },
+  {
+    id: 'yt-inside-nepal-news',
+    name: 'Inside Nepal News',
+    channelId: 'UC3v3VpUyf34SLfN1IyUlMeA',
+    type: 'news',
+    relatedPromiseIds: [],
+    relatedOfficialIds: [],
+  },
+  {
+    id: 'yt-kendrabindu',
+    name: 'Kendrabindu News',
+    channelId: 'UCPEwoZthpr3YZzrvlowpqgw',
+    type: 'news',
+    relatedPromiseIds: [],
+    relatedOfficialIds: [],
+  },
+  {
+    id: 'yt-ratopati-tv',
+    name: 'Ratopati TV',
+    channelId: 'UC1ev3ii9O4RuUVZ-5mfOBQQ',
     type: 'news',
     relatedPromiseIds: [],
     relatedOfficialIds: [],
@@ -106,7 +130,7 @@ export const YOUTUBE_CHANNELS: YouTubeChannel[] = [
   {
     id: 'yt-nepali-comment',
     name: 'The Nepali Comment',
-    channelId: 'UC_placeholder_nepali_comment',
+    channelId: 'UCIUpvBA9ibPWHaDeH0G49Aw',
     type: 'talk_show',
     relatedPromiseIds: [],
     relatedOfficialIds: [],
@@ -238,7 +262,7 @@ export async function getChannelVideos(
     type: 'video',
     maxResults: String(maxResults),
     order: 'date',
-    publishedAfter: getDateDaysAgo(3).toISOString(), // last 3 days for channels
+    publishedAfter: getDateDaysAgo(7).toISOString(), // last 7 days for channels
     key: YOUTUBE_API_KEY,
   });
 
@@ -667,7 +691,7 @@ export async function collectAllYouTube(): Promise<{
       if (channel.channelId.startsWith('UC_placeholder')) continue;
 
       try {
-        const videos = await getChannelVideos(channel.channelId, 5);
+        const videos = await getChannelVideos(channel.channelId, 10);
         videosFound += videos.length;
 
         for (const video of videos) {
@@ -731,10 +755,26 @@ export async function collectAllYouTube(): Promise<{
       try {
         const videos = await searchYouTube(query, 5);
         videosFound += videos.length;
+        const sourceId = buildQuerySourceId('yt-search', query);
+
+        await supabase.from('intelligence_sources').upsert(
+          {
+            id: sourceId,
+            name: `YouTube search: ${query}`,
+            source_type: 'youtube_search' as const,
+            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(
+              query,
+            )}`,
+            is_active: true,
+            last_checked_at: new Date().toISOString(),
+            ...(videos.length > 0
+              ? { last_found_at: new Date().toISOString() }
+              : {}),
+          },
+          { onConflict: 'id' },
+        );
 
         for (const video of videos) {
-          const sourceId = `yt-search-${query.slice(0, 30).replace(/\s+/g, '-').toLowerCase()}`;
-
           const { error } = await supabase
             .from('intelligence_signals')
             .upsert(
@@ -761,7 +801,13 @@ export async function collectAllYouTube(): Promise<{
               },
             );
 
-          if (!error) newVideos++;
+          if (!error) {
+            newVideos++;
+          } else {
+            errors.push(
+              `YouTube search "${query}" DB insert failed (${error.message})`,
+            );
+          }
         }
       } catch (err) {
         errors.push(
@@ -785,11 +831,25 @@ export async function collectAllYouTube(): Promise<{
       try {
         const videos = await searchYouTubeViaDuckDuckGo(query, 5);
         videosFound += videos.length;
+        const sourceId = buildQuerySourceId('yt-ddg', query);
+
+        await supabase.from('intelligence_sources').upsert(
+          {
+            id: sourceId,
+            name: `YouTube fallback search: ${query}`,
+            source_type: 'youtube_search' as const,
+            url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
+            is_active: true,
+            last_checked_at: new Date().toISOString(),
+            ...(videos.length > 0
+              ? { last_found_at: new Date().toISOString() }
+              : {}),
+          },
+          { onConflict: 'id' },
+        );
 
         for (const video of videos) {
           if (!video.videoId) continue;
-
-          const sourceId = `yt-ddg-${query.slice(0, 30).replace(/\s+/g, '-').replace(/[^a-z0-9-]/gi, '').toLowerCase()}`;
 
           const { error } = await supabase
             .from('intelligence_signals')
@@ -817,7 +877,13 @@ export async function collectAllYouTube(): Promise<{
               },
             );
 
-          if (!error) newVideos++;
+          if (!error) {
+            newVideos++;
+          } else {
+            errors.push(
+              `DuckDuckGo YouTube "${query}" DB insert failed (${error.message})`,
+            );
+          }
         }
       } catch (err) {
         errors.push(
@@ -980,4 +1046,26 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#x27;/g, "'")
     .replace(/&#x2F;/g, '/');
+}
+
+function buildQuerySourceId(prefix: 'yt-search' | 'yt-ddg', query: string): string {
+  const slug = query
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 40);
+
+  if (slug.length > 0) {
+    return `${prefix}-${slug}`;
+  }
+
+  // Stable fallback for non-Latin queries (e.g., Nepali)
+  let hash = 7;
+  for (let i = 0; i < query.length; i++) {
+    hash = (hash * 31 + query.charCodeAt(i)) >>> 0;
+  }
+  return `${prefix}-q-${hash.toString(36)}`;
 }
