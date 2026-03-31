@@ -1,10 +1,11 @@
 'use client';
 
-import { Heart, ChevronRight, Newspaper, Users, Building2 } from 'lucide-react';
+import { Heart, Share, ChevronRight, Newspaper, Users, Building2 } from 'lucide-react';
 import { GhantiIcon } from '@/components/ui/ghanti-icon';
 import { TruthMeter } from '@/components/public/truth-meter';
 import { VoteWidget } from '@/components/public/vote-widget';
 import { useI18n } from '@/lib/i18n';
+import { commitmentShareText, shareOrCopy } from '@/lib/utils/share';
 import type { GovernmentPromise, PromiseStatus } from '@/lib/data/promises';
 
 // ── Official title translations ──────────────────────────────────────────────
@@ -307,6 +308,20 @@ export function CommitmentCard({
               </button>
             )}
             <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const displayTitle = locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title;
+                const text = commitmentShareText({ title: displayTitle, progress: commitment.progress, status: commitment.status, locale });
+                const fullUrl = `${window.location.origin}/explore/first-100-days/${commitment.slug}`;
+                shareOrCopy({ title: text, text, url: fullUrl });
+              }}
+              className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-white/[0.06] transition-all"
+              aria-label="Share"
+            >
+              <Share className="w-3 h-3" />
+            </button>
+            <button
               onClick={(e) => { e.stopPropagation(); onClick?.(); }}
               className="p-1 rounded text-gray-500 hover:text-white transition-all"
               aria-label={t('commitment.viewDetails')}
@@ -482,6 +497,22 @@ export function CommitmentCard({
               </span>
             </button>
           )}
+
+          {/* Share button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const displayTitle = locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title;
+              const text = commitmentShareText({ title: displayTitle, progress: commitment.progress, status: commitment.status, locale });
+              const fullUrl = `${window.location.origin}/explore/first-100-days/${commitment.slug}`;
+              shareOrCopy({ title: text, text, url: fullUrl });
+            }}
+            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/[0.06] transition-all"
+            aria-label="Share"
+          >
+            <Share className="w-3.5 h-3.5" />
+          </button>
 
           {/* Navigate arrow */}
           <button

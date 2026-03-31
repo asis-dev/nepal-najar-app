@@ -2,6 +2,7 @@
 
 import { ExternalLink, CheckCircle2, XCircle, Minus } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { CardActions } from '@/components/public/card-actions';
 import type { MockNewsArticle } from '@/lib/data/promises';
 
 interface ArticleCardProps {
@@ -123,10 +124,18 @@ export function ArticleCard({ article }: ArticleCardProps) {
           </span>
         </div>
 
-        <span className="text-[10px] text-primary-400 flex items-center gap-1">
-          {locale === 'ne' ? 'पूरा पढ्नुहोस्' : 'Read full article'}
-          <ExternalLink className="w-3 h-3" />
-        </span>
+        <div className="flex items-center gap-2">
+          <CardActions
+            shareTitle={headline || article.headline}
+            shareUrl={article.source_url}
+            shareText={excerpt || article.excerpt}
+            size="sm"
+          />
+          <span className="text-[10px] text-primary-400 flex items-center gap-1">
+            {locale === 'ne' ? 'पूरा पढ्नुहोस्' : 'Read full article'}
+            <ExternalLink className="w-3 h-3" />
+          </span>
+        </div>
       </div>
     </a>
   );

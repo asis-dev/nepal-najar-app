@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight, Users } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { CardActions } from '@/components/public/card-actions';
 import {
   GRADE_COLORS,
   GRADE_LABELS,
@@ -47,7 +48,14 @@ export function BodyCard({ body }: { body: GovernmentBody }) {
             {typeLabel}
           </span>
         </div>
-        <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors flex-shrink-0" />
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <CardActions
+            shareTitle={`${isNe ? body.nameNe : body.name} — ${body.avgProgress}% avg progress`}
+            shareUrl={`/scorecard/${body.slug}`}
+            size="sm"
+          />
+          <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
+        </div>
       </div>
 
       {/* Body name */}

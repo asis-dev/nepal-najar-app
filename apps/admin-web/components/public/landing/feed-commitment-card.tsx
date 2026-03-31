@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Share2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { GhantiIcon } from '@/components/ui/ghanti-icon';
-import { commitmentShareText, shareOrCopy } from '@/lib/utils/share';
+import { CardActions } from '@/components/public/card-actions';
+import { commitmentShareText } from '@/lib/utils/share';
 import { STATUS_CONFIG } from '@/lib/data/landing-types';
 import type { GovernmentPromise } from '@/lib/data/promises';
 
@@ -99,19 +99,12 @@ export function FeedCommitmentCard({
           </div>
         )}
         {!commitment.progress && <div className="flex-1" />}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const text = commitmentShareText({ title, progress: commitment.progress, status: commitment.status, locale });
-            const shareUrl = `${window.location.origin}/explore/first-100-days/${commitment.slug}`;
-            shareOrCopy({ title: text, text, url: shareUrl });
-          }}
-          className="shrink-0 p-1 rounded-lg text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
-          aria-label={t('common.share')}
-        >
-          <Share2 className="w-3.5 h-3.5" />
-        </button>
+        <CardActions
+          commitmentId={commitment.id}
+          shareTitle={commitmentShareText({ title, progress: commitment.progress, status: commitment.status, locale })}
+          shareUrl={`/explore/first-100-days/${commitment.slug}`}
+          size="sm"
+        />
       </div>
     </Link>
   );

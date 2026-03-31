@@ -2,9 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Star } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { useWatchlistStore } from '@/lib/stores/preferences';
+import { CardActions } from '@/components/public/card-actions';
 import type { DailyBriefStory } from '@/lib/data/landing-types';
 import type { GovernmentPromise } from '@/lib/data/promises';
 
@@ -33,8 +32,6 @@ export function StoryCards({
   highlightedIndex?: number;
 }) {
   const { t } = useI18n();
-  const toggleWatch = useWatchlistStore((s) => s.toggleWatch);
-  const isWatched = useWatchlistStore((s) => s.isWatched);
   const [expandedStories, setExpandedStories] = useState<Set<number>>(new Set());
 
   const toggleStoryExpand = useCallback((idx: number) => {
@@ -111,20 +108,15 @@ export function StoryCards({
                 );
               })}
 
-              {/* Follow star for first related commitment */}
-              {firstCommitmentIdStr && (
-                <button
-                  onClick={() => toggleWatch(firstCommitmentIdStr)}
-                  className={`ml-auto p-1 rounded-lg transition-colors ${
-                    isWatched(firstCommitmentIdStr)
-                      ? 'text-amber-400 hover:text-amber-300'
-                      : 'text-gray-600 hover:text-gray-400'
-                  }`}
-                  aria-label={t('home.followStory')}
-                >
-                  <Star className={`w-3.5 h-3.5 ${isWatched(firstCommitmentIdStr) ? 'fill-current' : ''}`} />
-                </button>
-              )}
+              {/* Follow + Share for first related commitment */}
+              <div className="ml-auto">
+                <CardActions
+                  commitmentId={firstCommitmentIdStr ?? undefined}
+                  shareTitle={locale === 'ne' && story.titleNe ? story.titleNe : story.title}
+                  shareUrl={firstCommitmentIdStr ? `/explore/first-100-days/${allPromises.find((p) => p.id === firstCommitmentIdStr)?.slug ?? firstCommitmentIdStr}` : '/'}
+                  size="sm"
+                />
+              </div>
             </div>
           </div>
         );

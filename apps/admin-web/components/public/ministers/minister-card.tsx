@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Activity, MessageSquare, Target, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
+import { CardActions } from '@/components/public/card-actions';
 import type { Minister } from '@/lib/hooks/use-ministers';
 
 interface MinisterCardProps {
@@ -84,7 +85,14 @@ export function MinisterCard({ minister, locale }: MinisterCardProps) {
           <Target className="h-3 w-3" />
           {minister.ownedCommitmentIds.length} commitment{minister.ownedCommitmentIds.length !== 1 ? 's' : ''}
         </span>
-        <ChevronRight className="h-3.5 w-3.5 text-gray-600 transition-colors group-hover:text-gray-400" />
+        <div className="flex items-center gap-1">
+          <CardActions
+            shareTitle={`${minister.name} - ${weeklyActivity.totalSignals} signals this week`}
+            shareUrl={`/ministers/${minister.slug}`}
+            size="sm"
+          />
+          <ChevronRight className="h-3.5 w-3.5 text-gray-600 transition-colors group-hover:text-gray-400" />
+        </div>
       </div>
     </Link>
   );

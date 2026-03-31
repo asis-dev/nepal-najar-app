@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronUp, MessageSquare, MapPin, TrendingUp } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { CardActions } from '@/components/public/card-actions';
 import type { Proposal, ProposalStatus, ProposalCategory } from '@/lib/hooks/use-proposals';
 
 /* ═══════════════════════════════════════════
@@ -125,12 +126,19 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
             </div>
 
             {/* Bottom row */}
-            <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-              <span className="inline-flex items-center gap-1">
-                <MessageSquare className="w-3 h-3" />
-                {proposal.comment_count}
-              </span>
-              <span>{relativeTime(proposal.created_at)}</span>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-1">
+                  <MessageSquare className="w-3 h-3" />
+                  {proposal.comment_count}
+                </span>
+                <span>{relativeTime(proposal.created_at)}</span>
+              </div>
+              <CardActions
+                shareTitle={isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
+                shareUrl={`/proposals/${proposal.id}`}
+                size="sm"
+              />
             </div>
           </div>
         </div>
