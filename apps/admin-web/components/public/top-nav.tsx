@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { ShieldCheck, Award, Star } from 'lucide-react';
+import { ShieldCheck, Award, Star, Users } from 'lucide-react';
 import { RepublicMark } from '@/components/ui/ghanti-card-mark';
 import { NotificationBell } from '@/components/public/notification-bell';
 import { useTrending } from '@/lib/hooks/use-trending';
@@ -71,6 +71,7 @@ const desktopPrimaryLinks = [
 
 // Desktop: overflow into "More" dropdown
 const desktopMoreLinks = [
+  { href: '/ministers', labelKey: 'nav.ministers', icon: Users },
   { href: '/scorecard', labelKey: 'nav.ministries', icon: Award },
   { href: '/disputed', labelKey: 'nav.disputed', icon: Swords },
   { href: '/constitution', labelKey: 'nav.constitution', icon: Scale },
@@ -85,6 +86,7 @@ const allNavLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
   { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
+  { href: '/ministers', labelKey: 'nav.ministers', icon: Users },
   { href: '/corruption', labelKey: 'nav.corruption', icon: Shield },
   { href: '/complaints', labelKey: 'nav.complaints', icon: MessageSquareWarning },
   { href: '/scorecard', labelKey: 'nav.ministries', icon: Award },
