@@ -30,6 +30,7 @@ import {
 } from '@/lib/data/landing-types';
 import type { GovernmentPromise } from '@/lib/data/promises';
 
+import { useCommentCounts } from '@/lib/hooks/use-comment-counts';
 import { FeedTabBar } from './feed-tab-bar';
 import { FeedCommitmentCard } from './feed-commitment-card';
 import { StaleRow } from './stale-row';
@@ -230,6 +231,19 @@ export function FeedIsland() {
   const { data: corruptionStats } = useCorruptionStats();
   const { data: corruptionResult } = useCorruptionCases({ pageSize: 20 });
   const corruptionCases = corruptionResult?.cases ?? [];
+
+  /* ── Comment counts for visible commitments ── */
+  const allVisibleIds = useMemo(() => {
+    const items = feedTab === 'for-you'
+      ? filteredForYouActive
+      : feedTab === 'following'
+        ? followingFeed
+        : feedTab === 'trending'
+          ? trendingFeed
+          : [];
+    return items.slice(0, feedCount).map((c) => c.id);
+  }, [feedTab, filteredForYouActive, followingFeed, trendingFeed, feedCount]);
+  const commentCounts = useCommentCounts(allVisibleIds);
 
   /* ── Choose which feed to show ── */
   const currentFeedItems = feedTab === 'for-you'
@@ -594,6 +608,7 @@ export function FeedIsland() {
                       isTrending={trendingIds.has(commitment.id)}
                       locale={locale}
                       showNewDot={feedTab === 'following' ? hasNewActivity(commitment) : undefined}
+                      commentCount={commentCounts[commitment.id] || 0}
                     />
                   </div>
                 );

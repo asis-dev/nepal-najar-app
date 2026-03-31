@@ -13,11 +13,13 @@ export function FeedCommitmentCard({
   isTrending,
   locale,
   showNewDot,
+  commentCount,
 }: {
   commitment: GovernmentPromise;
   isTrending: boolean;
   locale: string;
   showNewDot?: boolean;
+  commentCount?: number;
 }) {
   const { t } = useI18n();
   const title = locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title;
@@ -103,6 +105,8 @@ export function FeedCommitmentCard({
           commitmentId={commitment.id}
           shareTitle={commitmentShareText({ title, progress: commitment.progress, status: commitment.status, locale })}
           shareUrl={`/explore/first-100-days/${commitment.slug}`}
+          detailUrl={`/explore/first-100-days/${commitment.slug}`}
+          commentCount={commentCount}
           size="sm"
         />
       </div>
