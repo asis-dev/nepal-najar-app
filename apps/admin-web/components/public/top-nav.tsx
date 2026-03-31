@@ -177,7 +177,7 @@ export function TopNav() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-np-base/80 backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-np-base/80 backdrop-blur-xl" suppressHydrationWarning>
       <div className="accent-crimson" />
       <div className="public-shell">
         <div className="grid h-16 grid-cols-[auto_1fr_auto] items-center gap-3 sm:h-[4.5rem] sm:gap-4">
@@ -409,7 +409,7 @@ export function TopNav() {
           </div>
         </div>
 
-        <div className="pb-2 md:hidden">
+        <div className="pb-1 md:hidden">
           <Link
             href="/complaints"
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/35 bg-amber-500/20 px-3 py-2.5 text-sm font-semibold text-amber-100 transition-colors hover:bg-amber-500/30"
@@ -421,7 +421,7 @@ export function TopNav() {
             <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-emerald-400/70">
               <Activity className="h-3 w-3" />
               <span>
-                {scanStats.signalsToday.toLocaleString()} {locale === 'ne' ? 'स्रोत आज स्क्यान गरियो' : 'sources scanned today'}
+                {scanStats.signalsToday.toLocaleString()} {locale === 'ne' ? 'स्रोत आज स्क्यान' : 'sources scanned today'}
               </span>
             </div>
           )}

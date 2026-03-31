@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { ArrowRight, ChevronDown, ChevronUp, Loader2, AlertTriangle, Heart, Share2, Star, Headphones, Play, Pause, ExternalLink } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp, Loader2, AlertTriangle, Heart, Share2, Star, Play, Pause, ExternalLink } from 'lucide-react';
 import { DailyBriefPlayer } from '@/components/public/daily-brief-player';
 import { useI18n } from '@/lib/i18n';
 import {
@@ -728,6 +728,7 @@ function UnifiedDailyBrief({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [topStoryExpanded, setTopStoryExpanded] = useState(false);
 
   const totalSignals = brief.stats?.totalSignals24h ?? 0;
   const sourcesActive = brief.stats?.sourcesActive ?? 0;
@@ -861,9 +862,19 @@ function UnifiedDailyBrief({
               </span>
               <span className="text-[10px] text-gray-600">{topStoryNarrative.signalCount} {locale === 'ne' ? 'स्रोत' : 'sources'}</span>
             </div>
-            <p className="text-xs leading-relaxed text-gray-400 line-clamp-3">
+            <p className={`text-xs leading-relaxed text-gray-400 ${!topStoryExpanded ? 'line-clamp-3' : ''}`}>
               {topStoryNarrative.summary}
             </p>
+            {topStoryNarrative.summary.length > 120 && (
+              <button
+                onClick={() => setTopStoryExpanded(!topStoryExpanded)}
+                className="mt-1 text-[11px] text-cyan-400/70 hover:text-cyan-300 transition-colors"
+              >
+                {topStoryExpanded
+                  ? (locale === 'ne' ? 'कम देखाउनुहोस्' : 'Show less')
+                  : (locale === 'ne' ? 'थप पढ्नुहोस्' : 'Read more')}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1340,15 +1351,15 @@ export default function LandingPage() {
 
             {/* ── Hero ── */}
             <div className="mb-4 md:mb-6 text-center">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white leading-tight">
+              <h1 className="text-base sm:text-xl md:text-2xl font-bold tracking-tight text-white leading-tight">
                 {locale === 'ne'
                   ? t('home.heroTitle')
-                  : 'Track promises. Report reality. Verify the truth.'}
+                  : 'Track promises. Report reality. Verify truth.'}
               </h1>
               <p className="mt-2 text-sm text-gray-400 max-w-2xl mx-auto leading-relaxed">
                 {locale === 'ne'
                   ? t('brand.heroSubheadline')
-                  : 'Nepal Republic uses AI to track government commitments, surface real-world issues, and analyze evidence so you can see how the system actually performs.'}
+                  : 'AI-powered tracking of government commitments, real-world issues, and evidence so you can see how the system actually performs.'}
               </p>
             </div>
 
@@ -1497,8 +1508,8 @@ export default function LandingPage() {
                 );
               })()}
 
-              {/* Worst category chips */}
-              {showLetterGrade && worstCategories.length > 0 && (
+              {/* Worst category chips — gated behind nowMs to prevent hydration mismatch */}
+              {nowMs && showLetterGrade && worstCategories.length > 0 && (
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mb-3 md:mb-4">
                   {worstCategories.map((cat) => {
                     const chipColor = cat.score >= 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
@@ -1532,15 +1543,8 @@ export default function LandingPage() {
                 </span>
               </div>
 
-              <div className="mb-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                <Link
-                  href="/complaints"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-500/20"
-                >
-                  {locale === 'ne' ? 'नागरिक समस्या दर्ता' : 'Report Civic Issue'}
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-                {/* Audio explainer — English */}
+              {/* About this app — audio explainers */}
+              <div className="mb-3 flex items-center justify-center gap-3 sm:justify-start">
                 <button
                   onClick={() => {
                     if (playingAboutLang === 'en') {
@@ -1554,16 +1558,14 @@ export default function LandingPage() {
                     aboutAudioRef.current.play().catch(() => {});
                     setPlayingAboutLang('en');
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1.5 text-[11px] font-medium text-cyan-200 transition-colors hover:bg-cyan-500/20"
+                  className="group inline-flex items-center gap-2.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 pl-2 pr-4 py-1.5 text-[13px] font-medium text-cyan-200 transition-colors hover:bg-cyan-500/20"
                 >
-                  <Headphones className="h-3 w-3" />
                   {playingAboutLang === 'en' ? (
-                    <><Pause className="h-3 w-3" /><span>Pause</span></>
+                    <><span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500 shadow-lg shadow-cyan-500/30"><Pause className="h-3.5 w-3.5 text-white" /></span><span>Pause</span></>
                   ) : (
-                    <span>About this app</span>
+                    <><span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500 shadow-lg shadow-cyan-500/30 transition-transform group-hover:scale-110"><Play className="h-3.5 w-3.5 text-white fill-white" /></span><span>About this app</span></>
                   )}
                 </button>
-                {/* Audio explainer — Nepali */}
                 <button
                   onClick={() => {
                     if (playingAboutLang === 'ne') {
@@ -1577,19 +1579,18 @@ export default function LandingPage() {
                     aboutAudioRef.current.play().catch(() => {});
                     setPlayingAboutLang('ne');
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-orange-400/30 bg-orange-500/10 px-2.5 py-1.5 text-[11px] font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
+                  className="group inline-flex items-center gap-2.5 rounded-full border border-orange-400/30 bg-orange-500/10 pl-2 pr-4 py-1.5 text-[13px] font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
                 >
-                  <Headphones className="h-3 w-3" />
                   {playingAboutLang === 'ne' ? (
-                    <><Pause className="h-3 w-3" /><span>रोक्नुहोस्</span></>
+                    <><span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 shadow-lg shadow-orange-500/30"><Pause className="h-3.5 w-3.5 text-white" /></span><span>रोक्नुहोस्</span></>
                   ) : (
-                    <span>नेपालीमा सुन्नुहोस्</span>
+                    <><span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 shadow-lg shadow-orange-500/30 transition-transform group-hover:scale-110"><Play className="h-3.5 w-3.5 text-white fill-white" /></span><span>नेपालीमा सुन्नुहोस्</span></>
                   )}
                 </button>
               </div>
 
-              {/* Share hero score */}
-              {ghantiScore && (
+              {/* Share hero score — gated behind nowMs to prevent hydration mismatch */}
+              {nowMs && ghantiScore && (
                 <div className="flex items-center justify-center sm:justify-start gap-2 mb-3">
                   <button
                     onClick={() => {
@@ -1617,7 +1618,7 @@ export default function LandingPage() {
               )}
 
               {/* Score disclaimer asterisk */}
-              {ghantiScore && (
+              {nowMs && ghantiScore && (
                 <p className="text-center text-[9px] text-gray-600 mb-2 md:mb-3">
                   <span className="group relative inline-flex items-center gap-0.5 cursor-help">
                     * {showLetterGrade ? t('home.scoreDisclaimer') : t('home.baselineDisclaimer')}
