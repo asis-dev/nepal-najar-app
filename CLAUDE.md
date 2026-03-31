@@ -1,7 +1,7 @@
-# GhantiCard — Project Context
+# Nepal Republic — Project Context
 
 ## What this app is
-GhantiCard (घण्टीकार्ड) is a civic accountability platform tracking Nepal's RSP government commitments. "Ghanti" = bell (Balen Shah's election symbol). "Card" = report card. Domain: ghanticard.com (pending). Built with Next.js 14, Supabase, Tailwind, React Query. Monorepo at `apps/admin-web/`.
+Nepal Republic (नेपाल रिपब्लिक) is an AI-powered civic accountability platform tracking Nepal's RSP government commitments. Domain: nepalrepublic.org. Built with Next.js 14, Supabase, Tailwind, React Query. Monorepo at `apps/admin-web/`.
 
 ## Deployment
 - **Host:** Vercel
@@ -12,11 +12,10 @@ GhantiCard (घण्टीकार्ड) is a civic accountability platform t
 - Database connection: see `.env.local` for `DATABASE_URL`
 
 ## Branding
-- Name: **GhantiCard** (घण्टीकार्ड)
-- Logo: Gold bell SVG inside red/blue gradient circle + "Ghanti**Card**" text
-- Scoring: "GhantiCard Score" with A-F letter grades
-- Colors: Nepal flag red (#DC143C) + blue (#003893), bell is gold (#D9A441)
-- Previously called "Nepal Najar" — fully rebranded, zero old references remain
+- Name: **Nepal Republic** (नेपाल रिपब्लिक)
+- Scoring: "Republic Score" with A-F letter grades
+- Colors: Nepal flag red (#DC143C) + blue (#003893)
+- Previously called "Nepal Najar" then "GhantiCard" — fully rebranded to Nepal Republic
 
 ## Key Architecture
 
@@ -78,7 +77,7 @@ scripts/seed-research-evidence.js — seed evidence into Supabase
 - Signal source name resolution (no more "rss-" prefixes)
 
 ### UI
-- Full rebrand: Nepal Najar → GhantiCard (77 files, 3 renamed)
+- Full rebrand: Nepal Najar → Nepal Republic (77 files, 3 renamed)
 - Bell icons replace all status dots/emoji
 - Grade badges (A-F) on commitment cards
 - Status-colored left borders (red=stalled, green=progress)

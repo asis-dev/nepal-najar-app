@@ -43,7 +43,7 @@ Each commitment shows:
 
 ---
 
-### 2. GhantiCard Score (Overall Government Grade)
+### 2. Republic Score (Overall Government Grade)
 
 A single score (0–100) with an A–F letter grade that represents overall government performance. Computed from five weighted factors:
 
@@ -301,7 +301,7 @@ A: Yes. AI classification isn't perfect. That's why every AI-generated insight l
 ### Scoring
 
 **Q: How is the overall grade calculated?**
-A: The GhantiCard Score combines five factors: delivery rate (how many promises are done), average progress (how far along the rest are), trust score (how well verified the data is), budget utilization (spending efficiency), and citizen sentiment (public voting). Each factor is weighted and combined into a 0–100 score with an A–F grade.
+A: The Republic Score combines five factors: delivery rate (how many promises are done), average progress (how far along the rest are), trust score (how well verified the data is), budget utilization (spending efficiency), and citizen sentiment (public voting). Each factor is weighted and combined into a 0–100 score with an A–F grade.
 
 **Q: What does each letter grade mean?**
 A: **A** (80+) = Excellent, **B** (60–79) = Good, **C** (40–59) = Average, **D** (20–39) = Poor, **F** (below 20) = Failing.

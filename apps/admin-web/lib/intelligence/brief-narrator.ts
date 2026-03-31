@@ -102,7 +102,7 @@ Rules:
 - ONLY Nepali (Devanagari). No English.
 - STRICT WORD LIMIT: 180-220 words. Count carefully. If over 220, cut stories.
 - No jargon: no "signal", "source", "pulse", "coverage count"
-- Platform: "नेपाल रिपब्लिक" — never "घण्टीकार्ड"
+- Platform: "नेपाल रिपब्लिक" — always use this name
 - Nepal newsroom Nepali. "तर" not "लेकिन", "र" not "और", "छ" not "है"
 - Pure prose. No markdown, bullets, numbering.
 - Paragraph breaks between sections.

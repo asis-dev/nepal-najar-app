@@ -62,7 +62,7 @@ At its core, Nepal Republic is five things:
 ### Tracking & Intelligence
 
 - **Commitment Tracker** — Browse all 109 commitments with status indicators, progress bars, letter grades, category filters, and AI-generated briefings. The main workhorse of the app.
-- **GhantiCard Score** — A single 0–100 score with an A–F letter grade that summarizes overall government performance. Computed from delivery rate, average progress, trust score, budget utilization, and citizen sentiment.
+- **Republic Score** — A single 0–100 score with an A–F letter grade that summarizes overall government performance. Computed from delivery rate, average progress, trust score, budget utilization, and citizen sentiment.
 - **Government Scorecard** — Ministry-level accountability. Each government body gets its own grade based on the commitments it's responsible for.
 - **Daily Brief** — AI-generated morning briefing covering what changed across all tracked commitments. Available as text and audio narration.
 - **AI Chat** — Ask questions in natural language ("Which ministry has the worst track record?" "What's happening with the metro project?") and get answers sourced from verified data.

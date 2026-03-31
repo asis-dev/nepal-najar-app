@@ -706,7 +706,7 @@ function BachanTrackerContent() {
                     <div>
                       <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200">
                         <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-                        {t('tracker.todayInGhantiCard')}
+                        {t('tracker.todayInRepublic')}
                       </div>
                       <h2 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-white sm:text-4xl">
                         {headlineText}

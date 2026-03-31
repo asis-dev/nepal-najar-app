@@ -251,7 +251,7 @@
     "nationsReportCard": "Report. Track. Verify. AI-powered Nepal's civic platform."
   },
   "chat": {
-    "askGhantiCard": "Ask the AI",
+    "askRepublic": "Ask the AI",
     "askDesc": "Ask anything about Nepal's governance — in English or Nepali",
     "askDescEmpty": "Ask about commitments, evidence, corruption, delays, and more. AI-powered, bilingual.",
     "placeholder": "Ask about government progress, evidence, corruption...",
@@ -559,7 +559,7 @@
     "campaignContext": "Campaign context",
     "evidenceLinkedPromises": "Evidence-linked promises",
     "first100DaysFraming": "First 100 days framing",
-    "todayInGhantiCard": "Republic Brief",
+    "todayInRepublic": "Republic Brief",
     "headlineMovedToday": "{count} commitments moved today across Nepal Republic.",
     "headlineTracking": "Tracking {total} commitments across Nepal's public accountability story.",
     "subheadWithArticle": "Latest signal: {headline} from {source}. {evidence} evidence links are already attached across the tracker.",

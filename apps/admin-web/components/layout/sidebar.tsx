@@ -92,10 +92,10 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="font-display text-lg font-bold text-white tracking-tight leading-tight">
-              Ghanti
+              Nepal
             </h1>
             <p className="text-xs font-semibold tracking-widest uppercase text-gradient-blue">
-              Card
+              Republic
             </p>
           </div>
         </Link>
