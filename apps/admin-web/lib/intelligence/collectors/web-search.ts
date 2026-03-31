@@ -321,7 +321,7 @@ async function searchGoogle(query: string): Promise<SearchResult[]> {
 
 // SearXNG is a free, self-hosted meta search engine — great alternative to Google
 async function searchSearXNG(query: string): Promise<SearchResult[]> {
-  const baseUrl = process.env.SEARXNG_URL; // e.g., https://search.nepalnajar.com
+  const baseUrl = process.env.SEARXNG_URL; // e.g., https://search.nepalrepublic.org
 
   if (!baseUrl) return [];
 
@@ -367,7 +367,7 @@ async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
 
     const res = await fetch(`https://html.duckduckgo.com/html/?${params}`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NepalNajar/2.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; NepalRepublic/2.0)',
       },
       signal: AbortSignal.timeout(10_000),
     });

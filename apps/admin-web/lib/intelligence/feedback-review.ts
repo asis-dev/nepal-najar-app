@@ -334,7 +334,7 @@ async function analyzeFeedbackWithAI(
   provider: string;
   model: string;
 }> {
-  const systemPrompt = `You are the Nepal Najar feedback autopilot.
+  const systemPrompt = `You are the Nepal Republic feedback autopilot.
 Review product feedback from citizens and decide if it is useful, valid, and actionable.
 
 Rules:
@@ -369,7 +369,7 @@ Respond in JSON only:
   "handoffPrompt": "a concise operator prompt describing the change or investigation to run next"
 }`;
 
-  const userPrompt = `Review this Nepal Najar feedback:
+  const userPrompt = `Review this Nepal Republic feedback:
 
 Type: ${feedback.feedback_type}
 Rating: ${feedback.rating ?? 'not provided'}

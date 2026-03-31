@@ -78,11 +78,15 @@ function SearchContent() {
     return promises.filter((p) => {
       return (
         p.title.toLowerCase().includes(q) ||
-        p.title_ne.includes(debouncedQuery) ||
-        p.description.toLowerCase().includes(q) ||
-        p.description_ne.includes(debouncedQuery) ||
+        p.title_ne?.includes(debouncedQuery) ||
+        p.description?.toLowerCase().includes(q) ||
+        p.description_ne?.includes(debouncedQuery) ||
+        p.summary?.toLowerCase().includes(q) ||
+        p.summary_ne?.includes(debouncedQuery) ||
         p.category.toLowerCase().includes(q) ||
-        p.category_ne.includes(debouncedQuery)
+        p.category_ne?.includes(debouncedQuery) ||
+        p.slug?.includes(q) ||
+        (p.actors && p.actors.some(a => a.toLowerCase().includes(q)))
       );
     });
   }, [promises, debouncedQuery]);

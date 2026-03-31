@@ -6,7 +6,7 @@ import { syncToCloud } from '@/lib/services/preferences-sync';
 
 /* ═══════════════════════════════════════════════
    ENGAGEMENT STORE
-   Daily streak tracking + Najar Index cache
+   Daily streak tracking + Republic Index cache
    Persisted to localStorage — no account needed
    ═══════════════════════════════════════════════ */
 
@@ -44,7 +44,7 @@ function isConsecutiveDay(dateA: string, dateB: string): boolean {
   return diffMs === 86400000; // exactly 24 hours
 }
 
-/** Cached snapshot of the Najar Index to avoid recomputing on every render */
+/** Cached snapshot of the Republic Index to avoid recomputing on every render */
 interface CachedIndex {
   /** The computed score (0-100) */
   score: number;
@@ -56,7 +56,7 @@ interface CachedIndex {
 
 /**
  * Engagement state persisted to localStorage.
- * Tracks daily visit streaks and caches the Najar Index.
+ * Tracks daily visit streaks and caches the Republic Index.
  */
 interface EngagementState {
   /** Current consecutive-day visit streak */
@@ -67,7 +67,7 @@ interface EngagementState {
   lastVisitDate: string | null;
   /** Whether the user has interacted (voted) today */
   todayInteracted: boolean;
-  /** Cached Najar Index to avoid recomputation */
+  /** Cached Republic Index to avoid recomputation */
   cachedIndex: CachedIndex | null;
 }
 
@@ -81,7 +81,7 @@ interface EngagementActions {
   recordVisit: () => void;
   /** Mark that the user has interacted (e.g. voted) today */
   recordInteraction: () => void;
-  /** Update the cached Najar Index snapshot */
+  /** Update the cached Republic Index snapshot */
   setCachedIndex: (index: CachedIndex) => void;
 }
 
@@ -139,7 +139,7 @@ export const useEngagementStore = create<EngagementState & EngagementActions>()(
       },
     }),
     {
-      name: 'nepal-najar-engagement',
+      name: 'nepalrepublic-engagement',
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: (state) => ({

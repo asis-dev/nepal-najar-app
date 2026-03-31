@@ -1,5 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runFullSweep } from '@/lib/intelligence/sweep';
+import { getSupabase } from '@/lib/supabase/server';
+
+async function releaseStaleRunningSweeps(maxAgeMinutes = 120): Promise<number> {
+  const supabase = getSupabase();
+  const cutoffIso = new Date(Date.now() - maxAgeMinutes * 60_000).toISOString();
+  const { data: staleSweeps, error } = await supabase
+    .from('intelligence_sweeps')
+    .select('id')
+    .eq('status', 'running')
+    .lt('started_at', cutoffIso);
+
+  if (error || !staleSweeps || staleSweeps.length === 0) return 0;
+
+  const staleIds = staleSweeps.map((row) => row.id);
+  const { error: updateError } = await supabase
+    .from('intelligence_sweeps')
+    .update({
+      status: 'failed',
+      finished_at: new Date().toISOString(),
+      summary: 'Sweep marked failed by route guard after exceeding stale threshold.',
+    })
+    .in('id', staleIds);
+
+  if (updateError) return 0;
+  return staleIds.length;
+}
+
+async function hasActiveRunningSweep(): Promise<boolean> {
+  const supabase = getSupabase();
+  const { count } = await supabase
+    .from('intelligence_sweeps')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'running');
+  return (count || 0) > 0;
+}
 
 // POST: Trigger a manual sweep
 export async function POST(request: NextRequest) {
@@ -13,6 +48,19 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
+    const staleMinutes = Math.max(
+      30,
+      Number.parseInt(process.env.INTELLIGENCE_STALE_SWEEP_MINUTES || '90', 10) ||
+        90,
+    );
+    await releaseStaleRunningSweeps(staleMinutes);
+    const alreadyRunning = await hasActiveRunningSweep();
+    if (alreadyRunning) {
+      return NextResponse.json(
+        { status: 'skipped', reason: 'Another sweep is already running' },
+        { status: 409 },
+      );
+    }
 
     const result = await runFullSweep({
       skipCollection: body.skipCollection,
@@ -32,9 +80,15 @@ export async function POST(request: NextRequest) {
 
 // GET: Trigger scheduled sweep (for Vercel Cron)
 export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const bearerSecret = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length)
+    : null;
+
   const cronSecret =
     request.headers.get('x-vercel-cron-secret') ||
-    request.nextUrl.searchParams.get('secret');
+    request.nextUrl.searchParams.get('secret') ||
+    bearerSecret;
 
   if (
     cronSecret !== process.env.CRON_SECRET &&
@@ -44,13 +98,29 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const mode = request.nextUrl.searchParams.get('mode');
+    const staleMinutes = Math.max(
+      30,
+      Number.parseInt(process.env.INTELLIGENCE_STALE_SWEEP_MINUTES || '90', 10) ||
+        90,
+    );
+    await releaseStaleRunningSweeps(staleMinutes);
+    const alreadyRunning = await hasActiveRunningSweep();
+    if (alreadyRunning) {
+      return NextResponse.json({
+        status: 'skipped',
+        reason: 'Another sweep is already running',
+      });
+    }
+
+    const mode = request.nextUrl.searchParams.get('mode') || 'full';
     const isRssOnly = mode === 'rss-only';
+    const skipAnalysisByDefault = mode !== 'full';
 
     const result = await runFullSweep({
       sweepType: 'scheduled',
       analysisBatchSize: isRssOnly ? 5 : 10,
       rssOnly: isRssOnly,
+      skipAnalysis: skipAnalysisByDefault,
     });
 
     return NextResponse.json({

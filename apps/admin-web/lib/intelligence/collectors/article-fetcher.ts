@@ -187,7 +187,7 @@ export async function fetchFullArticle(url: string): Promise<FullArticle | null>
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'NepalNajar/2.0 (intelligence-engine; +https://nepalnajar.com)',
+        'User-Agent': 'NepalRepublic/2.0 (civic-tracker; +https://nepalrepublic.org)',
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9,ne;q=0.8',
       },

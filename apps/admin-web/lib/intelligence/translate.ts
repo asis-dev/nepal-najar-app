@@ -5,6 +5,7 @@
  */
 
 import { aiComplete } from './ai-router';
+import { getSupabase } from '@/lib/supabase/server';
 
 export interface TranslationResult {
   titleEn: string;
@@ -83,4 +84,124 @@ export async function batchTranslateNepaliSignals(
   }
 
   return results;
+}
+
+export async function translatePendingNepaliSignals(limit = 20): Promise<{
+  scanned: number;
+  translated: number;
+  failed: number;
+}> {
+  const supabase = getSupabase();
+  const batchLimit = Math.max(1, Math.min(limit, 100));
+
+  const { data: nepaliSignals, error } = await supabase
+    .from('intelligence_signals')
+    .select('id, title, content, content_summary, metadata')
+    .eq('language', 'ne')
+    .eq('tier1_processed', true)
+    .gte('relevance_score', 0.3)
+    .order('discovered_at', { ascending: false })
+    .limit(Math.min(batchLimit * 5, 500));
+
+  if (error) {
+    throw new Error(`Failed to load Nepali translation backlog: ${error.message}`);
+  }
+
+  if (!nepaliSignals || nepaliSignals.length === 0) {
+    return { scanned: 0, translated: 0, failed: 0 };
+  }
+
+  const candidates = nepaliSignals
+    .filter((signal) => {
+      const metadata =
+        signal.metadata &&
+        typeof signal.metadata === 'object' &&
+        !Array.isArray(signal.metadata)
+          ? (signal.metadata as Record<string, unknown>)
+          : {};
+      const translationMeta =
+        metadata.translation &&
+        typeof metadata.translation === 'object' &&
+        !Array.isArray(metadata.translation)
+          ? (metadata.translation as Record<string, unknown>)
+          : {};
+      const existingTitleEn = translationMeta.title_en;
+      const hasTitleEn =
+        typeof existingTitleEn === 'string' && existingTitleEn.trim().length > 0;
+      const hasSummary =
+        typeof signal.content_summary === 'string' &&
+        signal.content_summary.trim().length > 0;
+      return !hasTitleEn || !hasSummary;
+    })
+    .slice(0, batchLimit);
+
+  if (candidates.length === 0) {
+    return { scanned: 0, translated: 0, failed: 0 };
+  }
+
+  const translated = await batchTranslateNepaliSignals(
+    candidates.map((signal) => ({
+      id: signal.id as string,
+      title: signal.title as string,
+      content: (signal.content as string | null) || undefined,
+    })),
+  );
+
+  let translatedCount = 0;
+  let failedCount = 0;
+  const nowIso = new Date().toISOString();
+
+  for (const signal of candidates) {
+    const translation = translated.get(signal.id as string);
+    if (!translation) {
+      failedCount++;
+      continue;
+    }
+
+    const existingMetadata =
+      signal.metadata && typeof signal.metadata === 'object' && !Array.isArray(signal.metadata)
+        ? (signal.metadata as Record<string, unknown>)
+        : {};
+
+    const existingTranslationMeta =
+      existingMetadata.translation &&
+      typeof existingMetadata.translation === 'object' &&
+      !Array.isArray(existingMetadata.translation)
+        ? (existingMetadata.translation as Record<string, unknown>)
+        : {};
+
+    const updatedMetadata: Record<string, unknown> = {
+      ...existingMetadata,
+      translation: {
+        ...existingTranslationMeta,
+        title_en: translation.titleEn || signal.title,
+        translated_at: nowIso,
+      },
+    };
+
+    const { error: updateError } = await supabase
+      .from('intelligence_signals')
+      .update({
+        content_summary:
+          signal.content_summary && signal.content_summary.trim().length > 0
+            ? signal.content_summary
+            : translation.summaryEn && translation.summaryEn.trim().length > 0
+            ? translation.summaryEn.trim()
+            : signal.content_summary,
+        metadata: updatedMetadata,
+      })
+      .eq('id', signal.id);
+
+    if (updateError) {
+      failedCount++;
+    } else {
+      translatedCount++;
+    }
+  }
+
+  return {
+    scanned: candidates.length,
+    translated: translatedCount,
+    failed: failedCount,
+  };
 }

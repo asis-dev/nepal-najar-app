@@ -4,6 +4,14 @@ import { HometownPicker } from '@/components/public/hometown-picker';
 import { PilotAnalytics } from '@/components/public/pilot-analytics';
 import { TopNav } from '@/components/public/top-nav';
 import { CivicSkyBackground } from '@/components/ui/civic-sky-background';
+import { createMetadata } from '@/lib/seo';
+
+export const metadata = createMetadata({
+  title: 'Track Government Promises',
+  description:
+    "Is Nepal's government keeping its promises? Track 109 commitments with real-time evidence, daily briefings, and citizen reports. Free and independent.",
+  path: '/',
+});
 
 export default function LandingLayout({
   children,

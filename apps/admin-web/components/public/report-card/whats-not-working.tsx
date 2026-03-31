@@ -65,14 +65,19 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-2">
-        <AlertTriangle className="w-5 h-5 text-red-400" />
-        <h3 className="text-lg font-semibold text-white">
-          {t('accountability.whatsNotWorking')}
-        </h3>
-        <span className="text-xs text-red-400/70 ml-auto">
-          {totalIssues} {t('accountability.issues')}
-        </span>
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <AlertTriangle className="w-5 h-5 text-red-400" />
+          <h3 className="text-lg font-semibold text-white">
+            {t('accountability.whatWeCantVerify')}
+          </h3>
+          <span className="text-xs text-red-400/70 ml-auto">
+            {totalIssues} {t('accountability.issues')}
+          </span>
+        </div>
+        <p className="text-xs text-gray-500">
+          {t('accountability.cantVerifyDesc')}
+        </p>
       </div>
 
       {/* Government portals down */}
@@ -88,11 +93,11 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
             </span>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2 overflow-hidden max-w-full">
             {govPortals.map((source) => (
               <div
                 key={source.url}
-                className="glass-card p-3 border-l-2 border-red-500/40"
+                className="glass-card p-3 border-l-2 border-red-500/40 overflow-hidden min-w-0 max-w-full"
               >
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className={`w-2 h-2 rounded-full ${statusDot(source.status)} animate-pulse`} />
@@ -103,9 +108,9 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
                     {t(statusLabelKey(source.status))}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-gray-600">
-                  <span className="truncate">{source.url}</span>
-                  <span className="ml-auto whitespace-nowrap">
+                <div className="flex items-center gap-2 text-[10px] text-gray-600 min-w-0">
+                  <span className="truncate min-w-0">{source.url}</span>
+                  <span className="ml-auto whitespace-nowrap flex-shrink-0">
                     <Clock className="w-2.5 h-2.5 inline mr-0.5" />
                     {timeAgo(source.lastChecked)}
                   </span>
@@ -129,11 +134,11 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
             </span>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 overflow-hidden max-w-full">
             {failedSources.map((source) => (
               <div
                 key={source.url}
-                className="glass-card p-3 border-l-2 border-amber-500/30"
+                className="glass-card p-3 border-l-2 border-amber-500/30 overflow-hidden min-w-0 max-w-full"
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${statusDot(source.status)}`} />
@@ -163,12 +168,12 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
             </span>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 overflow-hidden max-w-full">
             {silentPromises.map((p) => (
               <Link
                 key={p.id}
                 href={`/explore/first-100-days/${p.id}`}
-                className="glass-card p-3 border-l-2 border-gray-500/20 hover:bg-white/[0.03] hover:border-gray-400/30 transition-all"
+                className="glass-card p-3 border-l-2 border-gray-500/20 hover:bg-white/[0.03] hover:border-gray-400/30 transition-all overflow-hidden min-w-0 max-w-full"
               >
                 <span className="text-xs font-medium text-gray-400 line-clamp-2">
                   {isNe && p.title_ne ? p.title_ne : p.title}

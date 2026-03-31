@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getDailyBrief, generateDailyBrief } from '@/lib/intelligence/daily-brief';
+import {
+  getDailyBrief,
+  generateDailyBrief,
+  buildReaderHighlights,
+} from '@/lib/intelligence/daily-brief';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+
+// Allow up to 5 minutes for brief generation (AI summary + optional audio)
+export const maxDuration = 300;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([
@@ -39,11 +46,23 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json(brief, {
-      headers: {
-        'Cache-Control': 'public, max-age=1800',
+    const readerHighlights = await withTimeout(
+      buildReaderHighlights(brief),
+      5000,
+      [],
+    );
+
+    return NextResponse.json(
+      {
+        ...brief,
+        readerHighlights,
       },
-    });
+      {
+      headers: {
+        'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+      },
+      },
+    );
   } catch (err) {
     console.error('[API /daily-brief] Error:', err);
     return NextResponse.json(
@@ -58,7 +77,7 @@ export async function GET(request: Request) {
  *
  * Force regenerate today's brief. Requires authentication.
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
     // Check auth — accept either user session or service secret
     const headersList = await import('next/headers').then(m => m.headers());
@@ -77,7 +96,39 @@ export async function POST() {
       }
     }
 
+    const url = new URL(request.url);
+    const withAudioParam = url.searchParams.get('withAudio');
+    const withAudio = withAudioParam == null ? true : withAudioParam !== '0';
+
     const brief = await generateDailyBrief();
+
+    let audioResult:
+      | {
+          audioUrl: string | null;
+          durationSeconds: number;
+          provider: string;
+          error?: string;
+        }
+      | null = null;
+
+    if (withAudio) {
+      try {
+        const { generateAndStoreDailyAudio } = await import(
+          '@/lib/intelligence/brief-narrator'
+        );
+        audioResult = await generateAndStoreDailyAudio(brief);
+      } catch (audioErr) {
+        audioResult = {
+          audioUrl: null,
+          durationSeconds: 0,
+          provider: 'none',
+          error:
+            audioErr instanceof Error
+              ? audioErr.message
+              : 'audio generation failed',
+        };
+      }
+    }
 
     // Increment regenerated_count
     const { getSupabase } = await import('@/lib/supabase/server');
@@ -94,9 +145,17 @@ export async function POST() {
       // RPC may not exist — non-fatal
     }
 
+    const readerHighlights = await withTimeout(
+      buildReaderHighlights(brief),
+      5000,
+      [],
+    );
+
     return NextResponse.json({
       ...brief,
       regenerated: true,
+      audioResult,
+      readerHighlights,
     });
   } catch (err) {
     console.error('[API /daily-brief POST] Error:', err);

@@ -43,7 +43,7 @@ const classificationConfig = {
 
 export function ProofGallery({ promiseId }: { promiseId: string }) {
   const { isAuthenticated } = useAuth();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const isNe = locale === 'ne';
   const queryClient = useQueryClient();
   const [votingId, setVotingId] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export function ProofGallery({ promiseId }: { promiseId: string }) {
       <div className="glass-card p-6">
         <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
           <Camera className="w-4 h-4 text-cyan-400" />
-          {isNe ? 'नागरिक प्रमाणहरू' : 'Citizen Proof'}
+          {t('evidence.citizenProof')}
         </h3>
         <div className="flex justify-center py-6">
           <div className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
@@ -95,7 +95,7 @@ export function ProofGallery({ promiseId }: { promiseId: string }) {
     <div className="glass-card p-6">
       <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
         <Camera className="w-4 h-4 text-cyan-400" />
-        {isNe ? 'नागरिक प्रमाणहरू' : 'Citizen Proof'}
+        {t('evidence.citizenProof')}
         {evidence.length > 0 && (
           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-semibold">
             {evidence.length}
@@ -127,7 +127,7 @@ export function ProofGallery({ promiseId }: { promiseId: string }) {
                     {isVerified && (
                       <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                         <CheckCircle2 className="w-2.5 h-2.5" />
-                        {isNe ? 'समुदाय प्रमाणित' : 'Community Verified'}
+                        {t('evidence.communityVerified')}
                       </span>
                     )}
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${config.bg} ${config.color}`}>
@@ -189,10 +189,10 @@ export function ProofGallery({ promiseId }: { promiseId: string }) {
         <div className="text-center py-6">
           <Camera className="w-8 h-8 text-gray-700 mx-auto mb-2" />
           <p className="text-sm text-gray-500">
-            {isNe ? 'अहिलेसम्म कुनै नागरिक प्रमाण छैन' : 'No citizen proof yet'}
+            {t('evidence.noCitizenProofYet')}
           </p>
           <p className="text-xs text-gray-600 mt-1">
-            {isNe ? 'पहिलो बन्नुहोस् — प्रमाण साझा गर्नुहोस्' : 'Be the first — share what you see on the ground'}
+            {t('evidence.beFirstShareProof')}
           </p>
         </div>
       )}

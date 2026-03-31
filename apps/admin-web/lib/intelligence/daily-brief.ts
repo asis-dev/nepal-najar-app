@@ -1,5 +1,5 @@
 /**
- * Daily Brief Generator for Nepal Najar
+ * Daily Brief Generator for Nepal Republic
  *
  * Generates a daily intelligence summary by aggregating the last 24 hours
  * of signals, grouping by commitment and topic, and using AI to produce
@@ -8,6 +8,11 @@
 
 import { getSupabase } from '@/lib/supabase/server';
 import { aiComplete } from './ai-router';
+import {
+  isHindiLeaning,
+  looksLikeNepali,
+  normalizeNepaliRegister,
+} from './nepali-text';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,10 +26,13 @@ export interface DailyBrief {
     title: string;
     titleNe?: string;
     summary: string;
+    summaryNe?: string;
     signalCount: number;
     sources: string[];             // which platforms covered it
     relatedCommitments: number[];  // commitment IDs
     sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+    /** 0-100 importance score — higher = show first */
+    importance: number;
   }[];
   commitmentsMoved: {
     commitmentId: number;
@@ -40,6 +48,29 @@ export interface DailyBrief {
     topSource: string;
   };
   generatedAt: string;
+  audioUrl?: string | null;
+  videoUrl?: string | null;
+  audioDurationSeconds?: number | null;
+}
+
+export interface ReaderHighlight {
+  commitmentId: number;
+  title: string;
+  titleNe: string;
+  slug: string;
+  direction: 'confirms' | 'contradicts' | 'new_activity';
+  directionLabel: string;
+  directionLabelNe: string;
+  signalCount: number;
+  owner: string;
+  ownerNe: string;
+  whyItMatters: string;
+  whyItMattersNe: string;
+  nextWatchpoint: string;
+  nextWatchpointNe: string;
+  confidenceScore: number; // 0-1
+  confidenceLabel: 'high' | 'medium' | 'low';
+  trustLevel: string;
 }
 
 interface RawSignal {
@@ -63,9 +94,12 @@ interface RawSignal {
 
 interface AIBriefResponse {
   summaryBullets: string[];
+  summaryBulletsEn?: string[];
   topStories: {
     title: string;
+    titleEn?: string;
     summary: string;
+    summaryEn?: string;
     sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
     signalIds: string[];
   }[];
@@ -92,7 +126,16 @@ const STOP_WORDS = new Set([
   'how', 'what', 'when', 'where', 'who', 'why', 'nepal', 'nepali',
   'said', 'says', 'government', 'minister', 'according', 'report',
   'new', 'year', 'been', 'being', 'about', 'after', 'before',
+  // AI analysis junk words — these leak from content_summary of poorly analyzed signals
+  'specific', 'commitment', 'commitments', 'article', 'content', 'provided',
+  'information', 'event', 'individuals', 'involved', 'dates', 'contains',
+  'does', 'appear', 'related', 'promotional', 'message', 'viewers',
+  'subscribe', 'channel', 'youtube', 'website', 'latest', 'news',
+  'statement', 'classification', 'signal', 'source', 'reports',
+  // Nepali stop words
   'को', 'मा', 'ले', 'र', 'छ', 'छन्', 'गरेको', 'भएको', 'हुने',
+  'गरेका', 'गर्ने', 'भने', 'यो', 'यस', 'छैन', 'पनि', 'तथा',
+  'सम्बन्धित', 'प्रतिबद्धता', 'सरकारको', 'सरकार', 'सरकारले',
 ]);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -117,15 +160,45 @@ function todayDateString(): string {
 }
 
 function parseJSON<T>(text: string): T | null {
+  // Strip markdown code fences if present
+  const cleaned = text.trim().replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+  // Try direct parse first
   try {
-    const jsonMatch = text.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]) as T;
-    }
-    return JSON.parse(text) as T;
+    const result = JSON.parse(cleaned);
+    if (result && typeof result === 'object') return result as T;
   } catch {
-    return null;
+    // Direct parse failed
   }
+
+  // Fallback: extract JSON from text — try object first, then array
+  try {
+    const objMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      return JSON.parse(objMatch[0]) as T;
+    }
+  } catch {
+    // Object extraction failed
+  }
+
+  try {
+    const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (arrMatch) {
+      return JSON.parse(arrMatch[0]) as T;
+    }
+  } catch {
+    // Array extraction failed
+  }
+
+  return null;
+}
+
+function cleanSummaryBullet(text: string): string {
+  return text
+    .replace(/\s*\(Commitments?\s*[\d,\s]+\)\s*/g, ' ')
+    .replace(/\b(confirms|contradicts|new_activity|classification|signal|source count|pulse)\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 // ── Core: fetch recent signals ───────────────────────────────────────────────
@@ -165,7 +238,9 @@ async function fetchRecentSignals(): Promise<FetchResult> {
     }
 
     if (data && data.length > 0) {
-      return { signals: data as unknown as RawSignal[], windowUsed: windowLabels[i] };
+      // Deduplicate and prioritize before returning
+      const deduped = deduplicateSignals(data as unknown as RawSignal[]);
+      return { signals: deduped, windowUsed: windowLabels[i] };
     }
   }
 
@@ -183,7 +258,77 @@ async function fetchRecentSignals(): Promise<FetchResult> {
     return { signals: [], windowUsed: 'recent' };
   }
 
-  return { signals: (fallbackData || []) as unknown as RawSignal[], windowUsed: 'recent' };
+  return { signals: deduplicateSignals((fallbackData || []) as unknown as RawSignal[]), windowUsed: 'recent' };
+}
+
+/**
+ * Deduplicate signals that are about the same thing.
+ * Multiple YouTube channels / RSS feeds often report the same story.
+ * Keep the highest-quality version of each unique story.
+ */
+function deduplicateSignals(signals: RawSignal[]): RawSignal[] {
+  const seen = new Map<string, RawSignal>(); // normalized title → best signal
+
+  for (const signal of signals) {
+    const title = (signal.title_ne || signal.title || '').toLowerCase().trim();
+    // Normalize: strip punctuation, emojis, hashtags, extra spaces
+    const normalized = title
+      .replace(/[#@\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}❤️]/gu, '')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 60); // compare first 60 chars
+
+    if (normalized.length < 10) continue; // skip garbage titles
+
+    const existing = seen.get(normalized);
+    if (!existing) {
+      seen.set(normalized, signal);
+    } else {
+      // Keep the one with better content: prefer RSS over YouTube, prefer ones with published_at
+      const existingIsYT = existing.source_id.startsWith('yt-');
+      const currentIsYT = signal.source_id.startsWith('yt-');
+      if (existingIsYT && !currentIsYT) {
+        seen.set(normalized, signal); // prefer RSS over YouTube
+      } else if (existing.published_at && !signal.published_at) {
+        // keep existing — it has a publication date
+      } else if (!existing.published_at && signal.published_at) {
+        seen.set(normalized, signal); // prefer signal with publication date
+      }
+    }
+  }
+
+  // Also do fuzzy dedup — titles that share 80%+ words are likely the same story
+  const deduped = [...seen.values()];
+  const final: RawSignal[] = [];
+  const usedIndices = new Set<number>();
+
+  for (let i = 0; i < deduped.length; i++) {
+    if (usedIndices.has(i)) continue;
+    final.push(deduped[i]);
+
+    const wordsA = new Set(extractKeywords((deduped[i].title_ne || deduped[i].title || '').toLowerCase()));
+    if (wordsA.size < 3) continue;
+
+    for (let j = i + 1; j < deduped.length; j++) {
+      if (usedIndices.has(j)) continue;
+      const wordsB = new Set(extractKeywords((deduped[j].title_ne || deduped[j].title || '').toLowerCase()));
+      if (wordsB.size < 3) continue;
+
+      // Count overlap
+      let overlap = 0;
+      for (const w of wordsA) {
+        if (wordsB.has(w)) overlap++;
+      }
+      const similarity = overlap / Math.min(wordsA.size, wordsB.size);
+      if (similarity >= 0.7) {
+        usedIndices.add(j); // skip this duplicate
+      }
+    }
+  }
+
+  console.log(`[DailyBrief] Deduplication: ${signals.length} → ${final.length} unique signals`);
+  return final;
 }
 
 // ── Core: group signals by commitment ────────────────────────────────────────
@@ -345,6 +490,353 @@ function computePulseFromSignals(signals: RawSignal[]): number {
   return Math.min(100, Math.round(volumePulse + diversityBonus + relevanceBonus + coverageBonus));
 }
 
+const CATEGORY_IMPACT_MESSAGES: Record<string, string> = {
+  Governance:
+    'This affects government responsiveness and trust in public institutions.',
+  'Anti-Corruption':
+    'This affects corruption risk, public trust, and rule-of-law credibility.',
+  Infrastructure:
+    'This affects service delivery, mobility, and local economic activity.',
+  Transport:
+    'This affects daily travel time, logistics, and business reliability.',
+  Energy:
+    'This affects electricity reliability, industrial output, and household costs.',
+  Technology:
+    'This affects digital service delivery, transparency, and access to state services.',
+  Health:
+    'This affects access to care, treatment quality, and health equity.',
+  Education:
+    'This affects school quality, skills development, and long-term jobs outcomes.',
+  Environment:
+    'This affects disaster resilience, pollution risk, and local quality of life.',
+  Economy:
+    'This affects jobs, household purchasing power, and investment confidence.',
+  Social:
+    'This affects social protection, inclusion, and community well-being.',
+};
+
+function directionToLabel(
+  direction: 'confirms' | 'contradicts' | 'new_activity',
+): string {
+  if (direction === 'confirms') return 'Progress signal';
+  if (direction === 'contradicts') return 'Conflict signal';
+  return 'New activity';
+}
+
+function directionToLabelNe(
+  direction: 'confirms' | 'contradicts' | 'new_activity',
+): string {
+  if (direction === 'confirms') return 'प्रगति संकेत';
+  if (direction === 'contradicts') return 'विवाद संकेत';
+  return 'नयाँ गतिविधि';
+}
+
+function baseTrustScore(trustLevel: string | null | undefined): number {
+  switch (trustLevel) {
+    case 'verified':
+      return 0.9;
+    case 'high':
+      return 0.8;
+    case 'partial':
+    case 'moderate':
+      return 0.6;
+    case 'low':
+      return 0.4;
+    case 'unverified':
+    default:
+      return 0.3;
+  }
+}
+
+function scoreToLabel(score: number): 'high' | 'medium' | 'low' {
+  if (score >= 0.75) return 'high';
+  if (score >= 0.5) return 'medium';
+  return 'low';
+}
+
+function toOwner(actors: unknown): string {
+  if (Array.isArray(actors) && actors.length > 0) {
+    const first = actors.find(
+      (value) => typeof value === 'string' && value.trim().length > 0,
+    );
+    if (typeof first === 'string' && first.trim().length > 0) {
+      return first.trim();
+    }
+  }
+  return 'Government of Nepal';
+}
+
+const ACTOR_NE: Record<string, string> = {
+  'Prime Minister': 'प्रधानमन्त्री',
+  'Finance Minister': 'अर्थमन्त्री',
+  'Law Minister': 'कानून मन्त्री',
+  'Home Minister': 'गृहमन्त्री',
+  'Education Minister': 'शिक्षामन्त्री',
+  'Health Minister': 'स्वास्थ्य मन्त्री',
+  'Energy Minister': 'ऊर्जामन्त्री',
+  'ICT Minister': 'सूचना प्रविधि मन्त्री',
+  'Commerce Minister': 'वाणिज्यमन्त्री',
+  'Tourism Minister': 'पर्यटनमन्त्री',
+  'Agriculture Minister': 'कृषिमन्त्री',
+  'Foreign Minister': 'परराष्ट्रमन्त्री',
+  'Chief Secretary': 'मुख्य सचिव',
+  'Cabinet Secretary': 'मन्त्रिपरिषद् सचिव',
+  'NPC Vice Chair': 'राष्ट्रिय योजना आयोग उपाध्यक्ष',
+  'NRB Governor': 'नेपाल राष्ट्र बैंक गभर्नर',
+  'CIAA Chief': 'अख्तियार प्रमुख',
+  'Attorney General': 'महान्यायाधिवक्ता',
+  'Government of Nepal': 'नेपाल सरकार',
+};
+
+function toOwnerNe(actors: unknown): string {
+  const en = toOwner(actors);
+  return ACTOR_NE[en] || en;
+}
+
+function whyItMattersFor(
+  category: string | null | undefined,
+  direction: 'confirms' | 'contradicts' | 'new_activity',
+  title?: string,
+  signalCount?: number,
+  status?: string | null,
+): string {
+  const impact =
+    CATEGORY_IMPACT_MESSAGES[category || ''] ||
+    'This affects public accountability and confidence in delivery.';
+
+  const signals = signalCount && signalCount > 1 ? `${signalCount} sources reporting` : '';
+
+  if (direction === 'contradicts') {
+    return `${signals ? signals + '. ' : ''}Contradictory reports on this commitment — needs independent verification before status can change.`;
+  }
+  if (direction === 'confirms') {
+    if (status === 'not_started') {
+      return `${signals ? signals + '. ' : ''}First signs of movement on a commitment that was previously inactive. ${impact}`;
+    }
+    return `${signals ? signals + '. ' : ''}Multiple sources confirm progress is happening. ${impact}`;
+  }
+  if (status === 'stalled') {
+    return `${signals ? signals + '. ' : ''}Activity detected on a stalled commitment — monitoring if this signals a restart. ${impact}`;
+  }
+  return `${signals ? signals + '. ' : ''}New coverage detected. ${impact}`;
+}
+
+function nextWatchpointFor(
+  direction: 'confirms' | 'contradicts' | 'new_activity',
+  status: string | null | undefined,
+  owner?: string,
+): string {
+  const actor = owner && owner !== 'Government of Nepal' ? owner : 'the responsible ministry';
+
+  if (direction === 'contradicts') {
+    return `Watch for official response from ${actor} or competing evidence within 7 days.`;
+  }
+
+  if (direction === 'confirms' && status === 'delivered') {
+    return 'Watch for independent on-ground verification and beneficiary feedback.';
+  }
+
+  if (direction === 'confirms') {
+    return `Watch for ${actor} to release budget, procurement, or milestone updates.`;
+  }
+
+  if (status === 'not_started') {
+    return `Watch for ${actor} to announce a formal plan or allocate budget.`;
+  }
+
+  return `Watch for ${actor} to show concrete execution proof or timeline.`;
+}
+
+const CATEGORY_IMPACT_MESSAGES_NE: Record<string, string> = {
+  Governance: 'यसले सरकारी जवाफदेहिता र सार्वजनिक संस्थामा विश्वासमा असर गर्छ।',
+  'Anti-Corruption': 'यसले भ्रष्टाचार जोखिम, सार्वजनिक विश्वास र कानूनी विश्वसनीयतामा असर गर्छ।',
+  Infrastructure: 'यसले सेवा वितरण, यातायात र स्थानीय आर्थिक गतिविधिमा असर गर्छ।',
+  Transport: 'यसले दैनिक यात्रा समय, रसद र व्यापार विश्वसनीयतामा असर गर्छ।',
+  Energy: 'यसले बिजुली विश्वसनीयता, औद्योगिक उत्पादन र घरेलु खर्चमा असर गर्छ।',
+  Technology: 'यसले डिजिटल सेवा, पारदर्शिता र राज्य सेवामा पहुँचमा असर गर्छ।',
+  Health: 'यसले स्वास्थ्य सेवामा पहुँच, उपचार गुणस्तर र स्वास्थ्य समानतामा असर गर्छ।',
+  Education: 'यसले विद्यालयको गुणस्तर, सीप विकास र दीर्घकालीन रोजगार परिणाममा असर गर्छ।',
+  Environment: 'यसले प्रकोप लचिलोपन, प्रदूषण जोखिम र जीवनस्तरमा असर गर्छ।',
+  Economy: 'यसले रोजगारी, घरेलु क्रयशक्ति र लगानी विश्वासमा असर गर्छ।',
+  Social: 'यसले सामाजिक सुरक्षा, समावेशिता र सामुदायिक कल्याणमा असर गर्छ।',
+};
+
+function whyItMattersForNe(
+  category: string | null | undefined,
+  direction: 'confirms' | 'contradicts' | 'new_activity',
+  signalCount?: number,
+  status?: string | null,
+): string {
+  const impact = CATEGORY_IMPACT_MESSAGES_NE[category || ''] || 'यसले सार्वजनिक जवाफदेहिता र कार्यान्वयनमा विश्वासमा असर गर्छ।';
+  const signals = signalCount && signalCount > 1 ? `${signalCount} स्रोतहरूले रिपोर्ट गरिरहेका छन्। ` : '';
+
+  if (direction === 'contradicts') return `${signals}विरोधाभासी रिपोर्टहरू — स्वतन्त्र प्रमाणीकरण आवश्यक।`;
+  if (direction === 'confirms') {
+    if (status === 'not_started') return `${signals}पहिले निष्क्रिय प्रतिबद्धतामा पहिलो हलचलको संकेत। ${impact}`;
+    return `${signals}बहु स्रोतहरूले प्रगति पुष्टि गर्दैछन्। ${impact}`;
+  }
+  if (status === 'stalled') return `${signals}रोकिएको प्रतिबद्धतामा गतिविधि — पुनः सुरु हुने संकेत अनुगमन गर्दै। ${impact}`;
+  return `${signals}नयाँ कभरेज पत्ता लागेको। ${impact}`;
+}
+
+function nextWatchpointForNe(
+  direction: 'confirms' | 'contradicts' | 'new_activity',
+  status: string | null | undefined,
+  owner?: string,
+): string {
+  const actor = owner || 'जिम्मेवार मन्त्रालय';
+  if (direction === 'contradicts') return `${actor}बाट ७ दिनभित्र आधिकारिक प्रतिक्रिया वा प्रमाण हेर्नुहोस्।`;
+  if (direction === 'confirms' && status === 'delivered') return 'स्वतन्त्र भूमि प्रमाणीकरण र लाभग्राही प्रतिक्रिया हेर्नुहोस्।';
+  if (direction === 'confirms') return `${actor}ले बजेट, खरिद वा माइलस्टोन अपडेट जारी गर्ने हेर्नुहोस्।`;
+  if (status === 'not_started') return `${actor}ले औपचारिक योजना वा बजेट विनियोजन घोषणा गर्ने हेर्नुहोस्।`;
+  return `${actor}ले ठोस कार्यान्वयन प्रमाण वा समयरेखा देखाउने हेर्नुहोस्।`;
+}
+
+interface PromiseReadModel {
+  id: number | string;
+  title: string;
+  title_ne?: string | null;
+  slug: string | null;
+  category: string | null;
+  status: string | null;
+  trust_level: string | null;
+  actors: string[] | null;
+  source_count: number | null;
+}
+
+export async function buildReaderHighlights(
+  brief: Pick<DailyBrief, 'commitmentsMoved'>,
+  maxItems = 5,
+): Promise<ReaderHighlight[]> {
+  const moved = brief.commitmentsMoved || [];
+  if (moved.length === 0) return [];
+
+  const ids = Array.from(
+    new Set(
+      moved
+        .map((item) => item.commitmentId)
+        .filter((value) => Number.isFinite(value)),
+    ),
+  );
+
+  if (ids.length === 0) return [];
+
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from('promises')
+    .select('id, title, title_ne, slug, category, status, trust_level, actors, source_count')
+    .in('id', ids);
+
+  const rowMap = new Map<number, PromiseReadModel>();
+  for (const row of (data || []) as PromiseReadModel[]) {
+    const id = Number(row.id);
+    if (Number.isFinite(id)) {
+      rowMap.set(id, row);
+    }
+  }
+
+  const highlights = moved
+    .map((item) => {
+      const promiseRow = rowMap.get(item.commitmentId);
+      const trustLevel = promiseRow?.trust_level || 'unverified';
+      const sourceCount = promiseRow?.source_count || 0;
+      const score = Math.max(
+        0,
+        Math.min(
+          1,
+          baseTrustScore(trustLevel) +
+            Math.min(0.1, sourceCount * 0.01) +
+            Math.min(0.1, item.signalCount * 0.02),
+        ),
+      );
+
+      const owner = toOwner(promiseRow?.actors);
+      const ownerNe = toOwnerNe(promiseRow?.actors);
+
+      return {
+        commitmentId: item.commitmentId,
+        title: promiseRow?.title || item.title,
+        titleNe: promiseRow?.title_ne || promiseRow?.title || item.title,
+        slug:
+          promiseRow?.slug && promiseRow.slug.trim().length > 0
+            ? promiseRow.slug
+            : String(item.commitmentId),
+        direction: item.direction,
+        directionLabel: directionToLabel(item.direction),
+        directionLabelNe: directionToLabelNe(item.direction),
+        signalCount: item.signalCount,
+        owner,
+        ownerNe,
+        whyItMatters: whyItMattersFor(promiseRow?.category, item.direction, promiseRow?.title, item.signalCount, promiseRow?.status),
+        whyItMattersNe: whyItMattersForNe(promiseRow?.category, item.direction, item.signalCount, promiseRow?.status),
+        nextWatchpoint: nextWatchpointFor(item.direction, promiseRow?.status, owner),
+        nextWatchpointNe: nextWatchpointForNe(item.direction, promiseRow?.status, ownerNe),
+        confidenceScore: score,
+        confidenceLabel: scoreToLabel(score),
+        trustLevel,
+      } as ReaderHighlight;
+    })
+    .sort((a, b) => {
+      // Contradictions first (most newsworthy), then by signal count + confidence
+      const aPriority = (a.direction === 'contradicts' ? 100 : 0) + a.signalCount * 2 + a.confidenceScore * 10;
+      const bPriority = (b.direction === 'contradicts' ? 100 : 0) + b.signalCount * 2 + b.confidenceScore * 10;
+      return bPriority - aPriority;
+    })
+    .slice(0, maxItems);
+
+  return highlights;
+}
+
+// ── Salvage partial AI responses ─────────────────────────────────────────────
+
+/**
+ * When the AI returns truncated/invalid JSON (common with Nepali text containing
+ * unescaped characters), try to extract usable fields from the partial response.
+ */
+function salvageAIResponse(raw: string): AIBriefResponse | null {
+  const result: Partial<AIBriefResponse> = {};
+
+  // Extract summaryBullets array — find the first [...] after "summaryBullets"
+  const bulletsMatch = raw.match(/"summaryBullets"\s*:\s*(\[[\s\S]*?\])/);
+  if (bulletsMatch) {
+    try {
+      result.summaryBullets = JSON.parse(bulletsMatch[1]);
+    } catch {
+      // Try extracting individual strings
+      const items = [...bulletsMatch[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
+      if (items.length > 0) result.summaryBullets = items;
+    }
+  }
+
+  // Extract summaryBulletsEn
+  const bulletsEnMatch = raw.match(/"summaryBulletsEn"\s*:\s*(\[[\s\S]*?\])/);
+  if (bulletsEnMatch) {
+    try {
+      result.summaryBulletsEn = JSON.parse(bulletsEnMatch[1]);
+    } catch {
+      const items = [...bulletsEnMatch[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
+      if (items.length > 0) result.summaryBulletsEn = items;
+    }
+  }
+
+  // Extract topStories array
+  const storiesMatch = raw.match(/"topStories"\s*:\s*(\[[\s\S]*?\]\s*\])/);
+  if (storiesMatch) {
+    try {
+      result.topStories = JSON.parse(storiesMatch[1]);
+    } catch {
+      // topStories is complex nested JSON — skip if it doesn't parse
+    }
+  }
+
+  if (result.summaryBullets && result.summaryBullets.length > 0) {
+    console.log('[DailyBrief] Salvaged', result.summaryBullets.length, 'bullets,', result.summaryBulletsEn?.length || 0, 'bulletsEn,', result.topStories?.length || 0, 'stories');
+    return result as AIBriefResponse;
+  }
+
+  return null;
+}
+
 // ── Core: AI summarization ───────────────────────────────────────────────────
 
 async function generateAISummary(
@@ -353,89 +845,295 @@ async function generateAISummary(
   topicGroups: TopicGroup[],
   windowUsed: TimeWindowUsed = '24h',
 ): Promise<AIBriefResponse | null> {
-  // Build context from top 20 most relevant signals
-  const topSignals = signals.slice(0, 20);
-  const signalContext = topSignals.map((s, i) =>
-    `${i + 1}. [${s.signal_type}] "${s.title_ne || s.title}" (source: ${s.source_id}, ` +
-    `relevance: ${s.relevance_score?.toFixed(2)}, classification: ${s.classification || 'unknown'}, ` +
-    `commitments: ${(s.matched_promise_ids || []).join(',') || 'none'})\n` +
-    `   Summary: ${s.content_summary || (s.content || '').slice(0, 200)}`
-  ).join('\n');
+  // Build context — strip all internal IDs, scores, and jargon so AI never sees them
+  // Filter out signals with junk AI summaries (these poison the brief)
+  const JUNK_PHRASES = [
+    'does not contain any information',
+    'does not provide specific information',
+    'appears to be a promotional message',
+    'encouraging viewers to subscribe',
+    'not contain any',
+    'no specific information',
+  ];
+  const isJunkSummary = (s: string) => JUNK_PHRASES.some((p) => s.toLowerCase().includes(p));
 
-  const commitmentContext = commitmentGroups.slice(0, 10).map((g) =>
-    `- Commitment #${g.commitmentId}: ${g.signals.length} signals, dominant classification: ${g.topClassification || 'unknown'}`
-  ).join('\n');
+  const usableSignals = signals.filter((s) => {
+    const summary = s.content_summary || '';
+    return !isJunkSummary(summary);
+  });
+
+  // Score signals for AI context: prefer fresh, RSS, with real summaries
+  const now = Date.now();
+  const scoredSignals = (usableSignals.length > 0 ? usableSignals : signals).map((s) => {
+    let score = 0;
+    // Freshness: published_at within 24h gets max points
+    const pubDate = s.published_at ? new Date(s.published_at).getTime() : 0;
+    const discDate = new Date(s.discovered_at).getTime();
+    const effectiveDate = pubDate || discDate;
+    const hoursOld = (now - effectiveDate) / (1000 * 60 * 60);
+    if (hoursOld < 12) score += 50;
+    else if (hoursOld < 24) score += 40;
+    else if (hoursOld < 48) score += 20;
+    else score += 5; // old news gets minimal score
+    // Source quality: RSS has better text, YouTube has broader reach — both matter
+    if (s.source_id.startsWith('rss-')) score += 25;
+    else if (s.source_id.startsWith('yt-')) score += 15;
+    else score += 20;
+    // Has real content summary (not junk)
+    if (s.content_summary && s.content_summary.length > 50 && !isJunkSummary(s.content_summary)) score += 20;
+    // Has published_at date
+    if (s.published_at) score += 10;
+    // Relevance score
+    score += (s.relevance_score || 0) * 10;
+    return { signal: s, score };
+  });
+
+  // Sort by score descending, take top 25 for AI context
+  scoredSignals.sort((a, b) => b.score - a.score);
+  const topSignals = scoredSignals.slice(0, 25).map((s) => s.signal);
+
+  const signalContext = topSignals.map((s, i) => {
+    const title = s.title_ne || s.title;
+    const summary = s.content_summary && !isJunkSummary(s.content_summary)
+      ? s.content_summary
+      : (s.content || '').slice(0, 200);
+    const pubInfo = s.published_at ? ` [Published: ${s.published_at.slice(0, 10)}]` : '';
+    const sourceType = s.source_id.startsWith('rss-') ? 'News' : s.source_id.startsWith('yt-') ? 'YouTube' : 'Other';
+    return `${i + 1}. "${title}" (${sourceType}${pubInfo})\n   ${summary}`;
+  }).join('\n\n');
+
+  const commitmentContext = commitmentGroups.slice(0, 10).map((g) => {
+    // Use the most common signal title as a proxy for the commitment topic
+    const topSignal = g.signals[0];
+    const topic = topSignal?.title_ne || topSignal?.title || 'Government activity';
+    return `- ${topic}: ${g.signals.length} news reports`;
+  }).join('\n');
 
   const topicContext = topicGroups.slice(0, 10).map((g) =>
-    `- "${g.topic}": ${g.signals.length} signals from ${g.sources.size} sources`
+    `- ${g.topic}: covered by ${g.sources.size} different outlets`
   ).join('\n');
 
   const timeLabel = windowUsed === '24h' ? 'last 24 hours' : windowUsed === '48h' ? 'last 48 hours' : windowUsed === '72h' ? 'last 72 hours' : 'most recent available';
-  const systemPrompt = `You are a Nepal political news briefing generator for Nepal Najar, a government promise tracker.
-Given signals from the ${timeLabel}, generate a structured daily brief.
+  const todayStr = todayDateString(); // e.g. "2026-03-31"
+  const systemPrompt = `You write a 2-minute Nepali daily news brief for ${todayStr}. It will be READ ALOUD on air by a news anchor.
 
-Rules:
-1. Generate 3-5 bullet points summarizing the most important political developments
-2. For each bullet, identify which government commitment (if any) is affected
-3. Note any contradictions or surprising developments
-4. Keep it factual, concise, and neutral
-5. Identify top stories with sentiment analysis
-6. For commitment updates, indicate whether signals confirm, contradict, or show new activity
+Your job: take raw news data and turn it into a brief that a regular Nepali person finds useful and easy to follow. Connect the dots — explain WHY each thing matters to people's daily lives.
 
-Respond in JSON format ONLY:
+CRITICAL — FRESHNESS:
+- Today is ${todayStr}. ONLY include developments from TODAY or yesterday.
+- If something happened 3+ days ago (like someone becoming PM, cabinet formation, etc.), it is OLD NEWS. Do NOT include it unless there is a NEW development about it today.
+- "Balen became PM" is NOT news if it happened days ago. "Balen's first cabinet meeting decided X" IS news if it happened today.
+- Focus on: What CHANGED today? What NEW decision was made? What NEW statement was given? What NEW event happened?
+- If a news report is clearly about an old event re-shared on YouTube, SKIP IT.
+
+RULES:
+- Write in simple everyday Nepali — a taxi driver or shopkeeper should understand every word
+- NO English words, NO acronyms (say ठगी not MBBS fraud, say अर्थतन्त्र not GDP)
+- NO fancy/textbook words like पारदर्शिता, विश्वसनीयता, लोकतान्त्रिक प्रक्रिया, प्रतिबद्धता
+- NO numbers, NO IDs, NO technical labels
+- Short sentences. Like talking to a friend over tea
+- 6-8 bullets covering DIFFERENT topics. No repeating the same story
+- Each bullet: what happened TODAY + why it matters to ordinary people (1-2 simple sentences)
+- 180-220 Nepali words total. Fill the 2 minutes with real substance
+- Name the person and what they did — then say what it means for us
+
+GOOD examples:
+  "स्वर्णिमले आज बजेट कटौती गर्ने भने। हाम्रो बाटो र अस्पतालमा असर पर्छ।"
+  "सुदन गुरुङले घुस लिनेलाई छाड्दिन भने। भ्रष्टाचारमा कडाइ हुने देखिन्छ।"
+  "पोखरामा आज विरोध भयो। सडक अवरुद्ध छ।"
+BAD examples (old news rehashed):
+  "बालेन प्रधानमन्त्री भए।" (days old — skip unless NEW angle)
+  "राष्ट्रिय स्वतन्त्र पार्टीले सरकार बनायो।" (old — everyone knows this)
+
+NAME RULES:
+- Famous people: first name only (बालेन, not बालेन शाह)
+- Less known people: full name (सुदन गुरुङ, दीपक शाह)
+- "भए" is enough — don't say "शपथ ग्रहण गरेपछि पद सम्हाले"
+
+Respond in JSON:
 {
-  "summaryBullets": ["bullet 1", "bullet 2", ...],
+  "summaryBullets": ["Simple short Nepali sentence", "Another simple sentence", ...],
+  "summaryBulletsEn": ["Same bullet in plain English", "Another bullet in English", ...],
   "topStories": [
     {
-      "title": "Story headline",
-      "summary": "2-3 sentence summary",
+      "title": "Short Nepali headline (4-6 words)",
+      "titleEn": "Same headline in English",
+      "titleNe": "Same as title",
+      "summary": "One simple Nepali sentence about what it means for people",
+      "summaryEn": "Same sentence in English",
       "sentiment": "positive|negative|neutral|mixed",
-      "signalIds": ["id1", "id2"]
+      "signalIds": []
     }
   ],
   "commitmentUpdates": [
     {
       "commitmentId": 123,
       "direction": "confirms|contradicts|new_activity",
-      "keyFinding": "brief description of what changed"
+      "keyFinding": "Simple Nepali sentence"
     }
   ]
 }`;
 
-  const userPrompt = `Generate ${windowUsed === '24h' ? "today's" : 'a recent'} daily brief from these signals:
+  const userPrompt = `Write today's (${todayStr}) government brief from these ${timeLabel} news reports.
 
-SIGNALS (top 20 by relevance):
+IMPORTANT: Only summarize things that happened TODAY or yesterday. Skip anything older — your audience already knows about it.
+
+NEWS REPORTS (sorted by freshness and quality):
 ${signalContext}
 
-COMMITMENT ACTIVITY:
-${commitmentContext || 'No commitment activity detected.'}
+GOVERNMENT AREAS WITH ACTIVITY:
+${commitmentContext || 'No notable government activity.'}
 
-TOPIC CLUSTERS:
-${topicContext || 'No clear topic clusters detected.'}
+TOPICS COVERED BY MULTIPLE OUTLETS:
+${topicContext || 'No trending topics.'}
 
-Total signals in ${timeLabel}: ${signals.length}`;
+Total reports in period: ${signals.length}
+Remember: Focus on what is NEW today, not what everyone already heard about days ago.`;
 
   try {
     const response = await aiComplete('summarize', systemPrompt, userPrompt);
-    return parseJSON<AIBriefResponse>(response.content);
+    const parsed = parseJSON<AIBriefResponse>(response.content);
+
+    // If parsed is null (JSON truncated), try to salvage summaryBullets from the raw text
+    if (!parsed || !parsed.summaryBullets) {
+      console.warn('[DailyBrief] Full JSON parse failed, attempting salvage');
+      return salvageAIResponse(response.content);
+    }
+
+    return parsed;
   } catch (err) {
     console.error('[DailyBrief] AI summary generation failed:', err instanceof Error ? err.message : err);
     return null;
   }
 }
 
+async function translateToEnglish(nepaliText: string): Promise<string> {
+  const systemPrompt = `You are a translator. Translate the following Nepali text into clear, simple English. Keep the same structure (one sentence per line). Return only the translated text.`;
+
+  try {
+    const response = await aiComplete('summarize', systemPrompt, nepaliText);
+    return response.content.trim();
+  } catch (err) {
+    console.warn('[DailyBrief] English translation failed:', err instanceof Error ? err.message : err);
+    return '';
+  }
+}
+
 async function translateToNepali(englishSummary: string): Promise<string> {
-  const systemPrompt = `You are a professional translator. Translate the following English text to Nepali (Devanagari script).
-Keep it natural and use common Nepali political/news terminology.
-Respond with ONLY the translated text, no JSON or explanation.`;
+  const systemPrompt = `You are a Nepali newsroom translator. Translate English political brief text into clear Nepali used in Nepal newsrooms.
+
+Rules:
+- Use Nepali (Devanagari) only
+- Prefer Nepal-style wording over Hindi-style wording
+- Keep the meaning factual and unchanged
+- Keep the same bullet/line structure
+- Return only translated text`;
 
   try {
     const response = await aiComplete('summarize', systemPrompt, englishSummary);
-    return response.content.trim();
+    return normalizeNepaliRegister(response.content.trim());
   } catch (err) {
     console.warn('[DailyBrief] Nepali translation failed:', err instanceof Error ? err.message : err);
     return '';
   }
+}
+
+async function generateNepaliSummary(
+  aiSummary: AIBriefResponse | null,
+  englishSummary: string,
+  windowUsed: TimeWindowUsed,
+): Promise<string> {
+  const period =
+    windowUsed === '24h'
+      ? 'आज'
+      : windowUsed === '48h'
+      ? 'पछिल्लो ४८ घण्टा'
+      : windowUsed === '72h'
+      ? 'पछिल्लो ७२ घण्टा'
+      : 'हालका दिनहरू';
+
+  const nepaliPrompt = `You are the Nepali editorial desk for Nepal Republic.
+Write a short public-facing Nepali daily summary in 3-5 lines for readers in Nepal.
+
+Rules:
+- Nepali (Devanagari) only
+- Sound like Nepal newsroom language, not Hindi broadcast wording
+- Keep it factual, concise, and neutral
+- Mention contradictions or accountability concerns if present
+- No internal labels, no IDs, no technical terms
+- One key development per line
+- Return plain text only`;
+
+  const payload = aiSummary
+    ? JSON.stringify(
+        {
+          period,
+          summaryBullets: aiSummary.summaryBullets || [],
+          topStories: (aiSummary.topStories || []).slice(0, 5).map((story) => ({
+            title: story.title,
+            summary: story.summary,
+            sentiment: story.sentiment,
+          })),
+        },
+        null,
+        2,
+      )
+    : `${period}\n${englishSummary}`;
+
+  try {
+    const response = await aiComplete('summarize', nepaliPrompt, payload);
+    const content = normalizeNepaliRegister(response.content.trim());
+    if (looksLikeNepali(content) && !isHindiLeaning(content)) {
+      return content;
+    }
+  } catch (err) {
+    console.warn('[DailyBrief] Nepali editorial summary failed:', err instanceof Error ? err.message : err);
+  }
+
+  const translated = await translateToNepali(englishSummary);
+  if (translated && looksLikeNepali(translated)) {
+    return normalizeNepaliRegister(translated);
+  }
+
+  return normalizeNepaliRegister(
+    `${period} का मुख्य सार्वजनिक अद्यावधिकहरूलाई समेटेर यो दैनिक संक्षेप तयार गरिएको हो। ` +
+      `थप प्रमाण र स्पष्टता आउँदै जाँदा तथ्यहरू क्रमशः अद्यावधिक गरिनेछन्।`,
+  );
+}
+
+// ── Story importance scoring ─────────────────────────────────────────────────
+
+/**
+ * Score a story 0-100 based on newsworthiness signals.
+ * Higher = show first in the brief.
+ */
+function computeStoryImportance(
+  signalCount: number,
+  sourceCount: number,
+  commitmentCount: number,
+  sentiment: string,
+  hasContradiction: boolean,
+): number {
+  // Signal volume (log scale, max 30 pts)
+  const volumeScore = Math.min(30, Math.round(Math.log1p(signalCount) * 10));
+
+  // Source diversity — story covered by many different sources = more credible/important (max 25 pts)
+  const diversityScore = Math.min(25, sourceCount * 5);
+
+  // Commitment breadth — affects more commitments = wider impact (max 15 pts)
+  const breadthScore = Math.min(15, commitmentCount * 3);
+
+  // Sentiment boost — negative/mixed are more newsworthy than positive/neutral (max 15 pts)
+  const sentimentScore =
+    sentiment === 'negative' ? 15 :
+    sentiment === 'mixed' ? 12 :
+    sentiment === 'positive' ? 5 :
+    0;
+
+  // Contradiction bonus — conflicting evidence is the most newsworthy (max 15 pts)
+  const contradictionScore = hasContradiction ? 15 : 0;
+
+  return Math.min(100, volumeScore + diversityScore + breadthScore + sentimentScore + contradictionScore);
 }
 
 // ── Main: generate daily brief ───────────────────────────────────────────────
@@ -470,70 +1168,150 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
   // Generate AI summary
   const aiSummary = await generateAISummary(signals, commitmentGroups, topicGroups, windowUsed);
 
-  // Build summaryEn from AI or fallback
+  // Build summaryEn (English) and summaryNe (Nepali) from AI or fallback
   const isWiderWindow = windowUsed !== '24h';
   const periodLabel = isWiderWindow ? 'Recent developments' : 'Today';
   let summaryEn: string;
-  if (aiSummary?.summaryBullets?.length) {
-    summaryEn = aiSummary.summaryBullets.map((b) => `- ${b}`).join('\n');
-  } else {
-    // Fallback: generate a basic summary from data
-    const bullets: string[] = [];
-    bullets.push(`${periodLabel}: ${signals.length} intelligence signals collected from ${stats.sourcesActive} sources.`);
-    if (commitmentGroups.length > 0) {
-      bullets.push(`${commitmentGroups.length} government commitments had new activity.`);
+  let summaryNe: string;
+
+  // AI summaryBullets are Nepali; summaryBulletsEn are English
+  if (aiSummary?.summaryBulletsEn?.length) {
+    // Use the English bullets the AI provided
+    const cleanedEn = aiSummary.summaryBulletsEn
+      .map(cleanSummaryBullet)
+      .filter((line) => line.length > 0);
+    summaryEn = cleanedEn.map((b) => `- ${b}`).join('\n');
+    if (!summaryEn.trim()) {
+      summaryEn = `- ${periodLabel}: ${signals.length} intelligence signals collected from ${stats.sourcesActive} sources.`;
     }
-    if (topicGroups.length > 0) {
-      bullets.push(`Top topics: ${topicGroups.slice(0, 3).map((t) => t.topic).join(', ')}.`);
+  } else if (aiSummary?.summaryBullets?.length) {
+    // AI returned Nepali bullets but no English — translate them
+    try {
+      const nepaliText = aiSummary.summaryBullets.join('\n');
+      const translated = await translateToEnglish(nepaliText);
+      if (translated && translated.trim()) {
+        summaryEn = translated.split('\n').filter(l => l.trim()).map(b => `- ${b.replace(/^-\s*/, '')}`).join('\n');
+      } else {
+        summaryEn = `- ${periodLabel}: ${signals.length} intelligence signals collected from ${stats.sourcesActive} sources.`;
+      }
+    } catch {
+      summaryEn = `- ${periodLabel}: ${signals.length} intelligence signals collected from ${stats.sourcesActive} sources.`;
+    }
+  } else {
+    // No AI summary at all — generate basic English summary from data
+    // Don't claim specific counts or false "top topics" — keep it honest
+    const bullets: string[] = [];
+    bullets.push(`${periodLabel}: Our sources were scanned for new developments.`);
+    if (commitmentGroups.length > 0) {
+      bullets.push(`${commitmentGroups.length} government commitments showed activity.`);
+    }
+    // Only show topics that are real Nepali words or substantive English words (not junk)
+    const JUNK_TOPICS = new Set(['specific', 'commitment', 'article', 'content', 'provided', 'information', 'statement']);
+    const enTopics = topicGroups
+      .slice(0, 3)
+      .map((t) => t.topic)
+      .filter((t) => !JUNK_TOPICS.has(t.toLowerCase()) && t.length > 3);
+    if (enTopics.length > 0) {
+      bullets.push(`Key areas: ${enTopics.join(', ')}.`);
     }
     summaryEn = bullets.map((b) => `- ${b}`).join('\n');
   }
 
-  // Translate to Nepali
-  const summaryNe = await translateToNepali(summaryEn);
+  // Build Nepali summary: prefer AI Nepali bullets, fall back to generateNepaliSummary
+  if (aiSummary?.summaryBullets?.length) {
+    const cleanedNe = aiSummary.summaryBullets
+      .map(cleanSummaryBullet)
+      .filter((line) => line.length > 0);
+    const neFromBullets = cleanedNe.join('\n');
+    if (neFromBullets.trim()) {
+      summaryNe = neFromBullets;
+    } else {
+      summaryNe = await generateNepaliSummary(aiSummary, summaryEn, windowUsed);
+    }
+  } else {
+    summaryNe = await generateNepaliSummary(aiSummary, summaryEn, windowUsed);
+  }
 
-  // Build topStories
+  // Build topStories with importance scoring
   const topStories: DailyBrief['topStories'] = [];
 
   if (aiSummary?.topStories?.length) {
-    for (const story of aiSummary.topStories.slice(0, 5)) {
-      // Find matching signals to get sources and commitments
+    for (const story of aiSummary.topStories.slice(0, 8)) {
       const matchedSignals = story.signalIds
         ?.map((id) => signals.find((s) => s.id === id))
         .filter(Boolean) as RawSignal[] | undefined;
 
       const sources = new Set<string>();
       const relatedCommitments = new Set<number>();
+      let hasContradiction = false;
       for (const s of matchedSignals || []) {
         sources.add(s.source_id);
+        if (s.classification === 'contradicts') hasContradiction = true;
         for (const pid of s.matched_promise_ids || []) {
           relatedCommitments.add(pid);
         }
       }
 
+      // Detect language to handle AI returning fields in wrong language
+      const isNepaliTitle = (t: string) => /[\u0900-\u097F]/.test(t);
+      const rawTitle = story.title || '';
+      const rawTitleEn = story.titleEn || '';
+      const rawSummary = story.summary || '';
+      const rawSummaryEn = story.summaryEn || '';
+
+      // If titleEn looks Nepali and title looks English, they're swapped
+      const titleSwapped = rawTitleEn && isNepaliTitle(rawTitleEn) && !isNepaliTitle(rawTitle);
+      const summarySwapped = rawSummaryEn && isNepaliTitle(rawSummaryEn) && !isNepaliTitle(rawSummary);
+
+      const enTitle = titleSwapped ? rawTitle : (rawTitleEn || rawTitle);
+      const neTitle = titleSwapped ? rawTitleEn : rawTitle;
+      const enSummary = summarySwapped ? rawSummary : (rawSummaryEn || rawSummary);
+      const neSummary = summarySwapped ? rawSummaryEn : rawSummary;
+
       topStories.push({
-        title: story.title,
-        summary: story.summary,
+        title: enTitle,
+        titleNe: neTitle,
+        summary: enSummary,
+        summaryNe: neSummary,
         signalCount: story.signalIds?.length || 0,
         sources: [...sources],
         relatedCommitments: [...relatedCommitments],
         sentiment: story.sentiment || 'neutral',
+        importance: computeStoryImportance(
+          story.signalIds?.length || 0,
+          sources.size,
+          relatedCommitments.size,
+          story.sentiment || 'neutral',
+          hasContradiction,
+        ),
       });
     }
   } else {
     // Fallback: build from topic groups
-    for (const group of topicGroups.slice(0, 5)) {
+    for (const group of topicGroups.slice(0, 8)) {
       const topSignal = group.signals[0];
+      const hasContradiction = group.signals.some((s) => s.classification === 'contradicts');
       topStories.push({
         title: group.topic,
-        summary: topSignal?.content_summary || topSignal?.title_ne || topSignal?.title || '',
+        summary: topSignal?.title || topSignal?.content_summary || '',
+        summaryNe: topSignal?.title_ne || topSignal?.content_summary || '',
         signalCount: group.signals.length,
         sources: [...group.sources],
         relatedCommitments: [...group.relatedCommitments],
         sentiment: 'neutral',
+        importance: computeStoryImportance(
+          group.signals.length,
+          group.sources.size,
+          group.relatedCommitments.size,
+          'neutral',
+          hasContradiction,
+        ),
       });
     }
   }
+
+  // Sort by importance — most important first
+  topStories.sort((a, b) => b.importance - a.importance);
 
   // Build commitmentsMoved
   const commitmentsMoved: DailyBrief['commitmentsMoved'] = [];
@@ -569,6 +1347,13 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
     }
   }
 
+  // Sort commitmentsMoved — contradictions first (most newsworthy), then by signal count
+  commitmentsMoved.sort((a, b) => {
+    const aScore = (a.direction === 'contradicts' ? 100 : a.direction === 'confirms' ? 50 : 0) + a.signalCount;
+    const bScore = (b.direction === 'contradicts' ? 100 : b.direction === 'confirms' ? 50 : 0) + b.signalCount;
+    return bScore - aScore;
+  });
+
   const brief: DailyBrief = {
     date,
     pulse,
@@ -593,6 +1378,34 @@ async function storeDailyBrief(brief: DailyBrief): Promise<void> {
   const supabase = getSupabase();
 
   try {
+    // First, check if a brief already exists for this date so we preserve audio fields
+    const { data: existing } = await supabase
+      .from('daily_briefs')
+      .select('audio_url, audio_generated_at, audio_duration_seconds, video_url, regenerated_count, summary_en, top_stories')
+      .eq('date', brief.date)
+      .single();
+
+    // ── Quality gate: never replace a good brief with a worse one ────────
+    if (existing) {
+      const oldTopStories = Array.isArray(existing.top_stories) ? existing.top_stories.length : 0;
+      const newTopStories = brief.topStories?.length ?? 0;
+      const oldHasSummary = existing.summary_en && existing.summary_en.length > 50;
+      const newHasSummary = brief.summaryEn && brief.summaryEn.length > 50;
+
+      // If old brief had real content but new one is basically empty, keep the old one
+      if (oldHasSummary && !newHasSummary && oldTopStories > 0 && newTopStories === 0) {
+        console.warn('[DailyBrief] Quality gate: new brief is worse than existing. Keeping old brief.');
+        return;
+      }
+      // If old brief had multiple stories but new brief has none, keep old
+      if (oldTopStories >= 3 && newTopStories === 0) {
+        console.warn('[DailyBrief] Quality gate: new brief has 0 top stories vs existing', oldTopStories, '. Keeping old brief.');
+        return;
+      }
+    }
+
+    const regenCount = (existing?.regenerated_count ?? 0) + (existing ? 1 : 0);
+
     const { error } = await supabase
       .from('daily_briefs')
       .upsert(
@@ -606,7 +1419,12 @@ async function storeDailyBrief(brief: DailyBrief): Promise<void> {
           commitments_moved: brief.commitmentsMoved,
           stats: brief.stats,
           generated_at: brief.generatedAt,
-          regenerated_count: 0,
+          regenerated_count: regenCount,
+          // Preserve existing audio — don't wipe it on brief regeneration
+          audio_url: existing?.audio_url ?? null,
+          audio_generated_at: existing?.audio_generated_at ?? null,
+          audio_duration_seconds: existing?.audio_duration_seconds ?? null,
+          video_url: existing?.video_url ?? null,
         },
         { onConflict: 'date' },
       );
@@ -649,6 +1467,9 @@ export async function getDailyBrief(date?: string): Promise<DailyBrief | null> {
       commitmentsMoved: data.commitments_moved || [],
       stats: data.stats || { totalSignals24h: 0, newSignals: 0, sourcesActive: 0, topSource: '' },
       generatedAt: data.generated_at,
+      audioUrl: data.audio_url || null,
+      videoUrl: data.video_url || null,
+      audioDurationSeconds: data.audio_duration_seconds || null,
     };
   } catch {
     return null;

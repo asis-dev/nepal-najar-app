@@ -30,10 +30,10 @@ import {
    CONSTANTS
    ═══════════════════════════════════════════ */
 
-const CLASSIFICATION_STYLES: Record<EvidenceClassification, { bg: string; text: string; label: string; labelNe: string }> = {
-  confirms: { bg: 'bg-emerald-500/15 border-emerald-500/30', text: 'text-emerald-400', label: 'Confirms', labelNe: 'पुष्टि गर्छ' },
-  contradicts: { bg: 'bg-red-500/15 border-red-500/30', text: 'text-red-400', label: 'Contradicts', labelNe: 'खण्डन गर्छ' },
-  neutral: { bg: 'bg-gray-500/15 border-gray-500/30', text: 'text-gray-400', label: 'Neutral', labelNe: 'तटस्थ' },
+const CLASSIFICATION_STYLES: Record<EvidenceClassification, { bg: string; text: string; labelKey: string }> = {
+  confirms: { bg: 'bg-emerald-500/15 border-emerald-500/30', text: 'text-emerald-400', labelKey: 'verifyEvidence.confirms' },
+  contradicts: { bg: 'bg-red-500/15 border-red-500/30', text: 'text-red-400', labelKey: 'verifyEvidence.contradicts' },
+  neutral: { bg: 'bg-gray-500/15 border-gray-500/30', text: 'text-gray-400', labelKey: 'verifyEvidence.neutral' },
 };
 
 /* ═══════════════════════════════════════════
@@ -96,17 +96,17 @@ export default function VerifyEvidencePage() {
               <div className="glass-card p-12 text-center">
                 <LogIn className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                 <h2 className="text-xl font-semibold text-gray-300 mb-2">
-                  {isNe ? 'साइन इन आवश्यक' : 'Sign In Required'}
+                  {t('verifyEvidence.signInRequired')}
                 </h2>
                 <p className="text-sm text-gray-500 mb-6">
-                  {isNe ? 'प्रमाण समीक्षा गर्न साइन इन गर्नुहोस्।' : 'Sign in to review evidence.'}
+                  {t('verifyEvidence.signInToReview')}
                 </p>
                 <Link
                   href="/login"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all"
                 >
                   <LogIn className="w-4 h-4" />
-                  {isNe ? 'साइन इन' : 'Sign In'}
+                  {t('verifyEvidence.signIn')}
                 </Link>
               </div>
             </div>
@@ -126,19 +126,17 @@ export default function VerifyEvidencePage() {
               <div className="glass-card p-12 text-center">
                 <ShieldCheck className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                 <h2 className="text-xl font-semibold text-gray-300 mb-2">
-                  {isNe ? 'प्रमाणकर्ता स्थिति आवश्यक' : 'You need Verifier status'}
+                  {t('verifyEvidence.verifierRequired')}
                 </h2>
                 <p className="text-sm text-gray-500 mb-6">
-                  {isNe
-                    ? 'प्रमाण समीक्षा गर्न तपाईंलाई प्रमाणकर्ता वा प्रशासक भूमिका चाहिन्छ। आफ्नो कर्म बढाउनुहोस् र आवेदन दिनुहोस्।'
-                    : 'You need a Verifier or Admin role to review evidence. Build your karma and apply.'}
+                  {t('verifyEvidence.verifierRequiredDesc')}
                 </p>
                 <Link
                   href="/reputation"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all"
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  {isNe ? 'कर्म हेर्नुहोस्' : 'View Your Karma'}
+                  {t('verifyEvidence.viewYourKarma')}
                 </Link>
               </div>
             </div>
@@ -165,19 +163,17 @@ export default function VerifyEvidencePage() {
             <div className="mx-auto max-w-4xl text-center">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-4">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                {isNe ? 'प्रमाण समीक्षा' : 'Evidence Review'}
+                {t('verifyEvidence.evidenceReview')}
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold text-white">
-                {isNe ? 'समीक्षा पङ्क्ति' : 'Review Queue'}
+                {t('verifyEvidence.reviewQueue')}
               </h1>
               <p className="text-gray-400 text-sm sm:text-base mt-2 max-w-lg mx-auto">
-                {isNe
-                  ? 'समुदायले पेश गरेको प्रमाण समीक्षा गर्नुहोस्'
-                  : 'Review evidence submitted by the community'}
+                {t('verifyEvidence.reviewQueueDesc')}
               </p>
               {data && (
                 <p className="text-xs text-gray-500 mt-2">
-                  {data.total} {isNe ? 'पेन्डिङ समीक्षा' : 'pending reviews'}
+                  {data.total} {t('verifyEvidence.pendingReviews')}
                 </p>
               )}
             </div>
@@ -197,7 +193,7 @@ export default function VerifyEvidencePage() {
                 }`}
               >
                 <Filter className="w-3.5 h-3.5" />
-                {isNe ? 'फिल्टर' : 'Filters'}
+                {t('verifyEvidence.filters')}
               </button>
 
               {showFilters && (
@@ -205,7 +201,7 @@ export default function VerifyEvidencePage() {
                   {/* Classification */}
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">
-                      {isNe ? 'वर्गीकरण' : 'Classification'}
+                      {t('verifyEvidence.classification')}
                     </label>
                     <div className="relative">
                       <select
@@ -213,10 +209,10 @@ export default function VerifyEvidencePage() {
                         onChange={(e) => setClassificationFilter(e.target.value as EvidenceClassification | '')}
                         className="w-full appearance-none bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/40"
                       >
-                        <option value="">{isNe ? 'सबै' : 'All'}</option>
-                        <option value="confirms">{isNe ? 'पुष्टि गर्छ' : 'Confirms'}</option>
-                        <option value="contradicts">{isNe ? 'खण्डन गर्छ' : 'Contradicts'}</option>
-                        <option value="neutral">{isNe ? 'तटस्थ' : 'Neutral'}</option>
+                        <option value="">{t('verifyEvidence.all')}</option>
+                        <option value="confirms">{t('verifyEvidence.confirms')}</option>
+                        <option value="contradicts">{t('verifyEvidence.contradicts')}</option>
+                        <option value="neutral">{t('verifyEvidence.neutral')}</option>
                       </select>
                       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                     </div>
@@ -225,7 +221,7 @@ export default function VerifyEvidencePage() {
                   {/* Date */}
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">
-                      {isNe ? 'मिति देखि' : 'Date From'}
+                      {t('verifyEvidence.dateFrom')}
                     </label>
                     <input
                       type="date"
@@ -268,12 +264,10 @@ export default function VerifyEvidencePage() {
                 <div className="glass-card p-12 sm:p-16 text-center">
                   <CheckCircle2 className="w-12 h-12 text-emerald-500/50 mx-auto mb-4" />
                   <h2 className="text-xl font-semibold text-gray-300 mb-2">
-                    {isNe ? 'सबै प्रमाण समीक्षा भइसकेको!' : 'All caught up!'}
+                    {t('verifyEvidence.allCaughtUp')}
                   </h2>
                   <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                    {isNe
-                      ? 'हाल समीक्षाको लागि कुनै पेन्डिङ प्रमाण छैन।'
-                      : 'No pending evidence to review right now.'}
+                    {t('verifyEvidence.noPendingEvidence')}
                   </p>
                 </div>
               ) : (
@@ -283,6 +277,7 @@ export default function VerifyEvidencePage() {
                       key={item.id}
                       item={item}
                       isNe={isNe}
+                      t={t}
                       isActive={activeReview === item.id}
                       onStartReview={(action) => {
                         setActiveReview(item.id);
@@ -319,6 +314,7 @@ export default function VerifyEvidencePage() {
 function EvidenceReviewCard({
   item,
   isNe,
+  t,
   isActive,
   onStartReview,
   onCancelReview,
@@ -332,6 +328,7 @@ function EvidenceReviewCard({
 }: {
   item: CommunityEvidence;
   isNe: boolean;
+  t: (key: string) => string;
   isActive: boolean;
   onStartReview: (action: 'approve' | 'reject' | 'request_info') => void;
   onCancelReview: () => void;
@@ -367,7 +364,7 @@ function EvidenceReviewCard({
           </div>
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-white truncate">
-              {item.submitter_name || (isNe ? 'अज्ञात' : 'Anonymous')}
+              {item.submitter_name || t('verifyEvidence.anonymous')}
             </h3>
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <Clock className="w-3 h-3" />
@@ -378,7 +375,7 @@ function EvidenceReviewCard({
 
         {/* Classification badge */}
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${cls.bg} ${cls.text}`}>
-          {isNe ? cls.labelNe : cls.label}
+          {t(cls.labelKey)}
         </span>
       </div>
 
@@ -416,7 +413,7 @@ function EvidenceReviewCard({
             className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
           >
             <ExternalLink className="w-3 h-3" />
-            {isNe ? 'प्रमाण लिंक' : 'Proof Link'}
+            {t('verifyEvidence.proofLink')}
           </a>
         </div>
       )}
@@ -429,21 +426,21 @@ function EvidenceReviewCard({
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            {isNe ? 'स्वीकृत' : 'Approve'}
+            {t('verifyEvidence.approve')}
           </button>
           <button
             onClick={() => onStartReview('reject')}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-red-300 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
           >
             <XCircle className="w-3.5 h-3.5" />
-            {isNe ? 'अस्वीकृत' : 'Reject'}
+            {t('verifyEvidence.reject')}
           </button>
           <button
             onClick={() => onStartReview('request_info')}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
           >
             <AlertTriangle className="w-3.5 h-3.5" />
-            {isNe ? 'थप जानकारी' : 'Request Info'}
+            {t('verifyEvidence.requestInfo')}
           </button>
         </div>
       ) : (
@@ -451,12 +448,12 @@ function EvidenceReviewCard({
         <div className="pt-3 border-t border-white/[0.04] space-y-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">
-              {isNe ? 'समीक्षा टिप्पणी' : 'Review Note'}
+              {t('verifyEvidence.reviewNote')}
             </label>
             <textarea
               value={reviewNote}
               onChange={(e) => onNoteChange(e.target.value)}
-              placeholder={isNe ? 'तपाईंको टिप्पणी...' : 'Your note...'}
+              placeholder={t('verifyEvidence.reviewNotePlaceholder')}
               rows={3}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/40 resize-none transition-all"
             />
@@ -465,7 +462,7 @@ function EvidenceReviewCard({
           {reviewAction === 'reject' && (
             <div>
               <label className="block text-xs text-gray-500 mb-1">
-                {isNe ? 'प्रमाण URL (अनिवार्य)' : 'Proof URL (required for rejection)'}
+                {t('verifyEvidence.proofUrlRequired')}
               </label>
               <input
                 type="url"
@@ -498,13 +495,13 @@ function EvidenceReviewCard({
               ) : (
                 <AlertTriangle className="w-3.5 h-3.5" />
               )}
-              {isNe ? 'पेश गर्नुहोस्' : 'Submit'}
+              {t('verifyEvidence.submit')}
             </button>
             <button
               onClick={onCancelReview}
               className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
             >
-              {isNe ? 'रद्द गर्नुहोस्' : 'Cancel'}
+              {t('verifyEvidence.cancel')}
             </button>
           </div>
         </div>

@@ -15,7 +15,6 @@ import {
 import { useI18n } from '@/lib/i18n';
 import { useAccountability } from '@/lib/hooks/use-accountability';
 import { useIsMobile } from '@/lib/hooks/use-mobile';
-import { PublicPageHero } from '@/components/public/page-hero';
 import { TransparencyScoreSection } from '@/components/public/report-card/transparency-score';
 import { WhatsWorkingSection } from '@/components/public/report-card/whats-working';
 import { WhatsNotWorkingSection } from '@/components/public/report-card/whats-not-working';
@@ -37,23 +36,26 @@ export default function ReportCardPage() {
   const { locale, t } = useI18n();
   const isNe = locale === 'ne';
   const isMobile = useIsMobile();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nepalrepublic.org';
 
   const [activeTab, setActiveTab] = useState<Tab>('working');
   const [copied, setCopied] = useState(false);
   const [cacheBust, setCacheBust] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+  const [pageUrl, setPageUrl] = useState(`${siteUrl}/report-card`);
 
   const { data, isLoading } = useAccountability();
 
-  const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://nepalnajar.com/report-card';
-
   useEffect(() => {
+    setIsClient(true);
     setCacheBust(Math.floor(Date.now() / 600_000));
+    setPageUrl(window.location.href);
   }, []);
 
-  const shareTitle = `Nepal Najar - ${t('accountability.pageTitle')}`;
-  const shareText = isNe
-    ? `Nepal Najar ${t('accountability.pageTitle')} हेर्नुहोस्! ${pageUrl}`
-    : `Check out Nepal Najar's ${t('accountability.pageTitle')}! ${pageUrl}`;
+  const shareTitle = isNe
+    ? `नेपाल सरकारको साप्ताहिक रिपोर्ट कार्ड — AI द्वारा स्कोर गरिएको`
+    : `Nepal's weekly government report card — scored by AI`;
+  const shareText = `${shareTitle}. nepalrepublic.org`;
 
   function handleCopyLink() {
     if (typeof navigator !== 'undefined') {
@@ -73,7 +75,7 @@ export default function ReportCardPage() {
     }
   }
 
-  const supportsNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
+  const supportsNativeShare = isClient && typeof navigator !== 'undefined' && !!navigator.share;
   const totalIssues =
     (data?.whatsNotWorking.downSources.length ?? 0) +
     (data?.whatsNotWorking.silentPromises.length ?? 0);
@@ -104,113 +106,87 @@ export default function ReportCardPage() {
 
         {isMobile ? (
           /* ── Mobile compact hero ── */
-          <section className="px-3 pt-3 pb-2">
+          <section className="px-3 pt-3 pb-0">
             <div className="max-w-4xl mx-auto">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500 mb-1">
-                {isNe ? 'साप्ताहिक जवाफदेहिता' : 'Weekly accountability'}
+              <p className="text-[9px] uppercase tracking-[0.2em] text-gray-500 mb-0.5">
+                {t('reportCard.weeklyAccountability')}
               </p>
-              <h1 className="text-xl font-semibold text-white leading-tight">
+              <h1 className="text-base font-semibold text-white leading-tight mb-2">
                 {t('accountability.pageTitle')}
               </h1>
-              <p className="text-xs text-gray-400 mt-1 line-clamp-1">
-                {t('accountability.pageSubtitle')}
-              </p>
 
-              {/* Inline stats row */}
-              <div className="flex items-center gap-2 mt-3">
-                <div className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2 py-1.5 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500">
-                    {t('accountability.whatsWorking')}
-                  </p>
-                  <p className="text-lg font-semibold text-white leading-none mt-0.5">
-                    {data?.whatsWorking.length ?? '--'}
-                  </p>
-                </div>
-                <div className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2 py-1.5 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500">
-                    {t('accountability.issues')}
-                  </p>
-                  <p className="text-lg font-semibold text-white leading-none mt-0.5">
-                    {data ? totalIssues : '--'}
-                  </p>
-                </div>
-                <div className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2 py-1.5 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500">
-                    {t('accountability.votes')}
-                  </p>
-                  <p className="text-lg font-semibold text-white leading-none mt-0.5">
-                    {data ? data.voteAggregates.length : '--'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Transparency score inline */}
+              {/* Transparency score — compact with bars */}
               {data && (
-                <div className="mt-2">
-                  <TransparencyScoreSection score={data.transparencyScore} />
-                </div>
+                <TransparencyScoreSection score={data.transparencyScore} compact />
               )}
             </div>
           </section>
         ) : (
-          /* ── Desktop hero (unchanged) ── */
-          <>
-            <PublicPageHero
-              eyebrow={isNe ? 'साप्ताहिक जवाफदेहिता' : 'Weekly accountability'}
-              title={t('accountability.pageTitle')}
-              description={t('accountability.pageSubtitle')}
-              aside={
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-gray-500">
-                      {isNe ? 'यो हप्ता' : 'This week'}
-                    </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-center">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
-                          {t('accountability.whatsWorking')}
-                        </p>
-                        <p className="mt-2 text-2xl font-semibold text-white">
-                          {data?.whatsWorking.length ?? '--'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-center">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
-                          {t('accountability.issues')}
-                        </p>
-                        <p className="mt-2 text-2xl font-semibold text-white">
-                          {data ? totalIssues : '--'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-center">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
-                          {t('accountability.votes')}
-                        </p>
-                        <p className="mt-2 text-2xl font-semibold text-white">
-                          {data ? data.voteAggregates.length : '--'}
-                        </p>
-                      </div>
+          /* ── Desktop hero — compact layout ── */
+          <section className="px-6 lg:px-8 pt-6 pb-2">
+            <div className="max-w-5xl mx-auto">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1">
+                {t('reportCard.weeklyAccountabilityDesktop')}
+              </p>
+              <h1 className="text-2xl font-bold text-white mb-1">
+                {t('accountability.pageTitle')}
+              </h1>
+              <p className="text-sm text-gray-400 mb-5">
+                {t('accountability.pageSubtitle')}
+              </p>
+
+              {/* 2-col: Transparency score left, This Week stats right */}
+              <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+                {data && <TransparencyScoreSection score={data.transparencyScore} />}
+
+                <div className="flex flex-col justify-center">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500 mb-2">
+                    {t('reportCard.thisWeek')}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">
+                        {t('accountability.whatsWorking')}
+                      </p>
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {data?.whatsWorking.length ?? '--'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">
+                        {t('accountability.issues')}
+                      </p>
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {data ? totalIssues : '--'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">
+                        {t('accountability.votes')}
+                      </p>
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {data ? data.voteAggregates.length : '--'}
+                      </p>
                     </div>
                   </div>
                 </div>
-              }
-              stats={data ? <TransparencyScoreSection score={data.transparencyScore} /> : null}
-            />
-          </>
+              </div>
+            </div>
+          </section>
         )}
 
-        {/* Download / Share section */}
+        {/* Download / Share section — hidden on mobile hero, shown as collapsible */}
         <section className={`public-section pt-0 ${isMobile ? 'px-3' : ''}`}>
           <div className="public-shell">
             <div className="mx-auto max-w-4xl">
-              <details className="glass-card overflow-hidden">
-                <summary className={`flex cursor-pointer items-center justify-between gap-3 ${isMobile ? 'p-3 text-xs' : 'p-4 text-sm'} font-medium text-gray-300 transition-colors hover:text-white`}>
-                  <span className="inline-flex items-center gap-2">
-                    <Download className={isMobile ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
-                    {t('accountability.weeklyImage')}
+              <details className={`glass-card overflow-hidden ${isMobile ? 'mb-1' : ''}`}>
+                <summary className={`flex cursor-pointer items-center justify-between gap-3 ${isMobile ? 'px-3 py-2 text-[11px]' : 'p-4 text-sm'} font-medium text-gray-400 transition-colors hover:text-white`}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Share2 className={isMobile ? 'h-3 w-3' : 'h-4 w-4'} />
+                    {isMobile ? t('reportCard.shareReportCard') : t('accountability.weeklyImage')}
                   </span>
-                  <span className={`${isMobile ? 'text-[10px]' : 'text-xs'} uppercase tracking-[0.18em] text-gray-500`}>
-                    {isNe ? 'साझा गर्न तयार' : 'Ready to share'}
+                  <span className={`${isMobile ? 'text-[9px]' : 'text-xs'} uppercase tracking-[0.18em] text-gray-600`}>
+                    {t('reportCard.readyToShare')}
                   </span>
                 </summary>
                 <div className={`space-y-3 ${isMobile ? 'p-3' : 'p-4'} pt-0`}>
@@ -254,7 +230,7 @@ export default function ReportCardPage() {
                     </button>
                     <a
                       href="/api/report-card"
-                      download="nepal-najar-report-card.png"
+                      download="nepalrepublic-report-card.png"
                       className={`rounded-xl border border-white/[0.08] bg-white/[0.04] ${isMobile ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} text-center font-medium text-gray-300 transition-all hover:bg-white/[0.08]`}
                     >
                       <span className="inline-flex items-center gap-1.5">

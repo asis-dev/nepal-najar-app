@@ -1,15 +1,15 @@
 #!/bin/bash
 # =============================================================
-# Nepal Najar — Overnight Data Engine
+# Nepal Republic — Overnight Data Engine
 # Run this while LM Studio (Qwen 3.5) is running locally.
 # It will: 1) Harvest all sources, 2) AI-analyze every article.
 # =============================================================
 
 BASE_URL="${BASE_URL:-http://localhost:3000}"
-SECRET="${SCRAPE_SECRET:-nepal-najar-scrape-2024}"
+SECRET="${SCRAPE_SECRET:-nepalrepublic-scrape-2024}"
 BATCH_SIZE="${BATCH_SIZE:-5}"
 
-echo "🏔️  Nepal Najar — Overnight Data Engine"
+echo "🏔️  Nepal Republic — Overnight Data Engine"
 echo "============================================"
 echo "Base URL: $BASE_URL"
 echo "Batch size: $BATCH_SIZE"

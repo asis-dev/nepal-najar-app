@@ -64,7 +64,7 @@ function AdminLoginForm() {
           <div className="flex items-center justify-center gap-2 mb-3">
             <Mountain className="h-8 w-8 text-primary-400" />
             <h1 className="text-2xl font-semibold text-white tracking-tight">
-              Nepal <span className="text-gradient-blue">Najar</span>
+              Nepal<span className="text-gradient-blue">Republic</span>
             </h1>
           </div>
           <p className="text-sm text-gray-500">Administrative Access</p>
@@ -103,7 +103,7 @@ function AdminLoginForm() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && isValid && handleSendOtp()}
-                  placeholder="+977 98XXXXXXXX or admin@nepalnajar.com"
+                  placeholder="+977 98XXXXXXXX or admin@nepalrepublic.org"
                   className="input"
                   autoFocus
                   disabled={isLoading}
@@ -174,7 +174,7 @@ export default function AdminLoginPage() {
         <div className="min-h-screen bg-np-base flex items-center justify-center px-4">
           <div className="glass-card px-6 py-5 text-center">
             <p className="text-sm font-medium text-white">Loading secure access...</p>
-            <p className="mt-1 text-xs text-gray-500">Preparing Nepal Najar operator login</p>
+            <p className="mt-1 text-xs text-gray-500">Preparing Nepal Republic operator login</p>
           </div>
         </div>
       }

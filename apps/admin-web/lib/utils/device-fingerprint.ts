@@ -4,7 +4,7 @@
  * Not cryptographically secure, but sufficient for preventing casual double-voting
  */
 
-const STORAGE_KEY = 'nepal_najar_device_id';
+const STORAGE_KEY = 'nepalrepublic_device_id';
 
 function generateFingerprint(): string {
   const components: string[] = [];
@@ -36,9 +36,9 @@ function generateFingerprint(): string {
       ctx.fillStyle = '#f60';
       ctx.fillRect(125, 1, 62, 20);
       ctx.fillStyle = '#069';
-      ctx.fillText('Nepal Najar 🏔', 2, 15);
+      ctx.fillText('NepalRepublic 🏔', 2, 15);
       ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-      ctx.fillText('Nepal Najar 🏔', 4, 17);
+      ctx.fillText('NepalRepublic 🏔', 4, 17);
       components.push(canvas.toDataURL());
     }
   } catch {

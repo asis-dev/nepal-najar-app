@@ -10,7 +10,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('[Nepal Najar Error]', error);
+    console.error('[Nepal Republic Error]', error);
   }, [error]);
 
   return (

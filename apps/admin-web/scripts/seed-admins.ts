@@ -25,15 +25,15 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 // ─── Admin accounts to create ───────────────────────
 // Update these with real admin emails/phones before running.
 const ADMINS = [
-  { email: 'admin@nepalnajar.com', display_name: 'Admin' },
-  { email: 'operator1@nepalnajar.com', display_name: 'Operator 1' },
-  { email: 'operator2@nepalnajar.com', display_name: 'Operator 2' },
-  { email: 'operator3@nepalnajar.com', display_name: 'Operator 3' },
-  { email: 'operator4@nepalnajar.com', display_name: 'Operator 4' },
+  { email: 'admin@nepalrepublic.org', display_name: 'Admin' },
+  { email: 'operator1@nepalrepublic.org', display_name: 'Operator 1' },
+  { email: 'operator2@nepalrepublic.org', display_name: 'Operator 2' },
+  { email: 'operator3@nepalrepublic.org', display_name: 'Operator 3' },
+  { email: 'operator4@nepalrepublic.org', display_name: 'Operator 4' },
 ];
 
 async function seedAdmins() {
-  console.log(`\n🏔️  Nepal Najar — Seeding ${ADMINS.length} admin accounts\n`);
+  console.log(`\n🏔️  Nepal Republic — Seeding ${ADMINS.length} admin accounts\n`);
 
   for (const admin of ADMINS) {
     try {

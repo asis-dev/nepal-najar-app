@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
+import { resolveSourceDisplayName } from '@/lib/utils/source-names';
+import { isSignalVisibleToPublic } from '@/lib/intelligence/review-visibility';
+
+/** Alias for backward compat within this file */
+function resolveSourceName(sourceId: string): string {
+  return resolveSourceDisplayName(sourceId);
+}
 
 /**
  * GET /api/promises/[id]/signals?date=YYYY-MM-DD&limit=20
@@ -34,7 +41,7 @@ export async function GET(
   const { data: signals, error } = await supabase
     .from('intelligence_signals')
     .select(
-      'id, title, url, source_id, classification, confidence, relevance_score, discovered_at, content_summary, signal_type',
+      'id, title, url, source_id, classification, confidence, relevance_score, discovered_at, content_summary, signal_type, review_required, review_status',
     )
     .contains('matched_promise_ids', [promiseIdNum])
     .gte('discovered_at', todayStart)
@@ -46,10 +53,24 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const enriched = (signals || [])
+    .filter((signal) =>
+      isSignalVisibleToPublic({
+        review_required: signal.review_required as boolean | null,
+        review_status: signal.review_status as string | null,
+      }),
+    )
+    .map((s) => ({
+      ...s,
+      headline: s.title,
+      source_name: resolveSourceName(s.source_id),
+      source_url: s.url,
+    }));
+
   return NextResponse.json({
     promiseId: id,
     date,
-    signals: signals || [],
-    count: signals?.length || 0,
+    signals: enriched,
+    count: enriched.length,
   });
 }

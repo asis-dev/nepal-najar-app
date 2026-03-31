@@ -53,16 +53,19 @@ const categoryColors: Record<string, string> = {
   Social: 'text-pink-400',
 };
 
-function formatRelativeDate(dateString?: string | null): string {
-  if (!dateString) return 'Freshness unavailable';
+function formatRelativeDate(dateString: string | null | undefined, t: (key: string) => string): string {
+  if (!dateString) return t('dates.freshnessUnavailable');
   const value = new Date(dateString);
-  if (Number.isNaN(value.getTime())) return 'Freshness unavailable';
+  if (Number.isNaN(value.getTime())) return t('dates.freshnessUnavailable');
 
   const diffDays = Math.floor((Date.now() - value.getTime()) / 86400000);
-  if (diffDays <= 0) return 'Updated today';
-  if (diffDays === 1) return 'Updated yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (diffDays <= 0) return t('dates.today');
+  if (diffDays === 1) return t('dates.yesterday');
+  if (diffDays < 7) return t('dates.daysAgo').replace('{days}', String(diffDays));
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffDays < 30) return t('dates.weeksAgo').replace('{weeks}', String(diffWeeks));
+  const diffMonths = Math.floor(diffDays / 30);
+  return t('dates.monthsAgo').replace('{months}', String(diffMonths));
 }
 
 /* ===================================================
@@ -200,7 +203,7 @@ export default function WatchlistPage() {
                   <p className="mt-3 text-sm leading-7 text-gray-300 sm:text-base">
                     {watchedPromises.length > 0
                       ? `${activeWatchedPromises.length} watched commitments moved today with ${totalWatchedSignals} tracked signals. ${leadWatchedPromise ? `Lead watch: ${leadWatchedPromise.title}.` : ''}`
-                      : 'Save the commitments you care about and Nepal Najar starts feeling personal instead of generic.'}
+                      : 'Save the commitments you care about and Nepal Republic starts feeling personal instead of generic.'}
                   </p>
                   <div className="mt-5 flex flex-wrap gap-3">
                     <Link
@@ -328,7 +331,7 @@ export default function WatchlistPage() {
                               <Activity className="h-3 w-3 text-cyan-300" />
                               {activePromiseMap.has(promise.id)
                                 ? `${activePromiseMap.get(promise.id)?.signalCount ?? 0} signals today`
-                                : formatRelativeDate(promise.lastActivityDate || promise.lastSignalAt || promise.lastUpdate)}
+                                : formatRelativeDate(promise.lastActivityDate || promise.lastSignalAt || promise.lastUpdate, t)}
                             </span>
                             {promise.actors?.[0] ? (
                               <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-gray-300">
@@ -375,7 +378,7 @@ export default function WatchlistPage() {
                             </span>
                             <span className="inline-flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
-                              {formatRelativeDate(promise.lastActivityDate || promise.lastSignalAt || promise.lastUpdate)}
+                              {formatRelativeDate(promise.lastActivityDate || promise.lastSignalAt || promise.lastUpdate, t)}
                             </span>
                           </div>
                         </Link>
@@ -384,7 +387,7 @@ export default function WatchlistPage() {
                         <button
                           onClick={() => toggleWatch(promise.id)}
                           className="flex-shrink-0 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400 text-gray-400 transition-all duration-200 group/btn"
-                          title={isNe ? 'हेर्न बन्द गर्नुहोस्' : 'Unwatch'}
+                          title={t('watchlist.unwatch')}
                         >
                           <EyeOff className="w-4 h-4" />
                         </button>

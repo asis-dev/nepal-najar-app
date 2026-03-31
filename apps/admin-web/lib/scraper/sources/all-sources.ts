@@ -1,5 +1,5 @@
 /**
- * ALL government and news sources for Nepal Najar.
+ * ALL government and news sources for Nepal Republic.
  * Each source is mapped to specific promises it covers.
  * Uses generic scraper factories for consistency.
  */

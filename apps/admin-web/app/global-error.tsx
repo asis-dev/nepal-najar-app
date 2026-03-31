@@ -28,7 +28,7 @@ export default function GlobalError({
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💥</div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-              Nepal Najar encountered a critical error
+              Nepal Republic encountered a critical error
             </h2>
             <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
               {error.message || 'Something went very wrong. Please reload the page.'}

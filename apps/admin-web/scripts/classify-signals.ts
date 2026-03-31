@@ -97,7 +97,7 @@ interface ClassResult {
   reasoning: string;
 }
 
-const SYSTEM_PROMPT = `You are an intelligence analyst for Nepal Najar, tracking Nepal's government promises.
+const SYSTEM_PROMPT = `You are an intelligence analyst for Nepal Republic, tracking Nepal's government promises.
 Analyze if this news signal is relevant to any of these 35 promises:
 
 ${PROMISES.map(p => `${p.id}: ${p.title} (${p.keywords})`).join('\n')}
@@ -133,7 +133,7 @@ Date: ${signal.published_at || 'unknown'}`;
 
 async function main() {
   console.log('╔════════════════════════════════════════════╗');
-  console.log('║  Nepal Najar AI Classification Engine      ║');
+  console.log('║  Nepal Republic AI Classification Engine   ║');
   console.log('║  Powered by Gemini Flash (free tier)       ║');
   console.log('╚════════════════════════════════════════════╝\n');
 

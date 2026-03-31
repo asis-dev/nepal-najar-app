@@ -68,7 +68,7 @@ export const THREADS_ACCOUNTS: ThreadsAccountConfig[] = [
   // --- Politicians ---
   {
     id: 'threads-balen-shah',
-    username: 'baaborshahh',
+    username: 'balenshah',
     name: 'Balen Shah',
     category: 'politician',
     relatedPromiseIds: [],
@@ -76,7 +76,7 @@ export const THREADS_ACCOUNTS: ThreadsAccountConfig[] = [
   },
   {
     id: 'threads-rabi-lamichhane',
-    username: 'raaborbilamichhane',
+    username: 'rabilamichhane',
     name: 'Rabi Lamichhane',
     category: 'politician',
     relatedPromiseIds: [],
@@ -94,7 +94,7 @@ export const THREADS_ACCOUNTS: ThreadsAccountConfig[] = [
   // --- Parties ---
   {
     id: 'threads-rsp-official',
-    username: 'raborspnepal',
+    username: 'rspnepal',
     name: 'Rastriya Swatantra Party',
     category: 'party',
     relatedPromiseIds: [],

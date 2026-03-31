@@ -5,14 +5,39 @@
  * Set NEXT_PUBLIC_USE_LIVE_DATA=false to force static data (for local dev without Supabase).
  */
 import { promises as staticPromises, type GovernmentPromise } from './promises';
+import { PROMISES_KNOWLEDGE } from '@/lib/intelligence/knowledge-base';
+import { computeLiveScoreBatch } from '@/lib/intelligence/live-score-engine';
 
 const USE_LIVE_DATA = process.env.NEXT_PUBLIC_USE_LIVE_DATA !== 'false';
+const RECOUNT_EVIDENCE_ON_READ =
+  process.env.INTELLIGENCE_RECOUNT_EVIDENCE_ON_READ === 'true';
+const ENABLE_LIVE_SCORE_READ_MERGE =
+  process.env.INTELLIGENCE_ENABLE_LIVE_SCORE_READ_MERGE === 'true';
+
+// Build a lookup map from knowledge base (id -> knowledge entry)
+const knowledgeMap = new Map(PROMISES_KNOWLEDGE.map((k) => [k.id, k]));
+
+/**
+ * Merge keyOfficials + keyMinistries from the knowledge base into the actors field
+ * for any promise whose actors array is empty or undefined.
+ */
+function enrichActors(promises: GovernmentPromise[]): GovernmentPromise[] {
+  for (const p of promises) {
+    if (!p.actors || p.actors.length === 0) {
+      const kb = knowledgeMap.get(Number(p.id));
+      if (kb) {
+        p.actors = [...kb.keyOfficials, ...kb.keyMinistries];
+      }
+    }
+  }
+  return promises;
+}
 
 /**
  * Get all promises — from Supabase if live data is enabled, static fallback otherwise.
  */
 export async function getPromises(): Promise<GovernmentPromise[]> {
-  if (!USE_LIVE_DATA) return staticPromises;
+  if (!USE_LIVE_DATA) return enrichActors([...staticPromises]);
 
   try {
     const { supabase } = await import('@/lib/supabase/server');
@@ -23,28 +48,31 @@ export async function getPromises(): Promise<GovernmentPromise[]> {
 
     if (error || !data || data.length === 0) {
       console.warn('[data] Supabase query failed, falling back to static:', error?.message);
-      return staticPromises;
+      return enrichActors([...staticPromises]);
     }
 
-    // Compute REAL evidence counts from scraped_articles
+    // Optional exact recount from scraped_articles (expensive on large datasets).
+    // Default behavior trusts persisted evidence_count for fast public page loads.
     const evidenceCountMap: Record<string, number> = {};
-    try {
-      const { data: articles } = await supabase
-        .from('scraped_articles')
-        .select('promise_ids');
-      for (const a of articles || []) {
-        const pids = a.promise_ids as string[] | null;
-        if (!pids) continue;
-        for (const pid of pids) {
-          evidenceCountMap[pid] = (evidenceCountMap[pid] || 0) + 1;
+    if (RECOUNT_EVIDENCE_ON_READ) {
+      try {
+        const { data: articles } = await supabase
+          .from('scraped_articles')
+          .select('promise_ids');
+        for (const a of articles || []) {
+          const pids = a.promise_ids as string[] | null;
+          if (!pids) continue;
+          for (const pid of pids) {
+            evidenceCountMap[pid] = (evidenceCountMap[pid] || 0) + 1;
+          }
         }
+      } catch {
+        console.warn('[data] Failed to compute evidence counts');
       }
-    } catch {
-      console.warn('[data] Failed to compute evidence counts');
     }
 
     // Map Supabase snake_case to GovernmentPromise camelCase
-    return data.map((p: Record<string, unknown>) => ({
+    const mapped = enrichActors(data.map((p: Record<string, unknown>) => ({
       id: p.id as string,
       slug: p.slug as string,
       title: p.title as string,
@@ -56,7 +84,9 @@ export async function getPromises(): Promise<GovernmentPromise[]> {
       status: p.status as GovernmentPromise['status'],
       progress: p.progress as number,
       linkedProjects: p.linked_projects as number,
-      evidenceCount: evidenceCountMap[p.id as string] || 0, // REAL count from articles
+      evidenceCount: RECOUNT_EVIDENCE_ON_READ
+        ? evidenceCountMap[p.id as string] || 0
+        : (p.evidence_count as number) || 0,
       lastUpdate: p.last_update as string,
       description: p.description as string,
       description_ne: p.description_ne as string,
@@ -77,10 +107,40 @@ export async function getPromises(): Promise<GovernmentPromise[]> {
       spentNPR: p.spent_npr as number | undefined,
       fundingSource: p.funding_source as string | undefined,
       fundingSource_ne: p.funding_source_ne as string | undefined,
-    }));
+      baselineProgress: (p.baseline_progress ?? p.progress) as number,
+      baselineStatus: (p.baseline_status ?? p.status) as string,
+    })));
+
+    // Merge live scores from signal analysis (cached 5 min)
+    // During grace period (first 30 days), preserve baseline status/progress
+    // but still attach live metadata for context
+    if (ENABLE_LIVE_SCORE_READ_MERGE) {
+      try {
+        const { isGracePeriod } = await import('@/lib/intelligence/government-era');
+        const grace = isGracePeriod();
+        const liveScores = await computeLiveScoreBatch();
+        for (const promise of mapped) {
+          const live = liveScores.get(Number(promise.id));
+          if (live) {
+            promise.liveDataConfidence = live.dataConfidence;
+            if (live.lastSignalAt) promise.lastSignalAt = live.lastSignalAt;
+            if (!grace) {
+              // After grace period: use live status/progress
+              promise.status = live.liveStatus;
+              promise.progress = live.liveProgress;
+            }
+            // During grace: keep baseline status/progress (already set above)
+          }
+        }
+      } catch (err) {
+        console.warn('[data] Live score merge failed, using baseline:', err);
+      }
+    }
+
+    return mapped;
   } catch (err) {
     console.warn('[data] Failed to fetch from Supabase:', err);
-    return staticPromises;
+    return enrichActors([...staticPromises]);
   }
 }
 

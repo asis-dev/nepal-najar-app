@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isAdminAuthed } from '@/lib/auth/admin';
 import { enqueuePilotSummaryJob } from '@/lib/intelligence/jobs';
 import { getLatestPilotSummary, summarizePilotTracker } from '@/lib/intelligence/pilot-summary';
-
-function isAuthed(request: NextRequest): boolean {
-  const adminCookie = request.cookies.get('admin_session')?.value;
-  const authHeader = request.headers.get('authorization');
-  const adminSecret = process.env.ADMIN_SECRET;
-
-  return !!(
-    (adminCookie && adminSecret && adminCookie === adminSecret) ||
-    (authHeader && adminSecret && authHeader === `Bearer ${adminSecret}`)
-  );
-}
 
 function parseDays(value: string | null | undefined, fallback = 14) {
   const parsed = Number.parseInt(value || '', 10);
@@ -20,7 +10,7 @@ function parseDays(value: string | null | undefined, fallback = 14) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!isAuthed(request)) {
+  if (!isAdminAuthed(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -40,7 +30,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isAuthed(request)) {
+  if (!isAdminAuthed(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

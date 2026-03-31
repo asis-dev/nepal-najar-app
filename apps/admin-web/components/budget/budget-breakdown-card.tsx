@@ -33,11 +33,11 @@ export function BudgetBreakdownCard({
   const remaining = spentNPR ? estimatedNPR - spentNPR : estimatedNPR;
   const status = getUtilizationStatus(estimatedNPR, spentNPR);
 
-  const statusLabels: Record<string, { en: string; ne: string }> = {
-    onTrack: { en: 'On Track', ne: 'लक्ष्यमा' },
-    overBudget: { en: 'Over Budget', ne: 'बजेट भन्दा बढी' },
-    underUtilized: { en: 'Under-utilized', ne: 'कम प्रयोग' },
-    notStarted: { en: 'Not Started', ne: 'सुरु नभएको' },
+  const statusLabelKeys: Record<string, string> = {
+    onTrack: 'budget.onTrack',
+    overBudget: 'budget.overBudget',
+    underUtilized: 'budget.underUtilized',
+    notStarted: 'budget.notStarted',
   };
 
   return (
@@ -52,7 +52,7 @@ export function BudgetBreakdownCard({
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide ${status.bg} ${status.color} border ${status.border}`}
         >
           <span className={`w-1.5 h-1.5 rounded-full bg-current`} />
-          {isNe ? statusLabels[status.key]?.ne : statusLabels[status.key]?.en}
+          {t(statusLabelKeys[status.key] ?? 'budget.notStarted')}
         </span>
       </div>
 
@@ -75,7 +75,7 @@ export function BudgetBreakdownCard({
             {t('budget.spent')}
           </div>
           <div className={`text-lg font-bold ${spentNPR ? 'text-amber-400' : 'text-gray-600'}`}>
-            {spentNPR ? formatNPR(spentNPR) : (isNe ? 'उपलब्ध छैन' : 'N/A')}
+            {spentNPR ? formatNPR(spentNPR) : t('budget.na')}
           </div>
           {spentNPR != null && spentNPR > 0 && (
             <div className="text-[10px] text-gray-600 mt-0.5">{formatNPRtoUSD(spentNPR)}</div>
@@ -86,7 +86,7 @@ export function BudgetBreakdownCard({
         <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1.5">
             <ArrowUpRight className="w-3 h-3" />
-            {isNe ? 'बाँकी' : 'Remaining'}
+            {t('budget.remaining')}
           </div>
           <div className={`text-lg font-bold ${remaining >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {remaining >= 0 ? formatNPR(remaining) : `-${formatNPR(Math.abs(remaining))}`}

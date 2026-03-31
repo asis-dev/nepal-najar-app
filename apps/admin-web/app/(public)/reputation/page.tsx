@@ -60,17 +60,17 @@ export default function ReputationPage() {
               <div className="glass-card p-12 text-center">
                 <LogIn className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                 <h2 className="text-xl font-semibold text-gray-300 mb-2">
-                  {isNe ? 'साइन इन आवश्यक' : 'Sign In Required'}
+                  {t('reputation.signInRequired')}
                 </h2>
                 <p className="text-sm text-gray-500 mb-6">
-                  {isNe ? 'कर्म डास्बोर्ड हेर्न साइन इन गर्नुहोस्।' : 'Sign in to view your karma dashboard.'}
+                  {t('reputation.signInToView')}
                 </p>
                 <Link
                   href="/login"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all"
                 >
                   <LogIn className="w-4 h-4" />
-                  {isNe ? 'साइन इन' : 'Sign In'}
+                  {t('reputation.signIn')}
                 </Link>
               </div>
             </div>
@@ -95,15 +95,13 @@ export default function ReputationPage() {
             <div className="mx-auto max-w-3xl text-center">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-400 text-xs font-medium mb-4">
                 <Star className="w-3.5 h-3.5" />
-                {isNe ? 'समुदाय कर्म' : 'Community Karma'}
+                {t('reputation.communityKarmaLabel')}
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold text-white">
-                {isNe ? 'तपाईंको प्रतिष्ठा' : 'Your Reputation'}
+                {t('reputation.yourReputation')}
               </h1>
               <p className="text-gray-400 text-sm sm:text-base mt-2 max-w-lg mx-auto">
-                {isNe
-                  ? 'प्रमाण पेश गरेर, समीक्षा गरेर र समुदायमा योगदान दिएर कर्म कमाउनुहोस्'
-                  : 'Earn karma by submitting evidence, reviewing, and contributing to the community'}
+                {t('reputation.yourReputationDesc')}
               </p>
             </div>
           </div>
@@ -127,7 +125,7 @@ export default function ReputationPage() {
                     {isVerifier && (
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-xs font-semibold mb-4">
                         <ShieldCheck className="w-3.5 h-3.5" />
-                        {isNe ? 'तपाईं प्रमाणकर्ता हुनुहुन्छ' : 'You are a Verifier'}
+                        {t('reputation.youAreVerifier')}
                       </div>
                     )}
 
@@ -136,7 +134,7 @@ export default function ReputationPage() {
                       {karma.toLocaleString()}
                     </div>
                     <p className="text-sm text-gray-400 mb-1">
-                      {isNe ? 'कुल कर्म' : 'Total Karma'}
+                      {t('reputation.totalKarma')}
                     </p>
 
                     {/* Level */}
@@ -161,7 +159,7 @@ export default function ReputationPage() {
                           />
                         </div>
                         <p className="text-[10px] text-gray-600 mt-1">
-                          {karma} / {nextThreshold} {isNe ? 'कर्म' : 'karma'}
+                          {karma} / {nextThreshold} {t('applyVerifier.karma')}
                         </p>
                       </div>
                     )}
@@ -175,7 +173,7 @@ export default function ReputationPage() {
                       </div>
                       <div className="text-2xl font-bold text-emerald-400">{evidenceKarma}</div>
                       <p className="text-xs text-gray-500 mt-1">
-                        {isNe ? 'प्रमाण कर्म' : 'Evidence Karma'}
+                        {t('reputation.evidenceKarma')}
                       </p>
                     </div>
 
@@ -185,7 +183,7 @@ export default function ReputationPage() {
                       </div>
                       <div className="text-2xl font-bold text-cyan-400">{verificationKarma}</div>
                       <p className="text-xs text-gray-500 mt-1">
-                        {isNe ? 'प्रमाणीकरण कर्म' : 'Verification Karma'}
+                        {t('reputation.verificationKarma')}
                       </p>
                     </div>
 
@@ -195,7 +193,7 @@ export default function ReputationPage() {
                       </div>
                       <div className="text-2xl font-bold text-purple-400">{communityKarma}</div>
                       <p className="text-xs text-gray-500 mt-1">
-                        {isNe ? 'समुदाय कर्म' : 'Community Karma'}
+                        {t('reputation.communityKarma')}
                       </p>
                     </div>
                   </div>
@@ -204,7 +202,7 @@ export default function ReputationPage() {
                   <div className="glass-card p-5 sm:p-6">
                     <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-primary-400" />
-                      {isNe ? 'स्तर सीमाहरू' : 'Level Thresholds'}
+                      {t('reputation.levelThresholds')}
                     </h3>
                     <div className="space-y-3">
                       {MILESTONE_LEVELS.map((milestone) => {
@@ -230,17 +228,17 @@ export default function ReputationPage() {
                                 {isNe ? milestone.labelNe : milestone.label}
                               </span>
                               <span className="text-sm text-gray-300">
-                                {milestone.karma.toLocaleString()} {isNe ? 'कर्म' : 'karma'}
+                                {milestone.karma.toLocaleString()} {t('applyVerifier.karma')}
                               </span>
                             </div>
                             {isReached && (
                               <span className="text-emerald-400 text-xs font-medium">
-                                {isNe ? 'पुग्यो' : 'Reached'}
+                                {t('reputation.reached')}
                               </span>
                             )}
                             {milestone.level === 5 && !isReached && (
                               <span className="text-xs text-cyan-400/60">
-                                {isNe ? 'प्रमाणकर्ता बन्न सकिन्छ' : 'Can apply as Verifier'}
+                                {t('reputation.canApplyVerifier')}
                               </span>
                             )}
                           </div>
@@ -254,7 +252,7 @@ export default function ReputationPage() {
                     {isVerifier ? (
                       <div className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-sm font-semibold">
                         <ShieldCheck className="w-5 h-5" />
-                        {isNe ? 'तपाईं प्रमाणकर्ता हुनुहुन्छ' : 'You are a Verifier'}
+                        {t('reputation.youAreVerifier')}
                       </div>
                     ) : level >= 5 ? (
                       <Link
@@ -262,7 +260,7 @@ export default function ReputationPage() {
                         className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200 hover:scale-105"
                       >
                         <ShieldCheck className="w-5 h-5" />
-                        {isNe ? 'प्रमाणकर्ता बन्न आवेदन दिनुहोस्' : 'Apply to become a Verifier'}
+                        {t('reputation.applyVerifier')}
                       </Link>
                     ) : (
                       <p className="text-xs text-gray-500">

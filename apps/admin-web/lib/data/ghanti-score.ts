@@ -1,5 +1,5 @@
 /**
- * Nepal Najar Index — Single 0-100 governance performance score
+ * Republic Index — Single 0-100 governance performance score
  *
  * IMPORTANT: Includes data confidence gating. When insufficient verified data
  * exists, the index reports 'insufficient' confidence rather than showing
@@ -15,10 +15,10 @@ import { promises as staticPromises, type GovernmentPromise } from './promises';
    TYPES
    ═══════════════════════════════════════════════ */
 
-export type NajarGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+export type GhantiGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 export type DataConfidence = 'insufficient' | 'partial' | 'sufficient';
 
-export interface NajarSubScores {
+export interface GhantiSubScores {
   deliveryRate: number;
   avgProgress: number;
   trustScore: number;
@@ -26,11 +26,11 @@ export interface NajarSubScores {
   citizenSentiment: number;
 }
 
-export interface NajarIndex {
+export interface GhantiScore {
   score: number;        // 0-100
   change: number;       // weekly change
-  grade: NajarGrade;
-  subScores: NajarSubScores;
+  grade: GhantiGrade;
+  subScores: GhantiSubScores;
   /** Data confidence level — UI should NOT show score when 'insufficient' */
   dataConfidence: DataConfidence;
   /** Number of promises with verified/partial trust level */
@@ -98,7 +98,7 @@ function computeCitizenSentiment(
   return total > 0 ? Math.round((totalUp / total) * 100) : 0;
 }
 
-function scoreToGrade(score: number): NajarGrade {
+function scoreToGrade(score: number): GhantiGrade {
   if (score >= 80) return 'A';
   if (score >= 60) return 'B';
   if (score >= 40) return 'C';
@@ -121,19 +121,19 @@ function computeDataConfidence(promiseList: GovernmentPromise[]): { confidence: 
    ═══════════════════════════════════════════════ */
 
 /**
- * Compute the Najar Index from real promise data.
+ * Compute the Republic Index from real promise data.
  * @param promiseList — Pass Supabase promises for real data. Falls back to static if omitted.
  * @param voteAggregates — Real vote data from Supabase public_votes.
  */
-export function computeNajarIndex(
+export function computeGhantiScore(
   promiseList?: GovernmentPromise[],
   voteAggregates?: Record<string, { up: number; down: number }>,
-): NajarIndex {
+): GhantiScore {
   const promises = promiseList ?? staticPromises;
   const stats = computeStatsFromPromises(promises);
   const { confidence, count } = computeDataConfidence(promises);
 
-  const subScores: NajarSubScores = {
+  const subScores: GhantiSubScores = {
     deliveryRate: stats.deliveryRate,
     avgProgress: stats.avgProgress,
     trustScore: Math.round(computeTrustScore(promises)),
@@ -160,7 +160,7 @@ export function computeNajarIndex(
 }
 
 /** Grade display labels */
-export const GRADE_LABELS: Record<NajarGrade, { en: string; ne: string }> = {
+export const GRADE_LABELS: Record<GhantiGrade, { en: string; ne: string }> = {
   A: { en: 'Excellent', ne: 'उत्कृष्ट' },
   B: { en: 'Good', ne: 'राम्रो' },
   C: { en: 'Average', ne: 'औसत' },
@@ -169,7 +169,7 @@ export const GRADE_LABELS: Record<NajarGrade, { en: string; ne: string }> = {
 };
 
 /** Grade colors for UI */
-export const GRADE_COLORS: Record<NajarGrade, { text: string; bg: string; glow: string }> = {
+export const GRADE_COLORS: Record<GhantiGrade, { text: string; bg: string; glow: string }> = {
   A: { text: 'text-emerald-400', bg: 'bg-emerald-500/15', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.3)]' },
   B: { text: 'text-blue-400', bg: 'bg-blue-500/15', glow: 'shadow-[0_0_12px_rgba(59,130,246,0.3)]' },
   C: { text: 'text-amber-400', bg: 'bg-amber-500/15', glow: 'shadow-[0_0_12px_rgba(245,158,11,0.3)]' },

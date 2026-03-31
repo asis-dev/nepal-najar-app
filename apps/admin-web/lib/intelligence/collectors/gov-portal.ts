@@ -193,7 +193,7 @@ async function collectPortal(
     const res = await fetch(targetUrl, {
       headers: {
         'User-Agent':
-          'NepalNajar/2.0 (intelligence-engine; +https://nepalnajar.com)',
+          'NepalRepublic/2.0 (civic-tracker; +https://nepalrepublic.org)',
         Accept: 'text/html,application/xhtml+xml',
       },
       signal: AbortSignal.timeout(30_000),

@@ -65,7 +65,7 @@ for s in signals:
     print(f'{s[\"id\"][:8]}={s[\"id\"]}')
 ")
 
-  PROMPT="Classify these Nepal public-interest signals for Nepal Najar's dynamic government commitment tracker.
+  PROMPT="Classify these Nepal public-interest signals for Nepal Republic's dynamic government commitment tracker.
 
 RULES:
 - Government/ministry/budget/policy = ALWAYS relevant (0.4+)

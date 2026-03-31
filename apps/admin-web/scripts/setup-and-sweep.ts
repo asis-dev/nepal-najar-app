@@ -151,7 +151,7 @@ async function runRSSSweep() {
     try {
       const res = await fetch(feed.url, {
         headers: {
-          'User-Agent': 'NepalNajar/2.0 (+https://nepalnajar.com)',
+          'User-Agent': 'NepalRepublic/2.0 (+https://nepalrepublic.org)',
           'Accept': 'application/rss+xml, application/xml, text/xml',
         },
         signal: AbortSignal.timeout(15_000),
@@ -261,7 +261,7 @@ async function showStats() {
 
 async function main() {
   console.log('╔════════════════════════════════════════════╗');
-  console.log('║  Nepal Najar Intelligence Engine v2        ║');
+  console.log('║  Nepal Republic Intelligence Engine v2    ║');
   console.log('║  First Sweep — RSS Collection              ║');
   console.log('╚════════════════════════════════════════════╝');
 

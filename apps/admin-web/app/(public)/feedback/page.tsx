@@ -84,7 +84,7 @@ export default function FeedbackPage() {
             <LogIn className="mx-auto h-12 w-12 text-gray-500" />
             <h1 className="mt-4 text-2xl font-semibold text-white">Sign in to give feedback</h1>
             <p className="mt-2 text-sm text-gray-400">
-              We value your voice. Sign in so we can follow up and make Nepal Najar better for everyone.
+              We value your voice. Sign in so we can follow up and make Nepal Republic better for everyone.
             </p>
             <Link
               href="/login?from=/feedback"
@@ -107,7 +107,7 @@ export default function FeedbackPage() {
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-400" />
             <h1 className="mt-4 text-2xl font-semibold text-white">Thank you!</h1>
             <p className="mt-2 text-sm text-gray-400">
-              Your feedback helps us build a better Nepal Najar. We read every message.
+              Your feedback helps us build a better Nepal Republic. We read every message.
             </p>
             <p className="mt-1 text-xs text-gray-500">धन्यवाद — तपाईंको प्रतिक्रिया हामीलाई सुधार गर्न मद्दत गर्छ।</p>
             <div className="mt-6 flex justify-center gap-3">
@@ -147,10 +147,10 @@ export default function FeedbackPage() {
             Your feedback matters
           </h1>
           <p className="mt-3 text-base text-gray-400">
-            Nepal Najar is built for Nepal&apos;s citizens. Tell us what&apos;s working, what&apos;s broken, and what you want to see next.
+            Nepal Republic is built for Nepal&apos;s citizens. Tell us what&apos;s working, what&apos;s broken, and what you want to see next.
           </p>
           <p className="mt-1 text-sm text-gray-500">
-            तपाईंको प्रतिक्रिया नेपाल नजरलाई राम्रो बनाउँछ।
+            तपाईंको प्रतिक्रिया नेपाल रिपब्लिकलाई राम्रो बनाउँछ।
           </p>
         </div>
 
@@ -180,7 +180,7 @@ export default function FeedbackPage() {
           {/* Rating */}
           <div>
             <label className="mb-2 block text-[11px] uppercase tracking-[0.18em] text-gray-500">
-              How would you rate Nepal Najar? (optional)
+              How would you rate Nepal Republic? (optional)
             </label>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -255,7 +255,7 @@ export default function FeedbackPage() {
           </button>
 
           <p className="text-center text-[11px] text-gray-600">
-            Logged in as {user?.email || user?.phone || 'citizen'} · Your feedback is private and only seen by the Nepal Najar team.
+            Logged in as {user?.email || user?.phone || 'citizen'} · Your feedback is private and only seen by the Nepal Republic team.
           </p>
         </div>
       </div>

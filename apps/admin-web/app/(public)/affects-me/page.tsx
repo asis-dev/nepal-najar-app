@@ -342,7 +342,7 @@ export default function AffectsMePage() {
                   Your civic brief
                 </div>
                 <h2 className="mt-4 text-2xl font-semibold leading-tight text-white sm:text-3xl">
-                  {province}{district ? ` / ${district}` : ''} inside Nepal Najar
+                  {province}{district ? ` / ${district}` : ''} inside Nepal Republic
                 </h2>
                 <p className="mt-3 text-sm leading-7 text-gray-300 sm:text-base">
                   {direct.length} commitments are directly relevant here, {indirect.length} have indirect spillover, and {watchedLocalCount} are already in your watchlist.
@@ -445,7 +445,7 @@ export default function AffectsMePage() {
             <p className="text-[11px] uppercase tracking-[0.18em] text-primary-300">Why return here</p>
             <h3 className="mt-3 text-xl font-semibold text-white">This page should get sharper as your place matters more</h3>
             <p className="mt-3 text-sm leading-7 text-gray-300">
-              Nepal Najar becomes much more useful once the national story collapses into your own geography. Keep your location saved, watch the commitments that matter most, and use this page as your local starting point.
+              Nepal Republic becomes much more useful once the national story collapses into your own geography. Keep your location saved, watch the commitments that matter most, and use this page as your local starting point.
             </p>
           </div>
         </>

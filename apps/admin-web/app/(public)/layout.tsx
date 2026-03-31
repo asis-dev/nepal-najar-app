@@ -12,12 +12,27 @@ export default function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Nepal Republic',
+    alternateName: 'नेपाल रिपब्लिक',
+    url: 'https://www.nepalrepublic.org',
+    description:
+      'Independent civic accountability platform tracking Nepal government commitments',
+    sameAs: [],
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-np-base">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
       <PilotAnalytics />
       <CivicSkyBackground />
       <TopNav />
-      <main className="relative z-10 flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
+      <main className="relative z-10 flex-1 pb-20 md:pb-0">{children}</main>
       <Footer />
       <BottomNav />
       <HometownPicker />

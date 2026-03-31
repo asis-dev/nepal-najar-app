@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getImpactPrediction } from '@/lib/intelligence/impact-predictor';
+import {
+  getCachedImpactPrediction,
+  getImpactPrediction,
+} from '@/lib/intelligence/impact-predictor';
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([
@@ -16,6 +19,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
  * Public — no auth required.
  */
 export async function GET(request: Request) {
+  const allowOnDemandAi = process.env.INTELLIGENCE_ALLOW_ON_DEMAND_PUBLIC_AI === 'true';
   const { searchParams } = new URL(request.url);
   const commitmentIdStr = searchParams.get('commitment_id');
 
@@ -35,15 +39,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    const prediction = await withTimeout(
-      getImpactPrediction(commitmentId),
-      30_000,
-      null,
-    );
+    const prediction = allowOnDemandAi
+      ? await withTimeout(getImpactPrediction(commitmentId), 30_000, null)
+      : await withTimeout(
+          getCachedImpactPrediction(commitmentId, { allowStale: true }),
+          2_500,
+          null,
+        );
 
     if (!prediction) {
       return NextResponse.json(
-        { error: 'Impact prediction not available for this commitment', commitmentId },
+        {
+          error: allowOnDemandAi
+            ? 'Impact prediction not available for this commitment'
+            : 'Impact prediction not pre-generated yet for this commitment',
+          commitmentId,
+        },
         { status: 404 },
       );
     }

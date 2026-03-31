@@ -99,7 +99,7 @@ export default function ProposalsBrowsePage() {
                 {t('proposals.eyebrow')}
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold text-white">
-                {isNe ? 'जनताको माग' : "The People's Demand"}
+                {t('proposals.pageTitle')}
               </h1>
               <p className="text-gray-400 text-sm sm:text-base mt-2 max-w-lg mx-auto">
                 {t('proposals.subtitle')}

@@ -1,7 +1,7 @@
 /**
  * Promise Knowledge Base
  *
- * Deep context about each of the 35 promises so the AI can
+ * Deep context about each of the 109 promises so the AI can
  * understand INTENT, not just match keywords.
  */
 
@@ -49,135 +49,139 @@ export const PROMISES_KNOWLEDGE: PromiseKnowledge[] = [
   },
   {
     id: 2,
-    title: 'Westminster Parliamentary Reform',
-    titleNe: 'वेस्टमिन्स्टर संसदीय सुधार',
+    title: 'Limit Federal Ministries to 18',
+    titleNe: 'संघीय मन्त्रालय १८ मा सीमित',
     category: 'Governance',
     description:
-      'Reform parliamentary system towards Westminster model with stronger PM accountability',
+      'Reduce federal ministries to 18, eliminate duplication between federal, provincial, and local governments',
     keyAspects:
-      'Parliamentary reform, PM question time, committee system strengthening, opposition rights',
+      'Ministry consolidation, government restructuring, eliminating duplication, federal-provincial-local coordination, administrative efficiency',
     progressIndicators:
-      'Reform committee formed, parliamentary rules amended, PM question time introduced, committee powers expanded',
+      'Cabinet formed with 18 or fewer ministries, merger plan announced, ministry consolidation started, overlapping departments unified',
     stallIndicators:
-      'No reform committee, rules unchanged, PM avoids accountability sessions',
-    keyOfficials: ['Speaker of Parliament', 'PM', 'Opposition Leader'],
-    keyMinistries: ['Federal Parliament', 'Ministry of Law & Justice'],
-    budgetRelevance: 'Minimal — procedural reform',
+      'More than 18 ministries in cabinet, no consolidation plan, coalition demands expand cabinet, duplication continues',
+    keyOfficials: ['Prime Minister', 'Chief Secretary', 'Cabinet Secretary'],
+    keyMinistries: ['Office of PM', 'Ministry of General Administration'],
+    budgetRelevance:
+      'Saves ~NPR 5B/year through reduced overhead',
+    currentStatus: 'Cabinet formation underway with 18-ministry target confirmed by multiple sources',
   },
   {
     id: 3,
-    title: 'National Development Vision',
-    titleNe: 'राष्ट्रिय विकास दूरदृष्टि',
-    category: 'Economy',
+    title: 'Allocate 60% Budget to Provincial & Local Governments',
+    titleNe: 'बजेटको ६०% प्रदेश र स्थानीय सरकारलाई',
+    category: 'Governance',
     description:
-      'Create 25-year national development vision and 5-year implementation plan',
+      'Increase budget allocation to provincial and local governments from current 35% to 60%',
     keyAspects:
-      'Long-term planning, NPC role, economic vision 2050, development roadmap',
+      'Fiscal federalism, budget devolution, provincial funding, local government empowerment, revenue sharing formula',
     progressIndicators:
-      'Vision document drafted, NPC consultations held, plan approved by cabinet, targets set',
+      'Budget allocation to local levels increasing, new revenue sharing formula proposed, fiscal transfer guidelines updated, provincial budgets rising',
     stallIndicators:
-      'No document produced, NPC inactive, no stakeholder consultation',
-    keyOfficials: ['NPC Vice Chair', 'PM', 'Finance Minister'],
-    keyMinistries: ['National Planning Commission', 'Ministry of Finance'],
-    budgetRelevance: 'NPR 50-100M for planning process',
+      'Budget allocation stuck below 40%, center retains most funds, local governments underfunded, no formula change',
+    keyOfficials: ['Finance Minister', 'PM', 'NPC Vice Chair'],
+    keyMinistries: [
+      'Ministry of Finance',
+      'Ministry of Federal Affairs',
+      'NPC',
+    ],
+    budgetRelevance:
+      'Massive — would redistribute ~NPR 600B+ to provincial/local levels',
+    currentStatus: 'Current allocation at approximately 35% — significant gap to 60% target',
   },
   {
     id: 4,
-    title: 'Anti-Corruption Bill',
-    titleNe: 'भ्रष्टाचार विरोधी विधेयक',
+    title: 'Investigate Assets of Public Officials Since 1990',
+    titleNe: '१९९० देखि सार्वजनिक पदाधिकारीको सम्पत्ति अनुसन्धान',
     category: 'Anti-Corruption',
     description:
-      'Table comprehensive anti-corruption bill within first parliamentary session',
+      'Investigate assets of all public office holders since 2047 BS and nationalize illegally acquired assets',
     keyAspects:
-      'CIAA strengthening, whistleblower protection, asset declaration, corruption courts',
+      'Asset investigation, wealth audit since 1990, nationalization of illicit assets, CIAA authority, political accountability',
     progressIndicators:
-      'Bill drafted, tabled in parliament, committee review started, CIAA consulted, public feedback period',
+      'Investigation commission formed, asset declarations collected, probes initiated against officials, illicit assets identified and frozen',
     stallIndicators:
-      'No bill drafted, parliamentary session passes without tabling, CIAA undermined',
-    keyOfficials: ['Law Minister', 'CIAA Chief', 'Attorney General'],
+      'No commission formed, political leaders block investigation, CIAA inactive, no asset freezes',
+    keyOfficials: ['PM', 'CIAA Chief', 'Attorney General'],
     keyMinistries: [
-      'Ministry of Law & Justice',
       'CIAA',
+      'Office of PM',
       'Attorney General Office',
     ],
-    budgetRelevance: 'NPR 200-500M for CIAA capacity building',
+    budgetRelevance: 'NPR 500M-1B for investigation infrastructure; potential recovery in tens of billions',
+    currentStatus: 'No formal investigation mechanism established yet',
   },
   {
     id: 5,
-    title: 'Judicial Independence',
-    titleNe: 'न्यायिक स्वतन्त्रता',
-    category: 'Governance',
+    title: 'Mandatory Public Asset Disclosure',
+    titleNe: 'अनिवार्य सार्वजनिक सम्पत्ति विवरण',
+    category: 'Anti-Corruption',
     description:
-      'Ensure full judicial independence through constitutional and legal reforms',
+      'All public office holders must publicly disclose assets before assuming office',
     keyAspects:
-      'Judge appointments, judicial council reform, court infrastructure, case backlog reduction',
+      'Mandatory disclosure, pre-office asset declaration, public transparency, wealth verification, anti-corruption compliance',
     progressIndicators:
-      'Judicial council reformed, judge appointment process transparent, court digitization started',
+      'Disclosure law drafted, officials submitting asset declarations publicly, online portal for public access, penalties for non-compliance defined',
     stallIndicators:
-      'Political interference in appointments, judicial council unchanged, case backlog growing',
-    keyOfficials: [
-      'Chief Justice',
-      'Law Minister',
-      'Judicial Council members',
-    ],
+      'No disclosure requirement, officials hide assets, no enforcement mechanism, declarations remain private',
+    keyOfficials: ['PM', 'CIAA Chief', 'Law Minister'],
     keyMinistries: [
-      'Supreme Court',
+      'CIAA',
       'Ministry of Law & Justice',
-      'Judicial Council',
+      'Office of PM',
     ],
-    budgetRelevance: 'NPR 1-2B for court infrastructure',
+    budgetRelevance: 'NPR 100-200M for disclosure portal and verification system',
+    currentStatus: 'Asset disclosure exists but is not public — declarations submitted to CIAA remain confidential',
   },
   {
     id: 6,
-    title: 'Merit-Based Bureaucracy',
-    titleNe: 'योग्यतामा आधारित नोकरशाही',
-    category: 'Governance',
+    title: '100 Days, 100 Works Plan',
+    titleNe: '१०० दिन, १०० काम योजना',
+    category: 'Anti-Corruption',
     description:
-      'Reform civil service for merit-based appointments and promotions, end political transfers',
+      'Complete 100 specific short-term tasks in the first 100 days including corruption checks',
     keyAspects:
-      'PSC reform, merit promotion, political transfer ban, performance evaluation, digital HR',
+      'First 100 days accountability, measurable deliverables, anti-corruption quick wins, government performance tracking',
     progressIndicators:
-      'Transfer policy reformed, performance evaluation system implemented, PSC independence strengthened',
+      '100-task list published, progress dashboard live, tasks completed on schedule, public reporting active',
     stallIndicators:
-      'Mass political transfers continue, PSC recommendations ignored, no performance system',
-    keyOfficials: ['Chief Secretary', 'PM', 'PSC Chair'],
-    keyMinistries: [
-      'Office of PM',
-      'Public Service Commission',
-      'Ministry of General Administration',
-    ],
-    budgetRelevance: 'NPR 500M for HR systems',
+      'No task list published, deadline passes without accountability, tasks vague or unmeasurable',
+    keyOfficials: ['PM', 'Chief Secretary', 'Cabinet Secretary'],
+    keyMinistries: ['Office of PM', 'All ministries'],
+    budgetRelevance: 'Varies by task — aggregate NPR 5-10B across all 100 items',
+    currentStatus: 'Government recently formed — 100-day clock has started',
   },
   {
     id: 7,
-    title: 'E-Procurement System',
-    titleNe: 'ई-खरिद प्रणाली',
+    title: 'Public Procurement Transparency Portal',
+    titleNe: 'सार्वजनिक खरिद पारदर्शिता पोर्टल',
     category: 'Anti-Corruption',
     description:
-      'Implement fully digital e-procurement system for all government purchases',
+      'Open portal for all government procurement data, contracts, and spending',
     keyAspects:
-      'PPMO reform, digital bidding, transparency, procurement data open, contractor ratings',
+      'Open procurement data, contract transparency, spending disclosure, PPMO reform, real-time tracking, citizen oversight',
     progressIndicators:
-      'E-procurement portal launched, ministries onboarded, procurement data published, bidding process digitized',
+      'Portal launched with procurement data, contracts published online, spending data updated regularly, citizen complaints mechanism active',
     stallIndicators:
-      'Portal delayed, ministries resist adoption, manual processes continue',
-    keyOfficials: ['PPMO Director General', 'Finance Minister'],
-    keyMinistries: ['PPMO', 'Ministry of Finance'],
-    budgetRelevance: 'NPR 300-500M for IT infrastructure',
+      'No portal launched, procurement data hidden, contracts awarded opaquely, PPMO resists transparency',
+    keyOfficials: ['Finance Minister', 'PPMO Director General'],
+    keyMinistries: ['Ministry of Finance', 'PPMO'],
+    budgetRelevance: 'NPR 300-500M for portal development; potential savings of NPR 20B+ through transparency',
+    currentStatus: 'Existing e-procurement system (bolpatra.gov.np) operational but limited transparency for public oversight',
   },
   {
     id: 8,
-    title: 'GDP Growth Acceleration',
-    titleNe: 'GDP वृद्धि त्वरण',
+    title: '7% Annual GDP Growth Target',
+    titleNe: 'वार्षिक ७% जीडीपी वृद्धि लक्ष्य',
     category: 'Economy',
     description:
-      'Achieve sustained GDP growth above 7% through economic reforms',
+      'Achieve 7% average annual GDP growth, targeting $100 billion GDP within 5 years',
     keyAspects:
-      'Investment climate, FDI attraction, industrial policy, economic liberalization',
+      'GDP growth acceleration, $100B GDP target, investment climate, FDI attraction, industrial policy, economic reform',
     progressIndicators:
-      'GDP growth trending up, FDI increasing, new industries established, investment law reformed',
+      'GDP growth trending toward 7%, FDI increasing, new industries established, investment law reformed, CBS data improving',
     stallIndicators:
-      'GDP growth below 5%, FDI declining, business confidence low, reforms stalled',
+      'GDP growth below 5%, FDI declining, business confidence low, reforms stalled, remittance-dependent growth',
     keyOfficials: ['Finance Minister', 'NRB Governor', 'NPC Vice Chair'],
     keyMinistries: [
       'Ministry of Finance',
@@ -187,73 +191,76 @@ export const PROMISES_KNOWLEDGE: PromiseKnowledge[] = [
     ],
     budgetRelevance:
       'Macro-economic indicator — tracked via NRB/CBS data',
+    currentStatus: 'Current GDP growth around 3-4% — significant gap to 7% target',
   },
   {
     id: 9,
-    title: 'Youth Employment Program',
-    titleNe: 'युवा रोजगार कार्यक्रम',
+    title: 'Create 1.2 Million Jobs',
+    titleNe: '१२ लाख रोजगारी सिर्जना',
     category: 'Economy',
     description:
-      'Create 500,000 jobs domestically and reform foreign employment to protect workers',
+      'Create 1.2 million jobs through startups, entrepreneurship, foreign investment, and digital economy',
     keyAspects:
-      'Job creation, skill development, foreign employment reform, returning workers, startup support',
+      '1.2M job creation target, startup ecosystem, entrepreneurship support, FDI-driven employment, digital economy jobs, reducing foreign labor migration',
     progressIndicators:
-      'Employment programs launched, job data published, foreign employment regulations reformed, startup fund created',
+      'New jobs data published, startup fund established, FDI creating jobs, digital economy growing, foreign migration declining',
     stallIndicators:
-      'Youth unemployment rising, brain drain accelerating, no new programs, foreign worker exploitation continues',
-    keyOfficials: ['Labour Minister', 'Industry Minister'],
+      'Youth unemployment rising, brain drain accelerating, no startup support, foreign worker exploitation continues',
+    keyOfficials: ['Labour Minister', 'Industry Minister', 'Finance Minister'],
     keyMinistries: [
       'Ministry of Labour',
       'Ministry of Industry',
-      'CTEVT',
-      'Foreign Employment Board',
+      'Ministry of Finance',
     ],
-    budgetRelevance: 'NPR 5-10B for employment programs',
+    budgetRelevance: 'NPR 10-20B for employment programs and startup funds',
+    currentStatus: 'Approximately 500,000 Nepalis leave for foreign employment annually — domestic job creation remains far below demand',
   },
   {
     id: 10,
-    title: 'Trade Deficit Reduction',
-    titleNe: 'व्यापार घाटा कटौती',
+    title: 'Raise Exports to $30 Billion',
+    titleNe: 'निर्यात $३० अर्बमा पुर्याउने',
     category: 'Economy',
     description:
-      'Reduce trade deficit by promoting exports and import substitution',
+      'Raise exports to $30 billion within a decade, largely through IT services',
     keyAspects:
-      'Export promotion, import substitution, trade agreements, industrial zones, TEPC role',
+      '$30B export target, IT services export, software exports, BPO/KPO, trade promotion, reducing trade deficit',
     progressIndicators:
-      'Trade deficit narrowing, export value increasing, new trade agreements, SEZs operational',
+      'IT export revenue growing, new export markets opened, trade agreements signed, software companies scaling, trade deficit narrowing',
     stallIndicators:
-      'Trade deficit widening, exports declining, no new trade agreements',
-    keyOfficials: ['Commerce Minister', 'TEPC Chair', 'NRB Governor'],
-    keyMinistries: ['Ministry of Commerce', 'TEPC', 'Nepal Rastra Bank'],
-    budgetRelevance: 'NPR 2-5B for export infrastructure',
+      'Exports stagnant below $2B, IT sector underdeveloped, trade deficit widening, no new trade agreements',
+    keyOfficials: ['Commerce Minister', 'ICT Minister', 'TEPC Chair'],
+    keyMinistries: ['Ministry of Commerce', 'MOCIT', 'TEPC'],
+    budgetRelevance: 'NPR 5-10B for export promotion and IT infrastructure',
+    currentStatus: 'Nepal exports approximately $1.6B/year — target represents nearly 20x increase requiring massive IT sector growth',
   },
   {
     id: 11,
-    title: 'Tax System Modernization',
-    titleNe: 'कर प्रणाली आधुनिकीकरण',
+    title: 'Tax Reform — Reduce Citizen Burden',
+    titleNe: 'कर सुधार — नागरिक भार कम गर्ने',
     category: 'Economy',
     description:
-      'Digitize tax collection, broaden tax base, simplify compliance',
+      'Adjust income tax for family expenses, reduce tax burden on middle class',
     keyAspects:
-      'Digital tax filing, PAN system, VAT reform, tax base broadening, IRD modernization',
+      'Income tax adjustment, family expense deductions, middle class relief, tax bracket reform, school/medical deductions',
     progressIndicators:
-      'Online tax filing launched, tax revenue increasing, compliance simplified, PAN coverage expanded',
+      'Tax reform bill tabled, family deductions introduced, middle class tax rates reduced, budget announces relief measures',
     stallIndicators:
-      'Manual tax processes continue, revenue targets missed, informal economy growing',
+      'No tax reform, middle class burden increasing, no deductions for family expenses, revenue-focused taxation',
     keyOfficials: ['Finance Minister', 'IRD Director General'],
     keyMinistries: ['Ministry of Finance', 'Inland Revenue Department'],
     budgetRelevance:
-      'NPR 1-2B for IT systems; revenue impact NPR 50B+',
+      'Revenue impact NPR 20-50B through reduced collections offset by compliance gains',
+    currentStatus: 'Current tax system does not allow deductions for family expenses like school fees or medical bills',
   },
   {
     id: 12,
-    title: '30,000 MW Hydropower',
-    titleNe: '३०,००० मेगावाट जलविद्युत',
+    title: 'Generate 30,000 MW Electricity in 10 Years',
+    titleNe: '१० वर्षमा ३०,००० मेगावाट बिजुली उत्पादन',
     category: 'Energy',
     description:
-      'Develop 30,000 MW hydropower capacity for domestic use and export',
+      'Achieve 30,000 MW electricity generation and become energy exporter',
     keyAspects:
-      'Hydropower construction, PPA agreements, cross-border power trade, NEA reform, IPP promotion',
+      'Hydropower construction, PPA agreements, cross-border power trade, NEA reform, IPP promotion, solar/wind diversification',
     progressIndicators:
       'New dam construction started, PPA signed with India/Bangladesh, generation capacity increasing, NEA profitable',
     stallIndicators:
@@ -261,418 +268,448 @@ export const PROMISES_KNOWLEDGE: PromiseKnowledge[] = [
     keyOfficials: ['Energy Minister', 'NEA MD', 'DOED DG'],
     keyMinistries: ['Ministry of Energy', 'NEA', 'DOED', 'IBN'],
     budgetRelevance: 'NPR 50-100B+ (massive infrastructure)',
+    currentStatus: 'Current installed capacity ~3,422 MW; 259 projects totaling 10,692 MW under construction; FY 2025/26 target to reach 4,800 MW',
   },
   {
     id: 13,
-    title: 'Clean Drinking Water',
-    titleNe: 'स्वच्छ खानेपानी',
+    title: 'Complete Melamchi Water Supply',
+    titleNe: 'मेलम्ची खानेपानी आयोजना सम्पन्न',
     category: 'Infrastructure',
     description:
-      'Ensure clean drinking water access for all citizens, complete Melamchi',
+      'Complete Melamchi Water Supply Project to deliver clean drinking water to Kathmandu Valley',
     keyAspects:
-      'Melamchi completion, rural water supply, KUKL reform, water quality testing',
+      'Melamchi tunnel completion, Phase 2/3 (Yangri/Larke rivers), distribution network, KUKL reform, water quality',
     progressIndicators:
-      'Melamchi phases completed, rural water projects delivered, water quality improving, KUKL restructured',
+      'Melamchi phases completed, 510 MLD target achieved, distribution network expanded, water quality improving',
     stallIndicators:
-      'Melamchi delays, rural areas without water, KUKL inefficient, water contamination',
-    keyOfficials: ['Water Supply Minister', 'KUKL MD'],
+      'Melamchi delays, local protests blocking water flow, Phase 2/3 not started, distribution losses high',
+    keyOfficials: ['Water Supply Minister', 'KUKL MD', 'Melamchi Project Director'],
     keyMinistries: ['Ministry of Water Supply', 'KUKL', 'DWSS'],
-    budgetRelevance: 'NPR 20-30B for infrastructure',
+    budgetRelevance: 'NPR 35B+ for remaining phases',
+    currentStatus: 'Phase 1 delivers 170 MLD via temporary infrastructure; halted Jan 2026 by Sindhupalchok protests; Phases 2-3 not started',
   },
   {
     id: 14,
-    title: 'Smart City Development',
-    titleNe: 'स्मार्ट शहर विकास',
+    title: 'Complete All National Pride Projects in 2 Years',
+    titleNe: '२ वर्षमा सबै राष्ट्रिय गौरवका आयोजना सम्पन्न',
     category: 'Infrastructure',
     description:
-      'Develop smart city infrastructure in major urban centers',
+      'Complete all 27 designated national pride projects within 2 years of government formation',
     keyAspects:
-      'Urban planning, smart traffic, waste management, green buildings, digital infrastructure',
+      'National pride project completion, Fast Track highway, Budhigandaki, Nijgadh airport, railway, Pokhara-Kathmandu tunnel',
     progressIndicators:
-      'Smart city master plan approved, pilot projects launched, IoT infrastructure deployed',
+      'Project completion rate increasing, budget disbursement improving, fast track progressing, key milestones met',
     stallIndicators:
-      'No master plan, unplanned urbanization continues, no pilot projects',
-    keyOfficials: ['Urban Development Minister', 'KMC Mayor'],
-    keyMinistries: ['Ministry of Urban Development', 'NPC'],
-    budgetRelevance: 'NPR 10-20B for urban infrastructure',
+      'Projects stalled, budget underspent, World Bank warns 41 more years at current pace, zero progress on major projects',
+    keyOfficials: ['PM', 'Finance Minister', 'Physical Infrastructure Minister'],
+    keyMinistries: [
+      'Office of PM',
+      'Ministry of Physical Infrastructure',
+      'Ministry of Finance',
+    ],
+    budgetRelevance: 'NPR 500B+ across all 27 projects; FY 2025/26 allocated Rs 67.08B, only 15.49% spent in first 6 months',
+    currentStatus: 'Only 4 of 27 projects completed; Fast Track at 45%; Budhigandaki and Nijgadh spent zero; railway at 5% since 2008',
   },
   {
     id: 15,
-    title: 'East-West Highway 4-Lane',
-    titleNe: 'पूर्व-पश्चिम राजमार्ग ४ लेन',
-    category: 'Infrastructure',
+    title: 'East-West Highway 4-Lane Expansion',
+    titleNe: 'पूर्व-पश्चिम राजमार्ग ४ लेन विस्तार',
+    category: 'Transport',
     description:
-      'Upgrade East-West Highway to 4 lanes across entire length',
+      'Upgrade entire 1,028 km East-West Highway (Mahendra Highway) to 4-lane divided highway',
     keyAspects:
-      'Highway widening, bridge construction, safety improvements, toll system',
+      'Highway widening, Kakarbhitta-Kanchanpur corridor, bridge construction, land acquisition, ADB/World Bank funding, safety improvements',
     progressIndicators:
-      'Construction contracts awarded, road widening started, km completed increasing, bridges built',
+      'Construction contracts awarded, road widening progressing, km completed increasing, bridges built, sections opened',
     stallIndicators:
-      'Land acquisition delays, contracts disputed, construction paused, budget cuts',
-    keyOfficials: ['Transport Minister', 'DOR DG'],
+      'Land acquisition delays, contracts disputed, construction paused, budget cuts, electricity pole relocation blocked',
+    keyOfficials: ['Physical Infrastructure Minister', 'DOR DG'],
     keyMinistries: ['Ministry of Physical Infrastructure', 'DOR'],
-    budgetRelevance: 'NPR 100B+ for highway construction',
+    budgetRelevance: 'NPR 200B+ for full highway; ADB $300M loan, World Bank $450M loan',
+    currentStatus: 'Multiple sections under work; Kamala-Kanchanpur at 67%; Narayanghat-Butwal 6-lane at 42%; no work in Sudurpashchim',
   },
   {
     id: 16,
-    title: 'Federal Governance Strengthening',
-    titleNe: 'संघीय शासन सुदृढीकरण',
-    category: 'Governance',
+    title: 'East-West Electric Railway',
+    titleNe: 'पूर्व-पश्चिम विद्युतीय रेलमार्ग',
+    category: 'Transport',
     description:
-      'Strengthen federal governance with clear center-province-local coordination',
+      'Build 945 km Kakarbhitta-Kanchanpur electric railway for passenger and freight transport',
     keyAspects:
-      'Fiscal federalism, inter-governmental coordination, local capacity building, revenue sharing',
+      'Railway construction, Bardibas-Simara section, DPR completion, cross-border rail links, national pride project, route rerouting debate',
     progressIndicators:
-      'Revenue sharing formula implemented, coordination meetings regular, local capacity improved',
+      'Track laying progressing, DPR for new sections approved, land acquisition completed, stations under construction',
     stallIndicators:
-      'Center-province disputes, revenue sharing delayed, local governments underfunded',
-    keyOfficials: [
-      'PM',
-      'Federal Affairs Minister',
-      'Province Chief Ministers',
-    ],
-    keyMinistries: [
-      'Ministry of Federal Affairs',
-      'Local Development Ministry',
-    ],
-    budgetRelevance: 'NPR 5-10B for capacity building',
+      'Project at 5% since 2008, route rerouting delays, zero progress on key sections, budget underspent',
+    keyOfficials: ['Physical Infrastructure Minister', 'Railway Department DG'],
+    keyMinistries: ['Ministry of Physical Infrastructure', 'Department of Railways'],
+    budgetRelevance: 'Est. $3B total; Rs 11.22B spent so far; Rs 4B/year allocation',
+    currentStatus: 'National pride project at 5% progress since 2008; only 50 km track bedding done on Bardibas-Nijgadh section; government considering rerouting entire line',
   },
   {
     id: 17,
-    title: 'International Airport Completion',
-    titleNe: 'अन्तर्राष्ट्रिय विमानस्थल निर्माण',
-    category: 'Infrastructure',
+    title: 'Operationalize Bhairahawa & Pokhara Airports',
+    titleNe: 'भैरहवा र पोखरा विमानस्थल सञ्चालन',
+    category: 'Transport',
     description:
-      'Complete Pokhara and Bhairahawa international airports, advance Nijgadh',
+      'Make Bhairahawa (Gautam Buddha) and Pokhara International Airports fully operational with regular international flights',
     keyAspects:
-      'Pokhara airport operations, Bhairahawa expansion, Nijgadh EIA, CAAN reform',
+      'International flight operations, airline attraction, airport utilization, Bhairahawa operations, Pokhara revival, CAAN reform',
     progressIndicators:
-      'International flights started, airlines attracted, passenger numbers growing, Nijgadh EIA approved',
+      'Regular international flights operating, multiple airlines attracted, passenger numbers growing, airport revenue increasing',
     stallIndicators:
-      'No international flights, airports underutilized, Nijgadh blocked, CAAN mismanagement',
-    keyOfficials: ['Culture/Tourism Minister', 'CAAN DG'],
+      'No international flights at Pokhara, Bhairahawa underutilized, airlines pull out, airports running at losses',
+    keyOfficials: ['Tourism Minister', 'CAAN DG'],
     keyMinistries: ['Ministry of Culture & Tourism', 'CAAN'],
-    budgetRelevance: 'NPR 30-50B for airport infrastructure',
+    budgetRelevance: 'NPR 10B for operational infrastructure; airports currently operating at massive loss',
+    currentStatus: 'Bhairahawa: 729 total international flights since 2022, vastly underutilized. Pokhara: No regular international flights, only 1 weekly Lhasa charter',
   },
   {
     id: 18,
-    title: 'Digital Nepal Framework',
-    titleNe: 'डिजिटल नेपाल फ्रेमवर्क',
+    title: '"Online, Not Queue" — Digital Government Services',
+    titleNe: '"अनलाइन, लाइन होइन" — डिजिटल सरकारी सेवा',
     category: 'Technology',
     description:
-      'Implement comprehensive e-governance framework and digital public services',
+      'Deliver all government services digitally — eliminate queues, middlemen, and dalals through Nagarik App and e-governance',
     keyAspects:
-      'E-governance portal, digital ID, online service delivery, government cloud, open data',
+      'Nagarik App expansion, digital ID, e-governance blueprint, interoperability, institutional adoption, ADB/World Bank digital funding',
     progressIndicators:
-      'E-governance portal launched, services online, digital ID rollout, data portal active',
+      'Nagarik App services expanding, institutions accepting digital docs, e-governance blueprint implemented, ADB/WB funding disbursed',
     stallIndicators:
-      'Services still paper-based, no digital ID, portal non-functional',
+      'Institutions refuse digital documents, paper-based processes continue, Nagarik App limited, digital adoption slow',
     keyOfficials: ['ICT Minister', 'NITC Chair'],
     keyMinistries: ['MOCIT', 'NITC'],
-    budgetRelevance: 'NPR 5-10B for digital infrastructure',
+    budgetRelevance: 'NPR 5B+ government funds; ADB $40M + World Bank $50M approved',
+    currentStatus: 'Nagarik App launched but many institutions still refuse digital documents; ADB $40M and World Bank $50M approved Mar 2026; UN e-Gov ranking: 125th',
   },
   {
     id: 19,
-    title: 'Broadband Internet Connectivity',
-    titleNe: 'ब्रोडब्यान्ड इन्टरनेट कनेक्टिभिटी',
+    title: 'Digital Parks in All 7 Provinces',
+    titleNe: 'सातवटै प्रदेशमा डिजिटल पार्क',
     category: 'Technology',
     description:
-      'Expand broadband internet access to all 753 local levels',
+      'Establish technology/digital parks in each of the 7 provinces for IT industry growth',
     keyAspects:
-      'Fiber optic expansion, rural connectivity, NTC/Ncell infrastructure, community WiFi',
+      'IT park establishment, provincial tech hubs, tech company incubation, Banepa IT Park expansion, provincial digital infrastructure',
     progressIndicators:
-      'Fiber reach expanding, local levels connected, internet penetration increasing, prices decreasing',
+      'New IT parks land allocated, construction started in provinces, tech companies registered, IT employment growing outside Kathmandu',
     stallIndicators:
-      'Rural areas still disconnected, slow fiber rollout, ISP monopoly',
-    keyOfficials: ['ICT Minister', 'NTA Chair', 'NTC MD'],
-    keyMinistries: ['MOCIT', 'NTA', 'NTC'],
-    budgetRelevance: 'NPR 10-20B for fiber infrastructure',
+      'Only Banepa IT Park exists, no new provincial parks, tech jobs concentrated in Kathmandu, no funding allocated',
+    keyOfficials: ['ICT Minister', 'HITP Director'],
+    keyMinistries: ['MOCIT', 'HITP'],
+    budgetRelevance: 'NPR 50B for 7 IT parks; vision of 15,000 tech jobs when operational',
+    currentStatus: 'Only 1 IT Park exists in Banepa (234 ropani, built 2000-2005); recently revived with first supercomputer; no provincial parks started',
   },
   {
     id: 20,
-    title: 'IT Park & Tech Economy',
-    titleNe: 'आईटी पार्क र प्रविधि अर्थतन्त्र',
+    title: 'Declare IT as National Strategic Industry',
+    titleNe: 'सूचना प्रविधिलाई राष्ट्रिय रणनीतिक उद्योग घोषणा',
     category: 'Technology',
     description:
-      'Establish IT parks and promote tech industry growth',
+      'Formally declare IT as national strategic industry with tax breaks, promotion board, IP lending, and 5 lakh tech jobs target',
     keyAspects:
-      'IT park construction, tech startup ecosystem, BPO promotion, software exports',
+      'Strategic industry declaration, IT tax exemption, IT Promotion Board, intellectual property lending, 5 lakh tech jobs, AI policy',
     progressIndicators:
-      'IT park operational, tech companies established, software exports growing, startup ecosystem active',
+      'IT declared strategic industry in law, IT Promotion Board formed, tax exemptions implemented, tech employment growing',
     stallIndicators:
-      'IT park delayed, no tech investment, brain drain to India/abroad',
-    keyOfficials: ['ICT Minister', 'HITP Director'],
-    keyMinistries: ['MOCIT', 'HITP'],
-    budgetRelevance: 'NPR 5-10B for IT park infrastructure',
+      'No formal legal declaration, no IT Promotion Board, tax benefits not implemented, brain drain continues',
+    keyOfficials: ['ICT Minister', 'Finance Minister', 'Industry Minister'],
+    keyMinistries: ['MOCIT', 'Ministry of Finance', 'Ministry of Industry'],
+    budgetRelevance: 'Revenue impact through 75% tax exemption on IT export income; target Rs 3T IT exports in 10 years',
+    currentStatus: 'IT declared "special industry" in FY 2025/26 budget with 75% tax exemption; National AI Policy approved Aug 2025; but no formal "strategic industry" legal declaration or IT Promotion Board yet',
   },
   {
     id: 21,
-    title: 'Financial Inclusion',
-    titleNe: 'वित्तीय समावेशिता',
-    category: 'Economy',
+    title: 'Cryptocurrency Regulation & Pilot',
+    titleNe: 'क्रिप्टोकरेन्सी नियमन र पाइलट',
+    category: 'Technology',
     description:
-      'Expand financial access to unbanked population, promote digital payments',
+      'Study global crypto regulation, formulate national policy, and launch pilot mining project within 1 year',
     keyAspects:
-      'Bank branch expansion, mobile banking, microfinance, insurance penetration, NRB initiatives',
+      'Crypto regulation study, policy formulation, pilot mining, CBDC (Digital Rupee), blockchain adoption, legal framework',
     progressIndicators:
-      'Bank accounts opened, mobile banking users increasing, insurance coverage expanding, digital payments growing',
+      'Crypto study committee formed, policy paper published, pilot mining authorized, CBDC pilot launched, legal clarity established',
     stallIndicators:
-      'Rural areas unbanked, cash economy dominant, microfinance crisis',
-    keyOfficials: ['NRB Governor', 'Finance Minister'],
-    keyMinistries: ['Nepal Rastra Bank', 'Ministry of Finance'],
-    budgetRelevance: 'NPR 2-5B for financial infrastructure',
+      'Crypto remains completely illegal, no study conducted, arrests continue, no CBDC progress, zero policy movement',
+    keyOfficials: ['Finance Minister', 'NRB Governor', 'ICT Minister'],
+    keyMinistries: ['Nepal Rastra Bank', 'Ministry of Finance', 'MOCIT'],
+    budgetRelevance: 'NPR 200-500M for regulatory infrastructure and CBDC pilot',
+    currentStatus: 'Crypto completely illegal in Nepal; 50+ arrests in 2024-2025; NRB exploring CBDC with pilot testing for 2026; near bottom of Global Crypto Adoption Index',
   },
   {
     id: 22,
-    title: 'Universal Health Insurance',
-    titleNe: 'सार्वभौमिक स्वास्थ्य बीमा',
+    title: 'Universal Health Insurance — 100% Coverage',
+    titleNe: 'विश्वव्यापी स्वास्थ्य बीमा — १००% कभरेज',
     category: 'Health',
     description:
-      'Expand health insurance coverage to all citizens',
+      '100% insured quality healthcare for all citizens through universal health insurance',
     keyAspects:
-      'HIB expansion, premium subsidies, coverage quality, hospital network, claim processing',
+      'HIB expansion to 100%, premium subsidies for poor, coverage quality improvement, hospital network enrollment, claim processing reform',
     progressIndicators:
-      'Enrollment numbers increasing, all districts covered, claim settlement improving, subsidies for poor',
+      'Enrollment numbers increasing toward 100%, all districts covered, claim settlement improving, subsidies for poor families implemented',
     stallIndicators:
-      'Low enrollment, hospitals refuse HIB, claims unpaid, quality poor',
+      'Low enrollment, hospitals refuse HIB, claims unpaid, quality poor, coverage stagnant',
     keyOfficials: ['Health Minister', 'HIB Executive Director'],
     keyMinistries: ['MOHP', 'Health Insurance Board'],
-    budgetRelevance: 'NPR 10-20B for insurance subsidies',
+    budgetRelevance: 'NPR 80B+ for universal insurance subsidies',
+    currentStatus: 'Health insurance scheme operational in all 77 districts but enrollment remains below 30% of population',
   },
   {
     id: 23,
-    title: 'Hospital in Every District',
-    titleNe: 'प्रत्येक जिल्लामा अस्पताल',
+    title: 'Centralized National Ambulance Service',
+    titleNe: 'केन्द्रीकृत राष्ट्रिय एम्बुलेन्स सेवा',
     category: 'Health',
     description:
-      'Ensure functional hospital with basic services in all 77 districts',
+      'Establish a centralized, nationwide ambulance service reachable through single hotline',
     keyAspects:
-      'District hospital construction, doctor deployment, equipment, referral system, ambulance network',
+      'Single emergency hotline, centralized dispatch, nationwide ambulance fleet, response time standards, GPS tracking',
     progressIndicators:
-      'New hospitals built, doctors deployed, equipment installed, ambulance service started',
+      'National hotline operational, ambulances deployed in all districts, average response time decreasing, GPS dispatch active',
     stallIndicators:
-      'Districts without hospital, doctor vacancies, equipment broken, referral system absent',
+      'No centralized system, fragmented ambulance services, no hotline, rural areas unreachable, response times hours long',
     keyOfficials: ['Health Minister', 'DHS Director'],
     keyMinistries: ['MOHP', 'Department of Health Services'],
-    budgetRelevance: 'NPR 20-40B for hospital construction',
+    budgetRelevance: 'NPR 50B for ambulance fleet and dispatch infrastructure',
+    currentStatus: 'Fragmented ambulance services across districts; no single national hotline; some 102/108 services in limited areas',
   },
   {
     id: 24,
-    title: 'Education Quality Reform',
-    titleNe: 'शिक्षा गुणस्तर सुधार',
+    title: 'Free Education for Up to 3 Children',
+    titleNe: '३ सन्तानसम्म निःशुल्क शिक्षा',
     category: 'Education',
     description:
-      'Reform curriculum, improve teacher quality, modernize schools',
+      'Free education through high school for up to 3 children per family',
     keyAspects:
-      'New curriculum, teacher training, digital classrooms, STEM focus, assessment reform',
+      'Free schooling policy, per-family cap of 3 children, fee elimination, community school support, dropout prevention',
     progressIndicators:
-      'New curriculum implemented, teacher training programs, digital classrooms in schools, learning outcomes improving',
+      'Free education policy implemented, school fees eliminated in community schools, enrollment increasing, family benefit tracking active',
     stallIndicators:
-      'Old curriculum unchanged, no teacher training, schools deteriorating, dropout rates high',
-    keyOfficials: ['Education Minister', 'CDC Director'],
-    keyMinistries: ['Ministry of Education', 'CDC', 'ERO'],
-    budgetRelevance: 'NPR 15-25B for education reform',
+      'Hidden fees persist, community schools underfunded, private schools dominate, families still paying',
+    keyOfficials: ['Education Minister', 'Department of Education DG'],
+    keyMinistries: ['Ministry of Education', 'Department of Education'],
+    budgetRelevance: 'NPR 200B for education sector support',
+    currentStatus: 'Community schools nominally free but hidden fees common; private school enrollment exceeds community schools in urban areas',
   },
   {
     id: 25,
-    title: 'Technical/Vocational Training',
-    titleNe: 'प्राविधिक/व्यावसायिक तालिम',
+    title: '"Skill in Education" National Expansion',
+    titleNe: '"शिक्षामा सीप" राष्ट्रिय विस्तार',
     category: 'Education',
     description:
-      'Expand TVET programs aligned with labor market demands',
+      'Expand the successful Kathmandu "Skill in Education" program to all districts nationally',
     keyAspects:
-      'CTEVT expansion, industry linkages, certification, apprenticeships, skills mapping',
+      'Skill-based learning, vocational integration in schools, Kathmandu pilot expansion, practical skills, district-level implementation',
     progressIndicators:
-      'New TVET centers opened, industry partnerships, employment rate of graduates high, curriculum updated',
+      'Program expanded to new districts, teacher training conducted, skill labs in schools, student outcomes improving',
     stallIndicators:
-      'CTEVT stagnant, outdated courses, graduates unemployed, no industry linkage',
-    keyOfficials: ['Education Minister', 'CTEVT Director'],
-    keyMinistries: ['Ministry of Education', 'CTEVT'],
-    budgetRelevance: 'NPR 5-10B for TVET infrastructure',
+      'Program stuck in Kathmandu only, no expansion plan, no funding for districts, curriculum unchanged',
+    keyOfficials: ['Education Minister', 'CTEVT Director', 'CDC Director'],
+    keyMinistries: ['Ministry of Education', 'CTEVT', 'CDC'],
+    budgetRelevance: 'NPR 30B for national expansion of skill labs and teacher training',
+    currentStatus: 'Successful pilot in Kathmandu metropolitan area; no expansion to other districts yet',
   },
   {
     id: 26,
-    title: 'Research University',
-    titleNe: 'अनुसन्धान विश्वविद्यालय',
+    title: 'Zero Dropout Rate — School Retention Program',
+    titleNe: 'शून्य छुट दर — विद्यालय अवधारण कार्यक्रम',
     category: 'Education',
     description:
-      'Establish world-class research university focused on Nepal priorities',
+      'Achieve zero dropout through smart classrooms, labs, libraries, and retention programs',
     keyAspects:
-      'University establishment, research funding, international collaboration, PhD programs, innovation hub',
+      'Dropout prevention, smart classrooms, school labs, library expansion, retention incentives, scholarship programs',
     progressIndicators:
-      'University charter approved, land allocated, faculty hired, research funding established, international MoUs signed',
+      'Dropout rate declining, smart classrooms installed, labs and libraries in schools, retention programs active, scholarship coverage expanding',
     stallIndicators:
-      'No charter, no funding, no land, existing universities deteriorating',
-    keyOfficials: ['Education Minister', 'UGC Chair'],
-    keyMinistries: ['Ministry of Education', 'UGC'],
-    budgetRelevance: 'NPR 10-20B for university establishment',
+      'Dropout rates unchanged or increasing, no smart classrooms, no retention programs, poverty-driven dropouts continue',
+    keyOfficials: ['Education Minister', 'Department of Education DG'],
+    keyMinistries: ['Ministry of Education', 'Department of Education', 'ERO'],
+    budgetRelevance: 'NPR 100B for smart classrooms, labs, libraries across all schools',
+    currentStatus: 'National dropout rate still significant especially at secondary level; smart classroom rollout limited to urban areas',
   },
   {
     id: 27,
-    title: 'Agriculture Modernization',
-    titleNe: 'कृषि आधुनिकीकरण',
-    category: 'Economy',
+    title: 'Clean Kathmandu Valley Campaign',
+    titleNe: 'स्वच्छ काठमाडौं उपत्यका अभियान',
+    category: 'Environment',
     description:
-      'Modernize agriculture through technology, irrigation, and market access',
+      'Comprehensive waste management, river cleanup, and air quality improvement for Kathmandu Valley',
     keyAspects:
-      'Mechanization, irrigation expansion, cold storage, market infrastructure, crop insurance, agricultural research',
+      'Waste management reform, air quality improvement, river cleanup, landfill management, recycling, emission control',
     progressIndicators:
-      'Irrigation coverage expanding, mechanization subsidies distributed, cold storage built, farm income rising',
+      'Waste collection improved, air quality index improving, river cleanup campaigns active, recycling rates increasing',
     stallIndicators:
-      'Farmers abandoning land, food imports increasing, no irrigation expansion, no mechanization',
-    keyOfficials: ['Agriculture Minister', 'DOA DG'],
-    keyMinistries: ['Ministry of Agriculture', 'DOA', 'NARC'],
-    budgetRelevance: 'NPR 15-30B for agriculture programs',
+      'Garbage piling up, air quality deteriorating, rivers still polluted, no waste processing, open burning continues',
+    keyOfficials: ['Environment Minister', 'KMC Mayor', 'Lalitpur Mayor'],
+    keyMinistries: [
+      'Ministry of Forests & Environment',
+      'Kathmandu Metropolitan City',
+    ],
+    budgetRelevance: 'NPR 100B for waste management and environmental infrastructure',
+    currentStatus: 'Kathmandu Valley air quality regularly hits hazardous levels; Sisdol landfill at capacity; waste collection inconsistent',
   },
   {
     id: 28,
-    title: 'Climate & Environment Policy',
-    titleNe: 'जलवायु र वातावरण नीति',
+    title: 'Bagmati & Major River Restoration',
+    titleNe: 'बागमती र प्रमुख नदी पुनर्स्थापना',
     category: 'Environment',
     description:
-      'Implement climate action plan and move towards carbon neutrality',
+      'Restore Bagmati and other major rivers through sewage treatment and encroachment removal',
     keyAspects:
-      'NDC implementation, renewable energy, forest conservation, EV promotion, air quality, waste management',
+      'River restoration, sewage treatment plants, encroachment removal, water quality monitoring, Bagmati corridor development',
     progressIndicators:
-      'NDC targets met, renewable energy share increasing, forest cover stable, EV adoption growing, air quality improving',
+      'Sewage treatment plants operational, water quality improving, encroachments removed, river corridor development progressing',
     stallIndicators:
-      'Emissions rising, deforestation, no EV policy, air quality deteriorating',
-    keyOfficials: ['Environment Minister', 'Climate Change Council'],
-    keyMinistries: ['Ministry of Forests & Environment', 'MOEWRI'],
-    budgetRelevance:
-      'NPR 5-10B for climate programs + international climate finance',
+      'Raw sewage flowing, encroachments increasing, water quality deteriorating, treatment plants non-functional',
+    keyOfficials: ['Environment Minister', 'HPCIDBC Executive Director'],
+    keyMinistries: [
+      'Ministry of Forests & Environment',
+      'High Powered Committee for Bagmati',
+    ],
+    budgetRelevance: 'NPR 200B for sewage treatment and river infrastructure',
+    currentStatus: 'Bagmati remains heavily polluted; High Powered Committee active but encroachment removal stalled; sewage treatment capacity far below demand',
   },
   {
     id: 29,
-    title: 'Land Reform',
-    titleNe: 'भूमि सुधार',
+    title: 'Land Reform — Commission in 100 Days',
+    titleNe: 'भूमि सुधार — १०० दिनमा आयोग',
     category: 'Social',
     description:
-      'Implement comprehensive land reform and digital land management',
+      'Establish land commission in 100 days, solve landless/squatter ownership in 1000 days, create Land Bank',
     keyAspects:
-      'Land survey, digital land records, land ceiling, landless rehabilitation, MOLMAC reform',
+      'Land commission formation, landless/squatter settlement, Land Bank creation, digital land records, tenure security',
     progressIndicators:
-      'Digital land records available, land survey completed, landless families settled, disputes reduced',
+      'Land commission formed within 100 days, landless registration started, Land Bank established, digital records progressing',
     stallIndicators:
-      'Land records still paper-based, survey incomplete, landless not addressed, feudal system continues',
-    keyOfficials: ['Land Management Minister', 'Survey Department DG'],
-    keyMinistries: ['MOLMAC', 'Survey Department'],
-    budgetRelevance: 'NPR 5-10B for land survey and digitization',
+      'No commission formed after 100 days, landless not addressed, no Land Bank, paper-based records continue',
+    keyOfficials: ['Land Management Minister', 'PM', 'Survey Department DG'],
+    keyMinistries: ['MOLMAC', 'Office of PM', 'Survey Department'],
+    budgetRelevance: 'NPR 10-20B for commission operations and Land Bank',
+    currentStatus: 'No land commission established yet; estimated 500,000+ landless/squatter families awaiting resolution',
   },
   {
     id: 30,
-    title: 'Electoral Reform',
-    titleNe: 'निर्वाचन सुधार',
+    title: 'Overseas Voting for Diaspora Nepalis',
+    titleNe: 'प्रवासी नेपालीका लागि विदेशबाट मतदान',
     category: 'Governance',
     description:
-      'Reform electoral system for better representation and reduced money politics',
+      'Enable overseas voting for Nepali citizens abroad and support for dual citizenship',
     keyAspects:
-      'PR system reform, election finance law, voter registration, EVM adoption, campaign spending limits',
+      'Overseas voting rights, diaspora engagement, dual citizenship, electronic voting, embassy voting stations',
     progressIndicators:
-      'Election law amended, campaign spending limits enforced, EVM pilot conducted, voter turnout improving',
+      'Overseas voting law passed, embassy voting infrastructure set up, pilot in major diaspora countries, dual citizenship bill tabled',
     stallIndicators:
-      'No law change, money politics increasing, voter apathy, EC ineffective',
-    keyOfficials: ['Law Minister', 'EC Chief Commissioner'],
-    keyMinistries: ['Election Commission', 'Ministry of Law & Justice'],
-    budgetRelevance: 'NPR 2-5B for electoral infrastructure',
+      'No overseas voting law, diaspora excluded from elections, no dual citizenship progress, embassies not equipped',
+    keyOfficials: ['Law Minister', 'EC Chief Commissioner', 'Foreign Minister'],
+    keyMinistries: [
+      'Election Commission',
+      'Ministry of Law & Justice',
+      'Ministry of Foreign Affairs',
+    ],
+    budgetRelevance: 'NPR 3-5B for overseas voting infrastructure',
+    currentStatus: 'No overseas voting mechanism exists; estimated 4-5 million Nepalis abroad cannot vote; dual citizenship not legally allowed',
   },
   {
     id: 31,
-    title: 'Cooperative Sector Reform',
-    titleNe: 'सहकारी क्षेत्र सुधार',
+    title: 'Cooperatives Crisis Resolution — Return Depositors Money',
+    titleNe: 'सहकारी संकट समाधान — निक्षेपकर्ताको पैसा फिर्ता',
     category: 'Economy',
     description:
-      'Reform and regulate cooperative sector to protect depositors',
+      'Resolve cooperatives crisis through legal settlement and return depositors money',
     keyAspects:
-      'Cooperative regulation, audit enforcement, depositor protection, NRB oversight, fraud prevention',
+      'Depositor refund, cooperative fraud prosecution, legal settlement, regulatory reform, depositor protection fund',
     progressIndicators:
-      'New cooperative law passed, audits mandatory, fraud cases prosecuted, depositor insurance introduced',
+      'Depositors receiving money back, fraud cases prosecuted, legal settlements reached, new regulatory framework enacted',
     stallIndicators:
-      'Cooperative frauds continue, no regulation, depositors losing money, political protection of fraudsters',
-    keyOfficials: ['Cooperatives Registrar', 'Finance Minister'],
+      'Depositors still waiting, no prosecutions, cooperatives operating without oversight, political protection of fraudsters',
+    keyOfficials: ['Finance Minister', 'Cooperatives Registrar', 'NRB Governor'],
     keyMinistries: [
       'Department of Cooperatives',
       'Ministry of Finance',
       'NRB',
     ],
-    budgetRelevance: 'NPR 1-2B for regulatory infrastructure',
+    budgetRelevance: 'NPR 50B+ in depositor claims; regulatory infrastructure NPR 1-2B',
+    currentStatus: 'Thousands of depositors affected by cooperative fraud; recovery process extremely slow; political connections shielding perpetrators',
   },
   {
     id: 32,
-    title: 'Tourism Recovery & Growth',
-    titleNe: 'पर्यटन पुनरुत्थान र वृद्धि',
+    title: 'Double Tourist Numbers & Spending',
+    titleNe: 'पर्यटक संख्या र खर्च दोब्बर',
     category: 'Economy',
     description:
-      'Recover and grow tourism sector to pre-COVID levels and beyond',
+      'Double international tourist arrivals and per-tourist spending within 5 years',
     keyAspects:
-      'Tourist arrivals target, marketing campaigns, infrastructure development, adventure tourism, heritage preservation',
+      'Tourist arrival targets, per-tourist spending increase, destination marketing, infrastructure development, adventure tourism, heritage tourism',
     progressIndicators:
-      'Tourist arrivals increasing, revenue growing, new routes opened, infrastructure improved, events held',
+      'Tourist arrivals increasing, per-tourist spending rising, new source markets opened, tourism infrastructure improved',
     stallIndicators:
-      'Tourist numbers declining, infrastructure poor, marketing absent, visa hassles',
+      'Tourist numbers declining, spending per tourist dropping, infrastructure poor, marketing absent, visa hassles',
     keyOfficials: ['Tourism Minister', 'NTB CEO'],
     keyMinistries: ['Ministry of Culture & Tourism', 'NTB', 'CAAN'],
     budgetRelevance:
-      'NPR 5-10B for tourism promotion and infrastructure',
+      'NPR 50B for tourism promotion and infrastructure',
+    currentStatus: 'Nepal welcomed approximately 1 million tourists in 2024; target would require reaching 2 million with doubled spending',
   },
   {
     id: 33,
-    title: 'Independent Foreign Policy',
-    titleNe: 'स्वतन्त्र विदेश नीति',
-    category: 'Governance',
+    title: 'Official State Apology to Dalit Community',
+    titleNe: 'दलित समुदायलाई आधिकारिक राज्य माफी',
+    category: 'Social',
     description:
-      'Maintain balanced, independent foreign policy based on national interest',
+      'Issue official state apology to Dalit community for centuries of historical discrimination',
     keyAspects:
-      'India-China balance, multilateral engagement, trade diplomacy, diaspora engagement, border issues',
+      'State apology, Dalit rights acknowledgment, historical discrimination recognition, reconciliation process, caste justice',
     progressIndicators:
-      'Balanced diplomatic engagements, trade agreements with multiple countries, border issues addressed, diaspora policy',
+      'PM delivers formal apology, parliamentary resolution passed, Dalit community acknowledges, reconciliation process started',
     stallIndicators:
-      'Leaning heavily to one neighbor, sovereignty compromised, border encroachment unaddressed',
-    keyOfficials: ['PM', 'Foreign Minister'],
-    keyMinistries: ['Ministry of Foreign Affairs', 'Office of PM'],
-    budgetRelevance: 'NPR 2-5B for diplomatic operations',
+      'No apology delivered, PM avoids topic, Dalit organizations protest inaction, caste discrimination continues unchecked',
+    keyOfficials: ['Prime Minister', 'National Dalit Commission Chair'],
+    keyMinistries: ['Office of PM', 'National Dalit Commission'],
+    budgetRelevance: 'Minimal — symbolic/political action with follow-up program costs',
+    currentStatus: 'No formal state apology has ever been issued to the Dalit community for historical discrimination',
   },
   {
     id: 34,
-    title: 'Social Security Expansion',
-    titleNe: 'सामाजिक सुरक्षा विस्तार',
+    title: 'Social Security Expansion — Pension & Insurance',
+    titleNe: 'सामाजिक सुरक्षा विस्तार — पेन्सन र बीमा',
     category: 'Social',
     description:
-      'Expand social security coverage including pension, health, and disability support',
+      'Expand social security with pension fund for athletes, subsidized first-home loans, elder care',
     keyAspects:
-      'SSF coverage, pension reform, disability support, elderly care, maternity benefits',
+      'Athlete pension fund, first-home loan subsidy, elder care programs, SSF expansion, disability support, maternity benefits',
     progressIndicators:
-      'SSF enrollment expanding, pension payments regular, disability support increased, maternity benefits improved',
+      'Athlete pension established, first-home loan scheme launched, elder care centers operational, SSF enrollment expanding',
     stallIndicators:
-      'SSF fund mismanaged, coverage stagnant, pension delays, benefits inadequate',
-    keyOfficials: ['Labour Minister', 'SSF Executive Director'],
-    keyMinistries: ['Ministry of Labour', 'Social Security Fund'],
-    budgetRelevance: 'NPR 10-20B for social security programs',
+      'SSF fund mismanaged, no athlete pension, home loan scheme not launched, elder care neglected',
+    keyOfficials: ['Labour Minister', 'SSF Executive Director', 'Sports Minister'],
+    keyMinistries: ['Ministry of Labour', 'Social Security Fund', 'Ministry of Youth & Sports'],
+    budgetRelevance: 'NPR 30B for expanded social security programs',
+    currentStatus: 'SSF operational but limited coverage; no athlete pension fund; no first-home loan subsidy program',
   },
   {
     id: 35,
-    title: 'Passport & Immigration Reform',
-    titleNe: 'राहदानी र अध्यागमन सुधार',
+    title: 'Fast-Track Citizenship & Passport Processing',
+    titleNe: 'द्रुत नागरिकता र राहदानी प्रशोधन',
     category: 'Governance',
     description:
-      'Reform passport issuance and immigration services for efficiency and accessibility',
+      'Eliminate passport and citizenship backlogs through digitization and process reform',
     keyAspects:
-      'E-passport rollout, online appointment, regional passport offices, immigration digitization, queue management',
+      'Passport backlog elimination, citizenship digitization, e-passport rollout, online appointments, regional offices, process automation',
     progressIndicators:
-      'E-passport production started, online booking working, new offices opened, wait times reduced',
+      'Passport wait times reduced to days, citizenship issued same-day, e-passport production operational, online booking working',
     stallIndicators:
-      'Passport backlog growing, system crashes, long queues, corruption in process',
+      'Passport backlog growing, system crashes, long queues, corruption in process, months-long waits continue',
     keyOfficials: [
       'Home Minister',
-      'Immigration DG',
       'Passport Department DG',
+      'District Administration Officers',
     ],
     keyMinistries: [
       'Ministry of Home Affairs',
       'Department of Passports',
-      'Department of Immigration',
+      'District Administration Offices',
     ],
-    budgetRelevance: 'NPR 3-5B for passport infrastructure',
+    budgetRelevance: 'NPR 5B for passport infrastructure and digitization',
+    currentStatus: 'Passport backlog of 200,000+; e-passport production started but demand far exceeds capacity; citizenship processing still paper-based in most districts',
   },
 
   // ── PROMISES 36-109 — Expanded Knowledge Base ──

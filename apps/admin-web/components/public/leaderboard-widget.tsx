@@ -43,13 +43,13 @@ export function LeaderboardWidget({
   limit = 5,
   showLink = true,
 }: LeaderboardWidgetProps) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const isNe = locale === 'ne';
   const { data: leaderboard, isLoading } = useLeaderboard(type, limit);
 
   const defaultTitle = type === 'areas'
-    ? (isNe ? '\u0938\u092C\u0948\u092D\u0928\u094D\u0926\u093E \u0938\u0915\u094D\u0930\u093F\u092F \u0915\u094D\u0937\u0947\u0924\u094D\u0930' : 'Most Engaged Areas')
-    : (isNe ? '\u0936\u0940\u0930\u094D\u0937 \u092F\u094B\u0917\u0926\u093E\u0928\u0915\u0930\u094D\u0924\u093E' : 'Top Contributors');
+    ? t('leaderboard.mostEngagedAreas')
+    : t('leaderboard.topContributors');
 
   if (isLoading) {
     return (
@@ -80,7 +80,7 @@ export function LeaderboardWidget({
             href="/leaderboard"
             className="text-xs text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-1"
           >
-            {isNe ? '\u0938\u092C\u0948 \u0939\u0947\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D' : 'View All'}
+            {t('leaderboard.viewAll')}
             <ArrowRight className="w-3 h-3" />
           </Link>
         )}

@@ -74,7 +74,7 @@ const categoryColors: Record<PromiseCategory, string> = {
    COMPARE PAGE INNER (needs useSearchParams)
    ═══════════════════════════════════════════════ */
 function ComparePageInner() {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const searchParams = useSearchParams();
   const removeFromComparison = useComparisonStore((s) => s.removeFromComparison);
   const [hydrated, setHydrated] = useState(false);
@@ -107,22 +107,22 @@ function ComparePageInner() {
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1 text-sm text-gray-400">
         <Link href="/" className="hover:text-white transition-colors">
-          {isNe ? 'गृहपृष्ठ' : 'Home'}
+          {t('compare.home')}
         </Link>
         <ChevronRight className="h-3 w-3" />
         <Link href="/explore" className="hover:text-white transition-colors">
-          {isNe ? 'अन्वेषण' : 'Explore'}
+          {t('compare.explore')}
         </Link>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-white">{isNe ? 'तुलना' : 'Compare'}</span>
+        <span className="text-white">{t('compare.compare')}</span>
       </nav>
 
       {/* Title */}
       <h1 className="mb-2 text-2xl font-bold text-white sm:text-3xl">
-        {isNe ? 'वचनबद्धता तुलना' : 'Compare Commitments'}
+        {t('compare.title')}
       </h1>
       <p className="mb-8 text-gray-400">
-        {isNe ? 'चयन गरिएका वचनबद्धताहरूको साथसाथै तुलना' : 'Side-by-side comparison of selected commitments'}
+        {t('compare.subtitle')}
       </p>
 
       {/* Empty state */}
@@ -130,18 +130,16 @@ function ComparePageInner() {
         <div className="glass-card flex flex-col items-center justify-center rounded-2xl px-8 py-16 text-center">
           <BarChart3 className="mb-4 h-12 w-12 text-gray-500" />
           <h2 className="mb-2 text-lg font-semibold text-white">
-            {isNe ? 'कुनै वचनबद्धता चयन भएको छैन' : 'No commitments selected'}
+            {t('compare.noCommitmentsSelected')}
           </h2>
           <p className="mb-6 max-w-md text-gray-400">
-            {isNe
-              ? 'अन्वेषण पृष्ठबाट ४ वटासम्म वचनबद्धताहरू चयन गर्नुहोस्।'
-              : 'Select up to 4 commitments from the explore page to compare them side by side.'}
+            {t('compare.selectUpTo4')}
           </p>
           <Link
             href="/explore"
             className="glass-card glass-card-hover rounded-full px-6 py-2.5 text-sm font-medium text-white transition-all"
           >
-            {isNe ? 'वचनबद्धताहरू हेर्नुहोस्' : 'Browse Commitments'}
+            {t('compare.browsePromises')}
           </Link>
         </div>
       )}
@@ -205,7 +203,7 @@ function ComparePageInner() {
                 {/* Progress bar */}
                 <div className="mb-4">
                   <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="text-gray-400">{isNe ? 'प्रगति' : 'Progress'}</span>
+                    <span className="text-gray-400">{t('compare.progress')}</span>
                     <span className="font-mono text-white">{promise.progress}%</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-white/5">
@@ -230,7 +228,7 @@ function ComparePageInner() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1.5 text-gray-400">
                       <Shield className="h-3 w-3" />
-                      {isNe ? 'विश्वसनीयता' : 'Trust'}
+                      {t('compare.trust')}
                     </span>
                     <span className={`font-medium ${trust.text}`}>{trust.label}</span>
                   </div>
@@ -239,7 +237,7 @@ function ComparePageInner() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1.5 text-gray-400">
                       <FileText className="h-3 w-3" />
-                      {isNe ? 'प्रमाण' : 'Evidence'}
+                      {t('compare.evidence')}
                     </span>
                     <span className="font-mono text-white">{promise.evidenceCount}</span>
                   </div>
@@ -249,7 +247,7 @@ function ComparePageInner() {
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5 text-gray-400">
                         <Wallet className="h-3 w-3" />
-                        {isNe ? 'बजेट' : 'Budget'}
+                        {t('compare.budget')}
                       </span>
                       <span className="font-mono text-white">
                         {formatNPR(promise.estimatedBudgetNPR)}
@@ -262,7 +260,7 @@ function ComparePageInner() {
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5 text-gray-400">
                         <Scale className="h-3 w-3" />
-                        {isNe ? 'म्याद' : 'Deadline'}
+                        {t('compare.deadline')}
                       </span>
                       <span className="font-mono text-white">{promise.deadline}</span>
                     </div>

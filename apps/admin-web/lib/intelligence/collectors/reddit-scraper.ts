@@ -58,7 +58,7 @@ interface ScrapeResult {
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-const USER_AGENT = 'NepalNajar/1.0';
+const USER_AGENT = 'NepalRepublic/2.0 (civic-tracker; +https://nepalrepublic.org)';
 const REQUEST_DELAY_MS = 2100; // >2s to respect Reddit rate limits
 const HIGH_ENGAGEMENT_THRESHOLD = 100; // Fetch comments for posts with score > 100
 const RELEVANCE_BOOST_THRESHOLD = 50;  // Posts with score > 50 get relevance boost

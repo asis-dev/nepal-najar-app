@@ -4,13 +4,13 @@ import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import {
-  computeNajarIndex,
+  computeGhantiScore,
   GRADE_LABELS,
   GRADE_COLORS,
-  type NajarIndex,
-} from '@/lib/data/najar-index';
+  type GhantiScore,
+} from '@/lib/data/ghanti-score';
 
-interface NajarIndexDialProps {
+interface GhantiScoreDialProps {
   variant?: 'full' | 'compact';
 }
 
@@ -37,11 +37,11 @@ function getScoreColor(score: number): string {
   return '#ef4444';
 }
 
-export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
+export function GhantiScoreDial({ variant = 'full' }: GhantiScoreDialProps) {
   const { t, locale } = useI18n();
   const isNe = locale === 'ne';
 
-  const index: NajarIndex = useMemo(() => computeNajarIndex(), []);
+  const index: GhantiScore = useMemo(() => computeGhantiScore(), []);
 
   // Data confidence gate — show "insufficient data" instead of misleading score
   if (index.dataConfidence === 'insufficient') {
@@ -49,7 +49,7 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
       <div className="glass-card p-6 text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
           <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-            {isNe ? 'नजर सूचकांक' : 'Najar Index'}
+            {t('republicIndex.republicScore')}
           </h3>
           <span className="text-[8px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400/80 border border-amber-500/20">
             Beta
@@ -57,12 +57,10 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
         </div>
         <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <p className="text-sm text-gray-400 mb-1">
-            {isNe ? 'अपर्याप्त प्रमाणित डाटा' : 'Insufficient Verified Data'}
+            {t('republicIndex.insufficientData')}
           </p>
           <p className="text-xs text-gray-600">
-            {isNe
-              ? `${index.verifiedDataPoints}/5 प्रमाणित डाटा बिन्दुहरू — स्कोर अर्थपूर्ण हुन कम्तिमा ५ चाहिन्छ`
-              : `${index.verifiedDataPoints}/5 verified data points — need at least 5 for a meaningful score`}
+            {t('republicIndex.dataPointsNeeded').replace('{count}', String(index.verifiedDataPoints))}
           </p>
         </div>
       </div>
@@ -120,7 +118,7 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
         {/* Text */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider mb-0.5">
-            {t('najarIndex.title')}
+            {t('republicIndex.title')}
             <span className="text-[7px] font-semibold px-1 py-px rounded bg-amber-500/15 text-amber-400/80 border border-amber-500/20">β</span>
           </div>
           <div className="flex items-center gap-2 mb-1">
@@ -130,7 +128,7 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
           </div>
           <div className={`flex items-center gap-1 text-xs ${changeColor}`}>
             <ChangeIcon className="w-3 h-3" />
-            <span>{index.change > 0 ? '+' : ''}{index.change} {t('najarIndex.change')}</span>
+            <span>{index.change > 0 ? '+' : ''}{index.change} {t('republicIndex.change')}</span>
           </div>
         </div>
       </div>
@@ -142,7 +140,7 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
     <div className="glass-card p-6">
       <div className="flex items-center gap-2 mb-4">
         <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-          {t('najarIndex.governanceScore')}
+          {t('republicIndex.governanceScore')}
         </h3>
         <span className="text-[8px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400/80 border border-amber-500/20">
           Beta
@@ -190,11 +188,11 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
             <span
               className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold ${gradeStyle.bg} ${gradeStyle.text} ${gradeStyle.glow}`}
             >
-              {t('najarIndex.grade')}: {index.grade} — {gradeLabel}
+              {t('republicIndex.grade')}: {index.grade} — {gradeLabel}
             </span>
             <span className={`flex items-center gap-1 text-xs ${changeColor}`}>
               <ChangeIcon className="w-3.5 h-3.5" />
-              {index.change > 0 ? '+' : ''}{index.change} {t('najarIndex.change')}
+              {index.change > 0 ? '+' : ''}{index.change} {t('republicIndex.change')}
             </span>
           </div>
 
@@ -203,7 +201,7 @@ export function NajarIndexDial({ variant = 'full' }: NajarIndexDialProps) {
             {SUB_SCORE_KEYS.map((key) => (
               <div key={key} className="flex items-center gap-3">
                 <span className="text-[10px] text-gray-500 w-28 truncate uppercase tracking-wider">
-                  {t(`najarIndex.${key}`)}
+                  {t(`republicIndex.${key}`)}
                 </span>
                 <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                   <div

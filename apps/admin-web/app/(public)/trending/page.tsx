@@ -124,7 +124,7 @@ export default function TrendingPage() {
                     </span>
                   </div>
                   <h1 className="mt-4 text-3xl font-bold text-white sm:text-4xl">
-                    What Nepal Najar is hearing right now
+                    What Nepal Republic is hearing right now
                   </h1>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-400">
                     A ranked view of the commitments, people, and topics showing the

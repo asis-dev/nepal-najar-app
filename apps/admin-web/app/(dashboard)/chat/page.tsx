@@ -48,7 +48,7 @@ export default function ChatPage() {
         <div>
           <h1 className="section-title flex items-center gap-3">
             <Sparkles className="w-7 h-7 text-primary-400" />
-            Ask Nepal Najar
+            Ask Nepal Republic
           </h1>
           <p className="section-subtitle">
             Ask questions about development projects in English or नेपाली
@@ -138,7 +138,7 @@ function EmptyState({ onSuggestionClick }: { onSuggestionClick: (text: string) =
         <Globe2 className="w-8 h-8 text-primary-400" />
       </div>
       <h2 className="text-xl font-display font-bold text-white mb-2">
-        Ask Nepal Najar
+        Ask Nepal Republic
       </h2>
       <p className="text-sm text-gray-400 max-w-md mb-8">
         Ask questions about development projects, progress, delays, and more.

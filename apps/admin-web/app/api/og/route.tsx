@@ -3,12 +3,45 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
+// Nepal flag colors
+const NEPAL_RED = '#DC143C';
+const NEPAL_BLUE = '#003893';
+const BELL_GOLD = '#D9A441';
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const title = searchParams.get('title') || 'Nepal Najar';
-  const subtitle = searchParams.get('subtitle') || "Nepal's national report card, in public view";
+  const title = searchParams.get('title') || 'Nepal Republic';
+  const subtitle = searchParams.get('subtitle') || 'AI-Powered Civic Intelligence';
   const progress = searchParams.get('progress');
   const status = searchParams.get('status');
+  const section = searchParams.get('section'); // tracker, complaints, corruption, report, proposals
+
+  // Section-specific taglines
+  const tagline = section === 'complaints'
+    ? 'Report it. Route it. Resolve it.'
+    : section === 'corruption'
+    ? 'Follow the money. Track every case.'
+    : section === 'report'
+    ? 'AI-scored government accountability.'
+    : section === 'proposals'
+    ? 'Propose. Vote. Build.'
+    : 'Track promises. Report reality. Verify the truth.';
+
+  // Status colors
+  const statusColor =
+    status === 'in_progress' ? '#22d3ee'
+    : status === 'delivered' ? '#10b981'
+    : status === 'stalled' ? '#ef4444'
+    : status === 'not_started' ? '#9ca3af'
+    : '#60a5fa';
+
+  const statusLabel =
+    status === 'in_progress' ? 'IN PROGRESS'
+    : status === 'delivered' ? 'DELIVERED'
+    : status === 'stalled' ? 'STALLED'
+    : status === 'not_started' ? 'NOT STARTED'
+    : status ? status.toUpperCase().replace(/_/g, ' ')
+    : null;
 
   return new ImageResponse(
     (
@@ -20,35 +53,34 @@ export async function GET(request: NextRequest) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0a0e1a 0%, #0f1629 50%, #0a0e1a 100%)',
+          background: `linear-gradient(145deg, #0a0a12 0%, ${NEPAL_BLUE}22 40%, ${NEPAL_RED}18 70%, #0a0a12 100%)`,
           fontFamily: 'system-ui, sans-serif',
           position: 'relative',
         }}
       >
-        {/* Ambient glow */}
+        {/* Top accent line — Nepal flag gradient */}
         <div
           style={{
             position: 'absolute',
-            top: '-100px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '600px',
-            height: '600px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '5px',
+            background: `linear-gradient(90deg, ${NEPAL_RED}, ${BELL_GOLD}, ${NEPAL_BLUE})`,
           }}
         />
 
-        {/* Bottom glow */}
+        {/* Background glow */}
         <div
           style={{
             position: 'absolute',
-            bottom: '-100px',
-            right: '20%',
-            width: '400px',
-            height: '400px',
+            top: '-80px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '500px',
+            height: '500px',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 70%)',
+            background: `radial-gradient(circle, ${NEPAL_RED}20 0%, transparent 70%)`,
           }}
         />
 
@@ -60,49 +92,53 @@ export async function GET(request: NextRequest) {
             alignItems: 'center',
             justifyContent: 'center',
             textAlign: 'center',
-            padding: '60px',
+            padding: '50px 60px',
             position: 'relative',
             zIndex: 10,
           }}
         >
-          {/* Mountain icon */}
+          {/* Bell icon + brand */}
           <div
             style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, rgba(59,130,246,0.3), rgba(6,182,212,0.2))',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '30px',
-              boxShadow: '0 0 40px rgba(59,130,246,0.3)',
+              gap: '12px',
+              marginBottom: '28px',
             }}
           >
-            <span style={{ fontSize: '40px' }}>🏔️</span>
-          </div>
-
-          {/* Brand */}
-          <div
-            style={{
-              fontSize: '20px',
-              fontWeight: 700,
-              letterSpacing: '0.3em',
-              textTransform: 'uppercase',
-              color: '#60a5fa',
-              marginBottom: '16px',
-            }}
-          >
-            NEPAL NAJAR
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: `linear-gradient(135deg, ${NEPAL_RED}, ${NEPAL_BLUE})`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span style={{ fontSize: '24px' }}>🔔</span>
+            </div>
+            <div
+              style={{
+                fontSize: '18px',
+                fontWeight: 700,
+                letterSpacing: '0.25em',
+                textTransform: 'uppercase',
+                color: BELL_GOLD,
+              }}
+            >
+              NEPAL REPUBLIC
+            </div>
           </div>
 
           {/* Title */}
           <div
             style={{
-              fontSize: '48px',
+              fontSize: title.length > 60 ? '36px' : '46px',
               fontWeight: 800,
               color: 'white',
-              lineHeight: 1.2,
+              lineHeight: 1.15,
               maxWidth: '900px',
               marginBottom: '16px',
             }}
@@ -113,9 +149,10 @@ export async function GET(request: NextRequest) {
           {/* Subtitle */}
           <div
             style={{
-              fontSize: '22px',
+              fontSize: '20px',
               color: 'rgba(255,255,255,0.5)',
               maxWidth: '700px',
+              lineHeight: 1.4,
             }}
           >
             {subtitle}
@@ -125,36 +162,41 @@ export async function GET(request: NextRequest) {
           {progress && (
             <div
               style={{
-                marginTop: '40px',
+                marginTop: '36px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '20px',
+                gap: '16px',
               }}
             >
               <div
                 style={{
-                  width: '300px',
-                  height: '12px',
-                  borderRadius: '6px',
-                  background: 'rgba(255,255,255,0.1)',
+                  width: '280px',
+                  height: '14px',
+                  borderRadius: '7px',
+                  background: 'rgba(255,255,255,0.08)',
                   overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.06)',
                 }}
               >
                 <div
                   style={{
-                    width: `${progress}%`,
+                    width: `${Math.min(100, Number(progress))}%`,
                     height: '100%',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(90deg, #2563eb, #06b6d4)',
-                    boxShadow: '0 0 15px rgba(59,130,246,0.5)',
+                    borderRadius: '7px',
+                    background: Number(progress) < 20
+                      ? `linear-gradient(90deg, ${NEPAL_RED}, #ef4444)`
+                      : Number(progress) >= 80
+                      ? 'linear-gradient(90deg, #10b981, #34d399)'
+                      : `linear-gradient(90deg, ${NEPAL_BLUE}, #3b82f6)`,
+                    boxShadow: `0 0 12px ${Number(progress) < 20 ? NEPAL_RED : NEPAL_BLUE}80`,
                   }}
                 />
               </div>
               <span
                 style={{
-                  fontSize: '28px',
-                  fontWeight: 700,
-                  color: '#22d3ee',
+                  fontSize: '30px',
+                  fontWeight: 800,
+                  color: statusColor,
                 }}
               >
                 {progress}%
@@ -162,36 +204,22 @@ export async function GET(request: NextRequest) {
             </div>
           )}
 
-          {/* Status badge (if provided) */}
-          {status && (
+          {/* Status badge */}
+          {statusLabel && (
             <div
               style={{
-                marginTop: '24px',
+                marginTop: '20px',
                 padding: '8px 24px',
                 borderRadius: '100px',
-                background:
-                  status === 'active'
-                    ? 'rgba(16,185,129,0.2)'
-                    : status === 'completed'
-                      ? 'rgba(59,130,246,0.2)'
-                      : status === 'suspended'
-                        ? 'rgba(245,158,11,0.2)'
-                        : 'rgba(156,163,175,0.2)',
-                color:
-                  status === 'active'
-                    ? '#6ee7b7'
-                    : status === 'completed'
-                      ? '#93c5fd'
-                      : status === 'suspended'
-                        ? '#fcd34d'
-                        : '#d1d5db',
-                fontSize: '16px',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
+                background: `${statusColor}20`,
+                border: `1px solid ${statusColor}40`,
+                color: statusColor,
+                fontSize: '14px',
+                fontWeight: 700,
+                letterSpacing: '0.15em',
               }}
             >
-              {status}
+              {statusLabel}
             </div>
           )}
         </div>
@@ -200,17 +228,17 @@ export async function GET(request: NextRequest) {
         <div
           style={{
             position: 'absolute',
-            bottom: '30px',
+            bottom: '24px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            color: 'rgba(255,255,255,0.3)',
+            color: 'rgba(255,255,255,0.35)',
             fontSize: '14px',
           }}
         >
-          <span>nepalnajar.com</span>
+          <span style={{ color: BELL_GOLD }}>nepalrepublic.org</span>
           <span>·</span>
-          <span>Nepal&apos;s national report card</span>
+          <span>{tagline}</span>
         </div>
       </div>
     ),

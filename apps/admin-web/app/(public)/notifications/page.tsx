@@ -246,24 +246,22 @@ export default function NotificationsPage() {
               className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              {isNe ? 'गृहपृष्ठ' : 'Home'}
+              {t('notificationsPage.home')}
             </Link>
 
             <div className="glass-card p-12 sm:p-16 text-center mt-8">
               <Shield className="w-12 h-12 text-gray-600 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-gray-300 mb-2">
-                {isNe ? 'लगइन आवश्यक छ' : 'Login Required'}
+                {t('notificationsPage.loginRequired')}
               </h2>
               <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
-                {isNe
-                  ? 'सूचनाहरू हेर्न कृपया लगइन गर्नुहोस्।'
-                  : 'Please log in to view your notifications.'}
+                {t('notificationsPage.loginRequiredDesc')}
               </p>
               <Link
                 href="/explore"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200"
               >
-                {isNe ? 'अन्वेषण गर्नुहोस्' : 'Explore'}
+                {t('notificationsPage.explore')}
               </Link>
             </div>
           </div>
@@ -289,11 +287,11 @@ export default function NotificationsPage() {
                 href="/"
                 className="hover:text-primary-400 transition-colors"
               >
-                {isNe ? 'गृहपृष्ठ' : 'Home'}
+                {t('notificationsPage.home')}
               </Link>
               <span className="text-gray-600">/</span>
               <span className="text-gray-300">
-                {isNe ? 'सूचनाहरू' : 'Notifications'}
+                {t('notificationsPage.notifications')}
               </span>
             </nav>
           </div>
@@ -304,10 +302,10 @@ export default function NotificationsPage() {
           <div className="max-w-2xl mx-auto">
             <h1 className="text-3xl sm:text-4xl font-bold text-white flex items-center gap-3">
               <Bell className="w-7 h-7 sm:w-8 sm:h-8 text-primary-400" />
-              {isNe ? 'सूचनाहरू' : 'Notifications'}
+              {t('notificationsPage.notifications')}
               {unreadCount > 0 && (
                 <span className="text-sm px-2.5 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 font-medium">
-                  {unreadCount} {isNe ? 'नपढेको' : 'unread'}
+                  {unreadCount} {t('notificationsPage.unread')}
                 </span>
               )}
             </h1>
@@ -327,7 +325,7 @@ export default function NotificationsPage() {
                 }`}
               >
                 <Bell className="w-4 h-4" />
-                {isNe ? 'सूचनाहरू' : 'Notifications'}
+                {t('notificationsPage.notifications')}
               </button>
               <button
                 onClick={() => setTab('settings')}
@@ -338,7 +336,7 @@ export default function NotificationsPage() {
                 }`}
               >
                 <BellRing className="w-4 h-4" />
-                {isNe ? 'प्राथमिकताहरू' : 'Preferences'}
+                {t('notificationsPage.preferences')}
               </button>
             </div>
           </div>
@@ -362,7 +360,7 @@ export default function NotificationsPage() {
                       ) : (
                         <CheckCheck className="w-3.5 h-3.5" />
                       )}
-                      {isNe ? 'सबै पढेको चिन्ह लगाउनुहोस्' : 'Mark all read'}
+                      {t('notificationsPage.markAllRead')}
                     </button>
                   </div>
                 )}
@@ -419,12 +417,10 @@ export default function NotificationsPage() {
                   <div className="glass-card p-12 text-center">
                     <Bell className="w-10 h-10 text-gray-700 mx-auto mb-3" />
                     <h3 className="text-base font-medium text-gray-400 mb-1">
-                      {isNe ? 'कुनै सूचना छैन' : 'No notifications yet'}
+                      {t('notificationsPage.noNotifications')}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {isNe
-                        ? 'तपाईंले हेरिरहनुभएका वचनबद्धताहरू अपडेट हुँदा सूचना पाउनुहुनेछ।'
-                        : 'You\'ll be notified when commitments you watch get updates.'}
+                      {t('notificationsPage.noNotificationsDesc')}
                     </p>
                   </div>
                 )}
@@ -441,12 +437,10 @@ export default function NotificationsPage() {
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <h3 className="text-base font-semibold text-white">
-                            {isNe ? 'पुश सूचनाहरू' : 'Push Notifications'}
+                            {t('notificationsPage.pushNotifications')}
                           </h3>
                           <p className="text-sm text-gray-400 mt-0.5">
-                            {isNe
-                              ? 'वचनबद्धता अपडेट हुँदा ब्राउजर सूचनाहरू प्राप्त गर्नुहोस्।'
-                              : 'Get browser notifications when watched commitments update.'}
+                            {t('notificationsPage.pushNotificationsDesc')}
                           </p>
                         </div>
                         <button
@@ -474,16 +468,12 @@ export default function NotificationsPage() {
 
                       {!push.isSupported && (
                         <p className="text-xs text-amber-400/80 mt-2">
-                          {isNe
-                            ? 'तपाईंको ब्राउजरले पुश सूचनाहरू समर्थन गर्दैन।'
-                            : 'Your browser does not support push notifications.'}
+                          {t('notificationsPage.pushNotSupported')}
                         </p>
                       )}
                       {push.isSupported && push.permission === 'denied' && (
                         <p className="text-xs text-red-400/80 mt-2">
-                          {isNe
-                            ? 'सूचनाहरू अवरोध गरिएको छ। कृपया ब्राउजर सेटिङ्समा अनुमति दिनुहोस्।'
-                            : 'Notifications are blocked. Please allow them in your browser settings.'}
+                          {t('notificationsPage.pushBlocked')}
                         </p>
                       )}
                     </div>
@@ -500,12 +490,10 @@ export default function NotificationsPage() {
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <h3 className="text-base font-semibold text-white">
-                            {isNe ? 'इमेल अलर्टहरू' : 'Email Alerts'}
+                            {t('notificationsPage.emailAlerts')}
                           </h3>
                           <p className="text-sm text-gray-400 mt-0.5">
-                            {isNe
-                              ? 'हेरिरहेका वचनबद्धताहरू अपडेट हुँदा इमेल प्राप्त गर्नुहोस्।'
-                              : 'Receive email when your watched commitments get updates.'}
+                            {t('notificationsPage.emailAlertsDesc')}
                           </p>
                         </div>
                         <button
@@ -538,20 +526,18 @@ export default function NotificationsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-base font-semibold text-white">
-                        {isNe ? 'इमेल डाइजेस्ट' : 'Email Digest'}
+                        {t('notificationsPage.emailDigest')}
                       </h3>
                       <p className="text-sm text-gray-400 mt-0.5 mb-4">
-                        {isNe
-                          ? 'सम्पूर्ण प्रगतिको नियमित सारांश प्राप्त गर्नुहोस्।'
-                          : 'Receive a regular summary of all tracked progress.'}
+                        {t('notificationsPage.emailDigestDesc')}
                       </p>
 
                       <div className="flex flex-wrap gap-3">
                         {(
                           [
-                            { value: 'none' as const, label: isNe ? 'कुनै पनि होइन' : 'None' },
-                            { value: 'weekly' as const, label: isNe ? 'साप्ताहिक' : 'Weekly' },
-                            { value: 'monthly' as const, label: isNe ? 'मासिक' : 'Monthly' },
+                            { value: 'none' as const, label: t('notificationsPage.none') },
+                            { value: 'weekly' as const, label: t('notificationsPage.weekly') },
+                            { value: 'monthly' as const, label: t('notificationsPage.monthly') },
                           ] as const
                         ).map((option) => (
                           <button
@@ -581,12 +567,10 @@ export default function NotificationsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-base font-semibold text-white">
-                        {isNe ? 'प्रदेश अलर्टहरू' : 'Province Alerts'}
+                        {t('notificationsPage.provinceAlerts')}
                       </h3>
                       <p className="text-sm text-gray-400 mt-0.5 mb-4">
-                        {isNe
-                          ? 'विशेष प्रदेशहरूमा परियोजना अपडेटहरूको सूचना पाउनुहोस्।'
-                          : 'Get notified about project updates in specific provinces.'}
+                        {t('notificationsPage.provinceAlertsDesc')}
                       </p>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -634,15 +618,15 @@ export default function NotificationsPage() {
                     {isSaving ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {isNe ? 'सुरक्षित गर्दै...' : 'Saving...'}
+                        {t('notificationsPage.saving')}
                       </>
                     ) : saved ? (
                       <>
                         <Check className="w-4 h-4" />
-                        {isNe ? 'सुरक्षित भयो!' : 'Saved!'}
+                        {t('notificationsPage.saved')}
                       </>
                     ) : (
-                      isNe ? 'प्राथमिकताहरू सुरक्षित गर्नुहोस्' : 'Save Preferences'
+                      t('notificationsPage.savePreferences')
                     )}
                   </button>
                 </div>

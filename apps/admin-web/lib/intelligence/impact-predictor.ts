@@ -279,8 +279,16 @@ Return ONLY valid JSON, no markdown.`;
 
 // ── Cache: read/write ────────────────────────────────────────────────────────
 
-async function getCachedPrediction(commitmentId: number): Promise<ImpactPrediction | null> {
+interface CacheReadOptions {
+  allowStale?: boolean;
+}
+
+async function getCachedPrediction(
+  commitmentId: number,
+  options?: CacheReadOptions,
+): Promise<ImpactPrediction | null> {
   const supabase = getSupabase();
+  const allowStale = options?.allowStale === true;
 
   // Try dedicated table first
   try {
@@ -292,7 +300,7 @@ async function getCachedPrediction(commitmentId: number): Promise<ImpactPredicti
 
     if (!error && data) {
       const generatedAt = new Date(data.generated_at).getTime();
-      if (Date.now() - generatedAt <= CACHE_TTL_MS) {
+      if (allowStale || Date.now() - generatedAt <= CACHE_TTL_MS) {
         return {
           commitmentId: data.commitment_id,
           title: data.title,
@@ -326,12 +334,19 @@ async function getCachedPrediction(commitmentId: number): Promise<ImpactPredicti
     if (!prediction) return null;
 
     const generatedAt = new Date(prediction.generatedAt).getTime();
-    if (Date.now() - generatedAt > CACHE_TTL_MS) return null;
+    if (!allowStale && Date.now() - generatedAt > CACHE_TTL_MS) return null;
 
     return prediction;
   } catch {
     return null;
   }
+}
+
+export async function getCachedImpactPrediction(
+  commitmentId: number,
+  options?: CacheReadOptions,
+): Promise<ImpactPrediction | null> {
+  return getCachedPrediction(commitmentId, options);
 }
 
 async function storePrediction(prediction: ImpactPrediction): Promise<void> {

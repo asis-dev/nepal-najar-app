@@ -1,247 +1,361 @@
-# Nepal Najar — Feature Documentation
+# Nepal Republic — Product Guide
 
-> **जनताको नजरमा बालेनको नेपाल** — Tracking governance promises through the people's lens
+> **Report. Track. Verify. AI-powered Nepal's civic platform.**
 
-## Overview
+Nepal Republic is an AI-powered civic intelligence platform that tracks government commitments, scores accountability, and empowers citizens to report issues, expose corruption, and verify evidence — all in real time.
 
-Nepal Najar is a bilingual (English/Nepali) governance promise tracker built on Next.js 14. This document covers the viral engagement features added to drive daily retention, personalization, and social sharing.
-
----
-
-## Architecture
-
-```
-lib/
-├── data/
-│   ├── promises.ts          # Core promise data + computeStats()
-│   ├── najar-index.ts        # National governance score (0-100)
-│   ├── daily-promise.ts      # Deterministic daily promise picker
-│   └── ward-scores.ts        # Province/district score engine
-├── stores/
-│   ├── preferences.ts        # User prefs: hometown, locale, watchlist (Zustand)
-│   └── engagement.ts         # Streak tracking + index cache (Zustand)
-└── i18n/
-    └── index.tsx             # useI18n() hook
-
-components/public/
-├── najar-index-dial.tsx      # SVG circular gauge (full/compact)
-├── daily-streak.tsx          # Streak counter + today's promise
-├── mero-ward-card.tsx        # Personalized region score card
-├── watchlist-panel.tsx       # Slide-out watchlist overlay
-└── hometown-picker.tsx       # Province/district selector (with score preview)
-
-app/
-├── (public)/
-│   ├── daily/page.tsx        # Daily engagement page
-│   ├── mero-ward/page.tsx    # Province leaderboard + district drill-down
-│   ├── report-card/page.tsx  # Shareable weekly report card
-│   ├── watchlist/page.tsx    # Watchlist management
-│   └── explore/
-│       ├── page.tsx          # Main explore (embeds index dial, streak, ward card)
-│       └── first-100-days/
-│           ├── page.tsx      # Promise grid (with bookmark toggles)
-│           └── [id]/page.tsx # Promise detail (with watch button)
-└── api/
-    └── report-card/route.tsx # 1080x1080 ImageResponse (Edge runtime)
-```
+**Website:** [nepalrepublic.org](https://nepalrepublic.org)
+**Languages:** English and नेपाली (Nepali)
 
 ---
 
-## Feature 1: Nepal Najar Index
+## What Nepal Republic Does
 
-**Route:** Embedded on `/explore` | Full at `/daily`
-**Data:** `lib/data/najar-index.ts`
-**Component:** `components/public/najar-index-dial.tsx`
+Nepal Republic answers a question every citizen asks: **"Is the government keeping its promises?"**
 
-### What It Does
-A single 0-100 national governance score computed from five weighted sub-scores:
+The platform uses AI to continuously scan 80+ news sources, government portals, parliamentary records, and social media feeds. It matches what it finds against 109 tracked government commitments, scores progress, and presents everything in plain language — so citizens don't have to dig through press releases and budget documents themselves.
 
-| Sub-Score | Weight | Source |
-|-----------|--------|--------|
-| Delivery Rate | 25% | % of promises with status `delivered` |
-| Average Progress | 30% | Mean progress % across all promises |
-| Trust Score | 15% | Weighted: verified=100%, partial=50%, unverified=0% |
-| Budget Utilization | 20% | Total spent / total estimated across budgeted promises |
-| Citizen Sentiment | 10% | Upvote ratio from vote aggregates (mock: 62%) |
-
-### Grading Scale
-- **A** (80+): Excellent / उत्कृष्ट
-- **B** (60-79): Good / राम्रो
-- **C** (40-59): Average / औसत
-- **D** (20-39): Poor / कमजोर
-- **F** (<20): Failing / असफल
-
-### Weekly Change
-A deterministic mock value (-3 to +3) computed from the ISO week number. Creates the appearance of movement without real temporal data.
-
-### UI Variants
-- **`variant="full"`**: Large ring + score + grade badge + 5 sub-score horizontal bars
-- **`variant="compact"`**: Small ring + score + grade + weekly change indicator
+But it goes beyond tracking. Citizens can:
+- **Report civic issues** (potholes, water outages, garbage, etc.) directly to the platform
+- **Track corruption cases** with AI-verified evidence trails
+- **Submit evidence** (photos, documents, links) to verify or challenge government claims
+- **Vote and comment** on commitments to reflect public sentiment
+- **Build a personal watchlist** of commitments they care about
 
 ---
 
-## Feature 2: Daily Streak
+## Core Features
 
-**Route:** `/daily`
-**Data:** `lib/stores/engagement.ts` + `lib/data/daily-promise.ts`
-**Component:** `components/public/daily-streak.tsx`
+### 1. Commitment Tracker
 
-### How Streaks Work
-1. On page load, `recordVisit()` is called via `useEffect`
-2. Compares `lastVisitDate` to today's Nepal timezone date (UTC+5:45)
-3. If yesterday → increment `currentStreak`
-4. If today → no-op (already counted)
-5. If older → reset to 1
-6. `longestStreak` is tracked as the all-time high
+The heart of the platform. 109 government commitments are tracked across categories like infrastructure, health, education, anti-corruption, governance, and more.
 
-### Daily Promise
-- `getDailyPromise()` hashes the Nepal-timezone date string to pick a deterministic promise index
-- All users see the same promise on the same day
-- `getDailyPromiseHistory(7)` returns the last 7 days for the calendar view
+Each commitment shows:
+- **Progress percentage** — how far along the work is
+- **Letter grade** (A through F) — AI-computed accountability score
+- **Status** — In Progress, Delivered, Stalled, or Not Started
+- **Key officials and ministries** responsible
+- **AI briefing** — a plain-language summary of what's happening, updated automatically
+- **Evidence trail** — linked news articles, government documents, and citizen submissions
+- **Timeline** — when it was promised, key milestones, and current state
 
-### Interaction Tracking
-- When the user votes on today's promise, `recordInteraction()` sets `todayInteracted = true`
-- UI shows a green checkmark "Done for today!" state
-
-### Storage
-- Zustand persist store with key `'nepal-najar-engagement'`
-- Stored in `localStorage` — no account required
+**How scoring works:** Each commitment is scored based on verified progress from multiple independent sources. The AI cross-references government claims against news reports, budget data, and citizen evidence before assigning a grade.
 
 ---
 
-## Feature 3: Mero Ward Score
+### 2. GhantiCard Score (Overall Government Grade)
 
-**Route:** `/mero-ward`
-**Data:** `lib/data/ward-scores.ts`
-**Component:** `components/public/mero-ward-card.tsx`
+A single score (0–100) with an A–F letter grade that represents overall government performance. Computed from five weighted factors:
 
-### Province Scoring
-Each province gets a composite score from:
-```
-Score = 0.4 × progressScore + 0.3 × (1 - delayRatio) × 100 + 0.2 × budgetUtil + 0.1 × deliveryRate
-```
+| Factor | What it measures |
+|--------|-----------------|
+| Delivery Rate | How many commitments have been fully delivered |
+| Average Progress | Mean progress across all 109 commitments |
+| Trust Score | How well verified the progress claims are |
+| Budget Utilization | How efficiently allocated funds are being spent |
+| Citizen Sentiment | Public voting and feedback from platform users |
 
-Where `progressScore` uses a **category affinity matrix** — each province weights promise categories differently:
-- Bagmati: Technology (1.0), Governance (0.9), Anti-Corruption (0.9)
-- Karnali: Infrastructure (1.0), Transport (1.0), Health (0.9)
-- etc.
-
-### District Scoring
-Districts derive scores from their parent province + a hash-based variance of ±10 points. This creates realistic-looking variation without actual per-district data.
-
-### Leaderboard
-- 7 provinces ranked by score
-- Click a province to expand district rankings
-- User's province is highlighted with a primary border/glow
-- National average shown as a reference line
-
-### Hometown Picker Integration
-The hometown picker (`components/public/hometown-picker.tsx`) shows:
-- Score badge (X/100) next to each province
-- Province score summary strip when drilling into districts
+The score updates as new evidence comes in. It's designed to be a single number citizens can reference and share.
 
 ---
 
-## Feature 4: Weekly Report Card
+### 3. Weekly Report Card
 
-**Route:** `/report-card` | **API:** `/api/report-card`
-**Data:** Inline computation in Edge route (can't import Zustand)
+Every week, the platform generates a shareable report card — a visual summary of government performance that can be shared on WhatsApp, Facebook, X (Twitter), or downloaded as an image.
 
-### Image Generation
-- **Edge runtime** using `next/og` `ImageResponse`
-- Renders a **1080x1080** shareable infographic
-- All styles are inline JSX (Satori constraint — no Tailwind)
-- Dark gradient background matching the app theme
+The report card includes:
+- Overall score and grade
+- Number of commitments making progress vs. stalled
+- Key highlights — what's working and what's not
+- Transparency score — how open the government is being about its work
 
-### Layout
-1. Header: "नेपाल नजर" branding + "साप्ताहिक प्रतिवेदन"
-2. Center: Large score number with SVG ring gauge
-3. Stats grid: Delivered / In Progress / Stalled / Not Started (with colored dots)
-4. Budget bar: Spent vs Allocated visualization
-5. Metric cards: Total promises, avg progress, trust verified, budget utilization
-6. Footer: nepalnajar.com watermark + date
-
-### Sharing
-- Primary: Web Share API (`navigator.share`)
-- Fallbacks: WhatsApp, Facebook, X (Twitter), Copy Link
-- Download button (direct link to `/api/report-card`)
+Designed for social sharing. One tap to send via WhatsApp or copy the link.
 
 ---
 
-## Feature 5: Watchlist
+### 4. Daily Brief
 
-**Route:** `/watchlist` | **Panel:** `components/public/watchlist-panel.tsx`
-**Data:** `lib/stores/preferences.ts` (`watchedProjectIds`)
+A daily AI-generated summary of what happened in Nepal governance today. Think of it as a personalized morning briefing:
+- What changed across tracked commitments
+- New signals detected from news and government sources
+- Key events and developments
+- Available as text and audio narration
 
-### How It Works
-- Users click the Bookmark icon on promise cards or detail pages
-- `toggleWatch(promiseId)` adds/removes from the watchlist
-- `isWatched(promiseId)` checks if a promise is bookmarked
-- Stored in Zustand persist store (`'nepal-najar-preferences'`)
-
-### UI Touchpoints
-1. **Promise grid** (`first-100-days/page.tsx`): Bookmark icon on each card
-2. **Promise detail** (`first-100-days/[id]/page.tsx`): "Watch"/"Watching" button in header
-3. **Watchlist panel**: Slide-out overlay with watched promises list
-4. **Watchlist page** (`/watchlist`): Full management with detailed cards
+The daily brief is generated by scanning all sources and distilling the most important updates into a 2-minute read.
 
 ---
 
-## Internationalization
+### 5. AI-Powered Case Management (Civic Issues)
 
-All features are fully bilingual. Keys are in `messages/en.json` and `messages/ne.json`:
+A full case management system for civic complaints — powered by AI from intake to resolution.
 
-| Section | Example Key | English | Nepali |
-|---------|------------|---------|--------|
-| `najarIndex` | `najarIndex.title` | Nepal Najar Index | नेपाल नजर सूचकांक |
-| `dailyStreak` | `dailyStreak.title` | Daily Watch | दैनिक निगरानी |
-| `meroWard` | `meroWard.title` | Mero Ward Score | मेरो वार्ड स्कोर |
-| `reportCard` | `reportCard.title` | Weekly Report Card | साप्ताहिक प्रतिवेदन |
-| `watchlist` | `watchlist.title` | My Watchlist | मेरो सूची |
+**Reporting:**
+- Citizens submit complaints about real problems — potholes, water outages, garbage, electricity, permits, safety hazards, or anything else
+- Reports can include photos, GPS location, voice notes (auto-transcribed by AI), and detailed descriptions
+- Available in both English and Nepali
 
-The `useI18n()` hook provides `{ t, locale, setLocale }`. Components use `locale === 'ne'` checks for dynamic text.
+**AI Triage:**
+- Every complaint is automatically categorized by AI into the correct department (water, roads, electricity, sanitation, etc.)
+- AI assigns priority level based on severity, number of people affected, and safety risk
+- Duplicate detection — if 50 people report the same pothole, the AI merges them into one amplified case instead of creating 50 separate tickets
 
----
+**Routing & Tracking:**
+- Complaints are routed to the relevant government department automatically
+- Each case has an SLA (Service Level Agreement) timer — citizens can see if the response time is within acceptable limits
+- Status tracking: Submitted → Acknowledged → In Progress → Resolved
+- Escalation workflow — if SLA is breached, the case is automatically escalated
 
-## State Management
+**Community Features:**
+- Other citizens can follow a complaint to show support and get updates
+- Evidence can be added by anyone — photos, links, additional context
+- Satisfaction survey after resolution — did the government actually fix it?
 
-All client state uses **Zustand with persist middleware** (localStorage):
-
-| Store | Key | Purpose |
-|-------|-----|---------|
-| `usePreferencesStore` | `'nepal-najar-preferences'` | Locale, hometown, watchlist, voting |
-| `useEngagementStore` | `'nepal-najar-engagement'` | Streak, interaction flag, index cache |
-
-### Hydration Pattern
-Since localStorage is unavailable during SSR, all store-dependent components use:
-```tsx
-const [hydrated, setHydrated] = useState(false);
-useEffect(() => { setHydrated(true); }, []);
-if (!hydrated) return <Skeleton />;
-```
+**Operations Dashboard:**
+- Inbox with filtering by status, department, priority, and SLA status
+- Bulk operations for managing high-volume complaint periods
+- Department performance metrics — which departments respond fastest, which ignore citizens
+- Duplicate management with AI-suggested merges
 
 ---
 
-## Nepal Timezone
+### 6. Corruption Tracker
 
-Nepal uses UTC+5:45 (non-standard offset). All date-sensitive features compute Nepal time manually:
-```ts
-const nepalOffset = 5 * 60 + 45; // 345 minutes
-const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-const nepalDate = new Date(utcMs + nepalOffset * 60000);
-```
+A dedicated AI-powered system for tracking corruption in Nepal.
 
-This ensures:
-- Daily promise changes at midnight NPT for all users
-- Streak resets align with Nepal's day boundary
-- Report card dates reflect Nepal time
+**Case Management:**
+- Each corruption case has a full profile: title, description, evidence trail, amounts involved, entities implicated, severity rating, and current legal/investigation status
+- Timeline tracking — when it was discovered, key events, current state
+- Evidence scoring — how strong is the proof behind each allegation
+
+**AI Discovery:**
+- The intelligence engine automatically flags suspicious patterns from news coverage — unusual budget allocations, conflicting financial reports, whistleblower mentions
+- AI-discovered cases are queued for review before being published
+
+**Entity Profiles:**
+- Individuals and organizations involved in corruption allegations get dedicated profiles
+- Cross-referenced across multiple cases — shows patterns of repeated involvement
+- Links to their official positions and responsibilities
+
+**Citizen Reporting:**
+- Anyone can report corruption anonymously with supporting evidence
+- Reports are triaged by AI for severity and credibility
+- Supporting documents, photos, and links can be attached
+
+**Public Transparency:**
+- All published cases are browsable with filters for severity, status, and category
+- Statistics dashboard showing corruption patterns, amounts, and trends
 
 ---
 
-## Future Work
-- **Real vote aggregates**: Replace mock citizen sentiment with actual voting data
-- **Backend API**: Move province/district scores to server-computed endpoints
-- **Push notifications**: Remind users to maintain their streak
-- **Report card customization**: Let users pick which stats to highlight
-- **District-level project mapping**: Real data per district instead of hash-derived scores
+### 7. Constitution Monitor
 
+Nepal's constitution contains provisions that the government is obligated to implement. This feature tracks:
+- Key constitutional articles and their implementation status
+- Which provisions are being fulfilled, delayed, or ignored
+- Plain-language explanations of what each article means for citizens
+
+---
+
+### 8. Government Scorecard (Ministry-Level)
+
+Breaks down accountability by government body:
+- Each ministry gets its own grade based on the commitments it's responsible for
+- Shows which ministries are delivering and which are falling behind
+- Includes the responsible minister and key officials
+- Drill down into any ministry to see its specific commitments
+
+---
+
+### 9. Disputed Claims
+
+When government statements conflict with evidence on the ground, the platform flags them:
+- Side-by-side comparison of claims vs. evidence
+- Source citations for both sides
+- Community voting on which version is more credible
+
+---
+
+### 10. Trending & Explore
+
+- **Trending:** What's getting the most attention right now — most discussed commitments, most reported issues, most active categories
+- **Compare:** Side-by-side comparison of any two commitments
+- **Map view:** Geographic visualization of where commitments and issues are concentrated
+- **Search:** Full-text search across all commitments, officials, and issues
+
+---
+
+### 11. Evidence & Verification
+
+Citizens and verified community members can submit evidence:
+- **Photo uploads** — geotagged images of infrastructure, construction sites, service delivery
+- **Document links** — government gazettes, budget documents, news articles
+- **Verification voting** — the community reviews and votes on submitted evidence
+- **Verified status** — evidence that passes community review gets marked as verified
+
+**Verifier program:** Dedicated citizens can apply to become verified contributors. Verifiers get 2x voting weight and help maintain the quality of evidence on the platform.
+
+---
+
+### 12. Watchlist & Personalization
+
+- Bookmark any commitment to your personal watchlist
+- Set your hometown (province and district) to see local relevance
+- Get notifications when watched commitments have updates
+- Bilingual toggle — switch between English and Nepali at any time
+
+---
+
+### 13. AI Chat
+
+Ask questions about government performance in natural language:
+- "What's happening with the Kathmandu metro project?"
+- "Which ministry has the worst track record?"
+- "How much budget has been spent on infrastructure?"
+
+The AI answers using verified data from the platform's database and source network.
+
+---
+
+## How the AI Works
+
+Nepal Republic's AI engine is the backbone of the platform. Here's what it does — without getting into technical internals:
+
+1. **Scans continuously** — 80+ sources including major Nepali news outlets, government portals, social media, parliamentary records, and international reports
+2. **Matches signals to commitments** — when a news article mentions a government project, the AI identifies which of the 109 commitments it relates to
+3. **Classifies and scores** — determines whether the signal indicates progress, stalling, delivery, or a new development
+4. **Generates briefings** — writes plain-language summaries for each commitment based on all available evidence
+5. **Detects new commitments** — finds government promises that aren't yet being tracked
+6. **Discovers new sources** — identifies and suggests new information sources to improve coverage
+7. **Flags conflicts** — when two sources contradict each other, the AI flags it for review
+
+The AI doesn't replace human judgment — it amplifies it. Every AI-generated insight links back to its sources so citizens can verify for themselves.
+
+---
+
+## Bilingual Support
+
+The entire platform works in both English and Nepali:
+- All UI labels, buttons, and navigation
+- Commitment titles and descriptions
+- AI-generated briefings and summaries
+- Share text and social media cards
+- Audio narration for daily briefs
+
+Switch languages anytime using the EN|ने toggle in the footer.
+
+---
+
+## Sharing
+
+Every page on Nepal Republic is designed to be shared:
+- **Native sharing** — uses your phone's share menu (WhatsApp, Messenger, etc.)
+- **WhatsApp direct** — one-tap sharing with pre-written context
+- **Copy link** — for pasting anywhere
+- **Download image** — report card and scorecard available as shareable images
+- **Social cards** — every page generates a custom preview image (OG image) for social media
+
+Share text is automatically customized with the relevant data — a stalled commitment shares differently than a delivered one.
+
+---
+
+## Frequently Asked Questions
+
+### General
+
+**Q: What is Nepal Republic?**
+A: Nepal Republic is an AI-powered civic intelligence platform that tracks Nepal's government commitments, scores accountability, and lets citizens report issues and verify evidence. Think of it as a real-time report card for the government.
+
+**Q: Who runs Nepal Republic?**
+A: Nepal Republic is an independent civic technology initiative. It is not affiliated with any political party, government body, or media organization.
+
+**Q: Is it free to use?**
+A: Yes. Nepal Republic is completely free and open to all citizens.
+
+**Q: What language does it support?**
+A: English and Nepali (नेपाली). You can switch between them at any time.
+
+**Q: Do I need to create an account?**
+A: No. You can browse all data, read briefings, and share content without an account. Creating an account unlocks features like submitting evidence, voting, reporting issues, and building a watchlist.
+
+---
+
+### Data & Accuracy
+
+**Q: Where does the data come from?**
+A: The AI scans 80+ sources daily including major Nepali news outlets (Kathmandu Post, Republica, Online Khabar, Nepali Times, Himalayan Times, and more), government portals, parliamentary records, budget documents, social media, and international organization reports.
+
+**Q: How accurate is the information?**
+A: Every claim on the platform is linked to its source. The AI cross-references multiple sources before updating a commitment's status. When sources conflict, the platform flags it as disputed rather than picking a side. Citizens can also submit evidence to correct or verify claims.
+
+**Q: How often is data updated?**
+A: The AI scans sources multiple times per day. Commitment statuses and briefings update as new information is detected. The daily brief is generated fresh every morning.
+
+**Q: What are the 109 commitments being tracked?**
+A: These are specific promises and commitments made by Nepal's RSP government — covering infrastructure, health, education, anti-corruption, governance reform, economic development, and more. The list was compiled from official government statements, policy documents, and public addresses.
+
+**Q: Can the AI make mistakes?**
+A: Yes. AI classification isn't perfect. That's why every AI-generated insight links to its source, and the platform has community verification where citizens can challenge or confirm claims. The system is designed to be transparent about its confidence level.
+
+---
+
+### Scoring
+
+**Q: How is the overall grade calculated?**
+A: The GhantiCard Score combines five factors: delivery rate (how many promises are done), average progress (how far along the rest are), trust score (how well verified the data is), budget utilization (spending efficiency), and citizen sentiment (public voting). Each factor is weighted and combined into a 0–100 score with an A–F grade.
+
+**Q: What does each letter grade mean?**
+A: **A** (80+) = Excellent, **B** (60–79) = Good, **C** (40–59) = Average, **D** (20–39) = Poor, **F** (below 20) = Failing.
+
+**Q: How is an individual commitment scored?**
+A: Each commitment is scored based on verified progress from independent sources. The AI considers: official government updates, news coverage, budget allocation and spending, citizen-submitted evidence, and source reliability. The grade reflects how much real, verified progress has been made.
+
+**Q: Can the score go down?**
+A: Yes. If a commitment stalls, funding is cut, or contradictory evidence emerges, the progress and grade can decrease. The system reflects reality, not just announcements.
+
+---
+
+### Participation
+
+**Q: How can I contribute?**
+A: Several ways:
+- **Submit evidence** — upload photos or links that verify or challenge a commitment's progress
+- **Vote** — express your opinion on whether a commitment matters to you
+- **Report issues** — file civic complaints about problems in your area
+- **Report corruption** — submit tips about corruption cases
+- **Share** — spread awareness by sharing report cards and commitment data
+
+**Q: What is a Verifier?**
+A: Verifiers are trusted community members who review submitted evidence. They apply through the platform and, once approved, get enhanced voting weight (2x) and the ability to review and verify evidence submissions.
+
+**Q: Is my data private?**
+A: Nepal Republic does not require personal information to browse. If you create an account, your data is used only for platform functionality (watchlist, votes, submissions). We do not sell user data.
+
+**Q: Can I report something anonymously?**
+A: Yes. Corruption reports and civic complaints can be submitted without identifying yourself.
+
+---
+
+### Technical
+
+**Q: Does it work on mobile?**
+A: Yes. Nepal Republic is fully responsive and works on all screen sizes. It's also a Progressive Web App (PWA) — you can install it on your phone's home screen for an app-like experience.
+
+**Q: Can I install it as an app?**
+A: Yes. On Android (Chrome) or iOS (Safari), use the "Add to Home Screen" option. You'll get an app icon and full-screen experience without downloading from an app store.
+
+**Q: Does it work offline?**
+A: Basic pages are cached for offline viewing. However, live data (latest scores, daily briefs, new signals) requires an internet connection.
+
+**Q: What browsers are supported?**
+A: All modern browsers — Chrome, Safari, Firefox, Edge. Works on both desktop and mobile.
+
+---
+
+## Contact & Feedback
+
+Have questions, suggestions, or want to report an issue with the platform?
+
+- **Feedback page:** [nepalrepublic.org/feedback](https://nepalrepublic.org/feedback)
+- **Support:** [nepalrepublic.org/support](https://nepalrepublic.org/support)
+
+Nepal Republic is built for the people of Nepal. Your feedback makes it better.

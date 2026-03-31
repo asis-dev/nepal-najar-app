@@ -39,7 +39,7 @@ interface WardScorecardProps {
 }
 
 export function WardScorecard({ province, district, onRateClick }: WardScorecardProps) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const isNe = locale === 'ne';
   const { data: scorecard, isLoading } = useWardScorecard(province, district);
 
@@ -60,14 +60,14 @@ export function WardScorecard({ province, district, onRateClick }: WardScorecard
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-white flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-primary-400" />
-          {isNe ? '\u0935\u093E\u0930\u094D\u0921 \u0938\u094D\u0915\u094B\u0930\u0915\u093E\u0930\u094D\u0921' : 'Ward Scorecard'}
+          {t('ward.wardScorecard')}
         </h3>
         {onRateClick && (
           <button
             onClick={onRateClick}
             className="text-xs text-primary-400 hover:text-primary-300 transition-colors px-3 py-1.5 rounded-lg bg-primary-500/10 border border-primary-500/20 hover:bg-primary-500/15"
           >
-            {isNe ? '\u0930\u0947\u091F \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D' : 'Rate your area'}
+            {t('ward.rateArea')}
           </button>
         )}
       </div>
@@ -75,16 +75,14 @@ export function WardScorecard({ province, district, onRateClick }: WardScorecard
       {!hasData ? (
         <div className="text-center py-6">
           <p className="text-sm text-gray-500 mb-3">
-            {isNe
-              ? '\u092F\u0938 \u0915\u094D\u0937\u0947\u0924\u094D\u0930\u0915\u094B \u0932\u093E\u0917\u093F \u0905\u0939\u093F\u0932\u0947\u0938\u092E\u094D\u092E \u0915\u0941\u0928\u0948 \u0930\u093F\u092A\u094B\u0930\u094D\u091F \u091B\u0948\u0928\u0964'
-              : 'No reports yet for this area.'}
+            {t('ward.noReportsYet')}
           </p>
           {onRateClick && (
             <button
               onClick={onRateClick}
               className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
             >
-              {isNe ? '\u092A\u0939\u093F\u0932\u094B \u0930\u093F\u092A\u094B\u0930\u094D\u091F \u092C\u0928\u094D\u0928\u0941\u0939\u094B\u0938\u094D' : 'Be the first to report'}
+              {t('ward.beFirstToReport')}
             </button>
           )}
         </div>

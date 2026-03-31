@@ -77,7 +77,7 @@ export const X_ACCOUNTS: XAccountConfig[] = [
   // --- Politicians ---
   {
     id: 'x-balen-shah',
-    username: 'balaborad',
+    username: 'balenshah',
     name: 'Balen Shah',
     category: 'politician',
     relatedPromiseIds: [],
@@ -93,7 +93,7 @@ export const X_ACCOUNTS: XAccountConfig[] = [
   },
   {
     id: 'x-swarnim-wagle',
-    username: 'SwaraboradnimWagle',
+    username: 'SwarnimWagle',
     name: 'Swarnim Wagle',
     category: 'politician',
     relatedPromiseIds: [],
@@ -121,7 +121,7 @@ export const X_ACCOUNTS: XAccountConfig[] = [
   },
   {
     id: 'x-myrepublica',
-    username: 'myaborad',
+    username: 'myrepublica',
     name: 'myRepublica',
     category: 'news_outlet',
     relatedPromiseIds: [],
@@ -145,7 +145,7 @@ export const X_ACCOUNTS: XAccountConfig[] = [
   },
   {
     id: 'x-record-nepal',
-    username: 'thaboradrecord',
+    username: 'therecordnepal',
     name: 'The Record Nepal',
     category: 'news_outlet',
     relatedPromiseIds: [],
@@ -153,7 +153,7 @@ export const X_ACCOUNTS: XAccountConfig[] = [
   },
   {
     id: 'x-nepali-times',
-    username: 'neaboradpaltimes',
+    username: 'nepalitimes',
     name: 'Nepali Times',
     category: 'news_outlet',
     relatedPromiseIds: [],

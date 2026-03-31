@@ -55,6 +55,7 @@ import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences
 import { useComparisonStore } from '@/lib/stores/comparison';
 import { ExportButton } from '@/components/public/export-button';
 import { exportPromisesCSV, exportPromisesPDF } from '@/lib/utils/export';
+import { commitmentShareText } from '@/lib/utils/share';
 import { useEvidenceCounts } from '@/lib/hooks/use-evidence-vault';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import {
@@ -70,6 +71,8 @@ import {
 } from '@/lib/data/promises';
 import { useAllPromises, useArticleCount, useLatestArticles } from '@/lib/hooks/use-promises';
 import { useTrending } from '@/lib/hooks/use-trending';
+import { GhantiIcon } from '@/components/ui/ghanti-icon';
+import { translateActor } from '@/components/public/commitment-card';
 
 /* ═══════════════════════════════════════════════
    STATUS CONFIG
@@ -205,17 +208,19 @@ function ProgressRing({ percentage, size = 180, strokeWidth = 12 }: { percentage
   );
 }
 
-function formatRelativeSignalDate(dateString?: string | null) {
-  if (!dateString) return 'Freshness unavailable';
+function formatRelativeSignalDate(dateString: string | null | undefined, t: (key: string) => string) {
+  if (!dateString) return t('dates.freshnessUnavailable');
   const value = new Date(dateString);
-  if (Number.isNaN(value.getTime())) return 'Freshness unavailable';
+  if (Number.isNaN(value.getTime())) return t('dates.freshnessUnavailable');
 
   const diffDays = Math.floor((Date.now() - value.getTime()) / 86400000);
-  if (diffDays <= 0) return 'Updated today';
-  if (diffDays === 1) return 'Updated yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-
-  return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (diffDays <= 0) return t('dates.today');
+  if (diffDays === 1) return t('dates.yesterday');
+  if (diffDays < 7) return t('dates.daysAgo').replace('{days}', String(diffDays));
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffDays < 30) return t('dates.weeksAgo').replace('{weeks}', String(diffWeeks));
+  const diffMonths = Math.floor(diffDays / 30);
+  return t('dates.monthsAgo').replace('{months}', String(diffMonths));
 }
 
 /* ═══════════════════════════════════════════════
@@ -372,11 +377,11 @@ function BachanTrackerContent() {
     [activityMap, commitmentRecords, featuredCommitment],
   );
   const headlineText = activeTodayCount > 0
-    ? `${activeTodayCount} commitments moved today across Nepal Najar.`
-    : `Tracking ${stats.total} commitments across Nepal's public accountability story.`;
+    ? t('tracker.headlineMovedToday').replace('{count}', String(activeTodayCount))
+    : t('tracker.headlineTracking').replace('{total}', String(stats.total));
   const subheadText = leadArticle
-    ? `Latest signal: ${leadArticle.headline} from ${leadArticle.source_name}. ${totalEvidence} evidence links are already attached across the tracker.`
-    : `${articleCount ?? 0} articles scanned, ${commitmentsWithEvidence} commitments with evidence, and a live record built for daily accountability.`;
+    ? t('tracker.subheadWithArticle').replace('{headline}', leadArticle.headline).replace('{source}', leadArticle.source_name).replace('{evidence}', String(totalEvidence))
+    : t('tracker.subheadDefault').replace('{articles}', String(articleCount ?? 0)).replace('{withEvidence}', String(commitmentsWithEvidence));
   const watchlistCommitments = useMemo(
     () => commitmentRecords.filter((promise) => watchedProjectIds.includes(promise.id)),
     [commitmentRecords, watchedProjectIds],
@@ -385,7 +390,8 @@ function BachanTrackerContent() {
     () => watchlistCommitments.filter((promise) => {
       const lastSeen = activityMap[promise.id]?.lastActivityDate || promise.lastSignalAt || promise.lastUpdate;
       if (!lastSeen) return false;
-      return formatRelativeSignalDate(lastSeen) === 'Updated today';
+      const d = new Date(lastSeen);
+      return !Number.isNaN(d.getTime()) && Math.floor((Date.now() - d.getTime()) / 86400000) <= 0;
     }).length,
     [activityMap, watchlistCommitments],
   );
@@ -410,13 +416,13 @@ function BachanTrackerContent() {
     [commitmentRecords],
   );
   const actionSummary = activeTodayCount > 0
-    ? `${activeTodayCount} commitments moved today. Watch them, verify them, and push the record forward.`
-    : 'Nothing major moved today yet. That is exactly when evidence, tips, and citizen verification matter most.';
+    ? t('tracker.actionMovedToday').replace('{count}', String(activeTodayCount))
+    : t('tracker.actionNothingMoved');
 
   // Share handlers
-  const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://nepalnajar.com/explore/first-100-days';
-  const whatsappText = `Nepal Najar — Live Commitment Tracker \uD83C\uDDF3\uD83C\uDDF5 Check which public commitments are moving: ${pageUrl}`;
-  const shareText = `Nepal Najar — \u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E \u091F\u094D\u0930\u094D\u092F\u093E\u0915\u0930 | Track Nepal's public commitments with evidence. ${pageUrl}`;
+  const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://nepalrepublic.org/explore/first-100-days';
+  const whatsappText = `Nepal Republic — Live Commitment Tracker \uD83C\uDDF3\uD83C\uDDF5 Check which public commitments are moving: ${pageUrl}`;
+  const shareText = `Nepal Republic — \u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E \u091F\u094D\u0930\u094D\u092F\u093E\u0915\u0930 | Track Nepal's public commitments with evidence. ${pageUrl}`;
 
   function handleCopyLink() {
     navigator.clipboard.writeText(pageUrl);
@@ -427,8 +433,10 @@ function BachanTrackerContent() {
   function handleShareCard(e: React.MouseEvent, promise: GovernmentPromise) {
     e.preventDefault();
     e.stopPropagation();
-    const text = `${promise.title_ne}\n${promise.title}\n\nProgress: ${promise.progress}% | Status: ${t(statusLabelKeys[promise.status])}\nEvidence: ${promise.evidenceCount} items\n\n\u0928\u0947\u092A\u093E\u0932 \u0928\u091C\u0930 \u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E \u091F\u094D\u0930\u094D\u092F\u093E\u0915\u0930\n${pageUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+    const title = locale === 'ne' ? (promise.title_ne || promise.title) : promise.title;
+    const text = commitmentShareText({ title, progress: promise.progress, status: promise.status, locale });
+    const url = `${pageUrl.replace(/\/explore\/first-100-days.*/, '')}/explore/first-100-days/${promise.slug || promise.id}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${text}\n${url}`)}`, '_blank', 'noopener,noreferrer');
   }
 
   const handleLoadMore = useCallback(() => {
@@ -468,7 +476,7 @@ function BachanTrackerContent() {
               </span>
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">
-              {stats.total} total &middot; {stats.inProgress} active &middot; {stats.stalled} stalled &middot; {stats.delivered} done
+              {stats.total} {t('tracker.total')} &middot; {stats.inProgress} {t('tracker.active')} &middot; {stats.stalled} {t('tracker.stalledCount')} &middot; {stats.delivered} {t('tracker.done')}
             </p>
 
             {/* Wachan meter: single-line text stat */}
@@ -512,12 +520,10 @@ function BachanTrackerContent() {
                     </span>
                   </h1>
                   <p className="text-lg sm:text-xl text-gray-400 font-medium mb-4">
-                    {isNe ? 'Commitment Tracker' : t('commitment.bachanTracker')}
+                    {isNe ? 'Commitment Tracker' : '\u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E \u0905\u0928\u0941\u0917\u092E\u0928'}
                   </p>
                   <p className="text-base sm:text-lg text-gray-500 max-w-2xl mx-auto mb-8">
-                    {isNe
-                      ? '\u0939\u0930\u0947\u0915 \u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E, \u0939\u0930\u0947\u0915 \u092A\u094D\u0930\u092E\u093E\u0923 \u2014 Every commitment, every proof'
-                      : 'Every commitment, every proof \u2014 \u0939\u0930\u0947\u0915 \u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E, \u0939\u0930\u0947\u0915 \u092A\u094D\u0930\u092E\u093E\u0923'}
+                    {isNe ? t('tracker.taglineNe') : t('tracker.taglineEn')}
                   </p>
                 </div>
 
@@ -528,7 +534,7 @@ function BachanTrackerContent() {
                       {showBalenSpotlight ? (
                         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary-300/20 bg-primary-500/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-200">
                           <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-                          Balen campaign lens active
+                          {t('tracker.campaignLensActive')}
                         </div>
                       ) : null}
                       <div className="flex items-start gap-3">
@@ -536,22 +542,22 @@ function BachanTrackerContent() {
                           <Target className="w-5 h-5 text-white" />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-medium text-white">Nepal Najar &mdash; \u0928\u0947\u092A\u093E\u0932 \u0928\u091C\u0930</p>
-                          <p className="text-xs text-gray-500">National report card, campaign entry point</p>
+                          <p className="text-sm font-medium text-white">{isNe ? '\u0928\u0947\u092A\u093E\u0932 \u0930\u093F\u092A\u092C\u094D\u0932\u093F\u0915' : 'Nepal Republic'}</p>
+                          <p className="text-xs text-gray-500">{t('tracker.nationalReportCard')}</p>
                         </div>
                       </div>
 
                       <div className="mt-5 grid gap-3 sm:grid-cols-3">
                         <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.06] p-4 text-left">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300/80">Delivered</p>
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300/80">{t('commitment.delivered')}</p>
                           <p className="mt-2 text-2xl font-semibold text-white">{stats.delivered}</p>
                         </div>
                         <div className="rounded-2xl border border-amber-500/15 bg-amber-500/[0.06] p-4 text-left">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300/80">In Progress</p>
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300/80">{t('commitment.inProgress')}</p>
                           <p className="mt-2 text-2xl font-semibold text-white">{stats.inProgress}</p>
                         </div>
                         <div className="rounded-2xl border border-red-500/15 bg-red-500/[0.06] p-4 text-left">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-red-300/80">Stalled</p>
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-red-300/80">{t('commitment.stalled')}</p>
                           <p className="mt-2 text-2xl font-semibold text-white">{stats.stalled}</p>
                         </div>
                       </div>
@@ -565,13 +571,13 @@ function BachanTrackerContent() {
                               : 'border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]'
                           }`}
                         >
-                          Campaign view
+                          {t('tracker.campaignView')}
                           <ArrowRight className="h-4 w-4" />
                         </Link>
                         <span className="text-xs text-gray-500">
                           {showBalenSpotlight
-                            ? 'Scroll for the campaign spotlight and evidence context below.'
-                            : 'Open the campaign spotlight to frame this tracker around Balen\'s first 100 days.'}
+                            ? t('tracker.scrollForSpotlight')
+                            : t('tracker.openCampaignSpotlight')}
                         </span>
                       </div>
                     </div>
@@ -652,8 +658,8 @@ function BachanTrackerContent() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-primary-500/10" />
                     <div className="absolute inset-x-0 bottom-0 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300">Campaign Spotlight</p>
-                      <p className="mt-1 text-lg font-semibold text-white">Balen&apos;s first 100 days</p>
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300">{t('tracker.campaignSpotlight')}</p>
+                      <p className="mt-1 text-lg font-semibold text-white">{t('tracker.balenFirst100Days')}</p>
                     </div>
                   </div>
 
@@ -663,28 +669,28 @@ function BachanTrackerContent() {
                         ? 'border-primary-300/20 bg-primary-500/12 text-primary-200'
                         : 'border-cyan-400/20 bg-cyan-500/10 text-cyan-300'
                     }`}>
-                      {showBalenSpotlight ? 'Campaign lens active' : 'Why this view exists'}
+                      {showBalenSpotlight ? t('tracker.campaignLens') : t('tracker.whyViewExists')}
                     </div>
                     <h2 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">
-                      {showBalenSpotlight ? 'Balen is now framed as a live campaign dossier' : 'A campaign lens inside the national tracker'}
+                      {showBalenSpotlight ? t('tracker.campaignDossier') : t('tracker.campaignLensInside')}
                     </h2>
                     <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300 sm:text-base">
                       {showBalenSpotlight
-                        ? 'This view now foregrounds the Balen campaign angle while keeping the tracker as the source of truth underneath. The image stays lightweight, and the story context is visually obvious.'
-                        : 'This spotlight gives Balen\'s campaign entry point a visual home without slowing the top of the page. The tracker still loads as the main product first, and the image comes in lazily as supporting context.'}
+                        ? t('tracker.campaignDossierDesc')
+                        : t('tracker.campaignLensInsideDesc')}
                     </p>
                     <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-gray-400">
                       <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
                         <Radio className="h-4 w-4 text-cyan-300" />
-                        Campaign context
+                        {t('tracker.campaignContext')}
                       </span>
                       <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
                         <FileText className="h-4 w-4 text-primary-300" />
-                        Evidence-linked promises
+                        {t('tracker.evidenceLinkedPromises')}
                       </span>
                       <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
                         <Calendar className="h-4 w-4 text-amber-300" />
-                        First 100 days framing
+                        {t('tracker.first100DaysFraming')}
                       </span>
                     </div>
                   </div>
@@ -692,7 +698,7 @@ function BachanTrackerContent() {
               </div>
             </section>
 
-            {/* Today in Nepal Najar hero */}
+            {/* Today in Nepal Republic hero */}
             <section className="px-4 sm:px-6 lg:px-8 pb-12">
               <div className="max-w-6xl mx-auto">
                 <div className="overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-[#DC143C]/12 via-primary-500/[0.08] to-[#003893]/14 shadow-[0_24px_80px_rgba(2,6,23,0.35)]">
@@ -700,7 +706,7 @@ function BachanTrackerContent() {
                     <div>
                       <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200">
                         <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-                        Today in Nepal Najar
+                        {t('tracker.todayInGhantiCard')}
                       </div>
                       <h2 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-white sm:text-4xl">
                         {headlineText}
@@ -714,21 +720,21 @@ function BachanTrackerContent() {
                           href="/daily"
                           className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-4 py-2 font-medium text-white transition-colors hover:bg-white/[0.12]"
                         >
-                          Open daily changes
+                          {t('tracker.openDailyChanges')}
                           <ArrowUpRight className="h-4 w-4" />
                         </Link>
                         <Link
                           href="/watchlist"
                           className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-500/10 px-4 py-2 font-medium text-cyan-100 transition-colors hover:bg-cyan-500/15"
                         >
-                          Watch commitments
+                          {t('tracker.watchCommitments')}
                           <Eye className="h-4 w-4" />
                         </Link>
                         <Link
                           href="/feedback"
                           className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-4 py-2 font-medium text-gray-100 transition-colors hover:bg-black/30"
                         >
-                          Submit feedback
+                          {t('tracker.submitFeedback')}
                           <FileText className="h-4 w-4" />
                         </Link>
                       </div>
@@ -738,48 +744,48 @@ function BachanTrackerContent() {
                       <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
                         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
                           <Activity className="h-3.5 w-3.5 text-cyan-300" />
-                          Fresh movement
+                          {t('tracker.freshMovement')}
                         </div>
                         <p className="mt-3 text-3xl font-semibold text-white">{activeTodayCount}</p>
-                        <p className="mt-1 text-sm text-gray-300">commitments active today</p>
+                        <p className="mt-1 text-sm text-gray-300">{t('tracker.commitmentsActiveToday')}</p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
                         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-200">
                           <Newspaper className="h-3.5 w-3.5 text-rose-300" />
-                          Evidence pulse
+                          {t('tracker.evidencePulse')}
                         </div>
                         <p className="mt-3 text-3xl font-semibold text-white">{totalEvidence}</p>
-                        <p className="mt-1 text-sm text-gray-300">evidence links across public commitments</p>
+                        <p className="mt-1 text-sm text-gray-300">{t('tracker.evidenceLinksAcross')}</p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
                         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-200">
                           <Calendar className="h-3.5 w-3.5 text-amber-300" />
-                          Weekly freshness
+                          {t('tracker.weeklyFreshness')}
                         </div>
                         <p className="mt-3 text-3xl font-semibold text-white">{recentlyActiveCount}</p>
-                        <p className="mt-1 text-sm text-gray-300">commitments touched in the last 7 days</p>
+                        <p className="mt-1 text-sm text-gray-300">{t('tracker.touchedLast7Days')}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid gap-px border-t border-white/10 bg-white/10 lg:grid-cols-3">
                     <div className="bg-black/20 p-5 sm:p-6">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">Latest signal</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">{t('tracker.latestSignal')}</p>
                       {leadArticle ? (
                         <>
                           <p className="mt-3 text-lg font-medium text-white">{leadArticle.headline}</p>
                           <p className="mt-2 text-sm leading-6 text-gray-300">
-                            {leadArticle.source_name} · {formatRelativeSignalDate(leadArticle.published_at)}
+                            {leadArticle.source_name} · {formatRelativeSignalDate(leadArticle.published_at, t)}
                           </p>
                         </>
                       ) : (
                         <p className="mt-3 text-sm leading-6 text-gray-300">
-                          The signal feed is quiet right now, but the tracker is still ready for the next verified movement.
+                          {t('tracker.signalQuiet')}
                         </p>
                       )}
                     </div>
                     <div className="bg-black/20 p-5 sm:p-6">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">Most watched story</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">{t('tracker.mostWatchedStory')}</p>
                       {spotlightCommitment ? (
                         <>
                           <Link
@@ -789,15 +795,15 @@ function BachanTrackerContent() {
                             {isNe ? spotlightCommitment.title_ne : spotlightCommitment.title}
                           </Link>
                           <p className="mt-2 text-sm leading-6 text-gray-300">
-                            {spotlightCommitment.evidenceCount} evidence items · {spotlightCommitment.progress}% progress · {formatRelativeSignalDate(spotlightCommitment.lastActivityDate || spotlightCommitment.lastSignalAt || spotlightCommitment.lastUpdate)}
+                            {spotlightCommitment.evidenceCount} {t('tracker.evidenceItems')} · {spotlightCommitment.progress}% {t('commitment.progress')} · {formatRelativeSignalDate(spotlightCommitment.lastActivityDate || spotlightCommitment.lastSignalAt || spotlightCommitment.lastUpdate, t)}
                           </p>
                         </>
                       ) : null}
                     </div>
                     <div className="bg-black/20 p-5 sm:p-6">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">Why people come back</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">{t('tracker.whyPeopleComeBack')}</p>
                       <p className="mt-3 text-sm leading-7 text-gray-300">
-                        Daily changes, evidence trails, and one public record that keeps getting sharper as signals and citizen input arrive.
+                        {t('tracker.whyPeopleComeBackDesc')}
                       </p>
                     </div>
                   </div>
@@ -811,22 +817,22 @@ function BachanTrackerContent() {
                 <div className="glass-card p-6">
                   <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
                     <Eye className="h-4 w-4" />
-                    Return loop
+                    {t('tracker.returnLoop')}
                   </div>
                   <h3 className="mt-4 text-xl font-semibold text-white">
-                    {watchlistCommitments.length > 0 ? `Your watchlist has ${watchlistCommitments.length} live commitments` : 'Start a watchlist worth returning for'}
+                    {watchlistCommitments.length > 0 ? t('tracker.watchlistLive').replace('{count}', String(watchlistCommitments.length)) : t('tracker.startWatchlist')}
                   </h3>
                   <p className="mt-3 text-sm leading-7 text-gray-300">
                     {watchlistCommitments.length > 0
-                      ? `${watchlistRecentCount} of your watched commitments moved today. ${watchlistLead ? `Lead watch: ${watchlistLead.title}.` : ''}`
-                      : 'Save the commitments you care about and this tracker becomes personal. That is what turns a one-time visit into a daily habit.'}
+                      ? `${t('tracker.watchlistMovedToday').replace('{count}', String(watchlistRecentCount))} ${watchlistLead ? t('tracker.leadWatch').replace('{title}', isNe ? watchlistLead.title_ne : watchlistLead.title) : ''}`
+                      : t('tracker.watchlistEmpty')}
                   </p>
                   <div className="mt-5 flex flex-wrap gap-3">
                     <Link
                       href="/watchlist"
                       className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-100 transition-colors hover:bg-cyan-500/15"
                     >
-                      Open watchlist
+                      {t('tracker.openWatchlist')}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                     {watchlistLead ? (
@@ -834,7 +840,7 @@ function BachanTrackerContent() {
                         href={`/explore/first-100-days/${watchlistLead.slug}`}
                         className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08]"
                       >
-                        Open lead watch
+                        {t('tracker.openLeadWatch')}
                         <ArrowUpRight className="h-4 w-4" />
                       </Link>
                     ) : null}
@@ -844,29 +850,29 @@ function BachanTrackerContent() {
                 <div className="glass-card p-6">
                   <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
                     <MapPin className="h-4 w-4" />
-                    Local relevance
+                    {t('tracker.localRelevance')}
                   </div>
                   <h3 className="mt-4 text-xl font-semibold text-white">
-                    {hasSetHometown && province ? `Tracking ${province}${district ? ` / ${district}` : ''}` : 'Make the tracker feel close to home'}
+                    {hasSetHometown && province ? (district ? t('tracker.trackingProvinceDistrict').replace('{province}', province).replace('{district}', district) : t('tracker.trackingProvince').replace('{province}', province)) : t('tracker.makeTrackerLocal')}
                   </h3>
                   <p className="mt-3 text-sm leading-7 text-gray-300">
                     {hasSetHometown && province
-                      ? `${localizedCommitments.length} commitments in this tracker can already be framed through your area or national impact.`
-                      : 'Set your province or district and Nepal Najar can stop feeling abstract. Local context is what makes accountability feel personal.'}
+                      ? t('tracker.localCommitments').replace('{count}', String(localizedCommitments.length))
+                      : t('tracker.localEmpty')}
                   </p>
                   <div className="mt-5 flex flex-wrap gap-3">
                     <Link
                       href="/affects-me"
                       className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-500/15"
                     >
-                      Open affects me
+                      {t('tracker.openAffectsMe')}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                     <button
                       onClick={() => setShowPicker(true)}
                       className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.08]"
                     >
-                      Set my area
+                      {t('tracker.setMyArea')}
                       <MapPin className="h-4 w-4" />
                     </button>
                   </div>
@@ -875,29 +881,29 @@ function BachanTrackerContent() {
                 <div className="glass-card p-6">
                   <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">
                     <ShieldCheck className="h-4 w-4" />
-                    Trust layer
+                    {t('tracker.trustLayer')}
                   </div>
                   <h3 className="mt-4 text-xl font-semibold text-white">
-                    Public truth stays review-backed
+                    {t('tracker.publicTruthReviewed')}
                   </h3>
                   <p className="mt-3 text-sm leading-7 text-gray-300">
-                    Signals and media can flood in constantly, but Nepal Najar only becomes useful when evidence is legible and public truth is controlled.
+                    {t('tracker.trustLayerDesc')}
                   </p>
                   <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.05] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300">Verified</p>
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-emerald-300">{t('trust.verified')}</p>
                       <p className="mt-2 text-2xl font-semibold text-white">{trustSummary.verified}</p>
                     </div>
                     <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/[0.05] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-yellow-300">Partial</p>
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-yellow-300">{t('trust.partial')}</p>
                       <p className="mt-2 text-2xl font-semibold text-white">{trustSummary.partial}</p>
                     </div>
                     <div className="rounded-2xl border border-gray-500/15 bg-white/[0.03] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-400">Unverified</p>
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-400">{t('trust.unverified')}</p>
                       <p className="mt-2 text-2xl font-semibold text-white">{trustSummary.unverified}</p>
                     </div>
                     <div className="rounded-2xl border border-red-500/15 bg-red-500/[0.05] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-red-300">Disputed</p>
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-red-300">{t('trust.disputed')}</p>
                       <p className="mt-2 text-2xl font-semibold text-white">{trustSummary.disputed}</p>
                     </div>
                   </div>
@@ -912,10 +918,10 @@ function BachanTrackerContent() {
                   <div>
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-200">
                       <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-                      Participation changes the record
+                      {t('tracker.participationChanges')}
                     </div>
                     <h2 className="mt-4 text-3xl font-semibold leading-tight text-white sm:text-4xl">
-                      Nepal Najar should feel like a civic product you can affect
+                      {t('tracker.civicProduct')}
                     </h2>
                     <p className="mt-4 max-w-3xl text-sm leading-7 text-gray-300 sm:text-base">
                       {actionSummary}
@@ -925,14 +931,14 @@ function BachanTrackerContent() {
                         href="/feedback"
                         className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.12]"
                       >
-                        Leave feedback
+                        {t('tracker.leaveFeedback')}
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                       <Link
                         href="/daily"
                         className="inline-flex items-center gap-2 rounded-full border border-primary-300/20 bg-primary-500/10 px-4 py-2 text-sm font-medium text-primary-100 transition-colors hover:bg-primary-500/15"
                       >
-                        See what changed
+                        {t('tracker.seeWhatChanged')}
                         <Activity className="h-4 w-4" />
                       </Link>
                     </div>
@@ -940,16 +946,16 @@ function BachanTrackerContent() {
 
                   <div className="grid gap-3">
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-300">Signal</p>
-                      <p className="mt-2 text-sm leading-6 text-gray-300">A citizen, source, or reporter submits proof, contradiction, or context.</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-300">{t('tracker.signalLabel')}</p>
+                      <p className="mt-2 text-sm leading-6 text-gray-300">{t('tracker.signalDesc')}</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-300">Review</p>
-                      <p className="mt-2 text-sm leading-6 text-gray-300">The engine structures it, but reviewed decisions are what shape the public record.</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-300">{t('tracker.reviewLabel')}</p>
+                      <p className="mt-2 text-sm leading-6 text-gray-300">{t('tracker.reviewDesc')}</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-300">Outcome</p>
-                      <p className="mt-2 text-sm leading-6 text-gray-300">People see the movement, the evidence trail, and the updated accountability story.</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-300">{t('tracker.outcomeLabel')}</p>
+                      <p className="mt-2 text-sm leading-6 text-gray-300">{t('tracker.outcomeDesc')}</p>
                     </div>
                   </div>
                 </div>
@@ -971,10 +977,10 @@ function BachanTrackerContent() {
            FILTER BAR — mobile: sticky compact pill scroll; desktop: glass card
            ═══════════════════════════════════════ */}
         {isMobile ? (
-          <div className="sticky top-0 z-30 bg-np-base/95 backdrop-blur-md border-b border-white/[0.06] px-3 py-2 space-y-2">
-            {/* Search bar */}
+          <div className="sticky top-0 z-30 bg-np-base/95 backdrop-blur-md border-b border-white/[0.06] px-3 py-1.5 space-y-1.5">
+            {/* Search bar — compact */}
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500" />
               <input
                 type="text"
                 value={searchQuery}
@@ -983,10 +989,10 @@ function BachanTrackerContent() {
                   setMobileVisibleCount(MOBILE_INITIAL_COUNT);
                 }}
                 placeholder={t('commitment.filterPromises')}
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-gray-200 placeholder-gray-500 outline-none focus:border-primary-500/40"
+                className="w-full pl-7 pr-16 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] text-gray-200 placeholder-gray-500 outline-none focus:border-primary-500/40"
               />
-              {/* Sort + Watchlist in filter row */}
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {/* Sort + Watchlist */}
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                 <button
                   onClick={() => setSortBy(sortBy === 'activity' ? 'default' : 'activity')}
                   className={`p-1 rounded-md transition-all ${
@@ -994,45 +1000,42 @@ function BachanTrackerContent() {
                       ? 'text-emerald-400 bg-emerald-500/15'
                       : 'text-gray-500 hover:text-gray-300'
                   }`}
-                  title="Sort by recent activity"
+                  title={t('daily.recentActivity')}
                 >
                   <ArrowUpDown className="w-3 h-3" />
                 </button>
                 <Link
                   href="/watchlist"
                   className="p-1 rounded-md text-gray-500 hover:text-primary-400 transition-all"
-                  title="Watchlist"
+                  title={t('nav.watchlist')}
                 >
                   <Bookmark className="w-3 h-3" />
                 </Link>
               </div>
             </div>
 
-            {/* Status pills — horizontal scroll */}
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-hide">
+            {/* Status + Category pills — single scrollable row */}
+            <div className="flex gap-1 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-hide">
               {statusFilterEntries.map((s) => (
                 <button
                   key={s.key}
                   onClick={() => setStatusFilter(s.key)}
-                  className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-200 flex-shrink-0 ${
+                  className={`inline-flex items-center gap-0.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-200 flex-shrink-0 ${
                     statusFilter === s.key
                       ? 'bg-primary-500/20 text-primary-300 border border-primary-500/40'
                       : 'bg-white/[0.04] text-gray-400 border border-transparent'
                   }`}
                 >
-                  {s.emoji && <span className="text-[10px]">{s.emoji}</span>}
+                  {s.key !== 'All' && <GhantiIcon status={s.key as 'in_progress' | 'stalled' | 'delivered' | 'not_started'} size="xs" />}
                   {t(s.labelKey)}
                 </button>
               ))}
-            </div>
-
-            {/* Category pills — horizontal scroll */}
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-hide">
+              <span className="w-px h-4 bg-white/10 flex-shrink-0 self-center mx-0.5" />
               {allCategories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
-                  className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-200 flex-shrink-0 ${
+                  className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-200 flex-shrink-0 ${
                     categoryFilter === cat
                       ? 'bg-primary-500/20 text-primary-300 border border-primary-500/40'
                       : 'bg-white/[0.04] text-gray-400 border border-transparent'
@@ -1169,27 +1172,43 @@ function BachanTrackerContent() {
                             }}
                           />
 
-                          {/* Row 1: status + trust + watch */}
+                          {/* Row 1: status + grade + watch */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${style.bg} ${style.text}`}>
-                                <span className={`w-1 h-1 rounded-full ${style.dot}`} />
+                                <GhantiIcon status={promise.status} size="xs" />
                                 {t(statusLabelKeys[promise.status])}
                               </span>
                               {trendingIds.has(promise.id) && (
                                 <span className="text-[10px]">{'\uD83D\uDD25'}</span>
                               )}
                             </div>
-                            <button
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWatch(promise.id); }}
-                              className={`p-1 rounded-md transition-all ${
-                                isWatched(promise.id)
-                                  ? 'text-primary-400 bg-primary-500/15'
-                                  : 'text-gray-600'
-                              }`}
-                            >
-                              <Bookmark className={`w-3 h-3 ${isWatched(promise.id) ? 'fill-current' : ''}`} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              {/* Grade badge */}
+                              {(() => {
+                                const g = promise.progress >= 80 ? 'A' : promise.progress >= 60 ? 'B' : promise.progress >= 40 ? 'C' : promise.progress >= 20 ? 'D' : 'F';
+                                const gc: Record<string, string> = {
+                                  A: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                                  B: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                                  C: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                                  D: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+                                  F: 'bg-red-500/20 text-red-400 border-red-500/30',
+                                };
+                                return (
+                                  <span className={`flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold border ${gc[g]}`}>{g}</span>
+                                );
+                              })()}
+                              <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWatch(promise.id); }}
+                                className={`p-1 rounded-md transition-all ${
+                                  isWatched(promise.id)
+                                    ? 'text-primary-400 bg-primary-500/15'
+                                    : 'text-gray-600'
+                                }`}
+                              >
+                                <Bookmark className={`w-3 h-3 ${isWatched(promise.id) ? 'fill-current' : ''}`} />
+                              </button>
+                            </div>
                           </div>
 
                           {/* Title */}
@@ -1197,13 +1216,28 @@ function BachanTrackerContent() {
                             {isNe ? promise.title_ne : promise.title}
                           </h3>
 
+                          {/* Actors */}
+                          {promise.actors && promise.actors.length > 0 && (
+                            <div className="flex items-center gap-1 text-[10px] text-gray-500 min-w-0">
+                              <Users className="w-2.5 h-2.5 flex-shrink-0" />
+                              <span className="truncate">{promise.actors.slice(0, 2).map(a => translateActor(a, locale)).join(', ')}</span>
+                            </div>
+                          )}
+
                           {/* Category + freshness */}
                           <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
                             <CatIcon className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{promise.category}</span>
+                            <span className="truncate">{isNe ? (promise.category_ne || t(`categoryName.${promise.category}`)) : promise.category}</span>
                             <span>&middot;</span>
-                            <span className="truncate">{formatRelativeSignalDate(activityMap[promise.id]?.lastActivityDate || promise.lastSignalAt || promise.lastUpdate)}</span>
+                            <span className="truncate">{formatRelativeSignalDate(activityMap[promise.id]?.lastActivityDate || promise.lastSignalAt || promise.lastUpdate, t)}</span>
                           </div>
+
+                          {/* Summary (1 line) */}
+                          {(promise.summary || promise.description) && (
+                            <p className="text-[11px] text-gray-400 italic line-clamp-1 leading-relaxed">
+                              &ldquo;{isNe ? (promise.summary_ne || promise.description_ne || promise.summary || promise.description) : (promise.summary || promise.description)}&rdquo;
+                            </p>
+                          )}
 
                           {/* Progress bar */}
                           <div className="flex items-center gap-2">
@@ -1274,7 +1308,7 @@ function BachanTrackerContent() {
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${style.bg} ${style.text} ${style.glow ?? ''}`}
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                            <GhantiIcon status={promise.status} size="xs" />
                             {t(statusLabelKeys[promise.status])}
                           </span>
 
@@ -1321,7 +1355,7 @@ function BachanTrackerContent() {
                         {trendingIds.has(promise.id) && (
                           <span className="trending-badge mb-2 relative z-10">
                             <span className="text-[10px]">{'\uD83D\uDD25'}</span>
-                            Trending
+                            {t('tracker.trending')}
                           </span>
                         )}
 
@@ -1342,16 +1376,16 @@ function BachanTrackerContent() {
                         <div className="mb-3 flex flex-wrap gap-2 relative z-10">
                           <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-gray-300">
                             <FileText className="h-3 w-3 text-cyan-300" />
-                            {promise.evidenceCount} evidence
+                            {promise.evidenceCount} {t('tracker.evidence')}
                           </span>
                           <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-gray-300">
                             <Calendar className="h-3 w-3 text-amber-300" />
-                            {formatRelativeSignalDate(activityMap[promise.id]?.lastActivityDate || promise.lastSignalAt || promise.lastUpdate)}
+                            {formatRelativeSignalDate(activityMap[promise.id]?.lastActivityDate || promise.lastSignalAt || promise.lastUpdate, t)}
                           </span>
                           {promise.actors?.[0] ? (
                             <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-gray-300">
                               <Users className="h-3 w-3 text-emerald-300" />
-                              {promise.actors[0]}
+                              {translateActor(promise.actors[0], locale)}
                             </span>
                           ) : null}
                         </div>
@@ -1468,7 +1502,7 @@ function BachanTrackerContent() {
                           <button
                             onClick={(e) => handleShareCard(e, promise)}
                             className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-500 hover:text-primary-400 transition-colors"
-                            title="Share on WhatsApp"
+                            title={t('commitment.shareWhatsApp')}
                           >
                             <Share2 className="w-3.5 h-3.5" />
                           </button>
@@ -1488,7 +1522,7 @@ function BachanTrackerContent() {
                     onClick={handleLoadMore}
                     className="mt-4 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] py-3 text-sm font-medium text-gray-300 transition-all hover:bg-white/[0.06]"
                   >
-                    Load more ({filteredPromises.length - mobileVisibleCount} remaining)
+                    {t('common.loadMore')} ({filteredPromises.length - mobileVisibleCount} {t('common.remaining')})
                   </button>
                 )}
               </>
@@ -1555,7 +1589,7 @@ function BachanTrackerContent() {
                               <span
                                 className={`inline-flex items-center self-start px-2.5 py-1 rounded-full text-xs font-medium capitalize ${config.bg} ${config.text}`}
                               >
-                                {event.category}
+                                {t(`tracker.event${event.category.charAt(0).toUpperCase()}${event.category.slice(1)}`)}
                               </span>
                             </div>
                           </div>

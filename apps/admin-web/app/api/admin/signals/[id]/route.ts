@@ -6,19 +6,9 @@
  * Auth: admin_session cookie or Bearer ADMIN_SECRET.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { isAdminAuthed } from '@/lib/auth/admin';
 import { getSupabase } from '@/lib/supabase/server';
 import { recordSignalReviewAudit } from '@/lib/intelligence/review-audit';
-
-function isAuthed(request: NextRequest): boolean {
-  const adminCookie = request.cookies.get('admin_session')?.value;
-  const authHeader = request.headers.get('authorization');
-  const adminSecret = process.env.ADMIN_SECRET;
-
-  return !!(
-    (adminCookie && adminSecret && adminCookie === adminSecret) ||
-    (authHeader && adminSecret && authHeader === `Bearer ${adminSecret}`)
-  );
-}
 
 const VALID_CLASSIFICATIONS = [
   'confirms', 'contradicts', 'neutral', 'statement', 'budget_allocation', 'policy_change',
@@ -30,7 +20,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!isAuthed(request)) {
+  if (!isAdminAuthed(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

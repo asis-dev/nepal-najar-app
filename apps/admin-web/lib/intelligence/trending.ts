@@ -7,6 +7,7 @@
  */
 
 import { getSupabase } from '@/lib/supabase/server';
+import { resolveSourceDisplayName } from '@/lib/utils/source-names';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -317,7 +318,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
         id: s.id,
         title: s.title_ne || s.title,
         url: s.url,
-        source: s.source_id,
+        source: resolveSourceDisplayName(s.source_id),
       }));
 
     const lastSignal = data.current[0];
@@ -356,14 +357,12 @@ export async function computeTrending(): Promise<TrendingItem[]> {
     rawScore *= 1 + (sourceTypes.size - 1) * 0.3;
     rawScore *= Math.min(2.0, 1 + totalEngagement / 500);
 
-    const topSignals = relatedSignals
-      .slice(0, 3)
-      .map((s) => ({
-        id: s.id,
-        title: s.title_ne || s.title,
-        url: s.url,
-        source: s.source_id,
-      }));
+    const topSignals = relatedSignals.slice(0, 3).map((s) => ({
+      id: s.id,
+      title: s.title_ne || s.title,
+      url: s.url,
+      source: resolveSourceDisplayName(s.source_id),
+    }));
 
     const lastSignal = relatedSignals[0];
 
@@ -454,14 +453,12 @@ export async function computeTrending(): Promise<TrendingItem[]> {
     rawScore *= 1 + (sourceTypes.size - 1) * 0.3;
     rawScore *= Math.min(2.0, 1 + totalEngagement / 500);
 
-    const topSignals = relatedSignals
-      .slice(0, 3)
-      .map((s) => ({
-        id: s.id,
-        title: s.title_ne || s.title,
-        url: s.url,
-        source: s.source_id,
-      }));
+    const topSignals = relatedSignals.slice(0, 3).map((s) => ({
+      id: s.id,
+      title: s.title_ne || s.title,
+      url: s.url,
+      source: resolveSourceDisplayName(s.source_id),
+    }));
 
     const lastSignal = relatedSignals[0];
 

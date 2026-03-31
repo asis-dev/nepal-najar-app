@@ -38,7 +38,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
 
     // Fallback: legacy localStorage key
-    const storedLocale = localStorage.getItem('nepal-najar-locale') as Locale | null;
+    const storedLocale = localStorage.getItem('nepalrepublic-locale') as Locale | null;
     if (storedLocale === 'en' || storedLocale === 'ne') {
       setLocaleState(storedLocale);
       // Migrate to unified store
@@ -64,7 +64,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
     // Keep legacy localStorage key in sync for backward compat
     if (typeof window !== 'undefined') {
-      localStorage.setItem('nepal-najar-locale', newLocale);
+      localStorage.setItem('nepalrepublic-locale', newLocale);
     }
   }, []);
 

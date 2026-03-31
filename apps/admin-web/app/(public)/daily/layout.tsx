@@ -2,7 +2,7 @@ import { createMetadata } from '@/lib/seo';
 
 export const metadata = createMetadata({
   title: 'Daily Activity',
-  description: 'See which public commitments moved today, what stalled, and what signals were detected.',
+  description: 'Daily summary of Nepal government activity. AI-generated brief with audio narration covering policy, corruption, and civic issues.',
   path: '/daily',
 });
 

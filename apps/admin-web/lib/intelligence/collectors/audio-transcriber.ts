@@ -45,6 +45,12 @@ interface IngestResult {
   errors: string[];
 }
 
+export interface TranscribedAudio {
+  text: string | null;
+  language: string | null;
+  durationSeconds: number | null;
+}
+
 function getSignalTypeForTranscript(mediaType: 'audio' | 'video'): 'speech' | 'video' {
   return mediaType === 'video' ? 'video' : 'speech';
 }
@@ -196,10 +202,19 @@ async function callGroqWhisper(
   extension: string,
   language = 'ne',
 ): Promise<string | null> {
+  const verbose = await callGroqWhisperVerbose(audioBuffer, extension, language);
+  return verbose.text;
+}
+
+async function callGroqWhisperVerbose(
+  audioBuffer: Buffer,
+  extension: string,
+  language = 'ne',
+): Promise<TranscribedAudio> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     console.error('[audio-transcriber] GROQ_API_KEY not configured');
-    return null;
+    return { text: null, language: null, durationSeconds: null };
   }
 
   const mimeType = SUPPORTED_MIME_TYPES[extension] || 'audio/mpeg';
@@ -229,18 +244,70 @@ async function callGroqWhisper(
       console.error(
         `[audio-transcriber] Groq Whisper error ${res.status}: ${errorBody}`,
       );
-      return null;
+      return { text: null, language: null, durationSeconds: null };
     }
 
     const result = await res.json();
-    return result.text || null;
+    return {
+      text: typeof result.text === 'string' ? result.text : null,
+      language: typeof result.language === 'string' ? result.language : null,
+      durationSeconds:
+        typeof result.duration === 'number' && Number.isFinite(result.duration)
+          ? result.duration
+          : null,
+    };
   } catch (err) {
     console.error(
       '[audio-transcriber] Groq Whisper request failed:',
       err instanceof Error ? err.message : err,
     );
-    return null;
+    return { text: null, language: null, durationSeconds: null };
   }
+}
+
+function extensionFromFilename(filename?: string | null): string | null {
+  if (!filename) return null;
+  const match = filename.toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+  if (!match) return null;
+  return SUPPORTED_EXTENSIONS.includes(match[1]) ? match[1] : null;
+}
+
+function extensionFromMimeType(mimeType?: string | null): string | null {
+  if (!mimeType) return null;
+  const lower = mimeType.toLowerCase();
+  if (lower.includes('mpeg') || lower.includes('mp3')) return 'mp3';
+  if (lower.includes('mp4')) return 'mp4';
+  if (lower.includes('wav')) return 'wav';
+  if (lower.includes('webm')) return 'webm';
+  if (lower.includes('m4a')) return 'm4a';
+  return null;
+}
+
+export async function transcribeAudioBuffer(
+  audioBuffer: Buffer,
+  options?: {
+    extension?: string | null;
+    filename?: string | null;
+    mimeType?: string | null;
+    language?: string;
+  },
+): Promise<TranscribedAudio> {
+  if (!audioBuffer || audioBuffer.length === 0 || audioBuffer.length > MAX_FILE_SIZE) {
+    return { text: null, language: null, durationSeconds: null };
+  }
+
+  const normalizedExt = (options?.extension || '').toLowerCase();
+  const extension = SUPPORTED_EXTENSIONS.includes(normalizedExt)
+    ? normalizedExt
+    : extensionFromFilename(options?.filename) ||
+      extensionFromMimeType(options?.mimeType) ||
+      'webm';
+
+  return callGroqWhisperVerbose(
+    audioBuffer,
+    extension,
+    options?.language || 'ne',
+  );
 }
 
 /**

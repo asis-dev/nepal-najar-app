@@ -34,11 +34,13 @@ import type { ImpactPrediction } from '@/lib/intelligence/impact-predictor';
 import { useI18n } from '@/lib/i18n';
 import { TruthMeter } from '@/components/public/truth-meter';
 import { CommunityEvidenceFeed } from '@/components/public/community-evidence-feed';
+import { EvidenceSourceBadge, deriveSourceType } from '@/components/public/evidence-source-badge';
 import { CommentsSection } from '@/components/public/comments-section';
 import { VoteWidget } from '@/components/public/vote-widget';
 import { SourceVoteWidget } from '@/components/public/source-vote-widget';
 import { useWatchlistStore } from '@/lib/stores/preferences';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { commitmentShareText } from '@/lib/utils/share';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import {
   getPromiseBySlug,
@@ -48,6 +50,9 @@ import {
   type GovernmentPromise,
 } from '@/lib/data/promises';
 import { useAllPromises, useLatestArticles, usePromiseTodaySignals } from '@/lib/hooks/use-promises';
+import { GhantiIcon } from '@/components/ui/ghanti-icon';
+import { translateActor } from '@/components/public/commitment-card';
+import { translateOrg } from '@/lib/data/government-bodies';
 
 /* ═══════════════════════════════════════════════
    STATUS CONFIG
@@ -265,7 +270,7 @@ function SectionHeader({ icon, title }: { icon: string; title: string }) {
 export default function PromiseDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { toggleWatch, isWatched } = useWatchlistStore();
   const { isAuthenticated } = useAuth();
   const { data: livePromises } = useAllPromises();
@@ -298,7 +303,7 @@ export default function PromiseDetailPage() {
     return liveMatch ?? staticPromise;
   }, [idParam, livePromises, staticPromise]);
 
-  // Fetch briefing immediately on page load
+  // Defer briefing fetch — load AFTER page renders (non-blocking)
   useEffect(() => {
     if (!promise?.id) {
       setBriefingLoading(false);
@@ -307,27 +312,25 @@ export default function PromiseDetailPage() {
 
     const controller = new AbortController();
 
-    (async () => {
+    // Use requestIdleCallback (or setTimeout fallback) to defer AI fetch
+    // so the page renders immediately with static data first
+    const scheduleLoad = typeof window !== 'undefined' && 'requestIdleCallback' in window
+      ? (cb: () => void) => (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 2000 })
+      : (cb: () => void) => setTimeout(cb, 500);
+
+    scheduleLoad(() => {
       setBriefingLoading(true);
       setBriefingError(false);
-      try {
-        const res = await fetch(`/api/briefing?commitment_id=${promise.id}`, {
-          signal: controller.signal,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setBriefing(data);
-        } else {
-          setBriefingError(true);
-        }
-      } catch (e) {
-        if ((e as Error).name !== 'AbortError') {
-          setBriefingError(true);
-        }
-      } finally {
-        setBriefingLoading(false);
-      }
-    })();
+      fetch(`/api/briefing?commitment_id=${promise.id}`, {
+        signal: controller.signal,
+      })
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`${res.status}`))))
+        .then((data) => setBriefing(data))
+        .catch((e) => {
+          if ((e as Error).name !== 'AbortError') setBriefingError(true);
+        })
+        .finally(() => setBriefingLoading(false));
+    });
 
     return () => controller.abort();
   }, [promise?.id]);
@@ -437,15 +440,15 @@ export default function PromiseDetailPage() {
   // Share handler
   const handleShare = async () => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
-    const title = promise ? `${promise.title_ne} - ${promise.title}` : '';
+    if (!promise) return;
+    const title = locale === 'ne' ? (promise.title_ne || promise.title) : promise.title;
+    const text = commitmentShareText({ title, progress: promise.progress, status: promise.status, locale });
     if (navigator.share) {
       try {
-        await navigator.share({ title, url });
-      } catch {
-        // User cancelled
-      }
+        await navigator.share({ title: text, text, url });
+      } catch { /* cancelled */ }
     } else {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(`${text}\n${url}`);
     }
   };
 
@@ -456,17 +459,17 @@ export default function PromiseDetailPage() {
         <div className="text-center">
           <Target className="w-16 h-16 text-gray-600 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-2">
-            {isNe ? 'प्रतिबद्धता फेला परेन' : 'Commitment not found'}
+            {t('detail.notFoundTitle')}
           </h1>
           <p className="text-gray-500 mb-6">
-            {isNe ? 'यो प्रतिबद्धता अब उपलब्ध छैन।' : 'This commitment is no longer available.'}
+            {t('detail.notFoundDesc')}
           </p>
           <Link
             href="/explore/first-100-days"
             className="inline-flex items-center gap-2 btn-secondary"
           >
             <ArrowLeft className="w-4 h-4" />
-            {isNe ? 'ट्र्याकरमा फर्कनुहोस्' : 'Back to tracker'}
+            {t('detail.backToTracker')}
           </Link>
         </div>
       </div>
@@ -504,8 +507,13 @@ export default function PromiseDetailPage() {
 
   const sourceCount = promise.sourceCount ?? allSources.length;
 
-  // Assigned officials
-  const officials = promise.actors && promise.actors.length > 0 ? promise.actors.join(', ') : null;
+  // Assigned officials — separate people from organizations
+  const actorPeople = (promise.actors || []).filter((a) => {
+    const orgPrefixes = ['Ministry of', 'Department of', 'Office of', 'District ', 'Provincial '];
+    const orgNames = new Set(['Federal Parliament', 'Supreme Court', 'Judicial Council', 'Election Commission', 'Public Service Commission', 'CIAA', 'NEA', 'KUKL', 'CAAN', 'PPMO', 'NPC', 'NRB', 'NTA', 'NTB', 'SEBON', 'NEPSE', 'NARC', 'HITP', 'NITC', 'CTEVT', 'CDC', 'ERO', 'IBN', 'TEPC', 'NRNA', 'DOED', 'DOR', 'DWSS', 'DOA', 'DHM', 'UGC', 'MOCIT', 'MOHP', 'MOLMAC', 'IRD', 'SSF', 'Nepal Rastra Bank', 'Investment Board Nepal', 'Social Security Fund', 'Health Insurance Board', 'Electricity Regulatory Commission', 'Truth and Reconciliation Commission', 'National Dalit Commission', 'National Sports Council', 'Inland Revenue Department', 'Attorney General Office', 'Survey Department', 'Kathmandu Metropolitan City']);
+    return !orgNames.has(a) && !orgPrefixes.some((p) => a.startsWith(p));
+  });
+  const actorOrgs = (promise.actors || []).filter((a) => !actorPeople.includes(a));
 
   return (
     <div className="min-h-screen pb-24 md:pb-12">
@@ -526,7 +534,7 @@ export default function PromiseDetailPage() {
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-300 transition-colors mb-6 group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            {isNe ? 'पछाडि जानुहोस्' : 'Back'}
+            {t('detail.back')}
           </button>
 
           {/* Status badge */}
@@ -534,7 +542,7 @@ export default function PromiseDetailPage() {
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${status.bg} ${status.text}`}
             >
-              <span className={`w-2 h-2 rounded-full ${status.dot} animate-pulse`} />
+              <GhantiIcon status={promise.status} size="sm" />
               {isNe ? status.labelNe : status.label}
             </span>
           </div>
@@ -560,17 +568,27 @@ export default function PromiseDetailPage() {
             {promise.scope && (
               <>
                 <span className="text-gray-600">&middot;</span>
-                <span className="capitalize text-gray-500">{promise.scope}</span>
+                <span className="capitalize text-gray-500">{t(`detail.scope${promise.scope.charAt(0).toUpperCase()}${promise.scope.slice(1)}`)}</span>
               </>
             )}
           </div>
 
-          {/* Assigned official */}
-          {officials && (
-            <p className="text-sm text-gray-400 mb-4">
-              <span className="mr-1.5">{'\uD83D\uDC64'}</span>
-              {officials}
-            </p>
+          {/* Assigned officials + organizations */}
+          {(actorPeople.length > 0 || actorOrgs.length > 0) && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4">
+              {actorPeople.length > 0 && (
+                <span className="inline-flex items-center gap-1.5 text-sm text-gray-400">
+                  <Users className="w-3.5 h-3.5 flex-shrink-0" />
+                  {actorPeople.map((a) => translateActor(a, locale)).join(', ')}
+                </span>
+              )}
+              {actorOrgs.length > 0 && (
+                <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
+                  <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                  {actorOrgs.map((o) => translateOrg(o, locale)).join(', ')}
+                </span>
+              )}
+            </div>
           )}
 
           {/* Progress bar (8px thick) */}
@@ -592,7 +610,7 @@ export default function PromiseDetailPage() {
             </div>
             {(promise.progress ?? 0) === 0 && promise.status === 'not_started' && (
               <p className="text-xs text-gray-500 mt-1">
-                {isNe ? 'अहिलेसम्म कुनै प्रगति डेटा छैन' : 'No progress data yet'}
+                {t('detail.noProgressData')}
               </p>
             )}
           </div>
@@ -601,14 +619,14 @@ export default function PromiseDetailPage() {
           {promise.status === 'stalled' && (
             <div className="mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
               <p className="text-xs text-red-400 font-medium">
-                {'\u26D4'} {isNe ? 'अवरोधक' : 'Blocker'}: {isNe ? 'प्रगति रोकिएको छ' : 'Progress has stalled'}
+                {'\u26D4'} {t('detail.blocker')}: {t('detail.blockerDesc')}
               </p>
             </div>
           )}
 
           {/* Truth meter */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">{'\uD83D\uDEE1\uFE0F'} Truth:</span>
+            <span className="text-sm text-gray-500">{'\uD83D\uDEE1\uFE0F'} {t('detail.truth')}:</span>
             <TruthMeter score={truthScore} label={truthLabel} size="md" />
           </div>
         </section>
@@ -631,7 +649,7 @@ export default function PromiseDetailPage() {
                     : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
-                {tab === 'brief' ? (isNe ? 'सारांश' : 'Brief') : tab === 'sources' ? (isNe ? 'स्रोत' : 'Sources') : (isNe ? 'प्रमाण' : 'Evidence')}
+                {tab === 'brief' ? t('detail.briefTab') : tab === 'sources' ? t('detail.sourcesTab') : t('detail.evidenceTab')}
                 {activeTab === tab && (
                   <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full bg-primary-400" />
                 )}
@@ -644,7 +662,7 @@ export default function PromiseDetailPage() {
            SECTION 2: FULL BRIEFING
            ═══════════════════════════════════════ */}
         <section className={`pb-8 ${activeTab !== 'brief' ? 'hidden md:block' : ''}`}>
-          <SectionHeader icon={'\uD83D\uDCCB'} title={isNe ? 'सारांश' : 'Intelligence Briefing'} />
+          <SectionHeader icon={'\uD83D\uDCCB'} title={t('detail.intelligenceBriefing')} />
 
           {briefingLoading ? (
             <BriefingSkeleton />
@@ -656,11 +674,11 @@ export default function PromiseDetailPage() {
               </p>
               {lastUpdatedTime && (
                 <p className="text-xs text-gray-500 mt-4">
-                  {isNe ? 'अन्तिम अद्यावधिक' : 'Last updated'}: {lastUpdatedTime}
+                  {t('detail.lastUpdated')}: {lastUpdatedTime}
                   {sourceCount > 0 && (
                     <>
                       {' '}&middot;{' '}
-                      {sourceCount} {isNe ? 'स्रोतहरू ट्र्याक गर्दै' : 'sources tracking'}
+                      {sourceCount} {t('detail.sourcesTracking')}
                     </>
                   )}
                 </p>
@@ -679,7 +697,7 @@ export default function PromiseDetailPage() {
                     {/* What's happening */}
                     <div>
                       <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3">
-                        {isNe ? 'के भइरहेको छ' : "What's happening"}
+                        {t('detail.whatsHappening')}
                       </h3>
                       <p className="text-sm text-gray-300 leading-relaxed">
                         {fb.whatsHappening}
@@ -690,7 +708,7 @@ export default function PromiseDetailPage() {
                     {fb.whosSayingWhat && fb.whosSayingWhat.length > 0 && (
                       <div>
                         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3">
-                          {isNe ? 'कसले के भन्दैछ' : "Who's saying what"}
+                          {t('detail.whosSayingWhat')}
                         </h3>
                         <div className="space-y-2.5">
                           {fb.whosSayingWhat.map((item, i) => {
@@ -740,7 +758,7 @@ export default function PromiseDetailPage() {
                     {fb.keyNumbers && fb.keyNumbers.length > 0 && (
                       <div>
                         <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3">
-                          {isNe ? 'मुख्य तथ्याङ्क' : 'Key numbers'}
+                          {t('detail.keyNumbers')}
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                           {fb.keyNumbers.map((item, i) => (
@@ -762,7 +780,7 @@ export default function PromiseDetailPage() {
                     {/* What to watch */}
                     <div>
                       <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3">
-                        {isNe ? 'के हेर्ने' : 'What to watch'}
+                        {t('detail.whatToWatch')}
                       </h3>
                       <div className="pl-3.5 py-3 pr-3 border-l-2 border-l-amber-400/60 bg-amber-500/[0.04] rounded-r-lg">
                         <p className="text-sm text-gray-300 leading-relaxed">
@@ -774,11 +792,11 @@ export default function PromiseDetailPage() {
                     {/* Meta info */}
                     <div className="flex items-center justify-between text-[10px] text-gray-600 pt-2 border-t border-white/[0.04]">
                       <span>
-                        {briefing.signalCount} {isNe ? 'संकेतहरू' : 'signals'} &middot;{' '}
-                        {briefing.sourceCount} {isNe ? 'स्रोतहरू' : 'sources'}
+                        {briefing.signalCount} {t('detail.signals')} &middot;{' '}
+                        {briefing.sourceCount} {t('detail.sources')}
                       </span>
                       <span>
-                        {isNe ? 'उत्पन्न' : 'Generated'}{' '}
+                        {t('detail.generated')}{' '}
                         {new Date(briefing.generatedAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -793,7 +811,7 @@ export default function PromiseDetailPage() {
            SECTION 2.5: WHEN THIS IS DONE (Impact Prediction)
            ═══════════════════════════════════════ */}
         <section ref={impactRef} className={`pb-8 ${activeTab !== 'brief' ? 'hidden md:block' : ''}`}>
-          <SectionHeader icon={'\u2728'} title={isNe ? '\u092F\u094B \u092A\u0942\u0930\u093E \u092D\u090F\u092A\u091B\u093F' : 'When This Is Done'} />
+          <SectionHeader icon={'\u2728'} title={t('detail.whenThisIsDone')} />
 
           {impactLoading ? (
             <ImpactSkeleton />
@@ -812,7 +830,7 @@ export default function PromiseDetailPage() {
                 </p>
                 {impact.estimatedCompletion && (
                   <p className="text-xs text-gray-500 mt-3">
-                    {'\uD83D\uDCC5'} {isNe ? '\u0905\u0928\u0941\u092E\u093E\u0928\u093F\u0924 \u0938\u092E\u094D\u092A\u0928\u094D\u0928' : 'Est. completion'}: {impact.estimatedCompletion}
+                    {'\uD83D\uDCC5'} {t('detail.estCompletion')}: {impact.estimatedCompletion}
                   </p>
                 )}
               </div>
@@ -821,7 +839,7 @@ export default function PromiseDetailPage() {
               {impact.beforeAfter && impact.beforeAfter.length > 0 && (
                 <div className="glass-card p-5 sm:p-6">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-4">
-                    {'\uD83D\uDCCA'} {isNe ? '\u092A\u0939\u093F\u0932\u0947 \u2192 \u092A\u091B\u093F' : 'Before \u2192 After'}
+                    {'\uD83D\uDCCA'} {t('detail.beforeAfter')}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {impact.beforeAfter.map((item, i) => (
@@ -848,7 +866,7 @@ export default function PromiseDetailPage() {
               {impact.impacts && impact.impacts.length > 0 && (
                 <div className="glass-card p-5 sm:p-6">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-4">
-                    {'\uD83D\uDCA1'} {isNe ? '\u092E\u0941\u0916\u094D\u092F \u092A\u094D\u0930\u092D\u093E\u0935\u0939\u0930\u0942' : 'Key Impacts'}
+                    {'\uD83D\uDCA1'} {t('detail.keyImpacts')}
                   </h3>
                   <div className="space-y-2.5">
                     {impact.impacts.map((item, i) => {
@@ -860,10 +878,10 @@ export default function PromiseDetailPage() {
                             : 'bg-gray-500';
                       const confidenceLabel =
                         item.confidence === 'high'
-                          ? isNe ? '\u0909\u091A\u094D\u091A' : 'High'
+                          ? t('detail.confidenceHigh')
                           : item.confidence === 'medium'
-                            ? isNe ? '\u092E\u0927\u094D\u092F\u092E' : 'Medium'
-                            : isNe ? '\u0905\u0928\u0941\u092E\u093E\u0928\u093F\u0924' : 'Speculative';
+                            ? t('detail.confidenceMedium')
+                            : t('detail.confidenceSpeculative');
 
                       return (
                         <div
@@ -899,7 +917,7 @@ export default function PromiseDetailPage() {
               {impact.primaryBeneficiaries && impact.primaryBeneficiaries.length > 0 && (
                 <div className="glass-card p-5 sm:p-6">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-3">
-                    {isNe ? '\u0915\u0938\u0932\u093E\u0908 \u0938\u092C\u0948\u092D\u0928\u094D\u0926\u093E \u092C\u0922\u0940 \u092B\u093E\u0907\u0926\u093E' : 'Who benefits most'}
+                    {t('detail.whoBenefitsMost')}
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {impact.primaryBeneficiaries.map((b, i) => (
@@ -916,7 +934,7 @@ export default function PromiseDetailPage() {
 
               {/* Meta */}
               <div className="text-[10px] text-gray-600 text-center">
-                {isNe ? 'AI \u0926\u094D\u0935\u093E\u0930\u093E \u0909\u0924\u094D\u092A\u0928\u094D\u0928' : 'AI-generated prediction'} &middot;{' '}
+                {t('detail.aiGenerated')} &middot;{' '}
                 {new Date(impact.generatedAt).toLocaleDateString()}
               </div>
             </div>
@@ -927,7 +945,7 @@ export default function PromiseDetailPage() {
            SECTION 3: LATEST SOURCES (with voting)
            ═══════════════════════════════════════ */}
         <section className={`pb-8 ${activeTab !== 'sources' ? 'hidden md:block' : ''}`}>
-          <SectionHeader icon={'\uD83D\uDCF0'} title={isNe ? 'ताजा स्रोतहरू' : 'Latest Sources'} />
+          <SectionHeader icon={'\uD83D\uDCF0'} title={t('detail.latestSources')} />
 
           {signalsLoading ? (
             <div className="space-y-3">
@@ -959,15 +977,26 @@ export default function PromiseDetailPage() {
                       {source.headline}
                     </p>
                     <div className="flex items-center justify-between">
-                      <a
-                        href={source.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 transition-colors"
-                      >
-                        {isNe ? 'मूल पढ्नुहोस्' : 'Read original'}
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={source.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 transition-colors"
+                        >
+                          {t('detail.readOriginal')}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <EvidenceSourceBadge
+                          sourceType={deriveSourceType({
+                            source_type: source.sourceType,
+                            source_name: source.sourceName,
+                            confidence: source.confidence,
+                          })}
+                          isNe={locale === 'ne'}
+                          compact
+                        />
+                      </div>
                       {/* Source voting */}
                       <SourceVoteWidget targetType="signal" targetId={source.id} />
                     </div>
@@ -981,9 +1010,7 @@ export default function PromiseDetailPage() {
                   onClick={() => setShowAllSignals(true)}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-primary-400 bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-primary-500/20 transition-all"
                 >
-                  {isNe
-                    ? `सबै ${allSources.length} स्रोतहरू हेर्नुहोस्`
-                    : `Show all ${allSources.length} sources`}
+                  {t('detail.showAllSources').replace('{count}', String(allSources.length))}
                   <ChevronDown className="w-4 h-4" />
                 </button>
               )}
@@ -991,12 +1018,10 @@ export default function PromiseDetailPage() {
           ) : (
             <div className="glass-card p-6 text-center">
               <p className="text-sm text-gray-500">
-                {isNe ? 'अहिलेसम्म कुनै स्रोत उपलब्ध छैन।' : 'No sources available yet'}
+                {t('detail.noSourcesYet')}
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                {isNe
-                  ? 'बुद्धिमत्ता इन्जिनले स्वचालित रूपमा स्रोत खोज्छ।'
-                  : 'The intelligence engine is continuously scanning for sources.'}
+                {t('detail.noSourcesDesc')}
               </p>
             </div>
           )}
@@ -1006,7 +1031,7 @@ export default function PromiseDetailPage() {
            SECTION 4: COMMUNITY EVIDENCE
            ═══════════════════════════════════════ */}
         <section ref={evidenceRef} id="community-evidence" className={`pb-8 scroll-mt-6 ${activeTab !== 'evidence' ? 'hidden md:block' : ''}`}>
-          <SectionHeader icon={'\uD83D\uDCF8'} title={isNe ? 'समुदाय प्रमाण' : 'Community Evidence'} />
+          <SectionHeader icon={'\uD83D\uDCF8'} title={t('detail.communityEvidence')} />
           <CommunityEvidenceFeed promiseId={promise.id} />
         </section>
 
@@ -1014,7 +1039,7 @@ export default function PromiseDetailPage() {
            SECTION 5: DISCUSSION
            ═══════════════════════════════════════ */}
         <section className={`pb-8 ${activeTab !== 'evidence' ? 'hidden md:block' : ''}`}>
-          <SectionHeader icon={'\uD83D\uDCAC'} title={isNe ? 'छलफल' : 'Discussion'} />
+          <SectionHeader icon={'\uD83D\uDCAC'} title={t('detail.discussion')} />
           <CommentsSection promiseId={promise.id} />
         </section>
 
@@ -1039,8 +1064,8 @@ export default function PromiseDetailPage() {
             >
               <Eye className="w-3.5 h-3.5" />
               {isWatched(promise.id)
-                ? isNe ? 'हेरिरहेको' : 'Watching'
-                : isNe ? 'हेर्नुहोस्' : 'Watch'}
+                ? t('detail.watching')
+                : t('detail.watch')}
             </button>
 
             {/* Share */}
@@ -1049,7 +1074,7 @@ export default function PromiseDetailPage() {
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-white/[0.05] text-gray-300 border border-white/[0.08] transition-all hover:bg-white/[0.08]"
             >
               <Share2 className="w-3.5 h-3.5" />
-              {isNe ? 'साझा' : 'Share'}
+              {t('detail.share')}
             </button>
 
             {/* Submit Evidence */}
@@ -1058,7 +1083,7 @@ export default function PromiseDetailPage() {
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-primary-500/20 text-primary-300 border border-primary-500/30 transition-all hover:bg-primary-500/30"
             >
               <Camera className="w-3.5 h-3.5" />
-              {isNe ? 'प्रमाण' : 'Evidence'}
+              {t('detail.evidence')}
             </button>
           </div>
         </div>
@@ -1077,8 +1102,8 @@ export default function PromiseDetailPage() {
           >
             <Bookmark className={`w-4 h-4 ${isWatched(promise.id) ? 'fill-primary-400' : ''}`} />
             {isWatched(promise.id)
-              ? isNe ? 'हेरिरहेको' : 'Watching'
-              : isNe ? 'हेर्नुहोस्' : 'Watch'}
+              ? t('detail.watching')
+              : t('detail.watch')}
           </button>
 
           <button
@@ -1086,7 +1111,7 @@ export default function PromiseDetailPage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.06] transition-all"
           >
             <Share2 className="w-4 h-4" />
-            {isNe ? 'साझा गर्नुहोस्' : 'Share'}
+            {t('detail.share')}
           </button>
 
           <button
@@ -1094,7 +1119,7 @@ export default function PromiseDetailPage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-primary-500/15 text-primary-300 border border-primary-500/30 hover:bg-primary-500/25 transition-all"
           >
             <Camera className="w-4 h-4" />
-            {isNe ? 'प्रमाण पेश गर्नुहोस्' : 'Submit Evidence'}
+            {t('detail.submitEvidence')}
           </button>
         </div>
       </div>

@@ -377,6 +377,286 @@ export const RSS_FEEDS: RSSSource[] = [
     language: 'en',
     relatedPromiseIds: [],
   },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // HIGH-VALUE SOURCES — International orgs, think tanks, accountability
+  // These produce fewer articles but each one is highly relevant evidence
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── International Development Organizations ──
+  {
+    id: 'rss-worldbank-nepal',
+    name: 'World Bank Nepal',
+    feedUrl: 'https://www.worldbank.org/en/country/nepal/rss.xml',
+    language: 'en',
+    relatedPromiseIds: [8, 9, 14, 57, 84],
+  },
+  {
+    id: 'rss-adb-nepal',
+    name: 'Asian Development Bank Nepal',
+    feedUrl: 'https://www.adb.org/countries/nepal/main?feed=atom',
+    language: 'en',
+    relatedPromiseIds: [8, 15, 65, 84],
+  },
+  {
+    id: 'rss-undp-nepal',
+    name: 'UNDP Nepal',
+    feedUrl: 'https://www.undp.org/nepal/rss.xml',
+    language: 'en',
+    relatedPromiseIds: [57, 105, 108],
+  },
+  {
+    id: 'rss-who-nepal',
+    name: 'WHO Nepal',
+    feedUrl: 'https://www.who.int/nepal/rss-feeds/news/rss.xml',
+    language: 'en',
+    relatedPromiseIds: [22, 93, 96],
+  },
+  {
+    id: 'rss-unicef-nepal',
+    name: 'UNICEF Nepal',
+    feedUrl: 'https://www.unicef.org/nepal/rss.xml',
+    language: 'en',
+    relatedPromiseIds: [24, 26, 91, 93],
+  },
+  {
+    id: 'rss-ilo-nepal',
+    name: 'ILO Nepal',
+    feedUrl: 'https://www.ilo.org/gateway/faces/home/ctryHome?locale=EN&countryCode=NPL&_adf.ctrl-state=rss',
+    language: 'en',
+    relatedPromiseIds: [9, 34, 74],
+  },
+  {
+    id: 'rss-reliefweb-nepal',
+    name: 'ReliefWeb Nepal',
+    feedUrl: 'https://reliefweb.int/updates/rss.xml?search-query=country:Nepal&limit=20',
+    language: 'en',
+    relatedPromiseIds: [96, 108, 105],
+  },
+
+  // ── Think Tanks & Policy Research ──
+  {
+    id: 'rss-nefport',
+    name: 'Nepal Economic Forum',
+    feedUrl: 'https://nepaleconomicforum.org/feed/',
+    language: 'en',
+    relatedPromiseIds: [8, 10, 63, 87],
+  },
+  {
+    id: 'rss-nepal-policy-institute',
+    name: 'Nepal Policy Institute',
+    feedUrl: 'https://nepalpolicyinstitute.org/feed/',
+    language: 'en',
+    relatedPromiseIds: [1, 30, 101],
+  },
+  {
+    id: 'rss-cij-nepal',
+    name: 'Center for Investigative Journalism Nepal',
+    feedUrl: 'https://cijnepal.org.np/feed/',
+    language: 'en',
+    relatedPromiseIds: [4, 31, 47],
+  },
+  {
+    id: 'rss-transparency-intl',
+    name: 'Transparency International Nepal',
+    feedUrl: 'https://tinepal.org/feed/',
+    language: 'en',
+    relatedPromiseIds: [4, 5, 7, 47],
+  },
+
+  // ── RSP Official Sources ──
+  {
+    id: 'rss-rsp-nepal',
+    name: 'RSP Nepal Official',
+    feedUrl: 'https://rspnepal.org/feed/',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+
+  // ── YouTube Channels (via RSS) ──
+  // YouTube provides RSS feeds for channels at:
+  // https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID
+  {
+    id: 'yt-nepal-parliament',
+    name: 'Nepal Parliament TV',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCpSgTMgWR1QOYX6WMBllVTQ',
+    language: 'ne',
+    relatedPromiseIds: [1, 2, 38, 42],
+  },
+  {
+    id: 'yt-rsp-official',
+    name: 'RSP Official YouTube',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCxr4I5I6N3DGu1CvME-t5Rg',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-image-channel',
+    name: 'Image Channel News',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCcWZSWRsCPKnT3yIe1Hfwlw',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-kantipur-tv',
+    name: 'Kantipur TV',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCwXJYnFBSQEtaXaROmPANKw',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-news24-nepal',
+    name: 'News24 Nepal',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCHhEfSm0OOVHq4h2FKXS8RA',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-himalaya-tv',
+    name: 'Himalaya TV',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCb2XgCXS9AB_iNjXhQvxJtA',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-news24-nepal-main',
+    name: 'News24 Nepal',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCjG2HX7jfwqIjzTlaF1CPGA',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-kantipur-tv-hd',
+    name: 'Kantipur TV HD',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UC3yDoaqQzOd1bNP74ZrGPTA',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-nepal-television',
+    name: 'Nepal Television (NTV)',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCTGVQIvtPu5kqNI5ABmN8Fw',
+    language: 'ne',
+    relatedPromiseIds: [1, 2, 38, 42],
+  },
+  {
+    id: 'yt-onlinetv-nepal',
+    name: 'Onlinetv Nepal',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCbzFzlBEU_xFahqhGbEMJXQ',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-inside-nepal-news',
+    name: 'Inside Nepal News',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UC3v3VpUyf34SLfN1IyUlMeA',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-ap1-tv',
+    name: 'AP1 HD Television',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCFlPB2adH_uHaJfUCODTdrQ',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-prime-times',
+    name: 'Prime Times Television',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCL1Zr3XniRSwZOcqnpAKtfg',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-nepali-comment',
+    name: 'The Nepali Comment',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCIUpvBA9ibPWHaDeH0G49Aw',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-balen-shah',
+    name: 'Balen Shah (PM)',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCJgcDT2XI3cQJhGe01AFaHQ',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-kendrabindu',
+    name: 'Kendrabindu News',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCPEwoZthpr3YZzrvlowpqgw',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+  {
+    id: 'yt-ratopati-tv',
+    name: 'Ratopati TV',
+    feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UC1ev3ii9O4RuUVZ-5mfOBQQ',
+    language: 'ne',
+    relatedPromiseIds: [],
+  },
+
+  // ── Specialized / Sector Sources ──
+  {
+    id: 'rss-sharesansar',
+    name: 'ShareSansar (Stock Market)',
+    feedUrl: 'https://www.sharesansar.com/rss',
+    language: 'en',
+    relatedPromiseIds: [62],
+  },
+  {
+    id: 'rss-ictframe',
+    name: 'ICT Frame (Tech News)',
+    feedUrl: 'https://ictframe.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [18, 19, 20, 70, 71, 75, 76, 77, 78],
+  },
+  {
+    id: 'rss-fiscal-nepal',
+    name: 'Fiscal Nepal (Economy)',
+    feedUrl: 'https://www.fiscalnepal.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [8, 10, 11, 53, 87],
+  },
+  {
+    id: 'rss-new-business-age',
+    name: 'New Business Age',
+    feedUrl: 'https://www.newbusinessage.com/feed',
+    language: 'en',
+    relatedPromiseIds: [8, 9, 10, 53, 54, 87],
+  },
+  {
+    id: 'rss-farsight-nepal',
+    name: 'Farsight Nepal',
+    feedUrl: 'https://farsightnepal.com/feed/',
+    language: 'en',
+    relatedPromiseIds: [1, 2, 6],
+  },
+
+  // ── Human Rights & Social Justice ──
+  {
+    id: 'rss-amnesty-nepal',
+    name: 'Amnesty International Nepal',
+    feedUrl: 'https://www.amnesty.org/en/location/asia-and-the-pacific/south-asia/nepal/rss.xml',
+    language: 'en',
+    relatedPromiseIds: [33, 36, 37, 50, 51],
+  },
+  {
+    id: 'rss-hrw-nepal',
+    name: 'Human Rights Watch Nepal',
+    feedUrl: 'https://www.hrw.org/asia/nepal/feed',
+    language: 'en',
+    relatedPromiseIds: [33, 36, 37, 50, 51],
+  },
+
+  // ── Climate & Environment ──
+  {
+    id: 'rss-icimod',
+    name: 'ICIMOD (Mountain Development)',
+    feedUrl: 'https://www.icimod.org/feed/',
+    language: 'en',
+    relatedPromiseIds: [105, 106, 108],
+  },
 ];
 
 function parseXML(xml: string): RSSItem[] {
@@ -470,16 +750,21 @@ export async function collectRSS(
   errors: string[];
 }> {
   const errors: string[] = [];
+  const timeoutMs = Math.max(
+    3_000,
+    Number.parseInt(process.env.INTELLIGENCE_RSS_TIMEOUT_MS || '8000', 10) ||
+      8_000,
+  );
 
   try {
     const res = await fetch(source.feedUrl, {
       headers: {
         'User-Agent':
-          'NepalNajar/2.0 (intelligence-engine; +https://nepalnajar.com)',
+          'NepalRepublic/2.0 (civic-tracker; +https://nepalrepublic.org)',
         Accept:
           'application/rss+xml, application/xml, text/xml, application/atom+xml',
       },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!res.ok) {
@@ -505,21 +790,33 @@ export async function collectAllRSS(): Promise<{
   errors: string[];
 }> {
   const supabase = getSupabase();
-  let totalItems = 0;
-  let newItems = 0;
-  const allErrors: string[] = [];
+  const concurrency = Math.max(
+    1,
+    Math.min(
+      Number.parseInt(process.env.INTELLIGENCE_RSS_CONCURRENCY || '8', 10) || 8,
+      20,
+    ),
+  );
 
-  for (const source of RSS_FEEDS) {
-    const { items, errors } = await collectRSS(source);
-    allErrors.push(...errors);
-    totalItems += items.length;
+  let cursor = 0;
+  const results = await Promise.all(
+    Array.from({ length: concurrency }, async () => {
+      let totalItems = 0;
+      let newItems = 0;
+      const errors: string[] = [];
 
-    for (const item of items) {
-      // Upsert as intelligence signal
-      const { error } = await supabase
-        .from('intelligence_signals')
-        .upsert(
-          {
+      while (true) {
+        const nextIndex = cursor;
+        cursor += 1;
+        if (nextIndex >= RSS_FEEDS.length) break;
+
+        const source = RSS_FEEDS[nextIndex];
+        const { items, errors: feedErrors } = await collectRSS(source);
+        errors.push(...feedErrors);
+        totalItems += items.length;
+
+        if (items.length > 0) {
+          const payload = items.map((item) => ({
             source_id: source.id,
             signal_type: 'article',
             external_id: item.link,
@@ -534,36 +831,48 @@ export async function collectAllRSS(): Promise<{
             language: source.language,
             media_type: 'text',
             metadata: { categories: item.categories || [] },
-          },
+          }));
+
+          const { error } = await supabase.from('intelligence_signals').upsert(
+            payload,
+            {
+              onConflict: 'source_id,external_id',
+              ignoreDuplicates: true,
+            },
+          );
+
+          if (!error) {
+            // Approximate "new" count for pipeline metrics.
+            newItems += payload.length;
+          } else {
+            errors.push(`${source.name}: DB upsert failed (${error.message})`);
+          }
+        }
+
+        await supabase.from('intelligence_sources').upsert(
           {
-            onConflict: 'source_id,external_id',
-            ignoreDuplicates: true,
+            id: source.id,
+            name: source.name,
+            source_type: 'rss' as const,
+            url: source.feedUrl,
+            related_promise_ids: source.relatedPromiseIds,
+            is_active: true,
+            last_checked_at: new Date().toISOString(),
+            ...(items.length > 0
+              ? { last_found_at: new Date().toISOString() }
+              : {}),
           },
+          { onConflict: 'id' },
         );
+      }
 
-      if (!error) newItems++;
-    }
+      return { totalItems, newItems, errors };
+    }),
+  );
 
-    // Update source last_checked
-    await supabase.from('intelligence_sources').upsert(
-      {
-        id: source.id,
-        name: source.name,
-        source_type: 'rss' as const,
-        url: source.feedUrl,
-        related_promise_ids: source.relatedPromiseIds,
-        is_active: true,
-        last_checked_at: new Date().toISOString(),
-        ...(items.length > 0
-          ? { last_found_at: new Date().toISOString() }
-          : {}),
-      },
-      { onConflict: 'id' },
-    );
-
-    // Be polite
-    await new Promise((r) => setTimeout(r, 500));
-  }
-
-  return { totalItems, newItems, errors: allErrors };
+  return {
+    totalItems: results.reduce((sum, row) => sum + row.totalItems, 0),
+    newItems: results.reduce((sum, row) => sum + row.newItems, 0),
+    errors: results.flatMap((row) => row.errors),
+  };
 }

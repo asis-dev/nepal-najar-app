@@ -48,7 +48,7 @@ export function exportPromisesCSV(promises: GovernmentPromise[]) {
   const today = new Date().toISOString().split('T')[0];
   const link = document.createElement('a');
   link.href = url;
-  link.download = `nepal-najar-promises-${today}.csv`;
+  link.download = `nepalrepublic-promises-${today}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -88,7 +88,7 @@ export function exportPromisesPDF(promises: GovernmentPromise[]) {
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Nepal Najar — Government Promises Report (${today})</title>
+  <title>Nepal Republic — Government Promises Report (${today})</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1a1a1a; }
     h1 { font-size: 20px; margin-bottom: 4px; }
@@ -105,7 +105,7 @@ export function exportPromisesPDF(promises: GovernmentPromise[]) {
   </style>
 </head>
 <body>
-  <h1>Nepal Najar — Government Promises Report</h1>
+  <h1>Nepal Republic — Government Promises Report</h1>
   <div class="subtitle">Generated on ${today} — ${promises.length} promises tracked</div>
   <table>
     <thead>

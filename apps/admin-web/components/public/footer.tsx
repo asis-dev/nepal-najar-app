@@ -2,143 +2,67 @@
 
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
-import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
-
-/* ─── Link data ─── */
-
-const exploreLinks = [
-  { href: '/explore/first-100-days', label: 'Tracker' },
-  { href: '/report-card', label: 'Report Card' },
-  { href: '/explore/government', label: 'Government' },
-  { href: '/trending', label: 'Trending' },
-];
-
-const communityLinks = [
-  { href: '/evidence', label: 'Submit Evidence' },
-  { href: '/verifier-applications', label: 'Apply as Verifier' },
-  { href: '/feedback', label: 'Feedback' },
-  { href: '/how-it-works', label: 'How It Works' },
-];
-
-const resourceLinks = [
-  { href: '/how-it-works', label: 'About' },
-  { href: '/how-it-works#faq', label: 'FAQ' },
-  { href: '/api/v1', label: 'API' },
-  { href: '/privacy', label: 'Privacy Policy' },
-];
-
-const connectLinks = [
-  { href: 'https://x.com/nepalnajar', label: 'X / Twitter', external: true },
-  { href: 'https://facebook.com/nepalnajar', label: 'Facebook', external: true },
-  { href: 'https://reddit.com/r/nepalnajar', label: 'Reddit', external: true },
-  { href: 'https://github.com/nepalnajar', label: 'GitHub', external: true },
-];
-
-/* ─── Link column component ─── */
-
-function FooterColumn({ title, links }: {
-  title: string;
-  links: { href: string; label: string; external?: boolean }[];
-}) {
-  return (
-    <div>
-      <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-400">
-        {title}
-      </h4>
-      <ul className="space-y-2">
-        {links.map(({ href, label, external }) => (
-          <li key={href + label}>
-            {external ? (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-gray-500 transition-colors hover:text-gray-300"
-              >
-                {label}
-              </a>
-            ) : (
-              <Link
-                href={href}
-                className="text-xs text-gray-500 transition-colors hover:text-gray-300"
-              >
-                {label}
-              </Link>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/* ─── Footer ─── */
+import { RepublicMark } from '@/components/ui/ghanti-card-mark';
+import { ExternalLink } from 'lucide-react';
 
 export function Footer() {
-  const { locale, setLocale } = useI18n();
+  const { locale, setLocale, t } = useI18n();
+
+  const links = [
+    { href: '/explore/first-100-days', label: locale === 'ne' ? 'ट्र्याकर' : 'Tracker' },
+    { href: '/scorecard', label: locale === 'ne' ? 'स्कोरकार्ड' : 'Scorecard' },
+    { href: '/report-card', label: locale === 'ne' ? 'रिपोर्ट कार्ड' : 'Report Card' },
+    { href: '/corruption', label: locale === 'ne' ? 'भ्रष्टाचार' : 'Corruption' },
+    { href: '/complaints', label: t('nav.complaints') },
+    { href: '/daily', label: locale === 'ne' ? 'दैनिक ब्रिफ' : 'Daily Brief' },
+    { href: '/trending', label: locale === 'ne' ? 'ट्रेन्डिङ' : 'Trending' },
+    { href: '/about', label: t('footer.about') },
+    { href: '/how-it-works', label: locale === 'ne' ? 'कसरी काम गर्छ' : 'How It Works' },
+    { href: '/feedback', label: locale === 'ne' ? 'प्रतिक्रिया' : 'Feedback' },
+  ];
+
+  const social = [
+    { href: 'https://x.com/nepalrepublic', label: 'X' },
+    { href: 'https://facebook.com/nepalrepublic', label: 'Facebook' },
+    { href: 'https://reddit.com/r/nepalrepublic', label: 'Reddit' },
+  ];
 
   return (
-    <footer className="relative z-20 border-t border-white/5 bg-black/40">
-      <div className="public-shell px-4 py-6 sm:px-6 sm:py-8">
-        {/* Top: Brand + tagline */}
-        <div className="mb-6 text-center sm:mb-8">
-          <div className="inline-block">
-            <NepalNajarMark compact />
-          </div>
-          <p className="mt-2 text-xs text-gray-500">
-            The nation&apos;s report card.
+    <footer className="relative z-20 border-t border-white/[0.06] bg-[#060810]">
+      <div className="public-shell px-4 py-6 sm:px-6">
+        {/* Centered brand */}
+        <div className="flex flex-col items-center text-center mb-5">
+          <RepublicMark compact />
+          <p className="mt-1.5 text-[11px] text-gray-600 max-w-[280px]">
+            {t('brand.taglineFull')}
           </p>
         </div>
 
-        {/* Link grid: 2 cols on mobile, 4 on desktop */}
-        <div className="grid grid-cols-2 gap-6 sm:gap-8 lg:grid-cols-4">
-          <FooterColumn title="Explore" links={exploreLinks} />
-          <FooterColumn title="Community" links={communityLinks} />
-          <div className="hidden lg:block">
-            <FooterColumn title="Resources" links={resourceLinks} />
-          </div>
-          <div className="hidden lg:block">
-            <FooterColumn title="Connect" links={connectLinks} />
-          </div>
+        {/* Links — compact inline flow */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-gray-500">
+          {links.map(l => (
+            <Link key={l.href} href={l.href} className="hover:text-white transition-colors">{l.label}</Link>
+          ))}
         </div>
 
-        {/* Bottom bar: language toggle + legal */}
-        <div className="mt-6 flex flex-col items-center gap-3 border-t border-white/5 pt-5 sm:mt-8 sm:flex-row sm:justify-center sm:gap-2">
-          {/* Language toggle */}
-          <div className="flex items-center gap-1 text-xs">
-            <button
-              onClick={() => setLocale('en')}
-              className={`rounded px-1.5 py-0.5 transition-colors ${
-                locale === 'en'
-                  ? 'bg-white/10 text-gray-200'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              EN
-            </button>
-            <span className="text-gray-700">|</span>
-            <button
-              onClick={() => setLocale('ne')}
-              className={`rounded px-1.5 py-0.5 transition-colors ${
-                locale === 'ne'
-                  ? 'bg-white/10 text-gray-200'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              ने
-            </button>
+        {/* Social */}
+        <div className="mt-3 flex items-center justify-center gap-3 text-[11px] text-gray-600">
+          {social.map(s => (
+            <a key={s.href} href={s.href} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">{s.label}</a>
+          ))}
+        </div>
+
+        {/* Bottom line */}
+        <div className="mt-4 flex items-center justify-center gap-3 border-t border-white/[0.04] pt-3 text-[10px] text-gray-700">
+          <div className="flex items-center gap-0.5">
+            <button onClick={() => setLocale('en')} className={`rounded px-1.5 py-0.5 transition-colors ${locale === 'en' ? 'bg-white/[0.08] text-gray-400' : 'hover:text-gray-500'}`}>EN</button>
+            <span>|</span>
+            <button onClick={() => setLocale('ne')} className={`rounded px-1.5 py-0.5 transition-colors ${locale === 'ne' ? 'bg-white/[0.08] text-gray-400' : 'hover:text-gray-500'}`}>ने</button>
           </div>
-
-          <span className="hidden text-gray-700 sm:inline">&middot;</span>
-
-          <span className="text-[11px] text-gray-600">
-            &copy; 2026 Nepal Najar
-          </span>
-
-          <span className="hidden text-gray-700 sm:inline">&middot;</span>
-
-          <span className="text-[11px] text-gray-600">
-            Made with ❤️ for Nepal
+          <span>&copy; 2026 Nepal Republic</span>
+          <span className="flex items-center gap-1 text-emerald-500/60 font-medium">
+            <span className="h-1 w-1 rounded-full bg-emerald-500/80" />
+            {t('brand.poweredByAI')}
           </span>
         </div>
       </div>

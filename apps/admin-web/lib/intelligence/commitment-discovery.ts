@@ -151,7 +151,7 @@ interface AIDiscoveryResult {
 async function analyzeForNewCommitment(
   signal: Signal,
 ): Promise<AIDiscoveryResult | null> {
-  const systemPrompt = `You are an intelligence analyst for Nepal Najar, a government promise tracker.
+  const systemPrompt = `You are an intelligence analyst for Nepal Republic, a government promise tracker.
 Your task: determine if a signal contains a NEW government commitment that is NOT already tracked.
 
 EXISTING TRACKED COMMITMENTS (${PROMISES_KNOWLEDGE.length} total):
@@ -230,11 +230,9 @@ function getConfidenceLevel(
 async function storeDiscovery(
   signalId: string,
   result: AIDiscoveryResult,
-  status: 'pending' | 'auto_approved' = 'pending',
+  status: 'pending' = 'pending',
 ): Promise<void> {
   const supabase = getSupabase();
-
-  const isAutoApproved = status === 'auto_approved';
 
   const discoveryMetadata = {
     potential_new_commitment: true,
@@ -244,8 +242,8 @@ async function storeDiscovery(
     discovery_confidence: result.confidence,
     discovery_confidence_level: getConfidenceLevel(result.confidence),
     discovery_reasoning: result.reasoning,
-    auto_approved: isAutoApproved,
-    needs_review: !isAutoApproved,
+    auto_approved: false,
+    needs_review: true,
   };
 
   // Merge with existing metadata
@@ -262,96 +260,9 @@ async function storeDiscovery(
     .from('intelligence_signals')
     .update({
       metadata: { ...currentMetadata, ...discoveryMetadata },
-      review_required: !isAutoApproved,
+      review_required: true,
     })
     .eq('id', signalId);
-}
-
-/**
- * Auto-approve a high-confidence discovery by inserting into
- * community_commitments and updating the signal's matched_promise_ids.
- */
-async function autoApproveDiscovery(
-  signal: Signal,
-  result: AIDiscoveryResult,
-): Promise<string> {
-  const supabase = getSupabase();
-  const commitment = result.commitment!;
-  const category = toPromiseCategory(commitment.sector || null);
-
-  // Insert into community_commitments
-  const { data: inserted, error: insertErr } = await supabase
-    .from('community_commitments')
-    .insert({
-      title: String(commitment.what || signal.title || '').trim(),
-      title_ne: String(commitment.what || signal.title || '').trim(),
-      description: String(commitment.what || signal.title || '').trim(),
-      category,
-      category_ne: CATEGORY_NE[category],
-      status: 'not_started',
-      progress: 0,
-      scope: commitment.scope || 'unknown',
-      actors: buildActors(String(commitment.who || signal.author || 'Government')),
-      estimated_budget_npr:
-        typeof commitment.estimatedBudgetNPR === 'number'
-          ? commitment.estimatedBudgetNPR
-          : null,
-      source_signal_id: signal.id,
-      approved_at: new Date().toISOString(),
-      approved_by: 'auto_approve',
-      metadata: {
-        auto_approved: true,
-        signal_title: signal.title,
-        signal_url: signal.url,
-        discovery_confidence: result.confidence,
-      },
-    })
-    .select('id')
-    .single();
-
-  if (insertErr) {
-    console.error(
-      '[Commitment Discovery] Failed to auto-approve into community_commitments:',
-      insertErr.message,
-    );
-    throw insertErr;
-  }
-
-  const commitmentId = String(inserted?.id || 'unknown');
-
-  // Update signal's matched_promise_ids and review status
-  const { data: signalRow } = await supabase
-    .from('intelligence_signals')
-    .select('metadata, matched_promise_ids')
-    .eq('id', signal.id)
-    .single();
-
-  const existingMeta = (signalRow?.metadata as Record<string, unknown>) || {};
-  const existingMatched = (signalRow?.matched_promise_ids as number[]) || [];
-  const numericId = parseInt(commitmentId, 10);
-  const updatedMatched = Number.isFinite(numericId)
-    ? Array.from(new Set([...existingMatched, numericId]))
-    : existingMatched;
-
-  await supabase
-    .from('intelligence_signals')
-    .update({
-      matched_promise_ids: updatedMatched,
-      review_required: false,
-      review_status: 'approved',
-      metadata: {
-        ...existingMeta,
-        discovery_status: 'auto_approved',
-        discovery_reviewed_at: new Date().toISOString(),
-        discovery_reviewed_by: 'auto_approve',
-        discovery_mode: 'create',
-        discovery_commitment_id: commitmentId,
-        auto_approved: true,
-      },
-    })
-    .eq('id', signal.id);
-
-  return commitmentId;
 }
 
 // ---------------------------------------------------------------------------
@@ -382,7 +293,7 @@ export async function scanForNewCommitments(
     `[Commitment Discovery] ${candidates.length}/${signals.length} signals match commitment patterns`,
   );
 
-  // Step 2 + 3: AI analysis + confidence-based routing
+  // Step 2 + 3: AI analysis + review queue routing
   for (const signal of candidates) {
     // Skip if already analyzed for commitments
     const meta = signal.metadata || {};
@@ -404,65 +315,31 @@ export async function scanForNewCommitments(
       continue;
     }
 
-    // Confidence >= 0.7 → Auto-approve
-    if (result.confidence >= 0.7) {
-      await storeDiscovery(signal.id, result, 'auto_approved');
-      const commitmentId = await autoApproveDiscovery(signal, result);
+    await storeDiscovery(signal.id, result, 'pending');
 
-      const discovery: Discovery = {
-        signalId: signal.id,
-        signalTitle: signal.title,
-        signalUrl: signal.url,
-        publishedAt: signal.published_at,
-        confidence: result.confidence,
-        confidenceLevel: getConfidenceLevel(result.confidence),
-        reasoning: result.reasoning,
-        commitment: {
-          what: result.commitment.what,
-          who: result.commitment.who,
-          when: result.commitment.when,
-          sector: result.commitment.sector,
-          estimatedBudgetNPR: result.commitment.estimatedBudgetNPR,
-          budgetContext: result.commitment.budgetContext,
-          scope: (result.commitment.scope as DiscoveredCommitment['scope']) || 'unknown',
-          sourceType: result.commitment.sourceType || 'unknown',
-        },
-        status: 'approved',
-        discoveredAt: new Date().toISOString(),
-      };
+    const discovery: Discovery = {
+      signalId: signal.id,
+      signalTitle: signal.title,
+      signalUrl: signal.url,
+      publishedAt: signal.published_at,
+      confidence: result.confidence,
+      confidenceLevel: getConfidenceLevel(result.confidence),
+      reasoning: result.reasoning,
+      commitment: {
+        what: result.commitment.what,
+        who: result.commitment.who,
+        when: result.commitment.when,
+        sector: result.commitment.sector,
+        estimatedBudgetNPR: result.commitment.estimatedBudgetNPR,
+        budgetContext: result.commitment.budgetContext,
+        scope: (result.commitment.scope as DiscoveredCommitment['scope']) || 'unknown',
+        sourceType: result.commitment.sourceType || 'unknown',
+      },
+      status: 'pending',
+      discoveredAt: new Date().toISOString(),
+    };
 
-      discoveries.push(discovery);
-      console.log(
-        `[Commitment Discovery] Auto-approved new commitment: ${result.commitment.what} (confidence=${result.confidence}, commitmentId=${commitmentId})`,
-      );
-    } else {
-      // Confidence 0.5-0.7 → Flag for review (existing behavior)
-      await storeDiscovery(signal.id, result, 'pending');
-
-      const discovery: Discovery = {
-        signalId: signal.id,
-        signalTitle: signal.title,
-        signalUrl: signal.url,
-        publishedAt: signal.published_at,
-        confidence: result.confidence,
-        confidenceLevel: getConfidenceLevel(result.confidence),
-        reasoning: result.reasoning,
-        commitment: {
-          what: result.commitment.what,
-          who: result.commitment.who,
-          when: result.commitment.when,
-          sector: result.commitment.sector,
-          estimatedBudgetNPR: result.commitment.estimatedBudgetNPR,
-          budgetContext: result.commitment.budgetContext,
-          scope: (result.commitment.scope as DiscoveredCommitment['scope']) || 'unknown',
-          sourceType: result.commitment.sourceType || 'unknown',
-        },
-        status: 'pending',
-        discoveredAt: new Date().toISOString(),
-      };
-
-      discoveries.push(discovery);
-    }
+    discoveries.push(discovery);
 
     // Rate-limit AI calls
     await new Promise((r) => setTimeout(r, 1000));
@@ -616,7 +493,7 @@ async function createCommitmentFromDiscovery(
   const id = await getNextCommitmentId();
   const title = String(commitment.what || signal.title || `Discovered commitment ${id}`).trim();
   const category = toPromiseCategory((commitment.sector as string) || null);
-  const reviewState = options?.publish ? 'published' : 'reviewed';
+  const reviewState = options?.publish ? 'published' : 'candidate';
   const isPublic = options?.publish ?? false;
   const slug = await getUniqueCommitmentSlug(title, id);
   const today = new Date().toISOString().slice(0, 10);
@@ -774,43 +651,6 @@ export async function approveDiscovery(
         ? `Discovery merged into commitment ${commitmentId}`
         : `Discovery approved as commitment ${commitmentId}`,
   });
-
-  // Also insert into community_commitments so the hybrid data source
-  // (commitments-merged.ts) picks it up without a code deploy.
-  if (mode === 'create') {
-    try {
-      const category = toPromiseCategory((commitment.sector as string) || null);
-      await supabase.from('community_commitments').insert({
-        title: String(commitment.what || signal.title || '').trim(),
-        title_ne: String(commitment.what || signal.title || '').trim(),
-        description: String(commitment.what || signal.title || '').trim(),
-        category,
-        category_ne: CATEGORY_NE[category],
-        status: 'not_started',
-        progress: 0,
-        scope: (commitment.scope as string) || 'unknown',
-        actors: buildActors(String(commitment.who || signal.author || 'Government')),
-        estimated_budget_npr:
-          typeof commitment.estimatedBudgetNPR === 'number'
-            ? commitment.estimatedBudgetNPR
-            : null,
-        source_signal_id: signal.id,
-        approved_at: new Date().toISOString(),
-        approved_by: options?.reviewedBy || 'admin',
-        metadata: {
-          commitment_id: commitmentId,
-          signal_title: signal.title,
-          signal_url: signal.url,
-        },
-      });
-    } catch (err) {
-      // Non-fatal — the commitment was already created in the promises table
-      console.warn(
-        '[Commitment Discovery] Failed to insert into community_commitments:',
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
 
   return { commitmentId, mode };
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,12 +22,12 @@ interface TruthMeterProps {
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
-const LABEL_CONFIG: Record<
+const LABEL_STYLE: Record<
   TruthLabel,
-  { text: string; color: string; bg: string; border: string; glow: string; barColor: string }
+  { labelKey: string; color: string; bg: string; border: string; glow: string; barColor: string }
 > = {
   unverified: {
-    text: 'Unverified',
+    labelKey: 'truthMeter.unverified',
     color: 'text-red-400',
     bg: 'bg-red-500/10',
     border: 'border-red-500/20',
@@ -34,7 +35,7 @@ const LABEL_CONFIG: Record<
     barColor: '#ef4444',
   },
   low: {
-    text: 'Low',
+    labelKey: 'truthMeter.low',
     color: 'text-orange-400',
     bg: 'bg-orange-500/10',
     border: 'border-orange-500/20',
@@ -42,7 +43,7 @@ const LABEL_CONFIG: Record<
     barColor: '#f97316',
   },
   moderate: {
-    text: 'Moderate',
+    labelKey: 'truthMeter.moderate',
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/10',
     border: 'border-yellow-500/20',
@@ -50,7 +51,7 @@ const LABEL_CONFIG: Record<
     barColor: '#eab308',
   },
   high: {
-    text: 'High',
+    labelKey: 'truthMeter.high',
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/10',
     border: 'border-emerald-500/20',
@@ -58,7 +59,7 @@ const LABEL_CONFIG: Record<
     barColor: '#10b981',
   },
   verified: {
-    text: 'Verified',
+    labelKey: 'truthMeter.verified',
     color: 'text-blue-400',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/20',
@@ -67,11 +68,11 @@ const LABEL_CONFIG: Record<
   },
 };
 
-const FACTOR_LABELS = [
-  { key: 'sourceCredibility' as const, label: 'Source', max: 25 },
-  { key: 'crossVerification' as const, label: 'Cross-verified', max: 25 },
-  { key: 'evidenceQuality' as const, label: 'Evidence', max: 25 },
-  { key: 'communityVerification' as const, label: 'Community', max: 25 },
+const FACTOR_KEYS = [
+  { key: 'sourceCredibility' as const, labelKey: 'truthMeter.source', max: 25 },
+  { key: 'crossVerification' as const, labelKey: 'truthMeter.crossVerified', max: 25 },
+  { key: 'evidenceQuality' as const, labelKey: 'truthMeter.evidence', max: 25 },
+  { key: 'communityVerification' as const, labelKey: 'truthMeter.community', max: 25 },
 ];
 
 function getBarColor(score: number): string {
@@ -85,10 +86,11 @@ function getBarColor(score: number): string {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function TruthMeter({ score, label, size = 'md', factors }: TruthMeterProps) {
+  const { t } = useI18n();
   const [animatedScore, setAnimatedScore] = useState(0);
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const config = LABEL_CONFIG[label];
+  const config = LABEL_STYLE[label];
   const barColor = getBarColor(score);
 
   // Smooth animation on load
@@ -171,7 +173,7 @@ export function TruthMeter({ score, label, size = 'md', factors }: TruthMeterPro
         <span
           className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${config.bg} ${config.color} ${config.border}`}
         >
-          {config.text}
+          {t(config.labelKey)}
         </span>
 
         {/* Tooltip */}
@@ -198,13 +200,13 @@ export function TruthMeter({ score, label, size = 'md', factors }: TruthMeterPro
         <div className="flex items-center gap-2">
           <ShieldCheck className={`w-5 h-5 ${config.color}`} />
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            Truth Meter
+            {t('truthMeter.truthMeter')}
           </span>
         </div>
         <span
           className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${config.bg} ${config.color} ${config.border}`}
         >
-          {config.text}
+          {t(config.labelKey)}
         </span>
       </div>
 
@@ -229,13 +231,13 @@ export function TruthMeter({ score, label, size = 'md', factors }: TruthMeterPro
       {/* Factor breakdown */}
       {factors && (
         <div className="space-y-2">
-          {FACTOR_LABELS.map(({ key, label: factorLabel, max }) => {
+          {FACTOR_KEYS.map(({ key, labelKey, max }) => {
             const value = factors[key];
             const pct = (value / max) * 100;
             return (
               <div key={key} className="flex items-center gap-3">
                 <span className="text-[10px] text-gray-500 w-24 truncate uppercase tracking-wider">
-                  {factorLabel}
+                  {t(labelKey)}
                 </span>
                 <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                   <div
@@ -261,8 +263,6 @@ export function TruthMeter({ score, label, size = 'md', factors }: TruthMeterPro
 
 // ── Tooltip for sm/md variants ───────────────────────────────────────────────
 
-import { forwardRef } from 'react';
-
 const FactorTooltip = forwardRef<
   HTMLDivElement,
   {
@@ -271,7 +271,8 @@ const FactorTooltip = forwardRef<
     factors: NonNullable<TruthMeterProps['factors']>;
   }
 >(function FactorTooltip({ score, label, factors }, ref) {
-  const config = LABEL_CONFIG[label];
+  const { t } = useI18n();
+  const config = LABEL_STYLE[label];
   const barColor = getBarColor(score);
 
   return (
@@ -282,20 +283,20 @@ const FactorTooltip = forwardRef<
       {/* Title */}
       <div className="flex items-center justify-between mb-2.5">
         <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-          Truth Score
+          {t('truthMeter.truthScore')}
         </span>
         <span className={`text-xs font-bold ${config.color}`}>{score}/100</span>
       </div>
 
       {/* Factors */}
       <div className="space-y-1.5">
-        {FACTOR_LABELS.map(({ key, label: factorLabel, max }) => {
+        {FACTOR_KEYS.map(({ key, labelKey, max }) => {
           const value = factors[key];
           const pct = (value / max) * 100;
           return (
             <div key={key} className="flex items-center gap-2">
               <span className="text-[9px] text-gray-500 w-20 truncate">
-                {factorLabel}
+                {t(labelKey)}
               </span>
               <div className="flex-1 h-1 rounded-full bg-white/[0.06] overflow-hidden">
                 <div

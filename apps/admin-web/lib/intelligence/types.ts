@@ -33,9 +33,17 @@ export function needsHumanReview(params: {
   relevanceScore?: number | null;
   matchedPromiseIds?: number[] | null;
 }): boolean {
-  const confidence = params.confidence ?? 0;
+  const confidenceKnown =
+    typeof params.confidence === 'number' && Number.isFinite(params.confidence);
+  const confidence = confidenceKnown ? (params.confidence as number) : null;
   const relevance = params.relevanceScore ?? 0;
   const matches = params.matchedPromiseIds?.length ?? 0;
 
-  return confidence < 0.6 || (relevance >= 0.3 && relevance <= 0.6) || matches > 2;
+  // Confidence is only meaningful after Tier 3. Missing confidence should not
+  // force review by itself.
+  const lowConfidence = confidence !== null && confidence < 0.45;
+  const borderlineRelevance = relevance >= 0.3 && relevance < 0.45;
+  const tooManyMatches = matches > 3;
+
+  return lowConfidence || borderlineRelevance || tooManyMatches;
 }

@@ -29,6 +29,7 @@ import {
 import { useI18n } from '@/lib/i18n';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { PublicPageHero } from '@/components/public/page-hero';
+import { EvidenceSourceBadge, deriveSourceType } from '@/components/public/evidence-source-badge';
 
 // ----- Types -----
 
@@ -252,7 +253,7 @@ export default function EvidenceVaultPage() {
 
   // Format date
   function formatDate(dateStr: string | null): string {
-    if (!dateStr) return isNe ? 'मिति अज्ञात' : 'Date unknown';
+    if (!dateStr) return t('evidencePage.dateUnknown');
     try {
       const d = new Date(dateStr);
       return d.toLocaleDateString(isNe ? 'ne-NP' : 'en-US', {
@@ -289,19 +290,15 @@ export default function EvidenceVaultPage() {
 
         {/* Hero */}
         <PublicPageHero
-          eyebrow={isNe ? 'प्रमाण भण्डार' : 'Evidence Vault'}
-          title={isNe ? 'के भने, कहिले भने, कसले भने' : 'Who Said What, When'}
-          description={
-            isNe
-              ? 'नेता र अधिकारीहरूको कथन, वचनबद्धता, र दाबीहरूको प्रमाणित संग्रह'
-              : 'Verified archive of statements, commitments, and claims by leaders and officials'
-          }
+          eyebrow={t('evidencePage.evidenceVault')}
+          title={t('evidencePage.whoSaidWhatWhen')}
+          description={t('evidencePage.evidenceVaultDesc')}
           stats={
             <div className="flex items-center gap-6 mt-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-white">{totalCount}</p>
                 <p className="text-xs text-gray-500">
-                  {isNe ? 'प्रमाणहरू' : 'Evidence Items'}
+                  {t('evidencePage.evidenceItems')}
                 </p>
               </div>
               <div className="text-center">
@@ -309,7 +306,7 @@ export default function EvidenceVaultPage() {
                   {uniqueOfficials.length}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {isNe ? 'अधिकारीहरू' : 'Officials'}
+                  {t('evidencePage.officials')}
                 </p>
               </div>
             </div>
@@ -329,11 +326,7 @@ export default function EvidenceVaultPage() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={
-                        isNe
-                          ? 'नाम, कथन, वा स्रोत खोज्नुहोस्...'
-                          : 'Search by name, quote, or source...'
-                      }
+                      placeholder={t('evidencePage.searchPlaceholder')}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/30 transition-all"
                     />
                   </div>
@@ -346,7 +339,7 @@ export default function EvidenceVaultPage() {
                     }`}
                   >
                     <Filter className="w-4 h-4" />
-                    {isNe ? 'फिल्टर' : 'Filters'}
+                    {t('evidencePage.filters')}
                   </button>
                 </div>
 
@@ -356,7 +349,7 @@ export default function EvidenceVaultPage() {
                     {/* Source type */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1.5">
-                        {isNe ? 'स्रोत' : 'Source'}
+                        {t('evidencePage.source')}
                       </label>
                       <div className="relative">
                         <select
@@ -364,7 +357,7 @@ export default function EvidenceVaultPage() {
                           onChange={(e) => setSelectedSource(e.target.value)}
                           className="w-full appearance-none px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-primary-500/50"
                         >
-                          <option value="">{isNe ? 'सबै' : 'All Sources'}</option>
+                          <option value="">{t('evidencePage.allSources')}</option>
                           {Object.entries(SOURCE_LABELS).map(([key, label]) => (
                             <option key={key} value={key}>
                               {isNe ? label.ne : label.en}
@@ -378,7 +371,7 @@ export default function EvidenceVaultPage() {
                     {/* Statement type */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1.5">
-                        {isNe ? 'कथनको प्रकार' : 'Statement Type'}
+                        {t('evidencePage.statementType')}
                       </label>
                       <div className="relative">
                         <select
@@ -386,7 +379,7 @@ export default function EvidenceVaultPage() {
                           onChange={(e) => setSelectedStatement(e.target.value)}
                           className="w-full appearance-none px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-primary-500/50"
                         >
-                          <option value="">{isNe ? 'सबै' : 'All Types'}</option>
+                          <option value="">{t('evidencePage.allTypes')}</option>
                           {Object.entries(STATEMENT_LABELS).map(([key, label]) => (
                             <option key={key} value={key}>
                               {isNe ? label.ne : label.en}
@@ -400,7 +393,7 @@ export default function EvidenceVaultPage() {
                     {/* Promise filter */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1.5">
-                        {isNe ? 'वचनबद्धता' : 'Commitment'}
+                        {t('evidencePage.commitment')}
                       </label>
                       <div className="relative">
                         <select
@@ -412,7 +405,7 @@ export default function EvidenceVaultPage() {
                           }
                           className="w-full appearance-none px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-primary-500/50"
                         >
-                          <option value="">{isNe ? 'सबै' : 'All Commitments'}</option>
+                          <option value="">{t('evidencePage.allCommitments')}</option>
                           {Object.entries(PROMISE_SHORT).map(([id, label]) => (
                             <option key={id} value={id}>
                               #{id} {isNe ? label.ne : label.en}
@@ -426,7 +419,7 @@ export default function EvidenceVaultPage() {
                     {/* Sort */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1.5">
-                        {isNe ? 'क्रमबद्ध' : 'Sort By'}
+                        {t('evidencePage.sortBy')}
                       </label>
                       <div className="relative">
                         <select
@@ -434,12 +427,12 @@ export default function EvidenceVaultPage() {
                           onChange={(e) => setSortBy(e.target.value as SortOption)}
                           className="w-full appearance-none px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-primary-500/50"
                         >
-                          <option value="newest">{isNe ? 'नयाँ पहिला' : 'Newest First'}</option>
+                          <option value="newest">{t('evidencePage.newestFirst')}</option>
                           <option value="importance">
-                            {isNe ? 'महत्त्वपूर्ण पहिला' : 'Most Important'}
+                            {t('evidencePage.mostImportant')}
                           </option>
                           <option value="official">
-                            {isNe ? 'अधिकारी अनुसार' : 'By Official'}
+                            {t('evidencePage.byOfficial')}
                           </option>
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -479,12 +472,10 @@ export default function EvidenceVaultPage() {
                 <div className="glass-card p-12 text-center">
                   <ShieldCheck className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-white mb-2">
-                    {isNe ? 'प्रमाण भेटिएन' : 'No Evidence Found'}
+                    {t('evidencePage.noEvidenceFound')}
                   </h3>
                   <p className="text-sm text-gray-500 max-w-md mx-auto">
-                    {isNe
-                      ? 'खोज वा फिल्टर परिवर्तन गर्नुहोस्, वा पछि फेरि हेर्नुहोस् — हामी नियमित रूपमा नयाँ प्रमाण संकलन गर्दैछौं।'
-                      : 'Try adjusting your search or filters, or check back later — we regularly collect new evidence.'}
+                    {t('evidencePage.noEvidenceFoundDesc')}
                   </p>
                 </div>
               ) : (
@@ -505,7 +496,7 @@ export default function EvidenceVaultPage() {
                 <div className="mt-6 text-center">
                   <p className="text-xs text-gray-600">
                     {isNe
-                      ? `${evidence.length} / ${totalCount} प्रमाणहरू देखाइएको`
+                      ? `${evidence.length} / ${totalCount} ${t('evidencePage.evidenceItems')}`
                       : `Showing ${evidence.length} of ${totalCount} evidence items`}
                   </p>
                 </div>
@@ -532,6 +523,7 @@ function EvidenceCard({
   isNe: boolean;
   formatDate: (d: string | null) => string;
 }) {
+  const { t } = useI18n();
   const SourceIcon = SOURCE_ICONS[item.source_type] || FileText;
   const sourceLabel = SOURCE_LABELS[item.source_type] || {
     en: item.source_type,
@@ -617,7 +609,7 @@ function EvidenceCard({
         })}
         {item.promise_ids.length > 3 && (
           <span className="text-[10px] text-gray-600">
-            +{item.promise_ids.length - 3} {isNe ? 'थप' : 'more'}
+            +{item.promise_ids.length - 3} {t('evidencePage.more')}
           </span>
         )}
       </div>
@@ -630,6 +622,17 @@ function EvidenceCard({
             <Clock className="w-3 h-3" />
             {formatDate(item.spoken_date)}
           </div>
+
+          {/* Source quality */}
+          <EvidenceSourceBadge
+            sourceType={deriveSourceType({
+              source_type: item.source_type,
+              source_name: item.source_title || undefined,
+              verification_status: item.verification_status,
+            })}
+            isNe={isNe}
+            compact
+          />
 
           {/* Verification status */}
           <div className={`flex items-center gap-1 text-xs ${verification.color}`}>
@@ -646,7 +649,7 @@ function EvidenceCard({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-primary-400 bg-primary-500/10 border border-primary-500/20 hover:bg-primary-500/20 hover:border-primary-500/40 transition-all"
         >
           <ExternalLink className="w-3 h-3" />
-          {isNe ? 'स्रोत हेर्नुहोस्' : 'View Source'}
+          {t('evidencePage.viewSource')}
         </a>
       </div>
     </div>

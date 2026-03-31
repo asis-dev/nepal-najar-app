@@ -58,7 +58,7 @@ for s in signals:
   echo -n "  Classifying: $SIG_TITLE ... "
 
   # Build the OpenClaw prompt
-  PROMPT="You are an intelligence analyst for Nepal Najar, a dynamic government commitment tracker for Nepal.
+  PROMPT="You are an intelligence analyst for Nepal Republic, a dynamic government commitment tracker for Nepal.
 
 CLASSIFICATION RULES — BE AGGRESSIVE:
 - If a signal mentions ANY government activity, policy, budget, minister, ministry → relevant (score >= 0.4)

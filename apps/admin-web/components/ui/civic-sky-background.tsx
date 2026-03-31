@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Calm civic backdrop for Nepal Najar.
+ * Calm civic backdrop for Nepal Republic.
  * Keeps a hint of Nepal through elevation lines and a soft horizon,
  * without turning the whole app into a scene.
  */

@@ -288,10 +288,15 @@ function PublicMapPage() {
         {/* MAP — primary element */}
         <div className="glass-card overflow-hidden mb-6">
           <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <Map className="w-4 h-4 text-cyan-400" />
-              Nepal Province Map
-            </h2>
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Map className="w-4 h-4 text-cyan-400" />
+                Nepal Province Map
+              </h2>
+              <p className="mt-1 text-[10px] text-amber-300/90">
+                Province totals are estimated while geo-tagged commitment coverage is expanding.
+              </p>
+            </div>
             {selectedProvince && (
               <button
                 onClick={() => {

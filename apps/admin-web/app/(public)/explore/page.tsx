@@ -12,6 +12,8 @@ import {
   Users,
   Newspaper,
   ExternalLink,
+  RefreshCw,
+  BarChart3,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { SignalBadge } from '@/components/public/signal-badge';
@@ -166,7 +168,7 @@ export default function ExplorePage() {
       <PublicPageHero
         eyebrow={
           <>
-            Nepal Najar
+            Nepal Republic
             <span className="h-1 w-1 rounded-full bg-white/40" />
             <span className="text-gray-500">{t('commitment.tagline')}</span>
           </>
@@ -229,6 +231,14 @@ export default function ExplorePage() {
               <MapPin className="h-4 w-4 text-cyan-300" />
               {district ? `${district}, ${province}` : t('explore.setMyArea')}
             </button>
+            <Link href="/what-changed" className="metric-chip justify-center hover:bg-white/[0.07]">
+              <RefreshCw className="h-4 w-4 text-amber-300" />
+              {locale === 'ne' ? 'के परिवर्तन भयो?' : 'What Changed?'}
+            </Link>
+            <Link href="/sectors" className="metric-chip justify-center hover:bg-white/[0.07]">
+              <BarChart3 className="h-4 w-4 text-cyan-300" />
+              {locale === 'ne' ? 'क्षेत्रगत' : 'Sectors'}
+            </Link>
             <Link href="/explore/government" className="metric-chip justify-center hover:bg-white/[0.07]">
               <Sparkles className="h-4 w-4 text-nepal-red" />
               {t('explore.whoOwns')}

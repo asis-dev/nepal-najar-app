@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as allPromises } from '@/lib/data/promises';
+import { getPromises } from '@/lib/data';
+import { isPublicCommitment } from '@/lib/data/commitments';
 import { rateLimit, getClientIp } from '@/lib/middleware/rate-limit';
 
 /**
@@ -30,15 +31,20 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
   const q = searchParams.get('q')?.toLowerCase();
 
-  let filtered = [...allPromises];
+  const allCommitments = (await getPromises()).filter((commitment) =>
+    isPublicCommitment(commitment),
+  );
+
+  let filtered = [...allCommitments];
   if (status) filtered = filtered.filter((p) => p.status === status);
   if (category) filtered = filtered.filter((p) => p.category === category);
   if (q)
     filtered = filtered.filter(
       (p) =>
         p.title.toLowerCase().includes(q) ||
-        p.title_ne.includes(q) ||
-        p.description.toLowerCase().includes(q)
+        p.title_ne.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        (p.summary || '').toLowerCase().includes(q)
     );
 
   const total = filtered.length;
@@ -55,9 +61,15 @@ export async function GET(request: NextRequest) {
     status: p.status,
     progress: p.progress,
     evidenceCount: p.evidenceCount,
+    sourceCount: p.sourceCount ?? 0,
     lastUpdate: p.lastUpdate,
+    lastSignalAt: p.lastSignalAt ?? null,
     description: p.description,
     description_ne: p.description_ne,
+    scope: p.scope || p.geoScope || 'unknown',
+    actors: p.actors || [],
+    trustLevel: p.trustLevel,
+    reviewState: p.reviewState,
   }));
 
   return NextResponse.json(

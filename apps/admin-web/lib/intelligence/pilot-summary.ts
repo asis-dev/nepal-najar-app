@@ -233,7 +233,7 @@ function buildFallbackSummary(
 
 function buildPrompt(snapshot: Record<string, unknown>, windowDays: number) {
   return `
-You are OpenClaw, the pilot tracker analyst for Nepal Najar.
+You are OpenClaw, the pilot tracker analyst for Nepal Republic.
 
 Your job is to read real backend and usage facts about the app and produce a concise operator summary.
 

@@ -123,7 +123,7 @@ export const useVotingStore = create<VotingState & VotingActions>()(
       },
     }),
     {
-      name: 'nepal-najar-votes',
+      name: 'nepalrepublic-votes',
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: (state) => ({

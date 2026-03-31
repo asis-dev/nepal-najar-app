@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════
-   NEPAL NAJAR — PUBLIC DESIGN SYSTEM
+   NEPAL REPUBLIC — PUBLIC DESIGN SYSTEM
    Calm civic clarity with mobile-first public surfaces
    ═══════════════════════════════════════════════ */
 
@@ -481,22 +481,6 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='100'%3E%3Cpath d='M0,50 Q50,20 100,45 T200,50' fill='none' stroke='%23DDE7F0' stroke-width='0.5' opacity='0.03'/%3E%3Cpath d='M0,70 Q60,40 120,65 T200,70' fill='none' stroke='%23DDE7F0' stroke-width='0.4' opacity='0.025'/%3E%3C/svg%3E");
 }
 
-.nepal-najar-mark {
-  position: relative;
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 4px;
-  width: 22px;
-  height: 22px;
-}
-
-.nepal-najar-mark__bar {
-  display: block;
-  width: 8px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(220, 20, 60, 0.98) 0%, rgba(0, 56, 147, 0.95) 100%);
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 6px 16px rgba(0, 56, 147, 0.18);
-}
 
 @media (max-width: 767px) {
   .public-shell {
@@ -517,13 +501,6 @@
   }
 }
 
-.nepal-najar-mark__bar--short {
-  height: 13px;
-}
-
-.nepal-najar-mark__bar--tall {
-  height: 20px;
-}
 
 /* ── Trending Strip ── */
 .trending-scroll {
@@ -599,4 +576,53 @@
   .space-y-6 > * + * {
     margin-top: 0.5rem;
   }
+}
+
+/* ═══════════════════════════════════════════
+   STATUS INDICATOR ANIMATIONS & STYLES
+   ═══════════════════════════════════════════ */
+
+/* Subtle pulse animation for stalled/urgent status indicators */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.08); }
+}
+
+
+/* Stalled progress bar — striped pattern */
+.progress-stalled {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(239, 68, 68, 0.6),
+    rgba(239, 68, 68, 0.6) 4px,
+    rgba(239, 68, 68, 0.3) 4px,
+    rgba(239, 68, 68, 0.3) 8px
+  ) !important;
+}
+
+/* Delivered progress bar — shimmer celebration */
+.progress-delivered {
+  background: linear-gradient(90deg, #3b82f6, #06b6d4, #3b82f6) !important;
+  background-size: 200% 100%;
+  animation: progress-shimmer 2s ease-in-out infinite;
+}
+@keyframes progress-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Status-colored left borders for cards */
+.card-border-stalled {
+  border-left: 4px solid rgba(239, 68, 68, 0.7) !important;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.04), transparent 40%) !important;
+}
+.card-border-in-progress {
+  border-left: 4px solid rgba(16, 185, 129, 0.7) !important;
+}
+.card-border-delivered {
+  border-left: 4px solid rgba(59, 130, 246, 0.7) !important;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.04), transparent 40%) !important;
+}
+.card-border-not-started {
+  border-left: 4px solid rgba(107, 114, 128, 0.4) !important;
 }

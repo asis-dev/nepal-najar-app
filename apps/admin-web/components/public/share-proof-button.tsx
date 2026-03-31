@@ -13,7 +13,7 @@ interface ShareProofButtonProps {
 
 export function ShareProofButton({ promiseId }: ShareProofButtonProps) {
   const { isAuthenticated } = useAuth();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const isNe = locale === 'ne';
 
   const [isOpen, setIsOpen] = useState(false);
@@ -81,7 +81,7 @@ export function ShareProofButton({ promiseId }: ShareProofButtonProps) {
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all"
       >
         <Camera className="w-3.5 h-3.5" />
-        {isNe ? 'प्रमाण साझा गर्न लगइन गर्नुहोस्' : 'Sign in to share proof'}
+        {t('evidence.signInToShareProof')}
       </Link>
     );
   }
@@ -93,7 +93,7 @@ export function ShareProofButton({ promiseId }: ShareProofButtonProps) {
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all"
       >
         <Camera className="w-3.5 h-3.5" />
-        {isNe ? 'प्रमाण साझा गर्नुहोस्' : 'Share Proof'}
+        {t('evidence.shareProof')}
       </button>
 
       {/* Modal overlay */}
@@ -119,33 +119,31 @@ export function ShareProofButton({ promiseId }: ShareProofButtonProps) {
               <div className="text-center py-8">
                 <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
                 <h3 className="text-lg font-semibold text-white mb-1">
-                  {isNe ? 'प्रमाण पेश भयो!' : 'Proof Submitted!'}
+                  {t('evidence.proofSubmitted')}
                 </h3>
                 <p className="text-sm text-gray-400">
-                  {isNe ? 'धन्यवाद, तपाईंको योगदानले फरक पार्छ।' : 'Thank you, your contribution makes a difference.'}
+                  {t('evidence.proofSubmittedDesc')}
                 </p>
               </div>
             ) : (
               <>
                 <h3 className="text-lg font-semibold text-white mb-1">
                   <Camera className="w-5 h-5 inline mr-2 text-cyan-400" />
-                  {isNe ? 'प्रमाण साझा गर्नुहोस्' : 'Share Proof'}
+                  {t('evidence.shareProof')}
                 </h3>
                 <p className="text-xs text-gray-500 mb-5">
-                  {isNe
-                    ? 'फोटो लिंक वा विवरण थप्नुहोस्'
-                    : 'Add photo links or a description of what you witnessed'}
+                  {t('evidence.addPhotoOrDesc')}
                 </p>
 
                 {/* Media URLs */}
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                    {isNe ? 'फोटो/भिडियो लिंकहरू' : 'Photo/Video URLs'} <span className="text-gray-600">(optional)</span>
+                    {t('evidence.photoVideoUrls')} <span className="text-gray-600">(optional)</span>
                   </label>
                   <textarea
                     value={mediaUrls}
                     onChange={(e) => setMediaUrls(e.target.value)}
-                    placeholder={isNe ? 'प्रति लाइन एउटा URL' : 'One URL per line'}
+                    placeholder={t('evidence.oneUrlPerLine')}
                     rows={2}
                     className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 resize-none transition-all"
                   />
@@ -154,12 +152,12 @@ export function ShareProofButton({ promiseId }: ShareProofButtonProps) {
                 {/* Caption */}
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                    {isNe ? 'विवरण' : 'Caption'} <span className="text-gray-600">(max 500)</span>
+                    {t('evidence.captionLabel')} <span className="text-gray-600">(max 500)</span>
                   </label>
                   <textarea
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
-                    placeholder={isNe ? 'तपाईंले के देख्नुभयो...' : 'What did you see...'}
+                    placeholder={t('evidence.whatDidYouSee')}
                     maxLength={500}
                     rows={2}
                     className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 resize-none transition-all"
@@ -169,13 +167,13 @@ export function ShareProofButton({ promiseId }: ShareProofButtonProps) {
                 {/* Classification */}
                 <div className="mb-5">
                   <label className="block text-xs font-medium text-gray-400 mb-2">
-                    {isNe ? 'यो प्रमाणले...' : 'This evidence...'}
+                    {t('evidence.thisEvidence')}
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {([
-                      { value: 'confirms' as const, label: isNe ? 'पुष्टि गर्छ' : 'Confirms', emoji: '\u2705', color: 'emerald' },
-                      { value: 'contradicts' as const, label: isNe ? 'खण्डन गर्छ' : 'Contradicts', emoji: '\u274C', color: 'red' },
-                      { value: 'neutral' as const, label: isNe ? 'दस्तावेज' : 'Documenting', emoji: '\uD83D\uDCCB', color: 'gray' },
+                      { value: 'confirms' as const, label: t('evidence.confirmsLabel'), emoji: '\u2705', color: 'emerald' },
+                      { value: 'contradicts' as const, label: t('evidence.contradictsLabel'), emoji: '\u274C', color: 'red' },
+                      { value: 'neutral' as const, label: t('evidence.documentingLabel'), emoji: '\uD83D\uDCCB', color: 'gray' },
                     ]).map((opt) => (
                       <button
                         key={opt.value}
@@ -213,8 +211,8 @@ export function ShareProofButton({ promiseId }: ShareProofButtonProps) {
                     <Camera className="w-4 h-4" />
                   )}
                   {isSubmitting
-                    ? (isNe ? 'पेश गर्दै...' : 'Submitting...')
-                    : (isNe ? 'प्रमाण पेश गर्नुहोस्' : 'Submit Proof')}
+                    ? t('evidence.submitting')
+                    : t('evidence.submitProof')}
                 </button>
               </>
             )}

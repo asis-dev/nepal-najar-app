@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Trending — Nepal Najar',
+  title: 'Trending — Nepal Republic',
   description: 'See what\'s trending in Nepal politics right now',
   openGraph: {
-    title: 'Trending — Nepal Najar',
+    title: 'Trending — Nepal Republic',
     description: 'See what\'s trending in Nepal politics right now',
   },
 };

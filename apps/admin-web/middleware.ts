@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware';
 
 /**
- * Nepal Najar — Route Protection Middleware
+ * Nepal Republic — Route Protection Middleware
  *
  * Dashboard routes require Supabase auth + admin role.
  * Public routes pass through freely.
@@ -52,6 +52,8 @@ const PUBLIC_PREFIXES = [
   '/reputation',
   '/api/reputation',
   '/api/verifier-applications',
+  '/api/complaints',
+  '/complaints',
 ];
 
 // Dashboard routes that require admin auth
@@ -139,7 +141,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Legacy fallback: ADMIN_SECRET cookie check
-  const adminToken = request.cookies.get('np-admin-token')?.value;
+  const adminToken =
+    request.cookies.get('admin_session')?.value ||
+    request.cookies.get('np-admin-token')?.value;
   const adminSecret = process.env.ADMIN_SECRET;
 
   if (!adminSecret) {

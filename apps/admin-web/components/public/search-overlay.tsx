@@ -28,11 +28,11 @@ interface SearchOverlayProps {
    STATUS CONFIG
    ═══════════════════════════════════════════ */
 
-const statusConfig: Record<string, { label: string; dot: string }> = {
-  not_started: { label: 'Not Started', dot: 'bg-gray-400' },
-  in_progress: { label: 'In Progress', dot: 'bg-emerald-400' },
-  delivered: { label: 'Delivered', dot: 'bg-blue-400' },
-  stalled: { label: 'Stalled', dot: 'bg-red-400' },
+const statusConfig: Record<string, { labelKey: string; dot: string }> = {
+  not_started: { labelKey: 'commitment.notStarted', dot: 'bg-gray-400' },
+  in_progress: { labelKey: 'commitment.inProgress', dot: 'bg-emerald-400' },
+  delivered: { labelKey: 'commitment.delivered', dot: 'bg-blue-400' },
+  stalled: { labelKey: 'commitment.stalled', dot: 'bg-red-400' },
 };
 
 /* ═══════════════════════════════════════════
@@ -58,11 +58,14 @@ const CATEGORIES = [
    ═══════════════════════════════════════════ */
 
 const KNOWN_PEOPLE = [
-  { name: 'KP Sharma Oli', name_ne: 'केपी शर्मा ओली', role: 'Prime Minister' },
-  { name: 'Pushpa Kamal Dahal', name_ne: 'पुष्पकमल दाहाल', role: 'Former PM' },
-  { name: 'Sher Bahadur Deuba', name_ne: 'शेरबहादुर देउवा', role: 'Former PM' },
+  { name: 'Balen Shah', name_ne: 'बालेन शाह', role: 'Prime Minister' },
+  { name: 'Rabi Lamichhane', name_ne: 'रवि लामिछाने', role: 'RSP Chairman' },
+  { name: 'Swarnim Wagle', name_ne: 'स्वर्णिम वाग्ले', role: 'Finance Minister' },
+  { name: 'Shishir Khanal', name_ne: 'शिशिर खनाल', role: 'Foreign Minister' },
   { name: 'Ram Chandra Paudel', name_ne: 'रामचन्द्र पौडेल', role: 'President' },
-  { name: 'Rabindra Mishra', name_ne: 'रवीन्द्र मिश्र', role: 'RSP Leader' },
+  { name: 'KP Sharma Oli', name_ne: 'केपी शर्मा ओली', role: 'Former PM' },
+  { name: 'Pushpa Kamal Dahal', name_ne: 'पुष्पकमल दाहाल', role: 'Former PM' },
+  { name: 'Sher Bahadur Deuba', name_ne: 'शेरबहादुर देउवा', role: 'NC President' },
 ];
 
 /* ═══════════════════════════════════════════
@@ -97,7 +100,7 @@ function HighlightText({ text, query }: { text: string; query: string }) {
 
 export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const router = useRouter();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { data: promises } = useAllPromises();
 
   const [query, setQuery] = useState('');
@@ -317,6 +320,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
               setQuery(q);
               setActiveIndex(-1);
             },
+            t,
           })}
         </div>
       </div>
@@ -386,6 +390,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                   setQuery(q);
                   setActiveIndex(-1);
                 },
+                t,
               })}
             </div>
           </div>
@@ -412,6 +417,7 @@ interface ResultsContentProps {
   runningIndex: number;
   onNavigate: (href: string) => void;
   onSetQuery: (q: string) => void;
+  t: (key: string) => string;
 }
 
 function renderResultsContent(props: ResultsContentProps) {
@@ -427,6 +433,7 @@ function renderResultsContent(props: ResultsContentProps) {
     activeIndex,
     onNavigate,
     onSetQuery,
+    t,
   } = props;
 
   let runningIdx = 0;

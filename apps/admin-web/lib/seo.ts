@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-const SITE_NAME = 'Nepal Najar — नेपाल नजर';
-const SITE_DESCRIPTION = 'जनताको नजरमा Balenको Nepal — The public eye on Balen\'s Nepal. Track development projects, government commitments, and progress across all 7 provinces.';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://nepalnajar.com';
+const SITE_NAME = 'Nepal Republic — नेपाल रिपब्लिक';
+const SITE_DESCRIPTION = 'Track promises. Report reality. Verify the truth. Nepal Republic uses AI to track government commitments, surface real-world issues, and analyze evidence so you can see how the system actually performs.';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nepalrepublic.org';
 
 export function createMetadata(overrides?: {
   title?: string;
@@ -51,20 +51,25 @@ export function createMetadata(overrides?: {
       follow: true,
     },
     keywords: [
+      'Nepal government',
+      'AI civic intelligence',
+      'government accountability',
+      'Nepal Republic',
+      'नेपाल रिपब्लिक',
+      'civic tracker',
+      'government promises',
+      'AI governance',
       'Nepal',
-      'development',
-      'progress',
-      'Balen',
-      'government',
-      'projects',
+      'governance',
       'transparency',
-      'accountability',
+      'corruption tracking',
+      'civic complaints',
+      'evidence verification',
       'नेपाल',
-      'विकास',
-      'प्रगति',
+      'गणतन्त्र',
+      'शासन',
       'पारदर्शिता',
-      'Nepal Najar',
-      'नेपाल नजर',
+      'AI नागरिक बुद्धिमत्ता',
     ],
   };
 }
@@ -74,9 +79,9 @@ export function governmentServiceSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'GovernmentService',
-    name: 'Nepal Najar',
-    alternateName: 'नेपाल नजर',
-    description: SITE_DESCRIPTION,
+    name: 'Nepal Republic',
+    alternateName: 'नेपाल रिपब्लिक',
+    description: 'AI-powered civic intelligence platform for Nepal. Tracks government commitments, verifies evidence, and scores accountability.',
     url: SITE_URL,
     serviceArea: {
       '@type': 'Country',
@@ -84,7 +89,7 @@ export function governmentServiceSchema() {
     },
     provider: {
       '@type': 'Organization',
-      name: 'Nepal Najar',
+      name: 'Nepal Republic',
     },
   };
 }

@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { isAdminAuthed } from '@/lib/auth/admin';
 import { getSupabase } from '@/lib/supabase/server';
 
 const VALID_REVIEW_STATES = ['candidate', 'reviewed', 'published', 'rejected'] as const;
 
 function isAuthed(request: NextRequest): boolean {
-  const cookieStore = cookies();
-  const adminCookie = (cookieStore as unknown as { get(n: string): { value: string } | undefined }).get('admin_session')?.value;
-  const authHeader = request.headers.get('authorization');
-  const adminSecret = process.env.ADMIN_SECRET;
-
-  return !!(
-    (adminCookie && adminSecret && adminCookie === adminSecret) ||
-    (authHeader && adminSecret && authHeader === `Bearer ${adminSecret}`)
-  );
+  return isAdminAuthed(request);
 }
 
 export async function PATCH(

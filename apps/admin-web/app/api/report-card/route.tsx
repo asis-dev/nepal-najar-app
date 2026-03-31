@@ -12,11 +12,11 @@ export async function GET() {
   const totalSpent = withBudget.reduce((s, p) => s + (p.spentNPR ?? 0), 0);
   const budgetUtil = totalEstimated > 0 ? Math.round((totalSpent / totalEstimated) * 100) : 0;
 
-  // Najar Index (simplified for Edge)
+  // Republic Score (simplified for Edge)
   const trustScore = Math.round(
     promises.reduce((s, p) => s + (p.trustLevel === 'verified' ? 100 : p.trustLevel === 'partial' ? 50 : 0), 0) / promises.length,
   );
-  const najarScore = Math.round(
+  const ghantiScore = Math.round(
     0.25 * stats.deliveryRate + 0.30 * stats.avgProgress + 0.15 * trustScore + 0.20 * budgetUtil + 0.10 * 62,
   );
 
@@ -28,8 +28,8 @@ export async function GET() {
   weekEnd.setDate(weekStart.getDate() + 6);
   const dateRange = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
-  const scoreColor = najarScore >= 60 ? '#3b82f6' : najarScore >= 40 ? '#f59e0b' : '#ef4444';
-  const arcLength = Math.round((najarScore / 100) * 534);
+  const scoreColor = ghantiScore >= 60 ? '#3b82f6' : ghantiScore >= 40 ? '#f59e0b' : '#ef4444';
+  const arcLength = Math.round((ghantiScore / 100) * 534);
 
   const response = new ImageResponse(
     (
@@ -59,11 +59,11 @@ export async function GET() {
                 marginRight: '16px',
               }}
             >
-              <span style={{ fontSize: '24px', fontWeight: 800, color: '#60a5fa' }}>N</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: '#60a5fa' }}>NR</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.2em', color: '#60a5fa' }}>
-                NEPAL NAJAR
+                NEPAL REPUBLIC
               </span>
               <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em' }}>
                 Weekly Governance Report
@@ -91,7 +91,7 @@ export async function GET() {
               />
             </svg>
             <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '56px', fontWeight: 800, color: 'white' }}>{najarScore}</span>
+              <span style={{ fontSize: '56px', fontWeight: 800, color: 'white' }}>{ghantiScore}</span>
               <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)' }}>/100</span>
             </div>
           </div>
@@ -218,8 +218,8 @@ export async function GET() {
             alignItems: 'center',
           }}
         >
-          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)' }}>nepalnajar.com</span>
-          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)' }}>Nepal Najar - Weekly Report</span>
+          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)' }}>nepalrepublic.org</span>
+          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)' }}>Nepal Republic - Weekly Report</span>
         </div>
       </div>
     ),

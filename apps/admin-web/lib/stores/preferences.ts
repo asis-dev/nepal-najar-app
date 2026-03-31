@@ -238,7 +238,7 @@ export const useUserPreferencesStore = create<UserPreferencesState & UserPrefere
       },
     }),
     {
-      name: 'nepal-najar-user-preferences',
+      name: 'nepalrepublic-user-preferences',
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: (state) => ({
@@ -331,7 +331,7 @@ export const usePreferencesStore = create<HometownPreferences & PreferencesActio
       dismissPicker: () => set({ showPicker: false }),
     }),
     {
-      name: 'nepal-najar-preferences',
+      name: 'nepalrepublic-preferences',
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: (state) => ({
@@ -473,7 +473,7 @@ export const useWatchlistStore = create<WatchlistState & WatchlistActions>()(
       },
     }),
     {
-      name: 'nepal-najar-watchlist',
+      name: 'nepalrepublic-watchlist',
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: (state) => ({

@@ -69,12 +69,12 @@ export function WhatsWorkingSection({ promises }: WhatsWorkingProps) {
         </span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 overflow-hidden max-w-full">
         {promises.map((p) => (
           <Link
             key={p.id}
             href={`/explore/first-100-days/${p.id}`}
-            className="glass-card group p-4 border-l-2 border-emerald-500/50 hover:border-emerald-400 transition-all duration-200 hover:bg-white/[0.03]"
+            className="glass-card group p-3 sm:p-4 border-l-2 border-emerald-500/50 hover:border-emerald-400 transition-all duration-200 hover:bg-white/[0.03] overflow-hidden min-w-0 max-w-full"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-2 mb-2">
@@ -99,15 +99,15 @@ export function WhatsWorkingSection({ promises }: WhatsWorkingProps) {
             </div>
 
             {/* Latest article */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <Newspaper className="w-3 h-3 text-gray-600 flex-shrink-0" />
-              <span className="text-xs text-gray-400 truncate flex-1">
+              <span className="text-xs text-gray-400 truncate min-w-0">
                 {p.latestHeadline || t('accountability.articleAvailable')}
               </span>
             </div>
 
             {/* Footer: article count + confidence + time */}
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 min-w-0">
               <span className="text-[10px] text-emerald-400/80 font-medium">
                 <TrendingUp className="w-3 h-3 inline mr-0.5" />
                 {p.articleCount} {t('accountability.articles')}

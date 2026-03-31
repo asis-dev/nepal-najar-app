@@ -9,6 +9,7 @@
 
 import { getSupabase } from '@/lib/supabase/server';
 import { aiComplete } from './ai-router';
+import { resolveSourceDisplayName } from '@/lib/utils/source-names';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,7 +98,7 @@ interface AIBriefingResponse {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours — matches 1x/day sweep cadence
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -164,7 +165,7 @@ async function generateAIBriefing(
             .join('; ')
         : '';
       return (
-        `${i + 1}. Source: ${s.source_id}, Date: ${s.discovered_at}\n` +
+        `${i + 1}. Source: ${resolveSourceDisplayName(s.source_id)}, Date: ${s.discovered_at}\n` +
         `   Content: ${content}\n` +
         `   Classification: ${s.classification || 'unknown'}` +
         (entities ? `\n   Entities: ${entities}` : '')
@@ -242,8 +243,16 @@ Return ONLY valid JSON, no markdown.`;
 
 // ── Cache: read/write ────────────────────────────────────────────────────────
 
-async function getCachedBriefing(commitmentId: number): Promise<CommitmentBriefing | null> {
+interface CacheReadOptions {
+  allowStale?: boolean;
+}
+
+async function getCachedBriefing(
+  commitmentId: number,
+  options?: CacheReadOptions,
+): Promise<CommitmentBriefing | null> {
   const supabase = getSupabase();
+  const allowStale = options?.allowStale === true;
 
   try {
     const { data, error } = await supabase
@@ -256,7 +265,7 @@ async function getCachedBriefing(commitmentId: number): Promise<CommitmentBriefi
 
     // Check staleness
     const generatedAt = new Date(data.generated_at).getTime();
-    if (Date.now() - generatedAt > CACHE_TTL_MS) return null;
+    if (!allowStale && Date.now() - generatedAt > CACHE_TTL_MS) return null;
 
     return {
       commitmentId: data.commitment_id,
@@ -270,12 +279,16 @@ async function getCachedBriefing(commitmentId: number): Promise<CommitmentBriefi
     };
   } catch {
     // Table may not exist — fall back to metadata approach
-    return getCachedBriefingFromMetadata(commitmentId);
+    return getCachedBriefingFromMetadata(commitmentId, options);
   }
 }
 
-async function getCachedBriefingFromMetadata(commitmentId: number): Promise<CommitmentBriefing | null> {
+async function getCachedBriefingFromMetadata(
+  commitmentId: number,
+  options?: CacheReadOptions,
+): Promise<CommitmentBriefing | null> {
   const supabase = getSupabase();
+  const allowStale = options?.allowStale === true;
 
   try {
     const { data } = await supabase
@@ -292,12 +305,19 @@ async function getCachedBriefingFromMetadata(commitmentId: number): Promise<Comm
 
     // Check staleness
     const generatedAt = new Date(briefing.generatedAt).getTime();
-    if (Date.now() - generatedAt > CACHE_TTL_MS) return null;
+    if (!allowStale && Date.now() - generatedAt > CACHE_TTL_MS) return null;
 
     return briefing;
   } catch {
     return null;
   }
+}
+
+export async function getCachedCommitmentBriefing(
+  commitmentId: number,
+  options?: CacheReadOptions,
+): Promise<CommitmentBriefing | null> {
+  return getCachedBriefing(commitmentId, options);
 }
 
 async function storeBriefing(briefing: CommitmentBriefing): Promise<void> {
@@ -413,7 +433,7 @@ export async function generateCommitmentBriefing(
       fullBriefing: {
         whatsHappening: `${signals.length} intelligence signals from ${uniqueSources.size} sources have been matched to this commitment. The most recent signal was discovered on ${signals[0].discovered_at.slice(0, 10)}.`,
         whosSayingWhat: signals.slice(0, 5).map((s) => ({
-          source: s.source_id,
+          source: resolveSourceDisplayName(s.source_id),
           quote: s.content_summary || s.title,
           date: s.discovered_at.slice(0, 10),
           sentiment: 'neutral' as const,

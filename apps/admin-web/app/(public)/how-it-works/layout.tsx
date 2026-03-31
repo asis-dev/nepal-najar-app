@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'How It Works | Nepal Najar',
+  title: 'How It Works | Nepal Republic',
   description:
-    'Learn how Nepal Najar tracks government commitments using AI intelligence, community verification, and combined scoring. Nepal\'s citizen-powered accountability platform.',
+    'Learn how Nepal Republic tracks government commitments using AI intelligence, community verification, and combined scoring. Nepal\'s citizen-powered accountability platform.',
   openGraph: {
-    title: 'How Nepal Najar Works',
+    title: 'How Nepal Republic Works',
     description:
       'AI intelligence + community verification = the truth about every government commitment. See how Nepal\'s accountability platform works.',
   },

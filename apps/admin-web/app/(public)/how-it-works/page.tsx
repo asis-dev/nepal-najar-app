@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Brain,
@@ -15,10 +16,11 @@ import {
   Signal,
   Radio,
 } from 'lucide-react';
+import { usePromiseStats } from '@/lib/hooks/use-promises';
 
 /* ═══════════════════════════════════════════════
    HOW IT WORKS — Onboarding page
-   Nepal Najar: citizen-powered government accountability
+   Nepal Republic: citizen-powered government accountability
    ═══════════════════════════════════════════════ */
 
 const howWeTrackCards = [
@@ -26,7 +28,7 @@ const howWeTrackCards = [
     icon: Brain,
     title: 'AI Intelligence Engine',
     titleNe: 'एआई बुद्धिमत्ता इन्जिन',
-    body: 'We scan 15+ sources every 4 hours: news outlets, social media, parliament records, government portals, and public databases.',
+    body: 'We continuously scan news outlets, social media, parliament records, government portals, and public databases.',
     accent: 'from-blue-500/20 to-cyan-500/20',
     iconColor: 'text-blue-400',
     border: 'border-blue-500/20',
@@ -74,15 +76,93 @@ const roleCards = [
   },
 ];
 
-const stats = [
-  { value: '109', label: 'Commitments tracked', labelNe: 'वचनबद्धता ट्र्याक गरिएको' },
-  { value: '15+', label: 'Sources monitored', labelNe: 'स्रोत अनुगमन गरिएको' },
-  { value: '4hr', label: 'Scan frequency', labelNe: 'स्क्यान आवृत्ति' },
-];
-
 export default function HowItWorksPage() {
+  const { stats: commitmentStats } = usePromiseStats({ publicOnly: true });
+  const [activeSourceCount, setActiveSourceCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch('/api/intelligence/status', { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (!payload || !Array.isArray(payload.sources)) return;
+        const active = payload.sources.filter(
+          (source: { is_active?: boolean }) => source.is_active,
+        ).length;
+        setActiveSourceCount(active);
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
+  }, []);
+
+  const liveStats = useMemo(
+    () => [
+      {
+        value: commitmentStats?.total ? String(commitmentStats.total) : 'Live',
+        label: 'Commitments tracked',
+        labelNe: 'वचनबद्धता ट्र्याक गरिएको',
+      },
+      {
+        value: activeSourceCount ? String(activeSourceCount) : 'Live',
+        label: 'Active sources',
+        labelNe: 'सक्रिय स्रोत',
+      },
+      {
+        value: 'Continuous',
+        label: 'Scan cadence',
+        labelNe: 'स्क्यान ताल',
+      },
+    ],
+    [activeSourceCount, commitmentStats?.total],
+  );
+
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is Nepal Republic?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Nepal Republic is an independent civic accountability platform that tracks 109 government commitments made by Nepal\'s RSP-led government using AI intelligence and community verification.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How does Nepal Republic track government commitments?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'We continuously scan 80+ sources including news outlets, social media, parliament records, and government portals. AI classifies each piece of evidence against 109 commitments, and citizens submit ground-level verification.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How is the commitment score calculated?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Each commitment receives an A through F letter grade. The final score combines AI assessment (40% weight) with community-submitted evidence (60% weight), ensuring citizen voices lead the scoring.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How can I participate?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'You can participate as an Observer by submitting evidence, voting on submissions, and tracking commitments. You can also become a Verifier by earning reputation through quality contributions, gaining 2x voting weight.',
+        },
+      },
+    ],
+  };
+
   return (
     <div className="relative min-h-screen overflow-x-clip bg-np-void">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       {/* Background grid */}
       <div className="absolute inset-0 z-0 nepal-hero-grid" />
       <div className="mountain-ridge opacity-60" />
@@ -93,11 +173,11 @@ export default function HowItWorksPage() {
           <div className="public-shell text-center">
             <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary-500/20 bg-primary-500/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-300">
               <Radio className="h-3.5 w-3.5" />
-              नेपाल नजर कसरी काम गर्छ
+              नेपाल रिपब्लिक कसरी काम गर्छ
             </div>
 
             <h1 className="mx-auto mt-6 max-w-3xl text-balance font-sans text-[2.5rem] font-semibold leading-[0.94] tracking-[-0.04em] text-white sm:text-[3.4rem] lg:text-[4.2rem]">
-              How Nepal Najar Works
+              How Nepal Republic Works
             </h1>
 
             <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-gray-300 sm:text-lg">
@@ -146,11 +226,11 @@ export default function HowItWorksPage() {
                       projects, policy reforms — announcements are made, but
                       follow-through disappears into bureaucracy. There is no
                       single place where a citizen can check: did this actually
-                      happen? Nepal Najar changes that.
+                      happen? Nepal Republic changes that.
                     </p>
                     <p className="mt-3 text-sm leading-7 text-gray-500">
                       चुनावी वाचा, बजेट विनियोजन, पूर्वाधार आयोजना — घोषणा हुन्छ तर
-                      कार्यान्वयन नागरिकको नजरबाट हराउँछ। नेपाल नजरले यो बदल्छ।
+                      कार्यान्वयन नागरिकको नजरबाट हराउँछ। नेपाल रिपब्लिकले यो बदल्छ।
                     </p>
                   </div>
                 </div>
@@ -273,7 +353,7 @@ export default function HowItWorksPage() {
             </div>
 
             <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-3">
-              {stats.map((stat) => (
+              {liveStats.map((stat) => (
                 <div key={stat.label} className="glass-card p-5 text-center">
                   <p className="text-3xl font-bold text-white">{stat.value}</p>
                   <p className="mt-2 text-sm font-medium text-gray-300">
@@ -316,7 +396,7 @@ export default function HowItWorksPage() {
                         </span>
                       </div>
                       <span className="text-xs text-gray-500">
-                        Confirms vs contradicts from 15+ sources
+                        Confirms vs contradicts from live source network
                       </span>
                     </div>
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.06]">

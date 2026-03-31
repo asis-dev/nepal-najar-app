@@ -1,5 +1,5 @@
 /**
- * Scraper type definitions for Nepal Najar data pipeline
+ * Scraper type definitions for Nepal Republic data pipeline
  */
 
 /** Raw scraped article before promise matching */

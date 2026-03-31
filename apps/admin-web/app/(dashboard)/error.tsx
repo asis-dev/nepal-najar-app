@@ -10,7 +10,7 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('[Nepal Najar Dashboard Error]', error);
+    console.error('[Nepal Republic Dashboard Error]', error);
   }, [error]);
 
   return (

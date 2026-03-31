@@ -18,7 +18,7 @@ interface VerifyStats {
 
 export function VerifyProgress({ promiseId }: { promiseId: string }) {
   const { isAuthenticated } = useAuth();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const isNe = locale === 'ne';
   const queryClient = useQueryClient();
 
@@ -91,10 +91,10 @@ export function VerifyProgress({ promiseId }: { promiseId: string }) {
     <div className="glass-card p-6">
       <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
         <ShieldCheck className="w-4 h-4 text-cyan-400" />
-        {isNe ? 'प्रगति प्रमाणीकरण' : 'Verify Progress'}
+        {t('verifyEvidence.title')}
         {stats.total > 0 && (
           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-semibold">
-            {stats.total} {isNe ? 'मतहरू' : 'votes'}
+            {stats.total} {t('verifyEvidence.votes')}
           </span>
         )}
       </h3>
@@ -103,12 +103,12 @@ export function VerifyProgress({ promiseId }: { promiseId: string }) {
       {stats.total > 0 && (
         <div className="mb-4">
           <p className="text-xs text-gray-400 mb-2">
-            {isNe ? 'नागरिकहरू भन्छन्:' : 'Citizens say:'}{' '}
-            <span className="text-emerald-400 font-medium">{accuratePct}% {isNe ? 'सही' : 'Accurate'}</span>
+            {t('verifyEvidence.citizensSay')}{' '}
+            <span className="text-emerald-400 font-medium">{accuratePct}% {t('verifyEvidence.accurate')}</span>
             {' \u00B7 '}
-            <span className="text-red-400 font-medium">{disputedPct}% {isNe ? 'विवादित' : 'Disputed'}</span>
+            <span className="text-red-400 font-medium">{disputedPct}% {t('verifyEvidence.disputed')}</span>
             {' \u00B7 '}
-            <span className="text-amber-400 font-medium">{partialPct}% {isNe ? 'आंशिक' : 'Mixed'}</span>
+            <span className="text-amber-400 font-medium">{partialPct}% {t('verifyEvidence.mixed')}</span>
           </p>
           <div className="h-2.5 bg-white/5 rounded-full overflow-hidden flex">
             {accuratePct > 0 && (
@@ -138,9 +138,9 @@ export function VerifyProgress({ promiseId }: { promiseId: string }) {
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
             {([
-              { value: 'accurate', label: isNe ? 'सही' : 'Accurate', emoji: '\u2705', activeColor: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]' },
-              { value: 'disputed', label: isNe ? 'विवादित' : 'Disputed', emoji: '\u274C', activeColor: 'bg-red-500/20 border-red-500/40 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.15)]' },
-              { value: 'partially_true', label: isNe ? 'आंशिक सही' : 'Partially True', emoji: '\u26A0\uFE0F', activeColor: 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.15)]' },
+              { value: 'accurate', label: t('verifyEvidence.accurateLabel'), emoji: '\u2705', activeColor: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]' },
+              { value: 'disputed', label: t('verifyEvidence.disputedLabel'), emoji: '\u274C', activeColor: 'bg-red-500/20 border-red-500/40 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.15)]' },
+              { value: 'partially_true', label: t('verifyEvidence.partiallyTrue'), emoji: '\u26A0\uFE0F', activeColor: 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.15)]' },
             ]).map((opt) => (
               <button
                 key={opt.value}
@@ -168,7 +168,7 @@ export function VerifyProgress({ promiseId }: { promiseId: string }) {
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder={isNe ? 'किन विवादित? (वैकल्पिक)' : 'Why disputed? (optional)'}
+                placeholder={t('verifyEvidence.whyDisputed')}
                 rows={2}
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/20 resize-none transition-all"
               />
@@ -178,13 +178,13 @@ export function VerifyProgress({ promiseId }: { promiseId: string }) {
                   disabled={submitting}
                   className="flex-1 py-2 rounded-xl text-xs font-medium bg-red-500/15 border border-red-500/30 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-all"
                 >
-                  {submitting ? (isNe ? 'पेश गर्दै...' : 'Submitting...') : (isNe ? 'विवाद पेश गर्नुहोस्' : 'Submit Dispute')}
+                  {submitting ? t('evidence.submitting') : t('verifyEvidence.submitDispute')}
                 </button>
                 <button
                   onClick={() => { setShowReason(false); setReason(''); }}
                   className="px-4 py-2 rounded-xl text-xs text-gray-500 hover:text-gray-300 transition-colors"
                 >
-                  {isNe ? 'रद्द' : 'Cancel'}
+                  {t('verifyEvidence.cancel')}
                 </button>
               </div>
             </div>
@@ -192,7 +192,7 @@ export function VerifyProgress({ promiseId }: { promiseId: string }) {
 
           {userVote && !justVoted && (
             <p className="text-[10px] text-gray-600 text-center">
-              {isNe ? 'तपाईंले पहिले नै मत दिनुभएको छ। फेरि क्लिक गरेर अपडेट गर्नुहोस्।' : 'You already voted. Click again to update.'}
+              {t('verifyEvidence.alreadyVoted')}
             </p>
           )}
         </div>
@@ -200,9 +200,9 @@ export function VerifyProgress({ promiseId }: { promiseId: string }) {
         <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
           <p className="text-sm text-gray-400">
             <Link href="/login" className="text-cyan-400 hover:text-cyan-300 transition-colors">
-              {isNe ? 'लगइन गर्नुहोस्' : 'Sign in'}
+              {t('verifyEvidence.signIn')}
             </Link>{' '}
-            {isNe ? 'प्रगति प्रमाणित गर्न' : 'to verify progress'}
+            {t('verifyEvidence.toVerifyProgress')}
           </p>
         </div>
       )}

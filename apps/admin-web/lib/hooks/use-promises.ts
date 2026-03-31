@@ -247,12 +247,13 @@ export function useArticleCount() {
       if (!supabaseConfigured) return 0;
       if (!supabasePublic) return 0;
 
-      const { count, error } = await supabasePublic
-        .from('scraped_articles')
-        .select('id', { count: 'exact', head: true });
+      // Count from both tables — scraped_articles (legacy) + intelligence_signals (current pipeline)
+      const [articles, signals] = await Promise.all([
+        supabasePublic.from('scraped_articles').select('id', { count: 'exact', head: true }),
+        supabasePublic.from('intelligence_signals').select('id', { count: 'exact', head: true }),
+      ]);
 
-      if (error) return 0;
-      return count ?? 0;
+      return (articles.count ?? 0) + (signals.count ?? 0);
     },
     staleTime: 5 * 60 * 1000,
   });

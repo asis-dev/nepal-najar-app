@@ -4,21 +4,11 @@
  * Returns review stats: pending count, approved/rejected/edited today, classification breakdown.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { isAdminAuthed } from '@/lib/auth/admin';
 import { getSupabase } from '@/lib/supabase/server';
 
-function isAuthed(request: NextRequest): boolean {
-  const adminCookie = request.cookies.get('admin_session')?.value;
-  const authHeader = request.headers.get('authorization');
-  const adminSecret = process.env.ADMIN_SECRET;
-
-  return !!(
-    (adminCookie && adminSecret && adminCookie === adminSecret) ||
-    (authHeader && adminSecret && authHeader === `Bearer ${adminSecret}`)
-  );
-}
-
 export async function GET(request: NextRequest) {
-  if (!isAuthed(request)) {
+  if (!isAdminAuthed(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

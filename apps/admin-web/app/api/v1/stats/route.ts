@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as allPromises, type PromiseCategory } from '@/lib/data/promises';
+import { getPromises } from '@/lib/data';
+import { isPublicCommitment } from '@/lib/data/commitments';
 import { rateLimit, getClientIp } from '@/lib/middleware/rate-limit';
 
 /**
@@ -21,18 +22,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const total = allPromises.length;
+  const allCommitments = (await getPromises()).filter((commitment) =>
+    isPublicCommitment(commitment),
+  );
+  const total = allCommitments.length;
 
   const byStatus = {
-    not_started: allPromises.filter((p) => p.status === 'not_started').length,
-    in_progress: allPromises.filter((p) => p.status === 'in_progress').length,
-    delivered: allPromises.filter((p) => p.status === 'delivered').length,
-    stalled: allPromises.filter((p) => p.status === 'stalled').length,
+    not_started: allCommitments.filter((p) => p.status === 'not_started').length,
+    in_progress: allCommitments.filter((p) => p.status === 'in_progress').length,
+    delivered: allCommitments.filter((p) => p.status === 'delivered').length,
+    stalled: allCommitments.filter((p) => p.status === 'stalled').length,
   };
 
   // Group by category
-  const categoryMap = new Map<PromiseCategory, number>();
-  for (const p of allPromises) {
+  const categoryMap = new Map<string, number>();
+  for (const p of allCommitments) {
     categoryMap.set(p.category, (categoryMap.get(p.category) ?? 0) + 1);
   }
   const byCategory = Array.from(categoryMap.entries()).map(([category, count]) => ({
@@ -42,7 +46,7 @@ export async function GET(request: NextRequest) {
 
   const avgProgress =
     total > 0
-      ? Math.round(allPromises.reduce((sum, p) => sum + p.progress, 0) / total)
+      ? Math.round(allCommitments.reduce((sum, p) => sum + p.progress, 0) / total)
       : 0;
 
   return NextResponse.json(

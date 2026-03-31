@@ -9,7 +9,7 @@ interface BudgetOverviewStripProps {
 }
 
 export function BudgetOverviewStrip({ promises }: BudgetOverviewStripProps) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const isNe = locale === 'ne';
 
   // Compute aggregates from promises with budget data
@@ -27,30 +27,30 @@ export function BudgetOverviewStrip({ promises }: BudgetOverviewStripProps) {
 
   const stats = [
     {
-      label: isNe ? 'कुल विनियोजन' : 'Total Allocated',
+      label: t('budget.totalAllocated'),
       value: formatNPR(totalEstimated),
       sub: formatNPRtoUSD(totalEstimated),
       icon: Banknote,
       color: 'text-primary-400',
     },
     {
-      label: isNe ? 'कुल खर्च' : 'Total Spent',
+      label: t('budget.totalSpent'),
       value: formatNPR(totalSpent),
       sub: formatNPRtoUSD(totalSpent),
       icon: TrendingUp,
       color: 'text-amber-400',
     },
     {
-      label: isNe ? 'खर्च दर' : 'Utilization',
+      label: t('budget.utilizationLabel'),
       value: `${utilizationRate}%`,
-      sub: `${withBudget.length} ${isNe ? 'वचनबद्धता' : 'commitments'}`,
+      sub: `${withBudget.length} ${t('budget.commitments')}`,
       icon: PieChart,
       color: utilizationRate >= 60 ? 'text-emerald-400' : utilizationRate >= 30 ? 'text-amber-400' : 'text-orange-400',
     },
     {
-      label: isNe ? 'कोष स्रोत' : 'Funding Sources',
+      label: t('budget.fundingSources'),
       value: `${fundingSources.size}`,
-      sub: isNe ? 'विभिन्न स्रोतहरू' : 'distinct sources',
+      sub: t('budget.distinctSources'),
       icon: Building2,
       color: 'text-cyan-400',
     },
@@ -61,7 +61,7 @@ export function BudgetOverviewStrip({ promises }: BudgetOverviewStripProps) {
       <div className="flex items-center gap-2 mb-3">
         <Banknote className="w-4 h-4 text-primary-400" />
         <h3 className="text-sm font-semibold text-gray-300">
-          {isNe ? 'बजेट सारांश' : 'Budget Overview'}
+          {t('budget.budgetOverview')}
         </h3>
       </div>
 

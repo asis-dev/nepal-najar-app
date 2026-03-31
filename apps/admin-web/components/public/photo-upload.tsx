@@ -10,6 +10,7 @@ import {
   AlertCircle,
   ImageIcon,
 } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 /* ═══════════════════════════════════════════
    TYPES & CONSTANTS
@@ -24,7 +25,7 @@ interface PhotoUploadProps {
   maxSize?: number;
   /** Whether the component is disabled */
   disabled?: boolean;
-  /** Nepali locale */
+  /** @deprecated Use useI18n() hook instead */
   isNe?: boolean;
 }
 
@@ -64,8 +65,8 @@ export function PhotoUpload({
   maxFiles = MAX_FILES_DEFAULT,
   maxSize = MAX_SIZE_DEFAULT,
   disabled = false,
-  isNe = false,
 }: PhotoUploadProps) {
+  const { t } = useI18n();
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,9 +83,7 @@ export function PhotoUpload({
       const totalCount = files.length + fileArray.length;
       if (totalCount > maxFiles) {
         setError(
-          isNe
-            ? `अधिकतम ${maxFiles} फाइलहरू मात्र। ${files.length} पहिले नै थपिसकेको।`
-            : `Max ${maxFiles} files allowed. ${files.length} already added.`,
+          t('evidence.maxFilesError').replace('{maxFiles}', String(maxFiles)).replace('{count}', String(files.length)),
         );
         return;
       }
@@ -95,9 +94,7 @@ export function PhotoUpload({
         // Type check
         if (!ACCEPTED_TYPES.includes(file.type)) {
           setError(
-            isNe
-              ? `"${file.name}" — यो फाइल प्रकार अनुमति छैन। JPG, PNG, WebP, GIF, PDF मात्र।`
-              : `"${file.name}" — File type not allowed. Accepted: JPG, PNG, WebP, GIF, PDF.`,
+            t('evidence.fileTypeError').replace('{name}', file.name),
           );
           return;
         }
@@ -105,9 +102,7 @@ export function PhotoUpload({
         // Size check
         if (file.size > maxSize) {
           setError(
-            isNe
-              ? `"${file.name}" ${formatBytes(file.size)} — 5MB भन्दा ठूलो।`
-              : `"${file.name}" (${formatBytes(file.size)}) exceeds 5MB limit.`,
+            t('evidence.fileSizeError').replace('{name}', file.name).replace('{size}', formatBytes(file.size)),
           );
           return;
         }
@@ -121,7 +116,7 @@ export function PhotoUpload({
 
       setFiles((prev) => [...prev, ...newFiles]);
     },
-    [files.length, maxFiles, maxSize, isNe],
+    [files.length, maxFiles, maxSize, t],
   );
 
   // ── Remove a file ──
@@ -154,7 +149,7 @@ export function PhotoUpload({
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || (isNe ? 'अपलोड असफल' : 'Upload failed'));
+        setError(data.error || t('evidence.uploadFailed'));
         return;
       }
 
@@ -166,11 +161,11 @@ export function PhotoUpload({
 
       onUpload(data.urls);
     } catch {
-      setError(isNe ? 'अपलोड गर्न असफल। पुन: प्रयास गर्नुहोस्।' : 'Upload failed. Please try again.');
+      setError(t('evidence.uploadFailedRetry'));
     } finally {
       setUploading(false);
     }
-  }, [files, uploading, onUpload, isNe]);
+  }, [files, uploading, onUpload, t]);
 
   // ── Drag & drop handlers ──
   const onDragOver = useCallback(
@@ -249,12 +244,10 @@ export function PhotoUpload({
           </div>
           <div className="text-left">
             <p className="text-sm font-medium text-gray-200">
-              {isNe ? 'फोटो वा कागजात अपलोड गर्नुहोस्' : 'Upload photos or documents'}
+              {t('evidence.uploadPhotos')}
             </p>
             <p className="text-[11px] text-gray-500">
-              {isNe
-                ? `तान्नुहोस् वा क्लिक गर्नुहोस् | अधिकतम ${maxFiles} फाइल, ${formatBytes(maxSize)} प्रत्येक`
-                : `Drag & drop or click | Max ${maxFiles} files, ${formatBytes(maxSize)} each`}
+              {t('evidence.dragAndDrop').replace('{maxFiles}', String(maxFiles)).replace('{maxSize}', formatBytes(maxSize))}
             </p>
             <p className="text-[10px] text-gray-600 mt-0.5">
               JPG, PNG, WebP, GIF, PDF
@@ -276,14 +269,12 @@ export function PhotoUpload({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-400">
-              {isNe
-                ? `${files.length} फाइल चयन गरिएको`
-                : `${files.length} file${files.length > 1 ? 's' : ''} selected`}
+              {t('evidence.filesSelected').replace('{count}', String(files.length))}
             </p>
             <p className="text-[10px] text-gray-500">
               {formatBytes(files.reduce((sum, f) => sum + f.file.size, 0))}
               {' '}
-              {isNe ? 'जम्मा' : 'total'}
+              {t('evidence.total')}
             </p>
           </div>
 
@@ -339,14 +330,12 @@ export function PhotoUpload({
             {uploading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {isNe ? 'अपलोड हुँदैछ...' : 'Uploading...'}
+                {t('evidence.uploading')}
               </>
             ) : (
               <>
                 <ImageIcon className="w-4 h-4" />
-                {isNe
-                  ? `${files.length} फाइल अपलोड गर्नुहोस्`
-                  : `Upload ${files.length} file${files.length > 1 ? 's' : ''}`}
+                {t('evidence.uploadFiles').replace('{count}', String(files.length))}
               </>
             )}
           </button>

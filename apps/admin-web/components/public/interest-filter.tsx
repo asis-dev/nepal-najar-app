@@ -58,14 +58,14 @@ export function InterestFilter({ selected, onChange, isMobile }: Props) {
       {/* Trigger */}
       <button
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full transition-colors duration-200 ${
+        className={`inline-flex items-center justify-center transition-colors duration-200 ${
           hasFilters
-            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-            : 'bg-white/5 text-gray-400 border border-white/10 hover:border-white/20'
+            ? 'text-cyan-300'
+            : 'text-gray-400 hover:text-gray-300'
         }`}
       >
-        <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-        {hasFilters && <span className="text-[10px] font-bold">{selected.length}</span>}
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        {hasFilters && <span className="text-[10px] font-bold ml-0.5">{selected.length}</span>}
       </button>
 
       {/* Dropdown — simple checkbox list */}

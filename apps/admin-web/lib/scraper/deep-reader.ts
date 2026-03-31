@@ -26,7 +26,7 @@ export async function readFullArticle(
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'NepalNajar/1.0 (governance-tracker; +https://nepalnajar.com)',
+        'User-Agent': 'NepalRepublic/2.0 (civic-tracker; +https://nepalrepublic.org)',
         Accept: 'text/html',
       },
       signal: AbortSignal.timeout(8000),

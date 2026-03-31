@@ -76,7 +76,7 @@ function TabButton({
    MAIN PAGE
    ═══════════════════════════════════════════ */
 export default function LeaderboardPage() {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const isNe = locale === 'ne';
   const [activeTab, setActiveTab] = useState<'areas' | 'citizens'>('areas');
 
@@ -98,19 +98,15 @@ export default function LeaderboardPage() {
               className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              {isNe ? '\u092A\u091B\u093E\u0921\u093F' : 'Back'}
+              {t('leaderboard.back')}
             </Link>
           </div>
         </div>
 
         <PublicPageHero
-          eyebrow={isNe ? '\u0938\u0915\u094D\u0930\u093F\u092F \u0928\u093E\u0917\u0930\u093F\u0915' : 'Active Citizens'}
-          title={isNe ? '\u0938\u0915\u094D\u0930\u093F\u092F \u0928\u093E\u0917\u0930\u093F\u0915 \u0932\u093F\u0921\u0930\u092C\u094B\u0930\u094D\u0921' : 'Engagement Leaderboard'}
-          description={
-            isNe
-              ? '\u0915\u0941\u0928 \u0915\u094D\u0937\u0947\u0924\u094D\u0930 \u0930 \u0928\u093E\u0917\u0930\u093F\u0915 \u0938\u092C\u0948\u092D\u0928\u094D\u0926\u093E \u0938\u0915\u094D\u0930\u093F\u092F \u091B\u0928\u094D \u0939\u0947\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D\u0964'
-              : 'See which areas and citizens are most engaged in accountability.'
-          }
+          eyebrow={t('leaderboard.eyebrow')}
+          title={t('leaderboard.title')}
+          description={t('leaderboard.description')}
           centered
         />
 
@@ -121,13 +117,13 @@ export default function LeaderboardPage() {
               active={activeTab === 'areas'}
               onClick={() => setActiveTab('areas')}
               icon={Mountain}
-              label={isNe ? '\u0915\u094D\u0937\u0947\u0924\u094D\u0930' : 'Areas'}
+              label={t('leaderboard.areasTab')}
             />
             <TabButton
               active={activeTab === 'citizens'}
               onClick={() => setActiveTab('citizens')}
               icon={Users}
-              label={isNe ? '\u0928\u093E\u0917\u0930\u093F\u0915' : 'Citizens'}
+              label={t('leaderboard.citizensTab')}
             />
           </div>
         </section>
@@ -143,7 +139,7 @@ export default function LeaderboardPage() {
               <div className="glass-card p-10 text-center">
                 <Trophy className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-sm text-gray-500">
-                  {isNe ? '\u0905\u0939\u093F\u0932\u0947\u0938\u092E\u094D\u092E \u0915\u0941\u0928\u0948 \u0921\u093E\u091F\u093E \u091B\u0948\u0928\u0964' : 'No data available yet. Be the first to contribute!'}
+                  {t('leaderboard.noData')}
                 </p>
               </div>
             ) : activeTab === 'areas' ? (
@@ -151,11 +147,11 @@ export default function LeaderboardPage() {
                 {/* Header */}
                 <div className="hidden sm:flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] text-xs text-gray-500 uppercase tracking-wider">
                   <span className="w-8" />
-                  <span className="flex-1">{isNe ? '\u092A\u094D\u0930\u0926\u0947\u0936' : 'Province'}</span>
-                  <span className="w-20 text-right">{isNe ? '\u092A\u094D\u0930\u0938\u094D\u0924\u093E\u0935' : 'Proposals'}</span>
-                  <span className="w-20 text-right">{isNe ? '\u0930\u093F\u092A\u094B\u0930\u094D\u091F' : 'Reports'}</span>
-                  <span className="w-20 text-right">{isNe ? '\u092E\u0924' : 'Votes'}</span>
-                  <span className="w-20 text-right">{isNe ? '\u0938\u094D\u0915\u094B\u0930' : 'Score'}</span>
+                  <span className="flex-1">{t('leaderboard.provinceHeader')}</span>
+                  <span className="w-20 text-right">{t('leaderboard.proposalsHeader')}</span>
+                  <span className="w-20 text-right">{t('leaderboard.reportsHeader')}</span>
+                  <span className="w-20 text-right">{t('leaderboard.votesHeader')}</span>
+                  <span className="w-20 text-right">{t('leaderboard.scoreHeader')}</span>
                 </div>
 
                 {/* Rows */}
@@ -203,10 +199,10 @@ export default function LeaderboardPage() {
                 {/* Header */}
                 <div className="hidden sm:flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] text-xs text-gray-500 uppercase tracking-wider">
                   <span className="w-8" />
-                  <span className="flex-1">{isNe ? '\u0928\u093E\u0917\u0930\u093F\u0915' : 'Citizen'}</span>
-                  <span className="w-24 text-right">{isNe ? '\u092A\u094D\u0930\u0938\u094D\u0924\u093E\u0935 \u0938\u093F\u0930\u094D\u091C\u0928\u093E' : 'Proposals'}</span>
-                  <span className="w-24 text-right">{isNe ? '\u0938\u094D\u0935\u0940\u0915\u0943\u0924' : 'Accepted'}</span>
-                  <span className="w-20 text-right">{isNe ? '\u0915\u0930\u094D\u092E' : 'Karma'}</span>
+                  <span className="flex-1">{t('leaderboard.citizenHeader')}</span>
+                  <span className="w-24 text-right">{t('leaderboard.proposalsCreatedHeader')}</span>
+                  <span className="w-24 text-right">{t('leaderboard.acceptedHeader')}</span>
+                  <span className="w-20 text-right">{t('leaderboard.karmaHeader')}</span>
                 </div>
 
                 {/* Rows */}

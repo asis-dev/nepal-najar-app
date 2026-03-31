@@ -157,7 +157,7 @@ export default function DailyDatePage() {
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  {isNe ? 'अघिल्लो' : 'Previous'}
+                  {t('dailyPage.previous')}
                 </Link>
 
                 <div className="text-center">
@@ -177,7 +177,7 @@ export default function DailyDatePage() {
                     href={`/daily/${nextDate}`}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all"
                   >
-                    {isNe ? 'पछिल्लो' : 'Next'}
+                    {t('dailyPage.next')}
                     <ChevronRight className="w-4 h-4" />
                   </Link>
                 )}
@@ -195,7 +195,7 @@ export default function DailyDatePage() {
                 <div className="flex items-center gap-2 mb-5">
                   <Activity className="w-5 h-5 text-primary-400" />
                   <h2 className="text-lg font-semibold text-white">
-                    {isNe ? 'यस मितिको मुख्य गतिविधि' : 'Top activity on this date'}
+                    {t('dailyPage.topActivity')}
                   </h2>
                 </div>
 
@@ -227,7 +227,7 @@ export default function DailyDatePage() {
                       {isNe ? spotlight.title : spotlight.title_ne}
                     </p>
                     <p className="text-sm text-gray-400 leading-relaxed mb-5">
-                      {spotlight.topHeadline || (isNe ? 'यस मितिमा यही प्रतिबद्धतामा सबैभन्दा बलियो सार्वजनिक संकेत देखियो।' : 'This commitment carried the strongest reviewed public signal on this date.')}
+                      {spotlight.topHeadline || t('dailyPage.strongestSignalDate')}
                     </p>
 
                     <div className="mt-5 pt-4 border-t border-white/[0.06]">
@@ -235,7 +235,7 @@ export default function DailyDatePage() {
                         href={`/explore/first-100-days/${spotlight.slug || spotlight.promiseId}`}
                         className="inline-flex items-center gap-2 text-sm font-medium text-primary-300 hover:text-primary-200 transition-colors"
                       >
-                        {isNe ? 'पूरा विवरण हेर्नुहोस्' : 'View full commitment details'}
+                        {t('dailyPage.viewFullDetails')}
                         <ArrowRight className="w-4 h-4" />
                       </Link>
                     </div>
@@ -243,7 +243,7 @@ export default function DailyDatePage() {
                     {relatedActivity.length > 0 ? (
                       <div className="mt-6 space-y-2">
                         <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
-                          {isNe ? 'थप गतिविधि' : 'More activity'}
+                          {t('dailyPage.moreActivity')}
                         </p>
                         {relatedActivity.map((item) => (
                           <Link
@@ -264,12 +264,10 @@ export default function DailyDatePage() {
                   <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-sm text-gray-400">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertCircle className="w-4 h-4 text-gray-500" />
-                      <span>{isNe ? 'कुनै गतिविधि भेटिएन' : 'No activity found'}</span>
+                      <span>{t('dailyPage.noActivityFound')}</span>
                     </div>
                     <p>
-                      {isNe
-                        ? 'यस मितिमा कुनै समीक्षा गरिएको प्रतिबद्धता गतिविधि रेकर्ड भएको छैन।'
-                        : 'No reviewed commitment activity was recorded on this date.'}
+                      {t('dailyPage.noActivityFoundDesc')}
                     </p>
                   </div>
                 )}
@@ -287,7 +285,7 @@ export default function DailyDatePage() {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200 shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_25px_rgba(59,130,246,0.25)]"
               >
                 <Calendar className="w-4 h-4" />
-                {isNe ? 'आजको गतिविधिमा फर्कनुहोस्' : 'Back to Today'}
+                {t('dailyPage.backToToday')}
               </Link>
             </div>
           </section>

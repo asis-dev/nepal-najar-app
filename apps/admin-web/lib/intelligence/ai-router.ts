@@ -354,8 +354,8 @@ async function callOpenAICompatible(
   };
 
   if (config.provider === 'openrouter') {
-    headers['HTTP-Referer'] = 'https://ghanticard.com';
-    headers['X-Title'] = 'GhantiCard Intelligence';
+    headers['HTTP-Referer'] = 'https://nepalrepublic.org';
+    headers['X-Title'] = 'Nepal Republic Intelligence';
   }
 
   const res = await fetch(`${config.baseUrl}/chat/completions`, {

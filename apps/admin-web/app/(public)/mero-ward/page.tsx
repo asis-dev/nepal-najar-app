@@ -208,6 +208,7 @@ function CommunityProposalsSection({ province, isNe }: { province: string | null
    RECENT REPORTS SECTION
    =================================================== */
 function RecentReportsSection({ province, district, isNe }: { province: string | null; district: string | null; isNe: boolean }) {
+  const { t } = useI18n();
   const { data: reports, isLoading } = useWardReports(province, district);
 
   if (isLoading || !reports || reports.length === 0) return null;
@@ -224,7 +225,7 @@ function RecentReportsSection({ province, district, isNe }: { province: string |
       <div className="max-w-4xl mx-auto">
         <h2 className="text-base font-semibold text-white flex items-center gap-2 mb-4">
           <ClipboardList className="w-4 h-4 text-primary-400" />
-          {isNe ? '\u0939\u093E\u0932\u0915\u093E \u0930\u093F\u092A\u094B\u0930\u094D\u091F\u0939\u0930\u0942' : 'Recent Reports'}
+          {t('ward.recentReports')}
         </h2>
         <div className="space-y-2">
           {reports.slice(0, 5).map((report: WardReport) => (
@@ -561,18 +562,16 @@ export default function MeroWardPage() {
                 <div className="glass-card p-6 flex flex-col items-center justify-center text-center">
                   <ClipboardList className="w-10 h-10 text-primary-400 mb-3" />
                   <h3 className="text-base font-semibold text-white mb-2">
-                    {isNe ? '\u092E\u0947\u0930\u094B \u0935\u093E\u0930\u094D\u0921\u092C\u093E\u091F \u0930\u093F\u092A\u094B\u0930\u094D\u091F' : 'Report from My Ward'}
+                    {t('ward.reportFromMyWard')}
                   </h3>
                   <p className="text-sm text-gray-400 mb-4">
-                    {isNe
-                      ? '\u0924\u092A\u093E\u0908\u0902\u0915\u094B \u0915\u094D\u0937\u0947\u0924\u094D\u0930\u0915\u094B \u0935\u093E\u0938\u094D\u0924\u0935\u093F\u0915 \u0905\u0935\u0938\u094D\u0925\u093E \u0930\u093F\u092A\u094B\u0930\u094D\u091F \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D\u0964'
-                      : 'Share what is really happening in your area.'}
+                    {t('ward.shareRealSituation')}
                   </p>
                   <button
                     onClick={() => setShowReportForm(true)}
                     className="px-6 py-3 rounded-xl text-sm font-semibold bg-primary-500/20 text-primary-300 border border-primary-500/30 hover:bg-primary-500/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all duration-300"
                   >
-                    {isNe ? '\u0930\u093F\u092A\u094B\u0930\u094D\u091F \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D' : 'Submit a Report'}
+                    {t('ward.submitAReport')}
                   </button>
                 </div>
               )}
@@ -588,7 +587,7 @@ export default function MeroWardPage() {
           <div className="max-w-4xl mx-auto">
             <LeaderboardWidget
               type="areas"
-              title={isNe ? '\u0924\u092A\u093E\u0908\u0902\u0915\u094B \u0915\u094D\u0937\u0947\u0924\u094D\u0930 \u0915\u0938\u0930\u0940 \u091B?' : 'How your area compares'}
+              title={t('ward.howYourAreaCompares')}
               limit={5}
             />
           </div>

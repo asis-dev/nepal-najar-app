@@ -30,13 +30,16 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json({ success: true });
-    response.cookies.set('np-admin-token', adminSecret, {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       path: '/',
       maxAge: 60 * 60 * 24 * 7,
-    });
+    };
+    // Keep both cookie names for backward compatibility across old/new admin routes.
+    response.cookies.set('np-admin-token', adminSecret, cookieOptions);
+    response.cookies.set('admin_session', adminSecret, cookieOptions);
 
     return response;
   } catch {
@@ -53,12 +56,14 @@ export async function DELETE() {
 
   // Also clear legacy cookie
   const response = NextResponse.json({ success: true });
-  response.cookies.set('np-admin-token', '', {
+  const clearOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     path: '/',
     maxAge: 0,
-  });
+  };
+  response.cookies.set('np-admin-token', '', clearOptions);
+  response.cookies.set('admin_session', '', clearOptions);
   return response;
 }

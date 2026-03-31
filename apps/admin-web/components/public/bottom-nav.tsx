@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Eye, ClipboardList, BarChart3, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut } from 'lucide-react';
+import { Eye, ClipboardList, BarChart3, Award, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut, Swords, Scale, AlertCircle, Shield } from 'lucide-react';
 import { useTrending } from '@/lib/hooks/use-trending';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
@@ -19,6 +19,8 @@ const navItems = [
   { href: '/', icon: Eye, label: 'Home', labelNe: 'गृह', hasPulse: true },
   { href: '/explore/first-100-days', icon: ClipboardList, label: 'Tracker', labelNe: 'ट्र्याकर' },
   { href: '/report-card', icon: BarChart3, label: 'Report', labelNe: 'रिपोर्ट' },
+  { href: '/scorecard', icon: Award, label: 'Ministries', labelNe: 'मन्त्रालय' },
+  { href: '/complaints', icon: AlertCircle, label: 'Civic Issues', labelNe: 'नागरिक समस्या' },
   { href: '/me', icon: User, label: 'Me', labelNe: 'म', isMe: true },
 ];
 
@@ -27,7 +29,7 @@ export function BottomNav() {
   const router = useRouter();
   const { pulseLevel } = useTrending();
   const pulseDotColor = PULSE_COLORS[pulseLevel];
-  const { user, isAuthenticated, karma, signOut } = useAuth();
+  const { user, isAuthenticated, karma, signOut, isVerifier } = useAuth();
   const { locale, setLocale } = useI18n();
   const [showMeSheet, setShowMeSheet] = useState(false);
 
@@ -106,6 +108,13 @@ export function BottomNav() {
                 onClick={() => setShowMeSheet(false)}
                 isActive={pathname.startsWith('/reputation')}
               />
+              <MeSheetLink
+                href="/disputed"
+                icon={Swords}
+                label={locale === 'ne' ? 'विवाद' : 'Disputes'}
+                onClick={() => setShowMeSheet(false)}
+                isActive={pathname.startsWith('/disputed')}
+              />
 
               {/* Language toggle */}
               <button
@@ -120,6 +129,27 @@ export function BottomNav() {
               </button>
 
               <MeSheetLink
+                href="/scorecard"
+                icon={Award}
+                label={locale === 'ne' ? 'मन्त्रालय' : 'Ministries'}
+                onClick={() => setShowMeSheet(false)}
+                isActive={pathname.startsWith('/scorecard')}
+              />
+              <MeSheetLink
+                href="/constitution"
+                icon={Scale}
+                label={locale === 'ne' ? 'संविधान' : 'Constitution'}
+                onClick={() => setShowMeSheet(false)}
+                isActive={pathname.startsWith('/constitution')}
+              />
+              <MeSheetLink
+                href="/about"
+                icon={HelpCircle}
+                label={locale === 'ne' ? 'बारेमा' : 'About This App'}
+                onClick={() => setShowMeSheet(false)}
+                isActive={pathname.startsWith('/about')}
+              />
+              <MeSheetLink
                 href="/how-it-works"
                 icon={HelpCircle}
                 label={locale === 'ne' ? 'कसरी काम गर्छ' : 'How It Works'}
@@ -133,6 +163,22 @@ export function BottomNav() {
                 onClick={() => setShowMeSheet(false)}
                 isActive={pathname.startsWith('/feedback')}
               />
+              <MeSheetLink
+                href="/complaints"
+                icon={AlertCircle}
+                label={locale === 'ne' ? 'नागरिक समस्या' : 'Civic Issues'}
+                onClick={() => setShowMeSheet(false)}
+                isActive={pathname.startsWith('/complaints')}
+              />
+              {isVerifier && (
+                <MeSheetLink
+                  href="/complaints/ops"
+                  icon={Shield}
+                  label={locale === 'ne' ? 'उजुरी सञ्चालन' : 'Complaint Ops'}
+                  onClick={() => setShowMeSheet(false)}
+                  isActive={pathname.startsWith('/complaints/ops')}
+                />
+              )}
 
               {/* Sign Out */}
               <button

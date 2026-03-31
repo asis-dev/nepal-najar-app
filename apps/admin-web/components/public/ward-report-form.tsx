@@ -66,10 +66,10 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
       <div className="glass-card p-6 text-center">
         <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
         <h3 className="text-lg font-semibold text-white mb-1">
-          {isNe ? '\u0927\u0928\u094D\u092F\u0935\u093E\u0926!' : 'Thank you!'}
+          {t('ward.thankYou')}
         </h3>
         <p className="text-sm text-gray-400 mb-4">
-          {isNe ? '\u0924\u092A\u093E\u0908\u0902\u0915\u094B \u0930\u093F\u092A\u094B\u0930\u094D\u091F \u0938\u092B\u0932\u0924\u093E\u092A\u0942\u0930\u094D\u0935\u0915 \u092A\u0920\u093E\u0907\u092F\u094B\u0964' : 'Your report has been submitted successfully.'}
+          {t('ward.reportSubmittedSuccess')}
         </p>
         <button
           onClick={() => {
@@ -80,7 +80,7 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
           }}
           className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
         >
-          {isNe ? '\u0905\u0930\u094D\u0915\u094B \u0930\u093F\u092A\u094B\u0930\u094D\u091F \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D' : 'Submit another report'}
+          {t('ward.submitAnother')}
         </button>
       </div>
     );
@@ -90,7 +90,7 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
     return (
       <div className="glass-card p-6 text-center">
         <p className="text-sm text-gray-400 mb-3">
-          {isNe ? '\u0930\u093F\u092A\u094B\u0930\u094D\u091F \u0917\u0930\u094D\u0928 \u0932\u0917\u0907\u0928 \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D\u0964' : 'Please log in to submit a report.'}
+          {t('ward.pleaseLogin')}
         </p>
       </div>
     );
@@ -100,9 +100,7 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
     return (
       <div className="glass-card p-6 text-center">
         <p className="text-sm text-gray-400 mb-3">
-          {isNe
-            ? '\u092A\u0939\u093F\u0932\u0947 \u0924\u092A\u093E\u0908\u0902\u0915\u094B \u092A\u094D\u0930\u0926\u0947\u0936 \u0930 \u091C\u093F\u0932\u094D\u0932\u093E \u091B\u0928\u094C\u091F \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D\u0964'
-            : 'Please set your province and district in settings first.'}
+          {t('ward.setProvinceDistrict')}
         </p>
       </div>
     );
@@ -113,7 +111,7 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-base font-semibold text-white">
-          {isNe ? '\u092E\u0947\u0930\u094B \u0935\u093E\u0930\u094D\u0921\u092C\u093E\u091F \u0930\u093F\u092A\u094B\u0930\u094D\u091F' : 'Report from My Ward'}
+          {t('ward.reportFromMyWard')}
         </h3>
         {onClose && (
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
@@ -125,7 +123,7 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
       {/* Topic selector — grid of icons */}
       <div className="mb-5">
         <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">
-          {isNe ? '\u0935\u093F\u0937\u092F \u091B\u0928\u094C\u091F \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D' : 'Select a topic'}
+          {t('ward.selectTopic')}
         </p>
         <div className="grid grid-cols-5 gap-2">
           {TOPICS.map((topic) => (
@@ -150,7 +148,7 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
       {/* Star rating */}
       <div className="mb-5">
         <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">
-          {isNe ? '\u0930\u0947\u091F\u093F\u0919 \u0926\u093F\u0928\u0941\u0939\u094B\u0938\u094D' : 'Rate your area'}
+          {t('ward.rateYourArea')}
         </p>
         <div className="flex items-center gap-2">
           {[1, 2, 3, 4, 5].map((star) => (
@@ -181,12 +179,12 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
       {/* Optional description */}
       <div className="mb-5">
         <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-          {isNe ? '\u0935\u093F\u0935\u0930\u0923 (\u0910\u091A\u094D\u091B\u093F\u0915)' : 'Description (optional)'}
+          {t('ward.descriptionOptional')}
         </p>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
-          placeholder={isNe ? '\u0924\u092A\u093E\u0908\u0902\u0915\u094B \u0905\u0928\u0941\u092D\u0935 \u0932\u0947\u0916\u094D\u0928\u0941\u0939\u094B\u0938\u094D...' : 'Share what you see in your area...'}
+          placeholder={t('ward.shareExperience')}
           rows={3}
           className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-primary-500/40 focus:ring-1 focus:ring-primary-500/20 transition-colors"
         />
@@ -206,10 +204,10 @@ export function WardReportForm({ onClose, onSuccess }: WardReportFormProps) {
         {submitMutation.isPending ? (
           <span className="flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
-            {isNe ? '\u092A\u0920\u093E\u0909\u0901\u0926\u0948...' : 'Submitting...'}
+            {t('ward.submitting')}
           </span>
         ) : (
-          isNe ? '\u0930\u093F\u092A\u094B\u0930\u094D\u091F \u092A\u0920\u093E\u0909\u0928\u0941\u0939\u094B\u0938\u094D' : 'Submit Report'
+          t('ward.submitReport')
         )}
       </button>
 

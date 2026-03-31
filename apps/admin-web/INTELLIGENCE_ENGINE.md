@@ -202,6 +202,9 @@ Priority order: OpenClaw > OpenRouter > Gemini > Local
 | `INTELLIGENCE_AUTO_STATUS_SYNC` | Set to `true` to allow automatic promise status writes during sweep status sync. Default is review-safe `false`. |
 | `INTELLIGENCE_INLINE_DISCOVERY_WORKER` | Set to `true` to let the sweep process queued discovery jobs inline after enqueueing them. Default is `false`; queued worker route handles them separately. |
 | `INTELLIGENCE_INLINE_STATUS_WORKER` | Set to `true` to let the sweep process the queued status-pipeline job inline. Default is `false`; queued worker route handles it separately. |
+| `INTELLIGENCE_ALLOW_ON_DEMAND_PUBLIC_AI` | Set to `true` to allow `/api/briefing` and `/api/impact` to generate fresh AI output during page loads. Default `false` serves cached-only for fast UX. |
+| `INTELLIGENCE_RECOUNT_EVIDENCE_ON_READ` | Set to `true` to recompute evidence counts from all `scraped_articles` on each public read. Default `false` uses persisted `evidence_count` for speed. |
+| `INTELLIGENCE_ENABLE_LIVE_SCORE_READ_MERGE` | Set to `true` to run live-score merge during `getPromises()` reads. Default `false` to avoid heavy per-request scoring queries. |
 
 ## OpenClaw Integration
 

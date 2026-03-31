@@ -1,5 +1,5 @@
 /**
- * Nepal Najar Intelligence Brain
+ * Nepal Republic Intelligence Brain
  *
  * The AI reasoning engine that analyzes signals and updates promises.
  * Uses a 3-tier approach:
@@ -24,6 +24,7 @@ import {
 import { extractEntities, type ExtractedEntities } from './entity-extractor';
 import { extractProgress } from './progress-extractor';
 import { getRelevantCorrections } from './ai-feedback';
+import { hasCorruptionLanguage } from './corruption-discovery';
 
 interface Signal {
   id: string;
@@ -37,6 +38,8 @@ interface Signal {
   media_type: string | null;
   metadata: Record<string, unknown>;
   matched_promise_ids?: number[] | null;
+  review_status?: string | null;
+  review_required?: boolean | null;
 }
 
 interface ClassificationResult {
@@ -128,6 +131,24 @@ function requiresTier3(matchedPromiseIds: number[]): boolean {
   return matchedPromiseIds.length > 0;
 }
 
+function nextReviewStatus(
+  reviewRequired: boolean,
+  existing: unknown,
+): 'pending' | 'approved' | 'edited' | 'rejected' {
+  const normalized =
+    typeof existing === 'string' ? existing.toLowerCase() : 'pending';
+
+  if (
+    normalized === 'approved' ||
+    normalized === 'edited' ||
+    normalized === 'rejected'
+  ) {
+    return normalized;
+  }
+
+  return reviewRequired ? 'pending' : 'approved';
+}
+
 function sanitizeAnalyses(
   analyses: DeepAnalysisResult[],
   allowedPromiseIds: number[],
@@ -157,24 +178,17 @@ function sanitizeAnalyses(
 }
 
 // TIER 1: Quick classification (uses cheap/free model)
-export async function tier1Classify(
-  signal: Signal,
-): Promise<ClassificationResult> {
-  if (isObviouslyIrrelevantSignal(signal)) {
-    return {
-      isRelevant: false,
-      relevanceScore: 0.05,
-      matchedPromiseIds: [],
-      classification: 'neutral',
-      reasoning: 'Rejected by lexical guardrail as obvious non-government content.',
-    };
-  }
 
+// Build the shared system prompt for tier-1 classification
+async function buildTier1SystemPrompt(): Promise<{
+  systemPrompt: string;
+  commitmentCatalog: Awaited<ReturnType<typeof getCommitmentCatalogSummary>>;
+}> {
   const commitmentCatalog = await getCommitmentCatalogSummary();
-  const systemPrompt = `You are an intelligence analyst for Nepal Najar, a government promise tracker.
-You analyze signals (news articles, social media posts, videos, documents, interviews, transcripts, and official notices) to determine if they are relevant to Nepal Najar's tracked government commitments.
+  const systemPrompt = `You are an intelligence analyst for Nepal Republic, a government promise tracker.
+You analyze signals (news articles, social media posts, videos, documents, interviews, transcripts, and official notices) to determine if they are relevant to Nepal Republic's tracked government commitments.
 
-Nepal Najar tracks a DYNAMIC commitment universe: seeded commitments plus reviewed or candidate discoveries.
+Nepal Republic tracks a DYNAMIC commitment universe: seeded commitments plus reviewed or candidate discoveries.
 Known tracked commitments right now (${commitmentCatalog.total} total):
 ${commitmentCatalog.lines.join('\n')}
 
@@ -198,7 +212,227 @@ NEPALI CONTENT HANDLING:
 TEMPORAL DISCIPLINE:
 - ${getCurrentDateContext()}
 - Do not rely on stale political memory.
-- If the signal does not establish a fact, say so in reasoning instead of guessing.
+- If the signal does not establish a fact, say so in reasoning instead of guessing.`;
+
+  return { systemPrompt, commitmentCatalog };
+}
+
+// Pre-filter a signal before AI classification; returns a result if skippable, null otherwise
+function tier1PreFilter(
+  signal: Signal,
+): ClassificationResult | null {
+  const combinedText = [signal.title || '', signal.content || ''].join('').trim();
+  if (combinedText.length < 50) {
+    console.log(`[Brain] Skipped signal ${signal.id}: insufficient text (${combinedText.length} chars < 50)`);
+    return {
+      isRelevant: false,
+      relevanceScore: 0,
+      matchedPromiseIds: [],
+      classification: 'neutral',
+      reasoning: `Skipped — signal has only ${combinedText.length} characters of text, below the 50-character minimum for classification.`,
+    };
+  }
+
+  if (isObviouslyIrrelevantSignal(signal)) {
+    return {
+      isRelevant: false,
+      relevanceScore: 0.05,
+      matchedPromiseIds: [],
+      classification: 'neutral',
+      reasoning: 'Rejected by lexical guardrail as obvious non-government content.',
+    };
+  }
+
+  return null;
+}
+
+// Normalize a raw parsed classification result against the commitment catalog
+function normalizeTier1Result(
+  parsed: ClassificationResult,
+  signal: Signal,
+  commitmentCatalog: { knownIds: Set<number> },
+): ClassificationResult {
+  const normalizedMatches = Array.isArray(parsed.matchedPromiseIds)
+    ? parsed.matchedPromiseIds
+        .map((value) => Number(value))
+        .filter(
+          (value) =>
+            Number.isFinite(value) && commitmentCatalog.knownIds.has(value),
+        )
+    : [];
+
+  const normalizedResult: ClassificationResult = {
+    ...parsed,
+    classification: normalizeClassification(parsed.classification),
+    relevanceScore:
+      typeof parsed.relevanceScore === 'number' ? parsed.relevanceScore : 0,
+    matchedPromiseIds: normalizedMatches,
+  };
+
+  if (isObviouslyIrrelevantSignal(signal)) {
+    return {
+      isRelevant: false,
+      relevanceScore: 0.05,
+      matchedPromiseIds: [],
+      classification: 'neutral',
+      reasoning:
+        'AI output overridden by lexical guardrail due to obvious non-government content.',
+    };
+  }
+
+  return {
+    ...normalizedResult,
+    isRelevant:
+      normalizedResult.isRelevant &&
+      (normalizedResult.relevanceScore >= 0.3 ||
+        normalizedResult.matchedPromiseIds.length > 0),
+  };
+}
+
+// Batch classify up to 5 signals in a single AI call
+export async function tier1ClassifyBatch(
+  signals: Signal[],
+): Promise<Map<string, ClassificationResult>> {
+  const results = new Map<string, ClassificationResult>();
+
+  if (signals.length === 0) return results;
+
+  // Pre-filter: separate signals that need AI from those that can be skipped
+  const needsAI: Signal[] = [];
+  for (const signal of signals) {
+    const preFiltered = tier1PreFilter(signal);
+    if (preFiltered) {
+      results.set(signal.id, preFiltered);
+    } else {
+      needsAI.push(signal);
+    }
+  }
+
+  if (needsAI.length === 0) return results;
+
+  const { systemPrompt, commitmentCatalog } = await buildTier1SystemPrompt();
+
+  // Fetch corrections once for the batch (use combined text)
+  const combinedSignalText = needsAI
+    .map((s) => getSignalText(s))
+    .join(' ')
+    .slice(0, 2000);
+  const corrections = await getRelevantCorrections({
+    signalContent: combinedSignalText,
+  });
+
+  const fullSystemPrompt = corrections
+    ? `${systemPrompt}\n\nIMPORTANT — Learn from these past corrections by the admin:\n${corrections}\n\nApply these lessons to your classification.`
+    : systemPrompt;
+
+  // Build the batched user prompt with numbered signals
+  const signalBlocks = needsAI.map((signal, idx) => {
+    const signalText = getSignalText(signal);
+    const entities = extractEntities(signalText);
+    const entityContext = formatEntityContext(entities);
+
+    return `--- SIGNAL ${idx + 1} (ID: ${signal.id}) ---
+Type: ${signal.signal_type}
+Title: ${signal.title}
+Content: ${(signal.content || '').slice(0, 1500)}
+Source: ${signal.source_id}
+Date: ${signal.published_at || 'unknown'}
+Author: ${signal.author || 'unknown'}
+${entityContext}`;
+  });
+
+  const batchUserPrompt = `Analyze the following ${needsAI.length} signal(s). For EACH signal, provide a classification result.
+
+${signalBlocks.join('\n\n')}
+
+Respond with a JSON array containing exactly ${needsAI.length} result(s), one per signal in the same order:
+[
+  {
+    "signalIndex": 1,
+    "isRelevant": boolean,
+    "relevanceScore": 0.0-1.0,
+    "matchedPromiseIds": [number],
+    "classification": "confirms|contradicts|neutral|budget_allocation|policy_change|statement",
+    "reasoning": "brief explanation"
+  },
+  ...
+]`;
+
+  console.log(`[Brain] Batch tier-1 classifying ${needsAI.length} signals in single AI call (catalog ~${commitmentCatalog.lines.length} lines sent once instead of ${needsAI.length} times)`);
+
+  try {
+    const response = await aiComplete('classify', fullSystemPrompt, batchUserPrompt);
+    const parsed = parseJSON<Array<ClassificationResult & { signalIndex?: number }>>(response.content);
+
+    if (!parsed || !Array.isArray(parsed)) {
+      // Batch parse failed — fall back to individual classification
+      console.warn(`[Brain] Batch parse failed, falling back to individual classification for ${needsAI.length} signals`);
+      for (const signal of needsAI) {
+        const individual = await tier1ClassifySingle(signal, fullSystemPrompt, commitmentCatalog);
+        results.set(signal.id, individual);
+      }
+      return results;
+    }
+
+    // Map parsed results back to signals
+    for (let i = 0; i < needsAI.length; i++) {
+      const signal = needsAI[i];
+      // Try to match by signalIndex first, fall back to array position
+      const resultEntry = parsed.find((r) => r.signalIndex === i + 1) || parsed[i];
+
+      if (!resultEntry) {
+        console.warn(`[Brain] No batch result for signal ${signal.id} at index ${i}, falling back to individual`);
+        const individual = await tier1ClassifySingle(signal, fullSystemPrompt, commitmentCatalog);
+        results.set(signal.id, individual);
+        continue;
+      }
+
+      results.set(signal.id, normalizeTier1Result(resultEntry, signal, commitmentCatalog));
+    }
+
+    const savedCalls = needsAI.length - 1;
+    console.log(`[Brain] Batch complete: ${needsAI.length} signals classified, saved ${savedCalls} AI call(s) and ~${savedCalls * commitmentCatalog.lines.length} catalog lines of token overhead`);
+
+    return results;
+  } catch (err) {
+    // Full batch failed — fall back to individual classification
+    console.warn(`[Brain] Batch AI call failed (${err instanceof Error ? err.message : 'unknown'}), falling back to individual classification`);
+    for (const signal of needsAI) {
+      try {
+        const individual = await tier1ClassifySingle(signal, fullSystemPrompt, commitmentCatalog);
+        results.set(signal.id, individual);
+      } catch (individualErr) {
+        results.set(signal.id, {
+          isRelevant: false,
+          relevanceScore: 0,
+          matchedPromiseIds: [],
+          classification: 'neutral',
+          reasoning: `Error: ${individualErr instanceof Error ? individualErr.message : 'unknown'}`,
+        });
+      }
+    }
+    return results;
+  }
+}
+
+// Single-signal classification with a pre-built system prompt (used internally by batch and fallback)
+async function tier1ClassifySingle(
+  signal: Signal,
+  systemPrompt: string,
+  commitmentCatalog: { knownIds: Set<number> },
+): Promise<ClassificationResult> {
+  const signalText = getSignalText(signal);
+  const entities = extractEntities(signalText);
+  const entityContext = formatEntityContext(entities);
+
+  const userPrompt = `Analyze this signal:
+Type: ${signal.signal_type}
+Title: ${signal.title}
+Content: ${(signal.content || '').slice(0, 2000)}
+Source: ${signal.source_id}
+Date: ${signal.published_at || 'unknown'}
+Author: ${signal.author || 'unknown'}
+${entityContext}
 
 Respond in JSON format ONLY:
 {
@@ -209,32 +443,8 @@ Respond in JSON format ONLY:
   "reasoning": "brief explanation"
 }`;
 
-  // Extract entities from signal text for better classification context
-  const signalText = getSignalText(signal);
-  const entities = extractEntities(signalText);
-  const entityContext = formatEntityContext(entities);
-
-  // Fetch relevant past corrections to improve classification
-  const corrections = await getRelevantCorrections({
-    signalContent: signalText,
-  });
-
-  const userPrompt = `Analyze this signal:
-Type: ${signal.signal_type}
-Title: ${signal.title}
-Content: ${(signal.content || '').slice(0, 2000)}
-Source: ${signal.source_id}
-Date: ${signal.published_at || 'unknown'}
-Author: ${signal.author || 'unknown'}
-${entityContext}`;
-
-  // Append corrections context to the system prompt if available
-  const fullSystemPrompt = corrections
-    ? `${systemPrompt}\n\nIMPORTANT — Learn from these past corrections by the admin:\n${corrections}\n\nApply these lessons to your classification.`
-    : systemPrompt;
-
   try {
-    const response = await aiComplete('classify', fullSystemPrompt, userPrompt);
+    const response = await aiComplete('classify', systemPrompt, userPrompt);
     const parsed = parseJSON<ClassificationResult>(response.content);
     if (!parsed) {
       return {
@@ -245,42 +455,7 @@ ${entityContext}`;
         reasoning: 'Failed to parse AI response',
       };
     }
-
-    const normalizedMatches = Array.isArray(parsed.matchedPromiseIds)
-      ? parsed.matchedPromiseIds
-          .map((value) => Number(value))
-          .filter(
-            (value) =>
-              Number.isFinite(value) && commitmentCatalog.knownIds.has(value),
-          )
-      : [];
-
-    const normalizedResult: ClassificationResult = {
-      ...parsed,
-      classification: normalizeClassification(parsed.classification),
-      relevanceScore:
-        typeof parsed.relevanceScore === 'number' ? parsed.relevanceScore : 0,
-      matchedPromiseIds: normalizedMatches,
-    };
-
-    if (isObviouslyIrrelevantSignal(signal)) {
-      return {
-        isRelevant: false,
-        relevanceScore: 0.05,
-        matchedPromiseIds: [],
-        classification: 'neutral',
-        reasoning:
-          'AI output overridden by lexical guardrail due to obvious non-government content.',
-      };
-    }
-
-    return {
-      ...normalizedResult,
-      isRelevant:
-        normalizedResult.isRelevant &&
-        (normalizedResult.relevanceScore >= 0.3 ||
-          normalizedResult.matchedPromiseIds.length > 0),
-    };
+    return normalizeTier1Result(parsed, signal, commitmentCatalog);
   } catch (err) {
     return {
       isRelevant: false,
@@ -290,6 +465,20 @@ ${entityContext}`;
       reasoning: `Error: ${err instanceof Error ? err.message : 'unknown'}`,
     };
   }
+}
+
+// Single-signal entry point (backward compatible). Delegates to batch function with batch of 1.
+export async function tier1Classify(
+  signal: Signal,
+): Promise<ClassificationResult> {
+  const batchResults = await tier1ClassifyBatch([signal]);
+  return batchResults.get(signal.id) || {
+    isRelevant: false,
+    relevanceScore: 0,
+    matchedPromiseIds: [],
+    classification: 'neutral',
+    reasoning: 'Batch returned no result for this signal',
+  };
 }
 
 // TIER 3: Deep reasoning (uses smart model)
@@ -303,7 +492,7 @@ export async function tier3Analyze(
   const detailedCommitmentContext = await getCommitmentDetailContext(
     matchedPromiseIds,
   );
-  const systemPrompt = `You are a senior intelligence analyst for Nepal Najar, a government promise tracker for Nepal.
+  const systemPrompt = `You are a senior intelligence analyst for Nepal Republic, a government promise tracker for Nepal.
 
 Your job is to deeply analyze evidence and determine its impact on specific government promises. You must:
 1. Understand the INTENT behind each promise, not just keywords
@@ -437,72 +626,171 @@ export async function processSignalsBatch(
   const totalCostUsd = 0;
   const errors: string[] = [];
 
-  // TIER 1: Classify unprocessed signals
+  // TIER 1: Classify unprocessed signals (last 24h only to control costs)
+  const tier1Cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: unclassified } = await supabase
     .from('intelligence_signals')
     .select('*')
     .eq('tier1_processed', false)
+    .gte('discovered_at', tier1Cutoff)
     .order('discovered_at', { ascending: false })
     .limit(batchSize * 2);
 
   if (unclassified) {
-    for (const signal of unclassified) {
-      try {
-        const result = await tier1Classify(signal as unknown as Signal);
+    // Chunk signals into batches of 5 for efficient AI classification
+    const TIER1_BATCH_SIZE = 5;
+    const corruptionCandidates: string[] = [];
 
-        await supabase
-          .from('intelligence_signals')
-          .update({
-            tier1_processed: true,
-            tier3_processed:
-              result.isRelevant && !requiresTier3(result.matchedPromiseIds),
-            relevance_score: result.relevanceScore,
-            matched_promise_ids: result.matchedPromiseIds,
-            classification: normalizeClassification(result.classification),
-            reasoning: result.reasoning,
-            review_required: needsHumanReview({
-              confidence: null,
-              relevanceScore: result.relevanceScore,
-              matchedPromiseIds: result.matchedPromiseIds,
-            }),
-          })
-          .eq('id', signal.id);
+    // Collect signal IDs needing summaries (generated after all classification is done)
+    const signalsNeedingSummary: string[] = [];
 
-        // Generate AI summary for relevant signals
-        if (result.isRelevant && result.relevanceScore >= 0.3) {
-          try {
-            await generateSignalSummary(signal.id);
-          } catch {
-            // Non-fatal — summary generation failure shouldn't block processing
+    // Process chunks in parallel (3 at a time to respect rate limits)
+    const chunks: (typeof unclassified)[] = [];
+    for (let i = 0; i < unclassified.length; i += TIER1_BATCH_SIZE) {
+      chunks.push(unclassified.slice(i, i + TIER1_BATCH_SIZE));
+    }
+
+    const PARALLEL_CHUNKS = 3;
+    for (let c = 0; c < chunks.length; c += PARALLEL_CHUNKS) {
+      const parallelBatch = chunks.slice(c, c + PARALLEL_CHUNKS);
+
+      const chunkResults = await Promise.allSettled(
+        parallelBatch.map(async (chunk) => {
+          const typedChunk = chunk as unknown as Signal[];
+          const batchResults = await tier1ClassifyBatch(typedChunk);
+
+          for (const signal of chunk) {
+            const result = batchResults.get(signal.id);
+            if (!result) {
+              errors.push(`Tier1 ${signal.id}: no result from batch`);
+              continue;
+            }
+
+            try {
+              const reviewRequired = needsHumanReview({
+                confidence: null,
+                relevanceScore: result.relevanceScore,
+                matchedPromiseIds: result.matchedPromiseIds,
+              });
+              const reviewStatus = nextReviewStatus(
+                reviewRequired,
+                (signal as unknown as Signal).review_status,
+              );
+
+              const existingMetadata = (signal as any).metadata || {};
+              await supabase
+                .from('intelligence_signals')
+                .update({
+                  tier1_processed: true,
+                  tier3_processed:
+                    result.isRelevant && !requiresTier3(result.matchedPromiseIds),
+                  relevance_score: result.relevanceScore,
+                  matched_promise_ids: result.matchedPromiseIds,
+                  classification: normalizeClassification(result.classification),
+                  reasoning: result.reasoning,
+                  review_required: reviewRequired,
+                  review_status: reviewStatus,
+                  metadata: {
+                    ...existingMetadata,
+                    tier1_scanned_at: new Date().toISOString(),
+                    tier1_scan_version: '2026-03-30',
+                  },
+                })
+                .eq('id', signal.id);
+
+              // Queue for summary generation (done in batch after all classification)
+              if (result.isRelevant && result.relevanceScore >= 0.3) {
+                signalsNeedingSummary.push(signal.id as string);
+              }
+
+              // Flag for corruption discovery if relevant + has corruption keywords
+              if (
+                result.relevanceScore >= 0.3 &&
+                hasCorruptionLanguage(signal as unknown as Signal) &&
+                !(
+                  (signal.metadata as Record<string, unknown>)
+                    ?.potential_corruption_case
+                )
+              ) {
+                corruptionCandidates.push(signal.id as string);
+              }
+
+              tier1Processed++;
+            } catch (err) {
+              errors.push(
+                `Tier1 ${signal.id}: ${err instanceof Error ? err.message : 'error'}`,
+              );
+            }
           }
-        }
+        }),
+      );
 
-        tier1Processed++;
-      } catch (err) {
-        errors.push(
-          `Tier1 ${signal.id}: ${err instanceof Error ? err.message : 'error'}`,
+      // Log any chunk-level failures
+      for (const result of chunkResults) {
+        if (result.status === 'rejected') {
+          errors.push(`Tier1 batch: ${result.reason?.message || 'error'}`);
+        }
+      }
+    }
+
+    // Queue corruption discovery jobs for flagged signals
+    if (corruptionCandidates.length > 0) {
+      console.log(
+        `[Brain] Queueing ${corruptionCandidates.length} signal(s) for corruption discovery`,
+      );
+      for (const signalId of corruptionCandidates) {
+        try {
+          await supabase.from('intelligence_jobs').insert({
+            job_type: 'discover_corruption',
+            status: 'pending',
+            priority: 45,
+            dedupe_key: `discover-corruption:${signalId}`,
+            payload: { signalId },
+            max_attempts: 3,
+            available_at: new Date().toISOString(),
+          });
+        } catch {
+          // Non-fatal -- job may already exist (dedupe)
+        }
+      }
+    }
+
+    // Generate summaries in parallel (non-blocking, after all classification done)
+    if (signalsNeedingSummary.length > 0) {
+      const SUMMARY_PARALLEL = 5;
+      for (let s = 0; s < signalsNeedingSummary.length; s += SUMMARY_PARALLEL) {
+        const batch = signalsNeedingSummary.slice(s, s + SUMMARY_PARALLEL);
+        await Promise.allSettled(
+          batch.map((id) => generateSignalSummary(id).catch(() => {})),
         );
       }
-
-      await new Promise((r) => setTimeout(r, 100));
     }
   }
 
-  // TIER 3: Deep analysis on relevant signals
+  // TIER 3: Deep analysis on relevant signals (last 24h only to control costs)
+  const tier3Cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: relevant } = await supabase
     .from('intelligence_signals')
     .select('*')
     .eq('tier1_processed', true)
     .eq('tier3_processed', false)
-    .gte('relevance_score', 0.3)
+    .gte('relevance_score', 0.5)
+    .gte('discovered_at', tier3Cutoff)
     .order('relevance_score', { ascending: false })
     .limit(batchSize);
 
   if (relevant) {
-    const tier3Candidates = relevant.filter((signal) =>
-      Array.isArray(signal.matched_promise_ids) &&
-      signal.matched_promise_ids.length > 0,
-    );
+    const tier3Candidates = relevant.filter((signal) => {
+      if (!Array.isArray(signal.matched_promise_ids) || signal.matched_promise_ids.length === 0) {
+        return false;
+      }
+      const contentLength = [signal.title || '', signal.content || ''].join('').trim().length;
+      if (contentLength < 200) {
+        console.log(`[Brain] Skipped Tier 3 for signal ${signal.id}: content too short (${contentLength} chars < 200). Tier 1 classification only.`);
+        return false;
+      }
+      return true;
+    });
 
     for (const signal of tier3Candidates) {
       try {
@@ -540,6 +828,17 @@ export async function processSignalsBatch(
 
         const extractedData = primaryAnalysis?.extractedData || {};
         const signalMetadata = (signal.metadata || {}) as Record<string, unknown>;
+        signalMetadata.tier3_scanned_at = new Date().toISOString();
+        signalMetadata.tier3_scan_version = '2026-03-30';
+        const reviewRequired = needsHumanReview({
+          confidence,
+          relevanceScore: signal.relevance_score as number | null,
+          matchedPromiseIds,
+        });
+        const reviewStatus = nextReviewStatus(
+          reviewRequired,
+          (signal as Signal).review_status,
+        );
 
         // Merge progress extraction into metadata and extracted_data
         if (progressExtraction) {
@@ -564,16 +863,18 @@ export async function processSignalsBatch(
             extracted_data: extractedData,
             metadata: signalMetadata,
             corroborated_by: corroborating.map((s) => s.id),
-            review_required: needsHumanReview({
-              confidence,
-              relevanceScore: signal.relevance_score as number | null,
-              matchedPromiseIds,
-            }),
+            review_required: reviewRequired,
+            review_status: reviewStatus,
           })
           .eq('id', signal.id);
 
-        // Create promise updates
+        // Create promise updates (only for analyses with sufficient confidence)
         for (const analysis of analyses) {
+          if (analysis.confidence < 0.4) {
+            console.log(`[Brain] Skipped promise_update for signal ${signal.id} → promise ${analysis.promiseId}: confidence ${analysis.confidence} < 0.4 threshold`);
+            continue;
+          }
+
           await supabase.from('promise_updates').insert({
             promise_id: String(analysis.promiseId),
             article_id: null,
@@ -673,7 +974,7 @@ export async function generateSignalSummary(
     if (parts.length > 0) entitySection = `\n\nExtracted entities:\n${parts.join('\n')}`;
   }
 
-  const systemPrompt = `You are a concise news analyst for Nepal Najar, a government promise tracker.
+  const systemPrompt = `You are a concise news analyst for Nepal Republic, a government promise tracker.
 Summarize the following article in 2-3 sentences focusing on:
 - What happened
 - Who is involved

@@ -2,8 +2,8 @@
 
 import type { PilotEventName } from './events';
 
-const VISITOR_ID_KEY = 'nepal-najar-pilot-visitor-id';
-const SESSION_ID_KEY = 'nepal-najar-pilot-session-id';
+const VISITOR_ID_KEY = 'nepalrepublic-pilot-visitor-id';
+const SESSION_ID_KEY = 'nepalrepublic-pilot-session-id';
 
 interface TrackPilotEventOptions {
   pagePath?: string;

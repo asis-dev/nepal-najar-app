@@ -3,6 +3,10 @@ import {
   scanForNewCommitments,
   type Signal as DiscoverySignal,
 } from './commitment-discovery';
+import {
+  scanForCorruptionCases,
+  type Signal as CorruptionSignal,
+} from './corruption-discovery';
 import { transcribeAndIngest } from './collectors/audio-transcriber';
 import { runStatusPipeline } from './status-pipeline';
 import { reviewFeedbackItem } from './feedback-review';
@@ -12,6 +16,7 @@ import { processSignalsBatch } from './brain';
 export type IntelligenceJobType =
   | 'process_signals_batch'
   | 'discover_commitment'
+  | 'discover_corruption'
   | 'transcribe_url'
   | 'run_status_pipeline'
   | 'review_feedback'
@@ -26,6 +31,7 @@ export type IntelligenceJobStatus =
 interface JobPayloadMap {
   process_signals_batch: { batchSize: number; trigger: string; sequence: number };
   discover_commitment: { signalId: string };
+  discover_corruption: { signalId: string };
   transcribe_url: { url: string };
   run_status_pipeline: { trigger: string };
   review_feedback: { feedbackId: string };
@@ -84,6 +90,11 @@ function buildDedupeKey<T extends IntelligenceJobType>(
   if (jobType === 'discover_commitment') {
     const discoverPayload = payload as JobPayloadMap['discover_commitment'];
     return `discover:${discoverPayload.signalId}`;
+  }
+
+  if (jobType === 'discover_corruption') {
+    const corruptionPayload = payload as JobPayloadMap['discover_corruption'];
+    return `discover-corruption:${corruptionPayload.signalId}`;
   }
 
   if (jobType === 'run_status_pipeline') {
@@ -186,6 +197,123 @@ export async function enqueueSignalAnalysisJobs(options: {
         jobType: 'process_signals_batch',
         payload: { batchSize, trigger, sequence },
         priority: 70,
+      }),
+    );
+  }
+
+  return jobs;
+}
+
+export async function getSignalAnalysisBacklog(): Promise<{
+  unclassified: number;
+  tier3Pending: number;
+  total: number;
+}> {
+  const supabase = getSupabase();
+  const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { count: unclassifiedCount } = await supabase
+    .from('intelligence_signals')
+    .select('id', { count: 'exact', head: true })
+    .eq('tier1_processed', false)
+    .gte('discovered_at', cutoff24h);
+
+  // Counting "matched_promise_ids.length > 0" directly through PostgREST is awkward,
+  // so we fetch a bounded candidate set and filter locally.
+  const { data: tier3Candidates } = await supabase
+    .from('intelligence_signals')
+    .select('matched_promise_ids')
+    .eq('tier1_processed', true)
+    .eq('tier3_processed', false)
+    .gte('relevance_score', 0.3)
+    .gte('discovered_at', cutoff24h)
+    .limit(5000);
+
+  const tier3Pending = (tier3Candidates || []).filter(
+    (row) =>
+      Array.isArray(row.matched_promise_ids) &&
+      row.matched_promise_ids.length > 0,
+  ).length;
+
+  return {
+    unclassified: unclassifiedCount || 0,
+    tier3Pending,
+    total: (unclassifiedCount || 0) + tier3Pending,
+  };
+}
+
+export async function ensureSignalAnalysisJobsQueued(options?: {
+  batchSize?: number;
+  maxJobs?: number;
+  trigger?: string;
+}): Promise<{
+  queued: number;
+  existingPendingOrRunning: number;
+  backlog: {
+    unclassified: number;
+    tier3Pending: number;
+    total: number;
+  };
+}> {
+  const supabase = getSupabase();
+  const backlog = await getSignalAnalysisBacklog();
+
+  const [pendingCount, runningCount] = await Promise.all([
+    supabase
+      .from('intelligence_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('job_type', 'process_signals_batch')
+      .eq('status', 'pending'),
+    supabase
+      .from('intelligence_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('job_type', 'process_signals_batch')
+      .eq('status', 'running'),
+  ]);
+
+  const existingPendingOrRunning =
+    (pendingCount.count || 0) + (runningCount.count || 0);
+
+  if (existingPendingOrRunning > 0 || backlog.total === 0) {
+    return {
+      queued: 0,
+      existingPendingOrRunning,
+      backlog,
+    };
+  }
+
+  const batchSize = Math.max(1, Math.min(options?.batchSize ?? 5, 50));
+  const maxJobs = Math.max(1, Math.min(options?.maxJobs ?? 12, 12));
+  const trigger = options?.trigger || `worker-auto-${Date.now()}`;
+  const jobsToQueue = Math.min(
+    maxJobs,
+    Math.max(1, Math.ceil(backlog.total / Math.max(batchSize, 1))),
+  );
+
+  const queuedJobs = await enqueueSignalAnalysisJobs({
+    batchSize,
+    jobCount: jobsToQueue,
+    trigger,
+  });
+
+  return {
+    queued: queuedJobs.length,
+    existingPendingOrRunning,
+    backlog,
+  };
+}
+
+export async function enqueueCorruptionDiscoveryJobs(
+  signals: Array<Pick<DiscoverySignal, 'id'>>,
+): Promise<IntelligenceJobRow<'discover_corruption'>[]> {
+  const jobs: IntelligenceJobRow<'discover_corruption'>[] = [];
+
+  for (const signal of signals) {
+    jobs.push(
+      await enqueueIntelligenceJob({
+        jobType: 'discover_corruption',
+        payload: { signalId: signal.id },
+        priority: 45,
       }),
     );
   }
@@ -442,6 +570,22 @@ async function processSingleJob(
       signalId,
       discoveriesFound: discoveries.length,
       discoveries,
+    };
+  }
+
+  if (job.job_type === 'discover_corruption') {
+    const signalId = (job.payload as JobPayloadMap['discover_corruption']).signalId;
+    const signal = await loadDiscoverySignal(signalId);
+
+    if (!signal) {
+      throw new Error(`Signal ${signalId} not found`);
+    }
+
+    const corruptionDiscoveries = await scanForCorruptionCases([signal as unknown as CorruptionSignal]);
+    return {
+      signalId,
+      discoveriesFound: corruptionDiscoveries.length,
+      discoveries: corruptionDiscoveries,
     };
   }
 

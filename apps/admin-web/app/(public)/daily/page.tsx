@@ -138,12 +138,12 @@ export default function DailyPage() {
   // Share streak handler
   function handleShareStreak() {
     const text = isNe
-      ? `Nepal Najar ma mero streak ${currentStreak} din! Join me: ${typeof window !== 'undefined' ? window.location.href : ''}`
-      : `My Nepal Najar streak is ${currentStreak} days! Join me: ${typeof window !== 'undefined' ? window.location.href : ''}`;
+      ? `Nepal Republic ma mero streak ${currentStreak} din! Join me: ${typeof window !== 'undefined' ? window.location.href : ''}`
+      : `My Nepal Republic streak is ${currentStreak} days! Join me: ${typeof window !== 'undefined' ? window.location.href : ''}`;
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({
-        title: 'Nepal Najar Streak',
+        title: 'Nepal Republic Streak',
         text,
         url: typeof window !== 'undefined' ? window.location.href : '',
       }).catch(() => {});
@@ -354,7 +354,7 @@ export default function DailyPage() {
                 <div className="glass-card p-6 text-center">
                   <AlertCircle className="w-8 h-8 text-gray-600 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">
-                    {isNe ? 'आज कुनै गतिविधि छैन' : 'No activity detected today'}
+                    {t('dailyPage.noActivityToday')}
                   </p>
                 </div>
               ) : (
@@ -388,12 +388,12 @@ export default function DailyPage() {
                             {/* Breakdown badges */}
                             {ap.confirmsCount > 0 && (
                               <span className="text-[10px] text-emerald-400/70">
-                                +{ap.confirmsCount} {isNe ? 'पुष्टि' : 'confirms'}
+                                +{ap.confirmsCount} {t('dailyPage.confirms')}
                               </span>
                             )}
                             {ap.contradictsCount > 0 && (
                               <span className="text-[10px] text-red-400/70">
-                                -{ap.contradictsCount} {isNe ? 'विरोध' : 'contradicts'}
+                                -{ap.contradictsCount} {t('dailyPage.contradicts')}
                               </span>
                             )}
                           </div>
@@ -478,7 +478,7 @@ export default function DailyPage() {
                       {showAllInactive ? (
                         <>
                           <ChevronUp className="w-3.5 h-3.5" />
-                          {isNe ? 'कम देखाउनुहोस्' : 'Show less'}
+                          {t('dailyPage.showLess')}
                         </>
                       ) : (
                         <>
@@ -594,13 +594,13 @@ export default function DailyPage() {
                       {isNe ? spotlightActive.title : spotlightActive.title_ne}
                     </p>
                     <p className="text-sm text-gray-400 leading-relaxed mb-5">
-                      {spotlightActive.topHeadline || (isNe ? 'आजको सबैभन्दा बलियो संकेत यही प्रतिबद्धतामा देखियो।' : 'The strongest reviewed signal today landed on this commitment.')}
+                      {spotlightActive.topHeadline || t('dailyPage.strongestSignalToday')}
                     </p>
                     <Link
                       href={`/explore/first-100-days/${spotlightActive.slug || spotlightActive.promiseId}`}
                       className="inline-flex items-center gap-2 rounded-xl border border-primary-500/30 bg-primary-500/12 px-4 py-2.5 text-sm font-medium text-primary-300 transition-colors hover:bg-primary-500/18"
                     >
-                      {isNe ? 'प्रतिबद्धता खोल्नुहोस्' : 'Open commitment'}
+                      {t('dailyPage.openCommitment')}
                     </Link>
                   </>
                 ) : spotlightInactive ? (
@@ -608,7 +608,7 @@ export default function DailyPage() {
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white/[0.04] text-gray-400 mb-4">
                       <AlertCircle className="w-3 h-3" />
                       {spotlightInactive.daysSinceLastActivity === null
-                        ? (isNe ? 'अहिलेसम्म कुनै गतिविधि रेकर्ड छैन' : 'No activity recorded yet')
+                        ? t('dailyPage.noActivityRecordedYet')
                         : `${spotlightInactive.daysSinceLastActivity} ${spotlightInactive.daysSinceLastActivity === 1 ? t('dailyStreak.daySince') : t('dailyStreak.daysSince')}`}
                     </div>
                     <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
@@ -618,22 +618,18 @@ export default function DailyPage() {
                       {isNe ? spotlightInactive.title : spotlightInactive.title_ne}
                     </p>
                     <p className="text-sm text-gray-400 leading-relaxed mb-5">
-                      {isNe
-                        ? 'यो प्रतिबद्धतामा केही समयदेखि नयाँ गतिविधि देखिएको छैन।'
-                        : 'This commitment has gone quiet and may need a closer look.'}
+                      {t('dailyPage.commitmentGoneQuiet')}
                     </p>
                     <Link
                       href={`/explore/first-100-days/${spotlightInactive.slug || spotlightInactive.promiseId}`}
                       className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/[0.08]"
                     >
-                      {isNe ? 'प्रतिबद्धता खोल्नुहोस्' : 'Open commitment'}
+                      {t('dailyPage.openCommitment')}
                     </Link>
                   </>
                 ) : (
                   <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-sm text-gray-400">
-                    {isNe
-                      ? 'अझै कुनै दैनिक गतिविधि भेटिएको छैन।'
-                      : 'No reviewed daily activity has been recorded yet.'}
+                    {t('dailyPage.noDailyActivityYet')}
                   </div>
                 )}
               </div>

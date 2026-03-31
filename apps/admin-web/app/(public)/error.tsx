@@ -11,7 +11,7 @@ export default function PublicError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('[Nepal Najar Public Error]', error);
+    console.error('[Nepal Republic Public Error]', error);
   }, [error]);
 
   return (

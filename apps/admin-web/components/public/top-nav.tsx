@@ -16,22 +16,42 @@ import {
   Search,
   Bookmark,
   MessageSquarePlus,
+  MessageSquareWarning,
   Map,
   Megaphone,
   TrendingUp,
   Landmark,
   Activity,
+  Swords,
+  Scale,
   User,
   Settings,
   ChevronDown,
+  Shield,
+  MoreHorizontal,
+  Info,
+  RefreshCw,
+  BarChart3,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { ShieldCheck, Award, Star } from 'lucide-react';
-import { NepalNajarMark } from '@/components/ui/nepal-najar-mark';
+import { RepublicMark } from '@/components/ui/ghanti-card-mark';
 import { NotificationBell } from '@/components/public/notification-bell';
 import { useTrending } from '@/lib/hooks/use-trending';
 import { SearchOverlay } from '@/components/public/search-overlay';
+
+/* Live scan stats for header badge */
+function useScanStats() {
+  const [stats, setStats] = useState<{ signalsToday: number; sourcesToday: number } | null>(null);
+  useEffect(() => {
+    fetch('/api/scan-stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setStats(d))
+      .catch(() => {});
+  }, []);
+  return stats;
+}
 
 const PULSE_COLORS = {
   low: 'bg-blue-400',
@@ -40,18 +60,46 @@ const PULSE_COLORS = {
   very_high: 'bg-red-400',
 } as const;
 
-const primaryNavLinks = [
+// Desktop: 5 primary tabs always visible
+const desktopPrimaryLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
   { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
-  { href: '/trending', labelKey: 'nav.trending', icon: Activity },
-  { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
+  { href: '/corruption', labelKey: 'nav.corruption', icon: Shield },
+  { href: '/complaints', labelKey: 'nav.complaints', icon: MessageSquareWarning },
+];
+
+// Desktop: overflow into "More" dropdown
+const desktopMoreLinks = [
+  { href: '/scorecard', labelKey: 'nav.ministries', icon: Award },
+  { href: '/disputed', labelKey: 'nav.disputed', icon: Swords },
+  { href: '/constitution', labelKey: 'nav.constitution', icon: Scale },
+  { href: '/sectors', labelKey: 'nav.sectors', icon: BarChart3 },
+  { href: '/what-changed', labelKey: 'nav.whatChanged', icon: RefreshCw },
   { href: '/watchlist', labelKey: 'nav.watchlist', icon: Bookmark },
+  { href: '/about', labelKey: 'nav.about', icon: Info },
+];
+
+// All links for mobile menu
+const allNavLinks = [
+  { href: '/', labelKey: 'nav.home', icon: Eye },
+  { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
+  { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
+  { href: '/corruption', labelKey: 'nav.corruption', icon: Shield },
+  { href: '/complaints', labelKey: 'nav.complaints', icon: MessageSquareWarning },
+  { href: '/scorecard', labelKey: 'nav.ministries', icon: Award },
+  { href: '/disputed', labelKey: 'nav.disputed', icon: Swords },
+  { href: '/constitution', labelKey: 'nav.constitution', icon: Scale },
+  { href: '/sectors', labelKey: 'nav.sectors', icon: BarChart3 },
+  { href: '/what-changed', labelKey: 'nav.whatChanged', icon: RefreshCw },
+  { href: '/watchlist', labelKey: 'nav.watchlist', icon: Bookmark },
+  { href: '/about', labelKey: 'nav.about', icon: Info },
 ];
 
 const mobileOnlyLinks = [
   { href: '/search', labelKey: 'nav.search', icon: Search },
   { href: '/feedback', labelKey: 'nav.feedback', icon: MessageSquarePlus },
+  { href: '/explore/government', labelKey: 'nav.government', icon: Landmark },
   { href: '/explore/map', labelKey: 'nav.mapBeta', icon: Map },
   { href: '/proposals', labelKey: 'nav.proposalsBeta', icon: Megaphone },
 ];
@@ -61,10 +109,13 @@ export function TopNav() {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const { locale, setLocale, t } = useI18n();
   const { pulseLevel } = useTrending();
   const pulseDotColor = PULSE_COLORS[pulseLevel];
+  const scanStats = useScanStats();
   const { user, isAuthenticated, isVerifier, signOut, karma, level } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
@@ -98,11 +149,14 @@ export function TopNav() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [searchOpen]);
 
-  // Close user menu on outside click
+  // Close user menu and more menu on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -129,32 +183,85 @@ export function TopNav() {
         <div className="grid h-16 grid-cols-[auto_1fr_auto] items-center gap-3 sm:h-[4.5rem] sm:gap-4">
           <Link
             href="/"
-            className="flex min-w-0 items-center gap-2.5 text-white transition-opacity hover:opacity-85"
+            className="flex shrink-0 items-center gap-2.5 text-white transition-opacity hover:opacity-85"
           >
-            <NepalNajarMark compact />
+            <RepublicMark compact />
           </Link>
 
-          <div className="hidden items-center justify-center gap-1 lg:flex">
-          {primaryNavLinks.map(({ href, labelKey, icon: Icon }) => {
-            const isActive = isActivePath(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`relative flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
+          <div className="hidden items-center justify-center gap-0.5 lg:flex shrink-0">
+            {desktopPrimaryLinks.map(({ href, labelKey, icon: Icon }) => {
+              const isActive = isActivePath(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  title={t(labelKey)}
+                  className={`relative flex items-center gap-1 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'bg-white/[0.07] text-white'
+                      : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {t(labelKey)}
+                </Link>
+              );
+            })}
+            {/* More dropdown */}
+            <div className="relative" ref={moreMenuRef}>
+              <button
+                onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+                className={`flex items-center gap-1 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors ${
+                  moreMenuOpen || desktopMoreLinks.some(l => isActivePath(l.href))
                     ? 'bg-white/[0.07] text-white'
                     : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'
                 }`}
               >
-                  <Icon className="h-4 w-4" />
-                {t(labelKey)}
-              </Link>
-            );
-          })}
+                <MoreHorizontal className="h-3.5 w-3.5" />
+                {locale === 'ne' ? 'थप' : 'More'}
+                <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${moreMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {moreMenuOpen && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-np-border bg-np-surface/95 shadow-xl backdrop-blur-xl">
+                  <div className="py-1">
+                    {desktopMoreLinks.map(({ href, labelKey, icon: Icon }) => {
+                      const isActive = isActivePath(href);
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          onClick={() => setMoreMenuOpen(false)}
+                          className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
+                            isActive
+                              ? 'bg-white/[0.07] text-white'
+                              : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {t(labelKey)}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="hidden items-center justify-end gap-2 md:flex">
+          <div className="hidden items-center justify-end gap-2 lg:flex shrink-0">
+            {/* Today's scan count */}
+            {scanStats && scanStats.signalsToday > 0 && (
+              <div
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-medium text-emerald-300"
+                title={locale === 'ne'
+                  ? `आज ${scanStats.signalsToday} स्रोतहरू स्क्यान गरियो`
+                  : `${scanStats.signalsToday} sources scanned today`}
+              >
+                <Activity className="h-3.5 w-3.5" />
+                <span>{scanStats.signalsToday.toLocaleString()}</span>
+                <span className="text-emerald-400/60">{locale === 'ne' ? 'स्क्यान' : 'scanned'}</span>
+              </div>
+            )}
             {/* Pulse activity indicator */}
             <Link
               href="/trending"
@@ -234,14 +341,24 @@ export function TopNav() {
                         My Reputation
                       </Link>
                       {isVerifier && (
-                        <Link
-                          href="/verify-evidence"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-cyan-300"
-                        >
-                          <ShieldCheck className="h-4 w-4" />
-                          Verify Evidence
-                        </Link>
+                        <>
+                          <Link
+                            href="/verify-evidence"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-cyan-300"
+                          >
+                            <ShieldCheck className="h-4 w-4" />
+                            Verify Evidence
+                          </Link>
+                          <Link
+                            href="/complaints/ops"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-amber-300"
+                          >
+                            <Shield className="h-4 w-4" />
+                            Complaint Ops
+                          </Link>
+                        </>
                       )}
                       <button
                         onClick={handleSignOut}
@@ -291,13 +408,31 @@ export function TopNav() {
             </button>
           </div>
         </div>
+
+        <div className="pb-2 md:hidden">
+          <Link
+            href="/complaints"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/35 bg-amber-500/20 px-3 py-2.5 text-sm font-semibold text-amber-100 transition-colors hover:bg-amber-500/30"
+          >
+            <MessageSquareWarning className="h-4 w-4" />
+            {locale === 'ne' ? 'नागरिक समस्या दर्ता' : 'Report Civic Issue'}
+          </Link>
+          {scanStats && scanStats.signalsToday > 0 && (
+            <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-emerald-400/70">
+              <Activity className="h-3 w-3" />
+              <span>
+                {scanStats.signalsToday.toLocaleString()} {locale === 'ne' ? 'स्रोत आज स्क्यान गरियो' : 'sources scanned today'}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {mobileOpen && (
         <div className="border-t border-white/[0.06] bg-np-base/95 backdrop-blur-xl md:hidden">
           <div className="public-shell pb-4 pt-3">
             <div className="grid gap-2 sm:grid-cols-2">
-              {[...primaryNavLinks, ...mobileOnlyLinks].map(({ href, labelKey, icon: Icon }) => {
+              {[...allNavLinks, ...mobileOnlyLinks].map(({ href, labelKey, icon: Icon }) => {
               const isActive = isActivePath(href);
               return (
                 <Link

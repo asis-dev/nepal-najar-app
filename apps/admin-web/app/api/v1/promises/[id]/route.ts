@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as allPromises } from '@/lib/data/promises';
+import { getPromises } from '@/lib/data';
+import { isPublicCommitment } from '@/lib/data/commitments';
 import { rateLimit, getClientIp } from '@/lib/middleware/rate-limit';
 
 /**
@@ -25,9 +26,12 @@ export async function GET(
   }
 
   const { id } = await params;
+  const allCommitments = (await getPromises()).filter((commitment) =>
+    isPublicCommitment(commitment),
+  );
 
   // Look up by ID or slug
-  const promise = allPromises.find((p) => p.id === id || p.slug === id);
+  const promise = allCommitments.find((p) => String(p.id) === id || p.slug === id);
 
   if (!promise) {
     return NextResponse.json(
@@ -52,6 +56,11 @@ export async function GET(
     description_ne: promise.description_ne,
     trustLevel: promise.trustLevel,
     signalType: promise.signalType,
+    reviewState: promise.reviewState,
+    scope: promise.scope || promise.geoScope || 'unknown',
+    actors: promise.actors || [],
+    sourceCount: promise.sourceCount ?? 0,
+    lastSignalAt: promise.lastSignalAt ?? null,
     deadline: promise.deadline ?? null,
     estimatedBudgetNPR: promise.estimatedBudgetNPR ?? null,
     spentNPR: promise.spentNPR ?? null,

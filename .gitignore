@@ -19,3 +19,5 @@ public/workbox-*.js
 apps/admin-web/.next.prepush-check/
 output/
 .vercel
+.env.vercel-production
+.claude/worktrees/

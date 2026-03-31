@@ -1,5 +1,5 @@
 /**
- * AI-powered article analyzer for Nepal Najar.
+ * AI-powered article analyzer for Nepal Republic.
  *
  * Uses an OpenAI-compatible API (LM Studio local Qwen 3.5, OpenRouter, etc.)
  * to deeply analyze scraped articles and extract governance intelligence.
@@ -43,7 +43,7 @@ function buildSystemPrompt(): string {
     .map((p) => `[${p.id}] ${p.title} (${p.category}) — ${p.description}`)
     .join('\n');
 
-  return `You are a Nepal governance analyst for Nepal Najar (नेपाल नजर), a promise tracker for Nepal's government.
+  return `You are a Nepal governance analyst for Nepal Republic (नेपाल रिपब्लिक), a promise tracker for Nepal's government.
 
 You analyze news articles and government announcements to track progress on government promises from RSP's "बाचा पत्र 2082" (Citizen Contract).
 

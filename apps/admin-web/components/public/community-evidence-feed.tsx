@@ -25,6 +25,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CommunityEvidence, EvidenceClassification } from '@/lib/hooks/use-evidence-review';
 import { PhotoUpload } from './photo-upload';
+import { EvidenceSourceBadge, deriveSourceType } from './evidence-source-badge';
 
 /* ═══════════════════════════════════════════
    TYPES & CONSTANTS
@@ -36,28 +37,25 @@ interface CommunityEvidenceFeedProps {
 
 const CLASSIFICATION_CONFIG: Record<
   EvidenceClassification,
-  { icon: typeof CheckCircle2; color: string; bg: string; label: string; labelNe: string }
+  { icon: typeof CheckCircle2; color: string; bg: string; labelKey: string }
 > = {
   confirms: {
     icon: CheckCircle2,
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/15 border-emerald-500/30',
-    label: 'Confirms',
-    labelNe: 'पुष्टि गर्छ',
+    labelKey: 'evidence.confirms',
   },
   contradicts: {
     icon: XCircle,
     color: 'text-red-400',
     bg: 'bg-red-500/15 border-red-500/30',
-    label: 'Contradicts',
-    labelNe: 'खण्डन गर्छ',
+    labelKey: 'evidence.contradicts',
   },
   neutral: {
     icon: MinusCircle,
     color: 'text-gray-400',
     bg: 'bg-gray-500/15 border-gray-500/30',
-    label: 'Neutral',
-    labelNe: 'तटस्थ',
+    labelKey: 'evidence.neutral',
   },
 };
 
@@ -132,7 +130,7 @@ function useSubmitEvidence() {
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
 export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { isAuthenticated } = useAuth();
   const isNe = locale === 'ne';
 
@@ -193,7 +191,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white flex items-center gap-2">
           <FileCheck className="w-4 h-4 text-primary-400" />
-          {isNe ? 'समुदाय प्रमाण' : 'Community Evidence'}
+          {t('evidence.communityEvidence')}
           {data && (
             <span className="text-xs text-gray-500 font-normal">
               ({data.total})
@@ -207,7 +205,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-primary-300 bg-primary-500/10 border border-primary-500/20 hover:bg-primary-500/20 transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
-            {isNe ? 'प्रमाण पेश गर्नुहोस्' : 'Submit Evidence'}
+            {t('evidence.submitEvidence')}
           </button>
         )}
       </div>
@@ -217,12 +215,12 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
         <div className="glass-card p-4 space-y-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">
-              {isNe ? 'विवरण' : 'Caption'} *
+              {t('evidence.caption')} *
             </label>
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder={isNe ? 'तपाईंको प्रमाणको विवरण...' : 'Describe your evidence...'}
+              placeholder={t('evidence.captionPlaceholder')}
               rows={3}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/40 resize-none transition-all"
             />
@@ -230,7 +228,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
 
           <div>
             <label className="block text-xs text-gray-500 mb-1">
-              {isNe ? 'वर्गीकरण' : 'Classification'}
+              {t('evidence.classification')}
             </label>
             <div className="relative">
               <select
@@ -238,9 +236,9 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
                 onChange={(e) => setClassification(e.target.value as EvidenceClassification)}
                 className="w-full appearance-none bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/40"
               >
-                <option value="confirms">{isNe ? 'पुष्टि गर्छ' : 'Confirms'}</option>
-                <option value="contradicts">{isNe ? 'खण्डन गर्छ' : 'Contradicts'}</option>
-                <option value="neutral">{isNe ? 'तटस्थ' : 'Neutral'}</option>
+                <option value="confirms">{t('evidence.confirms')}</option>
+                <option value="contradicts">{t('evidence.contradicts')}</option>
+                <option value="neutral">{t('evidence.neutral')}</option>
               </select>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
             </div>
@@ -250,7 +248,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs text-gray-500">
-                {isNe ? 'मिडिया' : 'Media'} ({isNe ? 'वैकल्पिक' : 'optional'})
+                {t('evidence.media')} ({t('evidence.optional')})
               </label>
               <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
                 <button
@@ -263,7 +261,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
                   }`}
                 >
                   <Upload className="w-3 h-3" />
-                  {isNe ? 'अपलोड' : 'Upload'}
+                  {t('evidence.upload')}
                 </button>
                 <button
                   type="button"
@@ -275,7 +273,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
                   }`}
                 >
                   <Link2 className="w-3 h-3" />
-                  {isNe ? 'URL टाँस्नुहोस्' : 'Paste URL'}
+                  {t('evidence.pasteUrl')}
                 </button>
               </div>
             </div>
@@ -285,7 +283,6 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
                 <PhotoUpload
                   onUpload={(urls) => setMediaUrls((prev) => [...prev, ...urls])}
                   disabled={submitMutation.isPending}
-                  isNe={isNe}
                 />
                 {/* Show already-uploaded URLs */}
                 {mediaUrls.length > 0 && (
@@ -296,7 +293,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
                         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
                       >
                         <ImageIcon className="w-2.5 h-2.5" />
-                        {isNe ? `अपलोड ${i + 1}` : `Upload ${i + 1}`}
+                        {t('evidence.uploadLabel').replace('{index}', String(i + 1))}
                         <button
                           type="button"
                           onClick={() =>
@@ -324,7 +321,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
 
           <div>
             <label className="block text-xs text-gray-500 mb-1">
-              {isNe ? 'प्रमाण लिंक' : 'Proof URL'} ({isNe ? 'वैकल्पिक' : 'optional'})
+              {t('evidence.proofUrl')} ({t('evidence.optional')})
             </label>
             <input
               type="url"
@@ -337,13 +334,13 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
 
           {submitMutation.isError && (
             <p className="text-xs text-red-400">
-              {submitMutation.error?.message || (isNe ? 'पेश गर्न असफल' : 'Failed to submit')}
+              {submitMutation.error?.message || t('evidence.failedToSubmit')}
             </p>
           )}
 
           {submitMutation.isSuccess && (
             <p className="text-xs text-emerald-400">
-              {isNe ? 'प्रमाण पेश भयो! समीक्षापछि देखिनेछ।' : 'Evidence submitted! It will appear after review.'}
+              {t('evidence.evidenceSubmitted')}
             </p>
           )}
 
@@ -358,13 +355,13 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
               ) : (
                 <Send className="w-3.5 h-3.5" />
               )}
-              {isNe ? 'पेश गर्नुहोस्' : 'Submit'}
+              {t('evidence.submit')}
             </button>
             <button
               onClick={() => setShowSubmitForm(false)}
               className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
             >
-              {isNe ? 'रद्द गर्नुहोस्' : 'Cancel'}
+              {t('evidence.cancel')}
             </button>
           </div>
         </div>
@@ -387,10 +384,10 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
         <div className="glass-card p-8 text-center">
           <Inbox className="w-10 h-10 text-gray-600 mx-auto mb-3" />
           <p className="text-sm text-gray-400 mb-1">
-            {isNe ? 'अहिलेसम्म कुनै समुदाय प्रमाण छैन।' : 'No community evidence yet.'}
+            {t('evidence.noEvidenceYet')}
           </p>
           <p className="text-xs text-gray-500">
-            {isNe ? 'पहिलो बन्नुहोस्!' : 'Be the first!'}
+            {t('evidence.beTheFirst')}
           </p>
         </div>
       ) : (
@@ -409,20 +406,30 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
                   <div className="flex items-center gap-2 min-w-0">
                     <ClsIcon className={`w-4 h-4 flex-shrink-0 ${cls.color}`} />
                     <span className="text-xs font-medium text-gray-300 truncate">
-                      {item.submitter_name || (isNe ? 'अज्ञात' : 'Anonymous')}
+                      {item.submitter_name || t('evidence.anonymous')}
                     </span>
                     {item.submitter_is_verifier && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-[9px] font-semibold">
                         <ShieldCheck className="w-2.5 h-2.5" />
-                        {isNe ? 'प्रमाणकर्ता' : 'Verifier'}
+                        {t('evidence.verifier')}
                       </span>
                     )}
                   </div>
 
-                  {/* Classification badge */}
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${cls.bg} ${cls.color}`}>
-                    {isNe ? cls.labelNe : cls.label}
-                  </span>
+                  {/* Source quality + Classification badges */}
+                  <div className="flex items-center gap-1.5">
+                    <EvidenceSourceBadge
+                      sourceType={deriveSourceType({
+                        submitter_is_verifier: item.submitter_is_verifier,
+                        verification_status: item.status === 'approved' ? 'verified' : undefined,
+                      })}
+                      isNe={isNe}
+                      compact
+                    />
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${cls.bg} ${cls.color}`}>
+                      {t(cls.labelKey)}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Caption */}
@@ -442,7 +449,7 @@ export function CommunityEvidenceFeed({ promiseId }: CommunityEvidenceFeedProps)
                         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-primary-400 bg-primary-500/10 border border-primary-500/20 hover:bg-primary-500/20 transition-all"
                       >
                         <ImageIcon className="w-2.5 h-2.5" />
-                        {isNe ? `मिडिया ${i + 1}` : `Media ${i + 1}`}
+                        {t('evidence.mediaLabel').replace('{index}', String(i + 1))}
                         <ExternalLink className="w-2 h-2" />
                       </a>
                     ))}

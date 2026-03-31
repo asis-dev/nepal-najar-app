@@ -18,9 +18,9 @@ export async function mergeOnLogin(userId: string) {
   if (!supabase) return;
 
   // Read local stores
-  const localPrefs = safeParseJSON(localStorage.getItem('nepal-najar-preferences'));
-  const localWatchlist = safeParseJSON(localStorage.getItem('nepal-najar-watchlist'));
-  const localEngagement = safeParseJSON(localStorage.getItem('nepal-najar-engagement'));
+  const localPrefs = safeParseJSON(localStorage.getItem('nepalrepublic-preferences'));
+  const localWatchlist = safeParseJSON(localStorage.getItem('nepalrepublic-watchlist'));
+  const localEngagement = safeParseJSON(localStorage.getItem('nepalrepublic-engagement'));
 
   // Read cloud
   const { data: cloud } = await supabase
@@ -76,18 +76,18 @@ export async function mergeOnLogin(userId: string) {
     localPrefs.state.district = mergedDistrict;
     localPrefs.state.municipality = mergedMunicipality;
     localPrefs.state.hasSetHometown = hasHometown;
-    localStorage.setItem('nepal-najar-preferences', JSON.stringify(localPrefs));
+    localStorage.setItem('nepalrepublic-preferences', JSON.stringify(localPrefs));
   }
 
   if (localWatchlist?.state) {
     localWatchlist.state.watchedProjectIds = mergedWatchlist;
-    localStorage.setItem('nepal-najar-watchlist', JSON.stringify(localWatchlist));
+    localStorage.setItem('nepalrepublic-watchlist', JSON.stringify(localWatchlist));
   }
 
   if (localEngagement?.state) {
     localEngagement.state.currentStreak = mergedCurrentStreak;
     localEngagement.state.longestStreak = mergedLongestStreak;
-    localStorage.setItem('nepal-najar-engagement', JSON.stringify(localEngagement));
+    localStorage.setItem('nepalrepublic-engagement', JSON.stringify(localEngagement));
   }
 }
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Nepal Najar — Run SQL Migrations
+# Nepal Republic — Run SQL Migrations
 # ============================================================
 # This script opens the Supabase SQL Editor in your browser.
 # Paste and run each migration file in order.
@@ -10,7 +10,7 @@
 
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
-echo "║        Nepal Najar — Database Migrations            ║"
+echo "║      Nepal Republic — Database Migrations           ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo ""
 echo "Opening Supabase SQL Editor..."

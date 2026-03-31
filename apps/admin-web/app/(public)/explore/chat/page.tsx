@@ -50,7 +50,7 @@ export default function PublicChatPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-white flex items-center gap-3">
             <Sparkles className="w-7 h-7 text-primary-400" />
-            {t('chat.askNepalNajar')}
+            {t('chat.askGhantiCard')}
           </h1>
           <p className="text-sm text-gray-400 mt-1">
             {t('chat.askDesc')}
@@ -154,7 +154,7 @@ function EmptyState({
         <Globe2 className="w-8 h-8 text-primary-400" />
       </div>
       <h2 className="text-xl font-display font-bold text-white mb-2">
-        {t('chat.askNepalNajar')}
+        {t('chat.askGhantiCard')}
       </h2>
       <p className="text-sm text-gray-400 max-w-md mb-8">
         {t('chat.askDescEmpty')}

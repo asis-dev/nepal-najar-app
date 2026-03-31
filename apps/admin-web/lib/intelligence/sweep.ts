@@ -18,7 +18,7 @@ import { collectGovPortals } from './collectors/gov-portal';
 import { enrichUnprocessedSignals } from './collectors/article-fetcher';
 import { extractAndStoreEntities } from './entity-extractor';
 import { processSignalsBatch } from './brain';
-import { batchTranslateNepaliSignals } from './translate';
+import { translatePendingNepaliSignals } from './translate';
 import { collectSocialEvidence } from './evidence/social-collector';
 import { syncPromiseStatuses } from './promise-status-sync';
 import { computeDailyActivityRollup } from './daily-activity-rollup';
@@ -34,7 +34,7 @@ import { scrapeGoogleTrends } from './collectors/google-trends';
 import { computePulse, computeTrending } from './trending';
 import { computeTruthScoreBatch } from './truth-meter';
 import {
-  enqueueSignalAnalysisJobs,
+  ensureSignalAnalysisJobsQueued,
   enqueueDiscoveryJobsForSignals,
   enqueueStatusPipelineJob,
   processIntelligenceJobs,
@@ -79,7 +79,7 @@ async function upsertDailyQualityMetrics() {
   );
 }
 
-async function cleanupStaleSweeps(maxAgeMinutes = 20): Promise<number> {
+async function cleanupStaleSweeps(maxAgeMinutes = 90): Promise<number> {
   const supabase = getSupabase();
   const cutoffIso = new Date(
     Date.now() - maxAgeMinutes * 60_000,
@@ -140,6 +140,7 @@ async function markDiscoveryOnlySignalsProcessed(): Promise<number> {
     .update({
       tier3_processed: true,
       review_required: true,
+      review_status: 'pending',
       review_notes: 'Skipped Tier 3 because the signal is relevant but currently unmatched; routed to discovery/review instead.',
     })
     .in('id', ids);
@@ -269,9 +270,22 @@ export async function runFullSweep(
   const inlineStatusWorker =
     process.env.INTELLIGENCE_INLINE_STATUS_WORKER === 'true';
   const inlineAnalysisWorker =
+    sweepType !== 'scheduled' &&
     process.env.INTELLIGENCE_INLINE_ANALYSIS_WORKER !== 'false';
+  const scheduledFastMode =
+    sweepType === 'scheduled' &&
+    process.env.INTELLIGENCE_SCHEDULED_FAST_MODE !== 'false';
+  const enableLegacyScraper =
+    process.env.INTELLIGENCE_ENABLE_LEGACY_SWEEP === 'true';
+  const enableHeavyScheduledCollectors =
+    process.env.INTELLIGENCE_ENABLE_HEAVY_SCHEDULED_COLLECTORS === 'true';
+  const staleSweepMinutes = Math.max(
+    20,
+    Number.parseInt(process.env.INTELLIGENCE_STALE_SWEEP_MINUTES || '90', 10) ||
+      90,
+  );
 
-  const staleSweepsClosed = await cleanupStaleSweeps();
+  const staleSweepsClosed = await cleanupStaleSweeps(staleSweepMinutes);
   if (staleSweepsClosed > 0) {
     console.warn(`[Sweep] Closed ${staleSweepsClosed} stale sweep record(s) before starting a new run.`);
   }
@@ -367,12 +381,21 @@ export async function runFullSweep(
           );
         }
 
-        // Run sequentially (rate-limited)
-        try {
-          result.collection.search = await collectAllWebSearch();
-        } catch (err) {
-          result.collection.search.errors.push(
-            err instanceof Error ? err.message : 'Search failed',
+        const runHeavyCollectors =
+          !scheduledFastMode || enableHeavyScheduledCollectors;
+
+        if (runHeavyCollectors) {
+          // Run sequentially (rate-limited)
+          try {
+            result.collection.search = await collectAllWebSearch();
+          } catch (err) {
+            result.collection.search.errors.push(
+              err instanceof Error ? err.message : 'Search failed',
+            );
+          }
+        } else {
+          console.log(
+            '[Sweep] Skipping web search in scheduled fast mode (set INTELLIGENCE_ENABLE_HEAVY_SCHEDULED_COLLECTORS=true to enable).',
           );
         }
 
@@ -384,27 +407,33 @@ export async function runFullSweep(
           );
         }
 
-        // Run Apify Facebook profile scraper
-        try {
-          result.collection.apify = await collectAllApify();
-        } catch (err) {
-          result.collection.apify.errors.push(
-            err instanceof Error ? err.message : 'Apify failed',
-          );
-        }
-
-        // Run Facebook page scraper (Apify or DuckDuckGo fallback)
-        try {
-          const fbResult = await scrapeFacebookPages();
-          result.collection.social.postsFound += fbResult.postsFound;
-          result.collection.social.newPosts += fbResult.newPosts;
-          if (fbResult.errors.length > 0) {
-            result.collection.social.errors.push(...fbResult.errors.map(e => `[Facebook] ${e}`));
+        if (runHeavyCollectors) {
+          // Run Apify Facebook profile scraper
+          try {
+            result.collection.apify = await collectAllApify();
+          } catch (err) {
+            result.collection.apify.errors.push(
+              err instanceof Error ? err.message : 'Apify failed',
+            );
           }
-          console.log(`[Sweep] Facebook: ${fbResult.newPosts} new posts from ${fbResult.postsFound} found`);
-        } catch (err) {
-          result.collection.social.errors.push(
-            `Facebook scraper: ${err instanceof Error ? err.message : 'error'}`,
+
+          // Run Facebook page scraper (Apify or DuckDuckGo fallback)
+          try {
+            const fbResult = await scrapeFacebookPages();
+            result.collection.social.postsFound += fbResult.postsFound;
+            result.collection.social.newPosts += fbResult.newPosts;
+            if (fbResult.errors.length > 0) {
+              result.collection.social.errors.push(...fbResult.errors.map(e => `[Facebook] ${e}`));
+            }
+            console.log(`[Sweep] Facebook: ${fbResult.newPosts} new posts from ${fbResult.postsFound} found`);
+          } catch (err) {
+            result.collection.social.errors.push(
+              `Facebook scraper: ${err instanceof Error ? err.message : 'error'}`,
+            );
+          }
+        } else {
+          console.log(
+            '[Sweep] Skipping Apify/Facebook page scrapers in scheduled fast mode.',
           );
         }
 
@@ -505,8 +534,8 @@ export async function runFullSweep(
         }
       }
 
-      // Also run legacy scraper (existing 46 sources) — skip in rss-only mode
-      if (!rssOnly) {
+      // Also run legacy scraper (existing 46 sources) — opt-in only
+      if (!rssOnly && enableLegacyScraper) {
       try {
         const legacyRes = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/scrape/bulk`,
@@ -533,7 +562,7 @@ export async function runFullSweep(
           err instanceof Error ? err.message : 'Legacy scraper failed',
         );
       }
-      } // end if (!rssOnly) for legacy
+      } // end legacy scraper block
     }
 
     // ===== ENRICHMENT PHASE =====
@@ -581,6 +610,19 @@ export async function runFullSweep(
       }
     }
 
+    // ===== DEDUPLICATION PHASE (before analysis to avoid wasting AI on dupes) =====
+    if (!skipAnalysis) {
+      console.log('[Sweep] Starting deduplication phase...');
+      try {
+        const dedupResult = await deduplicateSignals();
+        console.log(`[Sweep] Dedup: ${dedupResult.merged} duplicates merged, ${dedupResult.canonical} canonical groups`);
+      } catch (err) {
+        result.analysis.errors.push(
+          `Dedup error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+    }
+
     // ===== ANALYSIS PHASE =====
     if (!skipAnalysis) {
       const discoveryOnlySignals = await markDiscoveryOnlySignalsProcessed();
@@ -595,20 +637,24 @@ export async function runFullSweep(
         console.log('[Sweep] No signal-analysis backlog found.');
       } else if (!inlineAnalysisWorker) {
         const queuedBatchSize = Math.min(5, analysisBatchSize);
-        const jobsToQueue = Math.min(
-          8,
-          Math.max(1, Math.ceil(backlog.total / queuedBatchSize)),
-        );
-        const jobs = await enqueueSignalAnalysisJobs({
+        const queueState = await ensureSignalAnalysisJobsQueued({
           batchSize: queuedBatchSize,
-          jobCount: jobsToQueue,
+          maxJobs: 8,
           trigger: `${sweepType}-${sweepId.slice(0, 8)}`,
         });
-        analysisQueued = true;
-        console.log(
-          `[Sweep] Queued ${jobs.length} analysis jobs for ${backlog.total} pending signals ` +
-            `(${backlog.unclassified} Tier 1, ${backlog.tier3Pending} Tier 3).`,
-        );
+        analysisQueued =
+          queueState.queued > 0 || queueState.existingPendingOrRunning > 0;
+        if (queueState.queued > 0) {
+          console.log(
+            `[Sweep] Queued ${queueState.queued} analysis jobs for ${queueState.backlog.total} pending signals ` +
+              `(${queueState.backlog.unclassified} Tier 1, ${queueState.backlog.tier3Pending} Tier 3).`,
+          );
+        } else if (queueState.existingPendingOrRunning > 0) {
+          console.log(
+            `[Sweep] Reusing ${queueState.existingPendingOrRunning} existing pending/running analysis jobs ` +
+              `for backlog ${queueState.backlog.total}.`,
+          );
+        }
       } else {
         console.log(
           `[Sweep] Starting inline analysis for ${backlog.total} pending signals ` +
@@ -638,44 +684,20 @@ export async function runFullSweep(
       // ===== TRANSLATION PHASE =====
       // Translate Nepali signals that were classified as relevant
       if (!analysisQueued) {
-      try {
-        console.log('[Sweep] Starting Nepali signal translation...');
-        const { data: nepaliSignals } = await supabase
-          .from('intelligence_signals')
-          .select('id, title, content, language')
-          .eq('language', 'ne')
-          .eq('tier1_processed', true)
-          .gte('relevance_score', 0.3)
-          .is('title_ne', null)
-          .limit(20);
-
-        if (nepaliSignals && nepaliSignals.length > 0) {
-          const translated = await batchTranslateNepaliSignals(
-            nepaliSignals.map((s) => ({
-              id: s.id,
-              title: s.title,
-              content: s.content,
-            })),
-          );
-
-          // Write translations back to the database
-          for (const [signalId, translation] of translated) {
-            await supabase
-              .from('intelligence_signals')
-              .update({
-                title_ne: translation.titleEn,
-                summary_en: translation.summaryEn,
-              })
-              .eq('id', signalId);
+        try {
+          console.log('[Sweep] Starting Nepali signal translation...');
+          const translationResult = await translatePendingNepaliSignals(20);
+          if (translationResult.scanned > 0) {
+            console.log(
+              `[Sweep] Translation backlog: ${translationResult.translated} translated, ` +
+                `${translationResult.failed} failed (scanned ${translationResult.scanned})`,
+            );
           }
-
-          console.log(`[Sweep] Translated ${translated.size} Nepali signals`);
+        } catch (err) {
+          result.analysis.errors.push(
+            `Translation error: ${err instanceof Error ? err.message : 'unknown'}`,
+          );
         }
-      } catch (err) {
-        result.analysis.errors.push(
-          `Translation error: ${err instanceof Error ? err.message : 'unknown'}`,
-        );
-      }
       } else {
         console.log('[Sweep] Skipping inline translation because analysis is queued for the worker.');
       }
@@ -731,19 +753,8 @@ export async function runFullSweep(
       }
     }
 
-    // ===== DEDUPLICATION PHASE =====
+    // ===== TRUTH SCORING PHASE =====
     if (!skipAnalysis && !analysisQueued) {
-      console.log('[Sweep] Starting deduplication phase...');
-      try {
-        const dedupResult = await deduplicateSignals();
-        console.log(`[Sweep] Dedup: ${dedupResult.merged} duplicates merged, ${dedupResult.canonical} canonical groups`);
-      } catch (err) {
-        result.analysis.errors.push(
-          `Dedup error: ${err instanceof Error ? err.message : 'unknown'}`,
-        );
-      }
-
-      // ===== TRUTH SCORING PHASE =====
       console.log('[Sweep] Computing truth scores for newly classified signals...');
       try {
         const { data: scorableSignals } = await supabase
@@ -869,6 +880,46 @@ export async function runFullSweep(
       }
     }
 
+    // ===== GOVERNMENT ROSTER EXTRACTION PHASE =====
+    if (!skipAnalysis && !rssOnly && !analysisQueued) {
+      console.log('[Sweep] Extracting government roster updates...');
+      try {
+        const { extractGovernmentRoster } = await import('./government-roster');
+        const rosterResult = await extractGovernmentRoster(sweepStartedAtIso);
+        console.log(
+          `[Sweep] Roster: scanned ${rosterResult.signalsScanned}, found ${rosterResult.appointmentSignals} appointment signals, ` +
+            `extracted ${rosterResult.appointmentsExtracted}, upserted ${rosterResult.officialsUpserted}`,
+        );
+        if (rosterResult.errors.length > 0) {
+          result.analysis.errors.push(...rosterResult.errors.slice(0, 5));
+        }
+      } catch (err) {
+        result.analysis.errors.push(
+          `Roster extraction error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+    }
+
+    // ===== CONSTITUTION AMENDMENT TRACKING PHASE =====
+    if (!skipAnalysis && !rssOnly && !analysisQueued) {
+      console.log('[Sweep] Tracking constitution amendment signals...');
+      try {
+        const { trackConstitutionAmendments } = await import('./constitution-tracker');
+        const constResult = await trackConstitutionAmendments(sweepStartedAtIso);
+        console.log(
+          `[Sweep] Constitution: scanned ${constResult.signalsScanned}, found ${constResult.amendmentSignals} amendment signals, ` +
+            `detected ${constResult.amendmentsDetected} amendments, updated ${constResult.articlesUpdated} articles`,
+        );
+        if (constResult.errors.length > 0) {
+          result.analysis.errors.push(...constResult.errors.slice(0, 5));
+        }
+      } catch (err) {
+        result.analysis.errors.push(
+          `Constitution tracking error: ${err instanceof Error ? err.message : 'unknown'}`,
+        );
+      }
+    }
+
     // ===== TRENDING COMPUTATION PHASE =====
     if (!skipAnalysis && !analysisQueued) {
       console.log('[Sweep] Computing trending pulse...');
@@ -884,50 +935,32 @@ export async function runFullSweep(
       }
     }
 
-    // ===== BRIEFING PRE-GENERATION PHASE =====
-    if (!skipAnalysis && !rssOnly && !analysisQueued) {
-      console.log('[Sweep] Pre-generating commitment briefings...');
+    // ===== DAILY BRIEF REGENERATION PHASE =====
+    // Always regenerate brief + audio on full sweeps, even if analysis was queued.
+    // storeDailyBrief preserves existing audio, and we re-generate audio each time
+    // so users always hear the latest summary.
+    if (!skipAnalysis && !rssOnly) {
+      console.log('[Sweep] Regenerating daily brief...');
       try {
-        const { generateCommitmentBriefing } = await import('./commitment-briefing');
         const { generateDailyBrief } = await import('./daily-brief');
 
-        // Regenerate daily brief
-        await generateDailyBrief();
+        // Regenerate daily brief + generate audio narration
+        const todayBrief = await generateDailyBrief();
         console.log('[Sweep] Daily brief regenerated');
 
-        // Pre-generate briefings for commitments with recent signals (top 20 by activity)
-        const supabase = (await import('@/lib/supabase/server')).getSupabase();
-        const { data: activeCommitments } = await supabase
-          .from('intelligence_signals')
-          .select('matched_promise_ids')
-          .not('matched_promise_ids', 'eq', '{}')
-          .order('discovered_at', { ascending: false })
-          .limit(200);
-
-        if (activeCommitments) {
-          const idCounts: Record<string, number> = {};
-          for (const s of activeCommitments) {
-            for (const id of (s.matched_promise_ids || [])) {
-              idCounts[String(id)] = (idCounts[String(id)] || 0) + 1;
-            }
+        try {
+          const { generateAndStoreDailyAudio } = await import('./brief-narrator');
+          const audioResult = await generateAndStoreDailyAudio(todayBrief);
+          if (audioResult.audioUrl) {
+            console.log(`[Sweep] Brief audio generated via ${audioResult.provider} (${audioResult.durationSeconds}s)`);
+          } else {
+            console.log(`[Sweep] Brief audio skipped: ${audioResult.error || 'no TTS provider'}`);
           }
-          const topIds = Object.entries(idCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 20)
-            .map(([id]) => Number(id));
-
-          let briefingsGenerated = 0;
-          for (const cid of topIds) {
-            try {
-              await generateCommitmentBriefing(cid);
-              briefingsGenerated++;
-            } catch { /* skip failed */ }
-            await new Promise(r => setTimeout(r, 1000)); // rate limit
-          }
-          console.log(`[Sweep] Pre-generated ${briefingsGenerated} commitment briefings`);
+        } catch (audioErr) {
+          console.warn('[Sweep] Brief audio error:', audioErr instanceof Error ? audioErr.message : 'unknown');
         }
       } catch (err) {
-        console.warn('[Sweep] Briefing pre-generation error:', err instanceof Error ? err.message : 'unknown');
+        console.warn('[Sweep] Daily brief error:', err instanceof Error ? err.message : 'unknown');
       }
     }
 
@@ -982,10 +1015,67 @@ export async function runFullSweep(
         `Daily rollup error: ${err instanceof Error ? err.message : 'unknown'}`,
       );
     }
+
+    // ===== COMBINED SCORING — merge AI + community signals into final progress =====
+    try {
+      const { computeAllCombinedScores } = await import('./combined-scoring');
+      const scores = await computeAllCombinedScores();
+      console.log(`[Sweep] Combined scoring: computed ${scores.length} scores`);
+    } catch (err) {
+      result.analysis.errors.push(
+        `Combined scoring error: ${err instanceof Error ? err.message : 'unknown'}`,
+      );
+    }
   } catch (err) {
     result.status = 'failed';
     result.analysis.errors.push(
       err instanceof Error ? err.message : 'Sweep failed',
+    );
+  }
+
+  // ── Pre-warm briefings — regenerate for ALL commitments that got new signals (no cap) ──
+  try {
+    const { generateBriefingBatch } = await import('./commitment-briefing');
+    const { generateImpactBatch } = await import('./impact-predictor');
+    // Find commitments that got new signals in this sweep
+    const { data: updatedCommitments } = await supabase
+      .from('intelligence_signals')
+      .select('matched_promise_ids')
+      .gte('discovered_at', sweepStartedAtIso)
+      .not('matched_promise_ids', 'eq', '{}');
+
+    const affectedIds = new Set<number>();
+    for (const sig of updatedCommitments || []) {
+      const ids = (sig.matched_promise_ids as number[]) || [];
+      for (const id of ids) affectedIds.add(id);
+    }
+
+    if (affectedIds.size > 0) {
+      const idsToWarm = Array.from(affectedIds); // No cap — warm all affected
+      const warmResult = await generateBriefingBatch(idsToWarm);
+      console.log(
+        `[Sweep] Pre-warmed ${warmResult.generated} briefings (${warmResult.failed} failed) for ${idsToWarm.length} commitments`,
+      );
+      // Also refresh impact predictions for affected commitments
+      const impactResult = await generateImpactBatch(idsToWarm);
+      console.log(
+        `[Sweep] Pre-warmed ${impactResult.generated} impact predictions for ${idsToWarm.length} commitments`,
+      );
+    }
+  } catch (err) {
+    result.analysis.errors.push(
+      `Briefing pre-warm error: ${err instanceof Error ? err.message : 'unknown'}`,
+    );
+  }
+
+  // ── Source Discovery — suggest new sources based on what we just scraped ──
+  let sourceDiscoveryResult: { suggestionsCreated: number; autoApproved: number } | undefined;
+  try {
+    const { discoverNewSources } = await import('./source-discovery');
+    sourceDiscoveryResult = await discoverNewSources({ dayWindow: 3, minReferences: 3, maxSuggestions: 5 });
+  } catch (err) {
+    result.analysis.errors.push(
+      `Source discovery error: ${err instanceof Error ? err.message : 'unknown'}`,
     );
   }
 
