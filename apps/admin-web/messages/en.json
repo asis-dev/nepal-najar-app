@@ -1132,6 +1132,18 @@
     "settings": "Settings",
     "myAccount": "My Account"
   },
+  "me": {
+    "title": "My Profile",
+    "signInToView": "Sign in to view your profile",
+    "editLocation": "Edit Location",
+    "saveLocation": "Save Location",
+    "locationNotSet": "Location not set",
+    "totalKarma": "Total Karma",
+    "viewReputation": "View Full Reputation",
+    "following": "Following",
+    "commitments": "commitments",
+    "signOut": "Sign Out"
+  },
   "community": {
     "karma": "Karma",
     "totalKarma": "Total Karma",

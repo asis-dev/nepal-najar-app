@@ -22,7 +22,7 @@ export default function LoginPage() {
 
     try {
       await signInWithPassword(email, password);
-      router.push('/explore');
+      router.push('/');
     } catch {
       // error is set in the store
     }

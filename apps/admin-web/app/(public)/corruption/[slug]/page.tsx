@@ -19,6 +19,8 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useCorruptionCase } from '@/lib/hooks/use-corruption';
+import { ReactionBar } from '@/components/public/reaction-bar';
+import { CorruptionComments } from '@/components/public/corruption-comments';
 import {
   CORRUPTION_TYPE_LABELS,
   STATUS_LABELS,
@@ -109,7 +111,7 @@ export default function CaseDetailPage() {
         <div className="public-shell text-center py-16">
           <p className="text-gray-500 mb-4">Case not found.</p>
           <Link href="/corruption" className="text-sm text-blue-400 hover:text-blue-300">
-            Back to Corruption Tracker
+            Back to All Cases
           </Link>
         </div>
       </section>
@@ -143,7 +145,7 @@ export default function CaseDetailPage() {
             className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors mb-4"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Corruption Tracker
+            Back to All Cases
           </Link>
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -299,9 +301,9 @@ export default function CaseDetailPage() {
 
       {/* ── Related Commitments ── */}
       {caseData.related_commitment_ids && caseData.related_commitment_ids.length > 0 && (
-        <section className="public-section pt-0">
+        <section className="public-section pt-0 pb-0">
           <div className="public-shell">
-            <div className="glass-card p-5">
+            <div className="glass-card p-5 mb-4">
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                 Related Government Commitments
               </h2>
@@ -321,6 +323,22 @@ export default function CaseDetailPage() {
           </div>
         </section>
       )}
+
+      {/* ── Reactions ── */}
+      <section className="public-section pt-0 pb-0">
+        <div className="public-shell">
+          <div className="mb-4">
+            <ReactionBar caseSlug={slug} />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Comments ── */}
+      <section className="public-section pt-0">
+        <div className="public-shell">
+          <CorruptionComments caseSlug={slug} />
+        </div>
+      </section>
     </>
   );
 }

@@ -1132,6 +1132,18 @@
     "settings": "सेटिङ",
     "myAccount": "मेरो खाता"
   },
+  "me": {
+    "title": "मेरो प्रोफाइल",
+    "signInToView": "तपाईंको प्रोफाइल हेर्न साइन इन गर्नुहोस्",
+    "editLocation": "ठाउँ सम्पादन",
+    "saveLocation": "ठाउँ सेभ गर्नुहोस्",
+    "locationNotSet": "ठाउँ सेट गरिएको छैन",
+    "totalKarma": "कुल कर्म",
+    "viewReputation": "विस्तृत प्रतिष्ठा हेर्नुहोस्",
+    "following": "फलो गरिएका",
+    "commitments": "प्रतिबद्धता",
+    "signOut": "साइन आउट"
+  },
   "community": {
     "karma": "कर्म",
     "totalKarma": "कुल कर्म",

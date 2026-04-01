@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 const SITE_NAME = 'Nepal Republic — नेपाल रिपब्लिक';
-const SITE_DESCRIPTION = 'Track promises. Report reality. Verify the truth. Nepal Republic uses AI to track government commitments, surface real-world issues, and analyze evidence so you can see how the system actually performs.';
+const SITE_DESCRIPTION = 'Independent AI platform holding Nepal\'s government accountable. 109 commitments monitored. Exposed corruption. Daily briefings. Real evidence.';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nepalrepublic.org';
 
 export function createMetadata(overrides?: {
@@ -56,13 +56,13 @@ export function createMetadata(overrides?: {
       'government accountability',
       'Nepal Republic',
       'नेपाल रिपब्लिक',
-      'civic tracker',
-      'government promises',
+      'civic intelligence',
+      'government accountability',
       'AI governance',
       'Nepal',
       'governance',
       'transparency',
-      'corruption tracking',
+      'corruption exposed',
       'civic complaints',
       'evidence verification',
       'नेपाल',
@@ -81,7 +81,7 @@ export function governmentServiceSchema() {
     '@type': 'GovernmentService',
     name: 'Nepal Republic',
     alternateName: 'नेपाल रिपब्लिक',
-    description: 'AI-powered civic intelligence platform for Nepal. Tracks government commitments, verifies evidence, and scores accountability.',
+    description: 'AI-powered civic intelligence platform for Nepal. Monitors government commitments, verifies evidence, and scores accountability.',
     url: SITE_URL,
     serviceArea: {
       '@type': 'Country',

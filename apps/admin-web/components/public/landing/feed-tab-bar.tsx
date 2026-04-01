@@ -23,7 +23,7 @@ export function FeedTabBar({
   const filterCount = categoriesOfInterest.length;
 
   const tabs: { id: FeedTab; label: string; badge?: number }[] = [
-    { id: 'for-you', label: filterCount > 0 ? `${t('home.forYou')} (${filterCount})` : t('home.forYou') },
+    { id: 'for-you', label: t('home.forYou'), badge: filterCount > 0 ? filterCount : undefined },
     { id: 'following', label: t('home.following'), badge: followingCount > 0 ? followingCount : undefined },
     { id: 'corruption', label: t('home.corruption') },
     { id: 'trending', label: t('home.trending') },
@@ -41,11 +41,11 @@ export function FeedTabBar({
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
-              <div key={tab.id} className="relative flex-1 md:flex-none inline-flex items-center">
+              <div key={tab.id} className="relative shrink-0 inline-flex items-center">
                 <button
                   onClick={() => onTabChange(tab.id)}
                   suppressHydrationWarning
-                  className={`w-full inline-flex items-center justify-center gap-1.5 rounded-full text-xs px-3 py-1.5 md:text-sm md:px-4 md:py-2 font-medium transition-all duration-200 ${
+                  className={`whitespace-nowrap inline-flex items-center justify-center gap-1.5 rounded-full text-[13px] px-3.5 py-2 md:text-sm md:px-4 md:py-2 font-medium transition-all duration-200 ${
                     isActive
                       ? 'text-white'
                       : 'text-gray-500 hover:text-gray-300'

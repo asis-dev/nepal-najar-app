@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useMemo, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, Check, X } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
 
@@ -17,6 +17,106 @@ const PROVINCES = [
   'Sudurpashchim',
 ];
 
+/** Common countries — Nepal first, then alphabetical popular ones */
+const COUNTRIES = [
+  'Nepal',
+  '---',
+  'Australia',
+  'Bangladesh',
+  'Bhutan',
+  'Canada',
+  'China',
+  'France',
+  'Germany',
+  'India',
+  'Japan',
+  'Malaysia',
+  'Qatar',
+  'Saudi Arabia',
+  'Singapore',
+  'South Korea',
+  'Sri Lanka',
+  'Thailand',
+  'United Arab Emirates',
+  'United Kingdom',
+  'United States',
+  '---',
+  'Afghanistan',
+  'Albania',
+  'Algeria',
+  'Argentina',
+  'Austria',
+  'Bahrain',
+  'Belgium',
+  'Brazil',
+  'Brunei',
+  'Cambodia',
+  'Chile',
+  'Colombia',
+  'Cyprus',
+  'Czech Republic',
+  'Denmark',
+  'Egypt',
+  'Ethiopia',
+  'Finland',
+  'Greece',
+  'Hong Kong',
+  'Hungary',
+  'Iceland',
+  'Indonesia',
+  'Iran',
+  'Iraq',
+  'Ireland',
+  'Israel',
+  'Italy',
+  'Jordan',
+  'Kenya',
+  'Kuwait',
+  'Laos',
+  'Lebanon',
+  'Luxembourg',
+  'Maldives',
+  'Mexico',
+  'Mongolia',
+  'Morocco',
+  'Myanmar',
+  'Netherlands',
+  'New Zealand',
+  'Nigeria',
+  'Norway',
+  'Oman',
+  'Pakistan',
+  'Peru',
+  'Philippines',
+  'Poland',
+  'Portugal',
+  'Romania',
+  'Russia',
+  'South Africa',
+  'Spain',
+  'Sweden',
+  'Switzerland',
+  'Taiwan',
+  'Tanzania',
+  'Turkey',
+  'Uganda',
+  'Ukraine',
+  'Vietnam',
+];
+
+/** Password strength checker */
+function getPasswordStrength(pw: string): { score: number; checks: { label: string; pass: boolean }[] } {
+  const checks = [
+    { label: 'At least 8 characters', pass: pw.length >= 8 },
+    { label: 'Contains uppercase letter', pass: /[A-Z]/.test(pw) },
+    { label: 'Contains lowercase letter', pass: /[a-z]/.test(pw) },
+    { label: 'Contains a number', pass: /[0-9]/.test(pw) },
+    { label: 'Contains special character', pass: /[^A-Za-z0-9]/.test(pw) },
+  ];
+  const score = checks.filter(c => c.pass).length;
+  return { score, checks };
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -26,18 +126,37 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [country, setCountry] = useState('Nepal');
   const [province, setProvince] = useState('');
   const [district, setDistrict] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
+
+  const isNepal = country === 'Nepal';
+  const strength = useMemo(() => getPasswordStrength(password), [password]);
+  const strengthColor =
+    strength.score <= 2 ? 'bg-red-500' : strength.score <= 3 ? 'bg-amber-500' : strength.score <= 4 ? 'bg-blue-500' : 'bg-emerald-500';
+  const strengthLabel =
+    strength.score <= 2 ? 'Weak' : strength.score <= 3 ? 'Fair' : strength.score <= 4 ? 'Good' : 'Strong';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     clearError();
     setValidationError('');
 
+    // Validation
+    if (displayName.trim().length < 2) {
+      setValidationError('Display name must be at least 2 characters');
+      return;
+    }
+
     if (password.length < 8) {
       setValidationError(t('auth.passwordMin'));
+      return;
+    }
+
+    if (strength.score < 3) {
+      setValidationError('Password is too weak. Add uppercase, numbers, or special characters.');
       return;
     }
 
@@ -50,15 +169,16 @@ export default function SignupPage() {
       const result = await signUpWithPassword({
         email,
         password,
-        displayName,
-        province: province || undefined,
-        district: district || undefined,
+        displayName: displayName.trim(),
+        country,
+        province: isNepal ? province || undefined : undefined,
+        district: isNepal ? district || undefined : undefined,
       });
 
       if (result.needsVerification) {
         router.push(`/verify?email=${encodeURIComponent(email)}`);
       } else {
-        router.push('/explore');
+        router.push('/');
       }
     } catch {
       // error is set in the store
@@ -152,7 +272,36 @@ export default function SignupPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">{t('auth.passwordMin')}</p>
+              {/* Password strength meter */}
+              {password.length > 0 && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${strengthColor}`}
+                        style={{ width: `${(strength.score / 5) * 100}%` }}
+                      />
+                    </div>
+                    <span className={`text-[10px] font-medium ${
+                      strength.score <= 2 ? 'text-red-400' : strength.score <= 3 ? 'text-amber-400' : strength.score <= 4 ? 'text-blue-400' : 'text-emerald-400'
+                    }`}>
+                      {strengthLabel}
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {strength.checks.map((check) => (
+                      <div key={check.label} className="flex items-center gap-1.5 text-[10px]">
+                        {check.pass ? (
+                          <Check className="h-2.5 w-2.5 text-emerald-400" />
+                        ) : (
+                          <X className="h-2.5 w-2.5 text-gray-600" />
+                        )}
+                        <span className={check.pass ? 'text-gray-400' : 'text-gray-600'}>{check.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Confirm Password */}
@@ -171,42 +320,81 @@ export default function SignupPage() {
                 className="input"
                 placeholder="••••••••"
               />
+              {confirmPassword.length > 0 && password !== confirmPassword && (
+                <p className="mt-1 text-xs text-red-400">Passwords do not match</p>
+              )}
+              {confirmPassword.length > 0 && password === confirmPassword && (
+                <p className="mt-1 text-xs text-emerald-400 flex items-center gap-1">
+                  <Check className="h-3 w-3" /> Passwords match
+                </p>
+              )}
             </div>
 
-            {/* Province */}
+            {/* Country */}
             <div>
-              <label htmlFor="province" className="mb-1.5 block text-sm font-medium text-gray-300">
-                {t('auth.province')}
+              <label htmlFor="country" className="mb-1.5 block text-sm font-medium text-gray-300">
+                Country
               </label>
               <select
-                id="province"
-                value={province}
-                onChange={(e) => setProvince(e.target.value)}
+                id="country"
+                value={country}
+                onChange={(e) => {
+                  setCountry(e.target.value);
+                  if (e.target.value !== 'Nepal') {
+                    setProvince('');
+                    setDistrict('');
+                  }
+                }}
                 className="input appearance-none"
               >
-                <option value="">{t('auth.selectProvince')}</option>
-                {PROVINCES.map((p) => (
-                  <option key={p} value={p}>
-                    {t(`province.${p}`)}
-                  </option>
-                ))}
+                {COUNTRIES.map((c, i) =>
+                  c === '---' ? (
+                    <option key={`sep-${i}`} disabled>──────────</option>
+                  ) : (
+                    <option key={c} value={c}>{c}</option>
+                  )
+                )}
               </select>
             </div>
 
-            {/* District */}
-            <div>
-              <label htmlFor="district" className="mb-1.5 block text-sm font-medium text-gray-300">
-                {t('auth.district')}
-              </label>
-              <input
-                id="district"
-                type="text"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                className="input"
-                placeholder="Kathmandu"
-              />
-            </div>
+            {/* Province — only for Nepal */}
+            {isNepal && (
+              <div>
+                <label htmlFor="province" className="mb-1.5 block text-sm font-medium text-gray-300">
+                  {t('auth.province')}
+                </label>
+                <select
+                  id="province"
+                  value={province}
+                  onChange={(e) => setProvince(e.target.value)}
+                  className="input appearance-none"
+                >
+                  <option value="">{t('auth.selectProvince')}</option>
+                  {PROVINCES.map((p) => (
+                    <option key={p} value={p}>
+                      {t(`province.${p}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* District — only for Nepal */}
+            {isNepal && (
+              <div>
+                <label htmlFor="district" className="mb-1.5 block text-sm font-medium text-gray-300">
+                  {t('auth.district')}
+                </label>
+                <input
+                  id="district"
+                  type="text"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  className="input"
+                  placeholder="Kathmandu"
+                />
+              </div>
+            )}
 
             {/* Submit */}
             <button
@@ -216,6 +404,11 @@ export default function SignupPage() {
             >
               {isLoading ? t('auth.signingUp') : t('auth.signUp')}
             </button>
+
+            {/* Security note */}
+            <p className="text-[10px] text-gray-600 text-center leading-relaxed">
+              Your password is encrypted and never stored in plain text. We use industry-standard authentication via Supabase Auth.
+            </p>
           </form>
 
           {/* Login link */}

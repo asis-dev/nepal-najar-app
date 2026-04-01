@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Loader2, AlertTriangle, Share2, Play, Pause } from 'lucide-react';
+import { Loader2, AlertTriangle, Share, Play, Pause } from 'lucide-react';
 import { DailyBriefPlayer } from '@/components/public/daily-brief-player';
 import { useI18n } from '@/lib/i18n';
 import { useIsMobile } from '@/lib/hooks/use-mobile';
@@ -28,6 +28,56 @@ import { PulseBar } from '@/components/public/landing/pulse-bar';
 const INAUGURATION_TIMESTAMP = new Date('2026-03-26T00:00:00+05:45').getTime();
 const NO_GRADE_WINDOW_DAYS = 30;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Stable audio URL wrapper — computes cache-bust ONCE on mount so
+ * parent re-renders don't change the URL and destroy the Audio element.
+ */
+function BriefAudioRow({ baseAudioUrl, durationSeconds, storyCount, onStoryHighlight }: {
+  baseAudioUrl: string;
+  durationSeconds?: number;
+  storyCount: number;
+  onStoryHighlight: (index: number) => void;
+}) {
+  // useMemo with empty deps = computed once per mount, stable across re-renders
+  const { enUrl, neUrl } = useMemo(() => {
+    const cacheBust = `?v=${Date.now()}`;
+    return {
+      enUrl: baseAudioUrl.replace('brief-ne.mp3', 'brief-en.mp3') + cacheBust,
+      neUrl: baseAudioUrl + cacheBust,
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseAudioUrl]);
+
+  return (
+    <div className="mb-2 flex gap-2">
+      <div className="flex-1 min-w-0">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-400 px-1">
+          English Audio Brief
+        </div>
+        <DailyBriefPlayer
+          audioUrl={enUrl}
+          durationSeconds={durationSeconds}
+          storyCount={storyCount}
+          onStoryHighlight={onStoryHighlight}
+          hideHeader
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400 px-1">
+          नेपाली अडियो ब्रिफ
+        </div>
+        <DailyBriefPlayer
+          audioUrl={neUrl}
+          durationSeconds={durationSeconds}
+          storyCount={storyCount}
+          onStoryHighlight={onStoryHighlight}
+          hideHeader
+        />
+      </div>
+    </div>
+  );
+}
 
 /* ═══════════════════════════════════════════
    Dashboard Island — Big Picture Dashboard
@@ -170,7 +220,7 @@ export function DashboardIsland() {
     return scored.slice(0, 5);
   }, [allPromises]);
 
-  const sourceCount = articleCount ?? 44;
+  const sourceCount = articleCount ?? 34100;
 
   /* ═══════════════════════════════════════════
      Render
@@ -190,6 +240,69 @@ export function DashboardIsland() {
               ? t('brand.heroSubheadline')
               : 'AI-powered tracking of government commitments, real-world issues, and evidence so you can see how the system actually performs.'}
           </p>
+        </div>
+
+        {/* ── Why Nepal Republic Exists — audio CTA ── */}
+        <div
+          className="mb-4 md:mb-5 rounded-xl border border-white/[0.06] px-4 py-3"
+          style={{
+            background:
+              'linear-gradient(135deg, rgba(220,20,60,0.06) 0%, rgba(0,56,147,0.06) 100%)',
+          }}
+        >
+          <p className="text-[13px] font-medium text-gray-300 text-center mb-2.5">
+            {locale === 'ne' ? 'यो एप किन बन्यो? सुन्नुहोस्' : 'Why does this app exist? Listen'}
+          </p>
+          <div className="flex items-center justify-center gap-2.5">
+            <button
+              onClick={() => {
+                if (playingAboutLang === 'en') {
+                  aboutAudioRef.current?.pause();
+                  setPlayingAboutLang(null);
+                  return;
+                }
+                if (aboutAudioRef.current) aboutAudioRef.current.pause();
+                aboutAudioRef.current = new Audio('/audio/about-en.mp3');
+                aboutAudioRef.current.addEventListener('ended', () =>
+                  setPlayingAboutLang(null),
+                );
+                aboutAudioRef.current.play().catch(() => {});
+                setPlayingAboutLang('en');
+              }}
+              className="group inline-flex items-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-[13px] font-medium text-cyan-200 transition-colors hover:bg-cyan-500/20"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500 shadow-md shadow-cyan-500/30 transition-transform group-hover:scale-110">
+                {playingAboutLang === 'en'
+                  ? <Pause className="h-3.5 w-3.5 text-white" />
+                  : <Play className="h-3.5 w-3.5 text-white fill-white" />}
+              </span>
+              {playingAboutLang === 'en' ? 'Playing…' : 'English'}
+            </button>
+            <button
+              onClick={() => {
+                if (playingAboutLang === 'ne') {
+                  aboutAudioRef.current?.pause();
+                  setPlayingAboutLang(null);
+                  return;
+                }
+                if (aboutAudioRef.current) aboutAudioRef.current.pause();
+                aboutAudioRef.current = new Audio('/audio/about-ne.mp3');
+                aboutAudioRef.current.addEventListener('ended', () =>
+                  setPlayingAboutLang(null),
+                );
+                aboutAudioRef.current.play().catch(() => {});
+                setPlayingAboutLang('ne');
+              }}
+              className="group inline-flex items-center gap-2 rounded-lg border border-orange-400/30 bg-orange-500/10 px-4 py-2 text-[13px] font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 shadow-md shadow-orange-500/30 transition-transform group-hover:scale-110">
+                {playingAboutLang === 'ne'
+                  ? <Pause className="h-3.5 w-3.5 text-white" />
+                  : <Play className="h-3.5 w-3.5 text-white fill-white" />}
+              </span>
+              {playingAboutLang === 'ne' ? 'सुन्दै…' : 'नेपालीमा'}
+            </button>
+          </div>
         </div>
 
         {/* ── Insight Card — what's happening RIGHT NOW ── */}
@@ -448,75 +561,6 @@ export function DashboardIsland() {
             </span>
           </div>
 
-          {/* About this app — audio explainers */}
-          <div className="mb-3 flex items-center justify-center gap-3 sm:justify-start">
-            <button
-              onClick={() => {
-                if (playingAboutLang === 'en') {
-                  aboutAudioRef.current?.pause();
-                  setPlayingAboutLang(null);
-                  return;
-                }
-                if (aboutAudioRef.current) aboutAudioRef.current.pause();
-                aboutAudioRef.current = new Audio('/audio/about-en.mp3');
-                aboutAudioRef.current.addEventListener('ended', () =>
-                  setPlayingAboutLang(null),
-                );
-                aboutAudioRef.current.play().catch(() => {});
-                setPlayingAboutLang('en');
-              }}
-              className="group inline-flex items-center gap-2.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 pl-2 pr-4 py-1.5 text-[13px] font-medium text-cyan-200 transition-colors hover:bg-cyan-500/20"
-            >
-              {playingAboutLang === 'en' ? (
-                <>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500 shadow-lg shadow-cyan-500/30">
-                    <Pause className="h-3.5 w-3.5 text-white" />
-                  </span>
-                  <span>Pause</span>
-                </>
-              ) : (
-                <>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500 shadow-lg shadow-cyan-500/30 transition-transform group-hover:scale-110">
-                    <Play className="h-3.5 w-3.5 text-white fill-white" />
-                  </span>
-                  <span>About this app</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={() => {
-                if (playingAboutLang === 'ne') {
-                  aboutAudioRef.current?.pause();
-                  setPlayingAboutLang(null);
-                  return;
-                }
-                if (aboutAudioRef.current) aboutAudioRef.current.pause();
-                aboutAudioRef.current = new Audio('/audio/about-ne.mp3');
-                aboutAudioRef.current.addEventListener('ended', () =>
-                  setPlayingAboutLang(null),
-                );
-                aboutAudioRef.current.play().catch(() => {});
-                setPlayingAboutLang('ne');
-              }}
-              className="group inline-flex items-center gap-2.5 rounded-full border border-orange-400/30 bg-orange-500/10 pl-2 pr-4 py-1.5 text-[13px] font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
-            >
-              {playingAboutLang === 'ne' ? (
-                <>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 shadow-lg shadow-orange-500/30">
-                    <Pause className="h-3.5 w-3.5 text-white" />
-                  </span>
-                  <span>रोक्नुहोस्</span>
-                </>
-              ) : (
-                <>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 shadow-lg shadow-orange-500/30 transition-transform group-hover:scale-110">
-                    <Play className="h-3.5 w-3.5 text-white fill-white" />
-                  </span>
-                  <span>नेपालीमा सुन्नुहोस्</span>
-                </>
-              )}
-            </button>
-          </div>
 
           {/* Share hero score — gated behind nowMs to prevent hydration mismatch */}
           {nowMs && ghantiScore && (
@@ -537,7 +581,7 @@ export function DashboardIsland() {
                 }}
                 className="inline-flex items-center gap-1.5 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
               >
-                <Share2 className="w-3 h-3" />
+                <Share className="w-3 h-3" />
                 {showLetterGrade
                   ? t('home.shareScore')
                   : t('home.shareSnapshot')}
@@ -669,46 +713,12 @@ export function DashboardIsland() {
                 </div>
 
                 {/* Audio players — EN and NE side by side on same row */}
-                {brief.audioUrl &&
-                  (() => {
-                    const cacheBust = `?v=${brief.date}`;
-                    const enUrl =
-                      brief.audioUrl.replace('brief-ne.mp3', 'brief-en.mp3') +
-                      cacheBust;
-                    const neUrl = brief.audioUrl + cacheBust;
-                    return (
-                      <div className="mb-2 flex gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-400 px-1">
-                            English
-                          </div>
-                          <DailyBriefPlayer
-                            audioUrl={enUrl}
-                            durationSeconds={
-                              brief.audioDurationSeconds || undefined
-                            }
-                            storyCount={brief.topStories?.length || 0}
-                            onStoryHighlight={setAudioHighlightIdx}
-                            hideHeader
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400 px-1">
-                            नेपाली
-                          </div>
-                          <DailyBriefPlayer
-                            audioUrl={neUrl}
-                            durationSeconds={
-                              brief.audioDurationSeconds || undefined
-                            }
-                            storyCount={brief.topStories?.length || 0}
-                            onStoryHighlight={setAudioHighlightIdx}
-                            hideHeader
-                          />
-                        </div>
-                      </div>
-                    );
-                  })()}
+                {brief.audioUrl && <BriefAudioRow
+                  baseAudioUrl={brief.audioUrl}
+                  durationSeconds={brief.audioDurationSeconds || undefined}
+                  storyCount={brief.topStories?.length || 0}
+                  onStoryHighlight={setAudioHighlightIdx}
+                />}
 
                 {/* Unified daily brief — single cohesive card */}
                 <UnifiedDailyBrief
@@ -719,14 +729,8 @@ export function DashboardIsland() {
                 />
               </div>
             ) : (
-              <div className="flex items-center gap-2.5 text-xs md:text-sm text-gray-400">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400 opacity-50" />
-                <span>
-                  {t('home.scanning').replace(
-                    '{count}',
-                    String(sourceCount),
-                  )}
-                </span>
+              <div className="text-xs md:text-sm text-gray-500 py-2">
+                {locale === 'ne' ? 'आजको ब्रिफ तयार हुँदैछ...' : "Today's brief is being prepared..."}
               </div>
             )}
           </div>

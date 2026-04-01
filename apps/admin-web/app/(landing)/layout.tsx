@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { BottomNav } from '@/components/public/bottom-nav';
 import { Footer } from '@/components/public/footer';
 import { HometownPicker } from '@/components/public/hometown-picker';
@@ -5,13 +6,19 @@ import { PilotAnalytics } from '@/components/public/pilot-analytics';
 import { TopNav } from '@/components/public/top-nav';
 import { CivicSkyBackground } from '@/components/ui/civic-sky-background';
 import { createMetadata } from '@/lib/seo';
+import { getCorruptionStats } from '@/lib/data/corruption-data';
+import { formatAmountNpr } from '@/lib/data/corruption-types';
 
-export const metadata = createMetadata({
-  title: 'Track Government Promises',
-  description:
-    "Is Nepal's government keeping its promises? Track 109 commitments with real-time evidence, daily briefings, and citizen reports. Free and independent.",
-  path: '/',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const stats = await getCorruptionStats();
+  const amount = formatAmountNpr(stats.totalAmountNpr);
+
+  return createMetadata({
+    title: 'AI-Powered Civic Intelligence for Nepal',
+    description: `Independent AI platform holding Nepal's government accountable. 109 commitments monitored. रू ${amount} in corruption exposed. ${stats.totalCases} cases. Daily briefings powered by 80+ sources.`,
+    path: '/',
+  });
+}
 
 export default function LandingLayout({
   children,

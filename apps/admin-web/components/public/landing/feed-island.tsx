@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowRight, ChevronDown, ChevronUp, Loader2, Shield, Clock } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp, Loader2, Shield, Clock, Share2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAllPromises } from '@/lib/hooks/use-promises';
 import { useTrending } from '@/lib/hooks/use-trending';
@@ -481,61 +481,139 @@ export function FeedIsland() {
               </div>
 
               {/* Corruption Summary */}
-              {corruptionStats && (
-                <div className="rounded-xl border border-red-500/15 bg-red-500/[0.03] p-3 md:p-4">
-                  <h3 className="text-sm font-bold text-red-300 mb-2 flex items-center gap-1.5">
-                    <Shield className="h-3.5 w-3.5" />
-                    {locale === 'ne' ? 'भ्रष्टाचार सारांश' : 'Corruption Summary'}
-                  </h3>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <div className="text-lg font-bold text-white">{corruptionStats.totalCases}</div>
-                      <div className="text-[9px] text-gray-500 uppercase">{locale === 'ne' ? 'घटना' : 'Cases'}</div>
+              {corruptionStats && (() => {
+                const byStatus = corruptionStats.casesByStatus || {};
+                const byAmount = (corruptionStats as any).amountByStatus || {};
+                const investigating = (byStatus.under_investigation ?? 0) + (byStatus.alleged ?? 0) + (byStatus.charged ?? 0);
+                const investigatingAmt = (byAmount.under_investigation ?? 0) + (byAmount.alleged ?? 0) + (byAmount.charged ?? 0);
+                const onTrial = byStatus.trial ?? 0;
+                const onTrialAmt = byAmount.trial ?? 0;
+                const convicted = byStatus.convicted ?? 0;
+                const convictedAmt = byAmount.convicted ?? 0;
+                return (
+                  <div className="rounded-xl border border-red-500/15 bg-red-500/[0.03] p-3 md:p-4">
+                    <h3 className="text-sm font-bold text-red-300 mb-1 flex items-center gap-1.5">
+                      <Shield className="h-3.5 w-3.5" />
+                      {locale === 'ne' ? 'भ्रष्टाचार सारांश' : 'Corruption Summary'}
+                    </h3>
+                    {/* Total headline */}
+                    <div className="mb-3 text-center">
+                      <div className="text-xl font-bold text-red-400">रू {formatAmountNpr(corruptionStats.totalAmountNpr)}</div>
+                      <div className="text-[10px] text-gray-500">
+                        {corruptionStats.totalCases} {locale === 'ne' ? 'घटनामा' : 'cases exposed'} {' · '}
+                        {'\u2248'} {formatNprWithUsd(corruptionStats.totalAmountNpr).usd}
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-lg font-bold text-red-400">रू {formatAmountNpr(corruptionStats.totalAmountNpr)}</div>
-                      <div className="text-[9px] text-gray-500 uppercase">{'\u2248'} {formatNprWithUsd(corruptionStats.totalAmountNpr).usd}</div>
+                    {/* Status breakdown */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-2 text-center">
+                        <div className="text-2xl font-bold text-amber-400">{investigating}</div>
+                        <div className="text-[9px] font-medium text-amber-400/70 uppercase leading-tight mt-0.5">
+                          {locale === 'ne' ? 'अनुसन्धानमा' : 'Under Investigation'}
+                        </div>
+                        {investigatingAmt > 0 && (
+                          <div className="text-[10px] font-semibold text-amber-400/60 mt-1">
+                            रू {formatAmountNpr(investigatingAmt)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-2 text-center">
+                        <div className="text-2xl font-bold text-purple-400">{onTrial}</div>
+                        <div className="text-[9px] font-medium text-purple-400/70 uppercase leading-tight mt-0.5">
+                          {locale === 'ne' ? 'मुद्दा विचाराधीन' : 'On Trial'}
+                        </div>
+                        {onTrialAmt > 0 && (
+                          <div className="text-[10px] font-semibold text-purple-400/60 mt-1">
+                            रू {formatAmountNpr(onTrialAmt)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-2 text-center">
+                        <div className="text-2xl font-bold text-red-400">{convicted}</div>
+                        <div className="text-[9px] font-medium text-red-400/70 uppercase leading-tight mt-0.5">
+                          {locale === 'ne' ? 'दोषी ठहर' : 'Convicted'}
+                        </div>
+                        {convictedAmt > 0 && (
+                          <div className="text-[10px] font-semibold text-red-400/60 mt-1">
+                            रू {formatAmountNpr(convictedAmt)}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-lg font-bold text-amber-400">{corruptionStats.activeInvestigations}</div>
-                      <div className="text-[9px] text-gray-500 uppercase">{locale === 'ne' ? 'सक्रिय' : 'Active'}</div>
-                    </div>
+                    {/* Share summary */}
+                    <button
+                      onClick={() => {
+                        const shareTitle = locale === 'ne'
+                          ? 'Nepal Republic — भ्रष्टाचार अनुसन्धान'
+                          : 'Follow The Money — Nepal Republic';
+                        const text = locale === 'ne'
+                          ? `🔍 ${investigating} अनुसन्धानमा (रू ${formatAmountNpr(investigatingAmt)})\n⚖️ ${onTrial} मुद्दा विचाराधीन (रू ${formatAmountNpr(onTrialAmt)})\n🔴 ${convicted} दोषी ठहर (रू ${formatAmountNpr(convictedAmt)})\n\nजम्मा: रू ${formatAmountNpr(corruptionStats.totalAmountNpr)} — ${corruptionStats.totalCases} घटना\n\nhttps://nepalrepublic.org/corruption`
+                          : `🔍 ${investigating} under investigation (रू ${formatAmountNpr(investigatingAmt)})\n⚖️ ${onTrial} on trial (रू ${formatAmountNpr(onTrialAmt)})\n🔴 ${convicted} convicted (रू ${formatAmountNpr(convictedAmt)})\n\nTotal: रू ${formatAmountNpr(corruptionStats.totalAmountNpr)} — ${corruptionStats.totalCases} cases exposed\n\nhttps://nepalrepublic.org/corruption`;
+                        if (navigator.share) {
+                          navigator.share({ title: shareTitle, text, url: 'https://nepalrepublic.org/corruption' }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(text).catch(() => {});
+                        }
+                      }}
+                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] py-2 text-[11px] font-medium text-gray-400 hover:text-white hover:bg-white/[0.08] transition-colors"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      {locale === 'ne' ? 'सेयर गर्नुहोस्' : 'Share This'}
+                    </button>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Corruption Cases */}
               {corruptionCases.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/corruption/${c.slug}`}
-                  className="glass-card-hover block p-3 md:p-4 transition-opacity duration-200"
-                >
-                  <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${STATUS_COLORS[c.status].bg} ${STATUS_COLORS[c.status].text}`}>
-                      {STATUS_LABELS[c.status].en}
-                    </span>
-                    {c.severity && SEVERITY_COLORS[c.severity] && (
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${SEVERITY_COLORS[c.severity].bg} ${SEVERITY_COLORS[c.severity].text}`}>
-                        {SEVERITY_LABELS[c.severity].en}
+                <div key={c.slug} className="glass-card-hover p-3 md:p-4 transition-opacity duration-200">
+                  <Link href={`/corruption/${c.slug}`} className="block">
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${STATUS_COLORS[c.status].bg} ${STATUS_COLORS[c.status].text}`}>
+                        {STATUS_LABELS[c.status].en}
                       </span>
-                    )}
-                  </div>
-                  <h3 className="text-sm font-semibold text-gray-100">{c.title}</h3>
-                  {c.estimated_amount_npr != null && c.estimated_amount_npr > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-red-400 font-medium mt-1">
-                      <span>रू {formatAmountNpr(c.estimated_amount_npr)}</span>
-                      <span className="text-[10px] text-gray-500">({'\u2248'} {formatNprWithUsd(c.estimated_amount_npr).usd})</span>
+                      {c.severity && SEVERITY_COLORS[c.severity] && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${SEVERITY_COLORS[c.severity].bg} ${SEVERITY_COLORS[c.severity].text}`}>
+                          {SEVERITY_LABELS[c.severity].en}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  {c.summary && (
-                    <p className="mt-1 text-[11px] text-gray-500 line-clamp-2">{c.summary}</p>
-                  )}
-                  <div className="flex items-center gap-1.5 text-[10px] text-gray-600 mt-2">
-                    <Clock className="h-3 w-3" />
-                    <span>Updated {new Date(c.updated_at).toLocaleDateString()}</span>
+                    <h3 className="text-sm font-semibold text-gray-100">{c.title}</h3>
+                    {c.estimated_amount_npr != null && c.estimated_amount_npr > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-red-400 font-medium mt-1">
+                        <span>रू {formatAmountNpr(c.estimated_amount_npr)}</span>
+                        <span className="text-[10px] text-gray-500">({'\u2248'} {formatNprWithUsd(c.estimated_amount_npr).usd})</span>
+                      </div>
+                    )}
+                    {c.summary && (
+                      <p className="mt-1 text-[11px] text-gray-500 line-clamp-2">{c.summary}</p>
+                    )}
+                  </Link>
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
+                      <Clock className="h-3 w-3" />
+                      <span>Updated {new Date(c.updated_at).toLocaleDateString()}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const amt = c.estimated_amount_npr ? ` — रू ${formatAmountNpr(c.estimated_amount_npr)}` : '';
+                        const statusLabel = locale === 'ne' ? STATUS_LABELS[c.status].ne : STATUS_LABELS[c.status].en;
+                        const text = locale === 'ne'
+                          ? `🔍 ${c.title}${amt}\nस्थिति: ${statusLabel}\n\n${c.summary || ''}\n\nNepal Republic मा हेर्नुहोस्\nhttps://nepalrepublic.org/corruption/${c.slug}`
+                          : `🔍 ${c.title}${amt}\nStatus: ${statusLabel}\n\n${c.summary || ''}\n\nFollow the money on Nepal Republic\nhttps://nepalrepublic.org/corruption/${c.slug}`;
+                        if (navigator.share) {
+                          navigator.share({ title: c.title, text, url: `https://nepalrepublic.org/corruption/${c.slug}` }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(text).catch(() => {});
+                        }
+                      }}
+                      className="shrink-0 p-1.5 rounded-lg text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
+                      aria-label="Share case"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </Link>
+                </div>
               ))}
 
               {corruptionCases.length > 0 && (

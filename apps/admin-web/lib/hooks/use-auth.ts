@@ -18,6 +18,7 @@ interface SignUpData {
   email: string;
   password: string;
   displayName: string;
+  country?: string;
   province?: string;
   district?: string;
 }
@@ -261,6 +262,7 @@ export const useAuth = create<AuthState>((set, get) => ({
               id: authData.user.id,
               display_name: data.displayName,
               email: data.email,
+              country: data.country || 'Nepal',
               province: data.province || null,
               district: data.district || null,
             }, { onConflict: 'id' });

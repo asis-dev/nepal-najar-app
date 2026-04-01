@@ -17,6 +17,15 @@ import {
   CheckCircle2,
   AlertTriangle,
   Briefcase,
+  GraduationCap,
+  Landmark,
+  Award,
+  AlertOctagon,
+  BadgeCheck,
+  HelpCircle,
+  ShieldQuestion,
+  User,
+  DollarSign,
 } from 'lucide-react';
 import { useMinistersWeekly } from '@/lib/hooks/use-ministers';
 import { useI18n } from '@/lib/i18n';
@@ -168,6 +177,9 @@ export default function MinisterDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Profile */}
+        {minister.profile && <MinisterProfile profile={minister.profile} isNe={isNe} />}
 
         {/* Activity stats bar */}
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -333,6 +345,193 @@ function StatCard({
       <Icon className={`mx-auto h-4 w-4 ${color}`} />
       <p className="mt-1.5 text-lg font-bold text-gray-100">{value}</p>
       <p className="text-xs text-gray-500">{label}</p>
+    </div>
+  );
+}
+
+/* ─── Verification Badge ─── */
+
+const VERIFICATION_CONFIG = {
+  confirmed: { icon: BadgeCheck, color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Confirmed' },
+  reported: { icon: HelpCircle, color: 'text-amber-400', bg: 'bg-amber-400/10', label: 'Reported' },
+  unverified: { icon: ShieldQuestion, color: 'text-gray-500', bg: 'bg-gray-500/10', label: 'Unverified' },
+} as const;
+
+function VerificationBadge({ status }: { status: 'confirmed' | 'reported' | 'unverified' }) {
+  const cfg = VERIFICATION_CONFIG[status] || VERIFICATION_CONFIG.unverified;
+  const Icon = cfg.icon;
+  return (
+    <span className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-medium ${cfg.color} ${cfg.bg}`} title={cfg.label}>
+      <Icon className="h-2.5 w-2.5" />
+      {cfg.label}
+    </span>
+  );
+}
+
+/* ─── Minister Profile ─── */
+
+function MinisterProfile({ profile, isNe }: { profile: any; isNe: boolean }) {
+  if (!profile) return null;
+
+  return (
+    <div className="mt-4 space-y-3">
+      {/* Bio */}
+      {profile.bio && (
+        <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <User className="h-3.5 w-3.5 text-gray-400" />
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {isNe ? 'परिचय' : 'Biography'}
+            </h3>
+          </div>
+          <p className="text-sm text-gray-300 leading-relaxed">{profile.bio}</p>
+          {profile.personalInfo?.party && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-md bg-primary-500/10 border border-primary-500/20 px-2 py-0.5 text-primary-400 font-medium">
+                {profile.personalInfo.party}
+              </span>
+              {profile.personalInfo.constituency && (
+                <span className="text-gray-500">{profile.personalInfo.constituency}</span>
+              )}
+              {profile.personalInfo.birthPlace && (
+                <span className="text-gray-500">From {profile.personalInfo.birthPlace}</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Education */}
+      {profile.education?.length > 0 && (
+        <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <GraduationCap className="h-3.5 w-3.5 text-blue-400" />
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {isNe ? 'शिक्षा' : 'Education'}
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {profile.education.map((edu: any, i: number) => (
+              <div key={i} className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-200">{edu.degree}</p>
+                  <p className="text-xs text-gray-500">{edu.institution}{edu.year ? ` · ${edu.year}` : ''}</p>
+                </div>
+                <VerificationBadge status={edu.verified} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Political Career */}
+      {profile.politicalCareer?.length > 0 && (
+        <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Landmark className="h-3.5 w-3.5 text-purple-400" />
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {isNe ? 'राजनीतिक करियर' : 'Political Career'}
+            </h3>
+          </div>
+          <div className="relative pl-4 space-y-3">
+            <div className="absolute left-1.5 top-1 bottom-1 w-px bg-gray-800" />
+            {profile.politicalCareer.map((role: any, i: number) => (
+              <div key={i} className="relative">
+                <div className="absolute -left-4 top-1.5 h-2 w-2 rounded-full bg-gray-700 border border-gray-600" />
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-200">{role.role}</p>
+                    <p className="text-xs text-gray-500">{role.period}</p>
+                    {role.details && <p className="text-xs text-gray-500 mt-0.5">{role.details}</p>}
+                  </div>
+                  <VerificationBadge status={role.verified} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Net Worth */}
+      {profile.estimatedNetWorth?.amount && (
+        <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <DollarSign className="h-3.5 w-3.5 text-amber-400" />
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {isNe ? 'अनुमानित सम्पत्ति' : 'Estimated Net Worth'}
+            </h3>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg font-bold text-amber-400">{profile.estimatedNetWorth.amount}</p>
+              <p className="text-[10px] text-gray-500">
+                Source: {profile.estimatedNetWorth.source || 'Unknown'}
+                {profile.estimatedNetWorth.year ? ` · ${profile.estimatedNetWorth.year}` : ''}
+              </p>
+            </div>
+            <VerificationBadge status={profile.estimatedNetWorth.verified} />
+          </div>
+        </div>
+      )}
+
+      {/* Achievements */}
+      {profile.achievements?.length > 0 && (
+        <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Award className="h-3.5 w-3.5 text-emerald-400" />
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {isNe ? 'उपलब्धिहरू' : 'Notable Achievements'}
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {profile.achievements.map((a: any, i: number) => (
+              <div key={i} className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-300">{a.description}</p>
+                  {a.year && <p className="text-[10px] text-gray-600 mt-0.5">{a.year}</p>}
+                </div>
+                <VerificationBadge status={a.verified} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Controversies */}
+      {profile.controversies?.length > 0 && (
+        <div className="rounded-xl border border-red-500/10 bg-red-500/[0.02] p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertOctagon className="h-3.5 w-3.5 text-red-400" />
+            <h3 className="text-xs font-semibold text-red-400/70 uppercase tracking-wider">
+              {isNe ? 'विवादहरू' : 'Controversies'}
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {profile.controversies.map((c: any, i: number) => (
+              <div key={i} className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-300">{c.description}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {c.year && <span className="text-[10px] text-gray-600">{c.year}</span>}
+                    {c.status && (
+                      <span className={`text-[10px] font-medium ${
+                        c.status === 'ongoing' || c.status === 'under investigation'
+                          ? 'text-amber-400'
+                          : c.status === 'resolved' || c.status === 'acquitted'
+                          ? 'text-emerald-400'
+                          : 'text-gray-500'
+                      }`}>
+                        {c.status}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <VerificationBadge status={c.verified} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

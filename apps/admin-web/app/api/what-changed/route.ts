@@ -39,44 +39,46 @@ export async function GET(request: NextRequest) {
   // 1. Recent intelligence signals (commitment updates)
   const { data: signals } = await db
     .from('intelligence_signals')
-    .select('id, title, source, signal_type, promise_ids, created_at, confidence, url')
-    .gte('created_at', since)
-    .in('relevance', ['high', 'medium'])
-    .order('created_at', { ascending: false })
+    .select('id, title, title_ne, source_id, signal_type, matched_promise_ids, discovered_at, confidence, classification, url, content_summary')
+    .gte('discovered_at', since)
+    .gte('relevance_score', 0.5)
+    .order('discovered_at', { ascending: false })
     .limit(30);
 
   for (const sig of signals || []) {
-    const promiseIds = (sig.promise_ids as string[]) || [];
+    const promiseIds: number[] = (sig.matched_promise_ids as number[]) || [];
     changes.push({
       id: `sig-${sig.id}`,
       feed: 'national',
       type: (sig.signal_type as string) || 'news_update',
       title: (sig.title as string) || 'Signal detected',
-      summary: `${(sig.source as string) || 'Source'}: ${(sig.title as string) || ''}`.slice(0, 200),
+      title_ne: (sig.title_ne as string) || undefined,
+      summary: ((sig.content_summary as string) || (sig.title as string) || '').slice(0, 200),
       source_count: 1,
       confidence: (sig.confidence as number) || undefined,
-      created_at: sig.created_at as string,
+      created_at: sig.discovered_at as string,
       link: promiseIds.length > 0 ? `/explore/first-100-days/${promiseIds[0]}` : undefined,
       affects: promiseIds.length > 0 ? `${promiseIds.length} commitment${promiseIds.length > 1 ? 's' : ''}` : undefined,
     });
   }
 
-  // 2. Promise status changes (from promise_updates or scraped_articles)
+  // 2. Promise status changes (from scraped_articles)
   const { data: recentArticles } = await db
     .from('scraped_articles')
-    .select('id, title, source_name, promise_ids, created_at')
+    .select('id, headline, headline_ne, source_name, promise_ids, created_at')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(20);
 
   for (const article of recentArticles || []) {
-    const promiseIds = (article.promise_ids as string[]) || [];
+    const promiseIds = (article.promise_ids as number[]) || [];
     if (promiseIds.length === 0) continue;
     changes.push({
       id: `art-${article.id}`,
       feed: 'national',
       type: 'news_coverage',
-      title: (article.title as string) || 'News article',
+      title: (article.headline as string) || 'News article',
+      title_ne: (article.headline_ne as string) || undefined,
       summary: `${(article.source_name as string) || 'News'} published coverage affecting ${promiseIds.length} commitment${promiseIds.length > 1 ? 's' : ''}.`,
       source_count: 1,
       created_at: article.created_at as string,
@@ -87,52 +89,55 @@ export async function GET(request: NextRequest) {
 
   // ═══ COMMUNITY FEED ═══
 
-  // 3. New civic issues
-  const { data: newComplaints } = await db
-    .from('civic_complaints')
-    .select('id, title, title_ne, issue_type, municipality, ward_number, status, created_at')
-    .gte('created_at', since)
-    .eq('is_public', true)
-    .order('created_at', { ascending: false })
-    .limit(20);
+  // 3. New civic issues (if table exists)
+  try {
+    const { data: newComplaints } = await db
+      .from('civic_complaints')
+      .select('id, title, title_ne, issue_type, municipality, ward_number, status, created_at')
+      .gte('created_at', since)
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(20);
 
-  for (const c of newComplaints || []) {
-    const isResolved = c.status === 'resolved' || c.status === 'closed';
-    changes.push({
-      id: `comp-${c.id}`,
-      feed: 'community',
-      type: isResolved ? 'issue_resolved' : 'new_issue',
-      title: (c.title as string) || 'Civic issue',
-      title_ne: (c.title_ne as string) || undefined,
-      summary: isResolved
-        ? `Civic issue resolved: ${(c.title as string) || ''}`
-        : `New ${(c.issue_type as string) || ''} issue reported`,
-      where: [c.municipality, c.ward_number ? `Ward ${c.ward_number}` : ''].filter(Boolean).join(', ') || undefined,
-      source_count: 1,
-      created_at: c.created_at as string,
-      link: `/complaints/${c.id}`,
-    });
-  }
+    for (const c of newComplaints || []) {
+      const isResolved = c.status === 'resolved' || c.status === 'closed';
+      changes.push({
+        id: `comp-${c.id}`,
+        feed: 'community',
+        type: isResolved ? 'issue_resolved' : 'new_issue',
+        title: (c.title as string) || 'Civic issue',
+        title_ne: (c.title_ne as string) || undefined,
+        summary: isResolved
+          ? `Civic issue resolved: ${(c.title as string) || ''}`
+          : `New ${(c.issue_type as string) || ''} issue reported`,
+        where: [c.municipality, c.ward_number ? `Ward ${c.ward_number}` : ''].filter(Boolean).join(', ') || undefined,
+        source_count: 1,
+        created_at: c.created_at as string,
+        link: `/complaints/${c.id}`,
+      });
+    }
+  } catch { /* civic_complaints table may not exist yet */ }
 
   // 4. New evidence submissions
   const { data: newEvidence } = await db
     .from('evidence_vault')
-    .select('id, promise_id, source_name, summary, created_at, verification_status')
+    .select('id, promise_ids, source_title, quote_summary, created_at, verification_status')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(15);
 
   for (const ev of newEvidence || []) {
+    const evPromiseIds = (ev.promise_ids as number[]) || [];
     changes.push({
       id: `ev-${ev.id}`,
       feed: 'community',
       type: 'evidence_added',
-      title: `Evidence submitted: ${(ev.source_name as string) || 'source'}`,
-      summary: (ev.summary as string) || 'New evidence added to commitment',
+      title: `Evidence submitted: ${(ev.source_title as string) || 'source'}`,
+      summary: (ev.quote_summary as string) || 'New evidence added to commitment',
       source_count: 1,
       confidence: ev.verification_status === 'verified' ? 0.9 : 0.5,
       created_at: ev.created_at as string,
-      link: ev.promise_id ? `/explore/first-100-days/${ev.promise_id}` : undefined,
+      link: evPromiseIds.length > 0 ? `/explore/first-100-days/${evPromiseIds[0]}` : undefined,
     });
   }
 
@@ -162,22 +167,24 @@ export async function GET(request: NextRequest) {
   // 6. Disputed/contradicted signals
   const { data: disputed } = await db
     .from('intelligence_signals')
-    .select('id, title, source, created_at, promise_ids')
-    .gte('created_at', since)
-    .eq('signal_type', 'contradicts')
-    .order('created_at', { ascending: false })
+    .select('id, title, title_ne, source_id, discovered_at, matched_promise_ids')
+    .gte('discovered_at', since)
+    .eq('classification', 'contradicts')
+    .order('discovered_at', { ascending: false })
     .limit(10);
 
   for (const d of disputed || []) {
+    const dPromiseIds = (d.matched_promise_ids as number[]) || [];
     changes.push({
       id: `disp-${d.id}`,
       feed: 'integrity',
       type: 'contradiction_flag',
       title: `AI contradiction flag: ${(d.title as string) || 'signal'}`,
-      summary: `Evidence from ${(d.source as string) || 'source'} contradicts existing claims`,
+      title_ne: (d.title_ne as string) || undefined,
+      summary: `Evidence from ${(d.source_id as string) || 'source'} contradicts existing claims`,
       source_count: 1,
-      created_at: d.created_at as string,
-      link: (d.promise_ids as string[])?.length > 0 ? `/explore/first-100-days/${(d.promise_ids as string[])[0]}` : undefined,
+      created_at: d.discovered_at as string,
+      link: dPromiseIds.length > 0 ? `/explore/first-100-days/${dPromiseIds[0]}` : undefined,
     });
   }
 

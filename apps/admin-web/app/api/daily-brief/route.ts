@@ -29,13 +29,14 @@ export async function GET(request: Request) {
   const date = searchParams.get('date') || undefined;
 
   try {
-    // Try cached brief first
+    // Try cached brief first (includes quality fallback to most recent good brief)
     let brief = await withTimeout(getDailyBrief(date), 5000, null);
 
     if (!brief) {
-      // No cached brief — generate on the fly (only for today)
+      // No brief at all — only generate on the fly for today, and only via explicit POST
+      // GET should not auto-generate to avoid creating garbage briefs
       if (!date || date === new Date().toISOString().slice(0, 10)) {
-        brief = await withTimeout(generateDailyBrief(), 60000, null);
+        // Return 404 — use POST /api/daily-brief to force regeneration
       }
     }
 

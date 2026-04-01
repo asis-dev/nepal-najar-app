@@ -19,13 +19,13 @@ export function commitmentShareText(opts: {
   if (locale === 'ne') {
     if (status === 'stalled') return `⚠️ "${short}" — ${progress}% मा रोकिएको। ${BRAND} मा हेर्नुहोस्`;
     if (status === 'delivered') return `✅ "${short}" — पूरा भयो! ${BRAND} मा प्रमाणित`;
-    return `📊 "${short}" — ${progress}% प्रगति। ${BRAND} मा ट्र्याक गर्नुहोस्`;
+    return `📊 "${short}" — ${progress}% प्रगति। ${BRAND} मा हेर्नुहोस्`;
   }
 
-  if (status === 'stalled') return `⚠️ "${short}" is stuck at ${progress}%. Verified on ${BRAND}`;
+  if (status === 'stalled') return `⚠️ "${short}" is stuck at ${progress}%. Verified by AI on ${BRAND}`;
   if (status === 'delivered') return `✅ "${short}" — delivered. Verified on ${BRAND}`;
-  if (progress >= 70) return `📊 "${short}" is ${progress}% done. Track it on ${BRAND}`;
-  return `📊 "${short}" — ${progress}% progress. Track it on ${BRAND}`;
+  if (progress >= 70) return `📊 "${short}" is ${progress}% done. See the evidence on ${BRAND}`;
+  return `📊 "${short}" — ${progress}% progress. See the evidence on ${BRAND}`;
 }
 
 /** Generate share text for the overall scorecard/home */
@@ -40,12 +40,12 @@ export function scorecardShareText(opts: {
   if (locale === 'ne') {
     return grade
       ? `नेपाल सरकारको ग्रेड: ${grade} (${score}/100)। AI ले ८०+ स्रोत स्क्यान गरेर प्रमाणित। ${SITE}`
-      : `दिन ${dayInTerm}: AI ले १०९ सरकारी वचनबद्धता ट्र्याक गर्दैछ। ${SITE}`;
+      : `दिन ${dayInTerm}: AI ले १०९ सरकारी वचनबद्धता अनुगमन गर्दैछ। ${SITE}`;
   }
 
   return grade
     ? `Nepal's government scored ${grade} (${score}/100) — verified by AI across 80+ sources. ${SITE}`
-    : `Day ${dayInTerm}: AI is tracking 109 government commitments. See what's happening → ${SITE}`;
+    : `Day ${dayInTerm}: AI is monitoring 109 government commitments. See who delivers and who fails → ${SITE}`;
 }
 
 /** Generate share text for report card */
@@ -68,9 +68,9 @@ export function dailyBriefShareText(opts: { date: string; locale?: string }): st
 export function corruptionShareText(opts: { title: string; locale?: string }): string {
   const short = opts.title.length > 50 ? opts.title.slice(0, 47) + '...' : opts.title;
   if (opts.locale === 'ne') {
-    return `🔍 "${short}" — ${BRAND} मा भ्रष्टाचार ट्र्याक गर्नुहोस्`;
+    return `🔍 "${short}" — ${BRAND} मा भ्रष्टाचार अनुसन्धान हेर्नुहोस्`;
   }
-  return `🔍 "${short}" — tracked on ${BRAND}`;
+  return `🔍 "${short}" — Follow the money on ${BRAND}`;
 }
 
 /** Generate share text for civic complaint */
@@ -78,7 +78,7 @@ export function complaintShareText(opts: { locale?: string }): string {
   if (opts.locale === 'ne') {
     return `नागरिक समस्या रिपोर्ट गर्नुहोस् — ${BRAND} मा। ${SITE}`;
   }
-  return `Report civic issues and track resolution — ${BRAND}. ${SITE}`;
+  return `Report civic issues — AI monitors resolution. ${BRAND}. ${SITE}`;
 }
 
 /** Generate OG image URL with params */

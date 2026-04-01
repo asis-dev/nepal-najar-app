@@ -5,6 +5,20 @@ import { PROMISES_KNOWLEDGE } from '@/lib/intelligence/knowledge-base';
 export const dynamic = 'force-dynamic';
 export const revalidate = 300;
 
+/** Build name variants for fuzzy matching (first name, last name, full name, Nepali name) */
+function nameVariants(name: string, nameNe?: string | null): string[] {
+  const parts = name.toLowerCase().trim().split(/\s+/);
+  const variants = [name.toLowerCase().trim()];
+  // Last name alone (if 2+ parts)
+  if (parts.length >= 2) variants.push(parts[parts.length - 1]);
+  // Handle parenthetical aliases like "Balendra Shah (Balen)"
+  const aliasMatch = name.match(/\(([^)]+)\)/);
+  if (aliasMatch) variants.push(aliasMatch[1].toLowerCase().trim());
+  // Nepali name
+  if (nameNe) variants.push(nameNe.trim());
+  return variants;
+}
+
 export async function GET(req: NextRequest) {
   const days = Number(req.nextUrl.searchParams.get('days') || '7');
   const supabase = getSupabase();
@@ -13,49 +27,63 @@ export async function GET(req: NextRequest) {
   // 1. Fetch current ministers from roster
   const { data: roster } = await supabase
     .from('government_roster')
-    .select('name, name_ne, title, title_ne, ministry, ministry_slug, appointed_date, confidence')
+    .select('name, name_ne, title, title_ne, ministry, ministry_slug, appointed_date, confidence, metadata')
     .eq('is_current', true)
     .order('ministry_slug');
 
-  // 2. Fetch recent signals with extracted_data
+  // 2. Fetch recent signals
   const { data: signals } = await supabase
     .from('intelligence_signals')
-    .select('id, title, title_ne, url, source_id, signal_type, discovered_at, matched_promise_ids, classification, extracted_data')
+    .select('id, title, title_ne, content_summary, url, source_id, signal_type, discovered_at, matched_promise_ids, classification, extracted_data')
     .gte('discovered_at', cutoff)
     .gte('relevance_score', 0.2)
     .order('discovered_at', { ascending: false })
-    .limit(2000);
+    .limit(3000);
 
   const ministers = (roster || []).map(minister => {
-    // Match signals where extracted_data.officials mentions this minister
-    const nameKey = minister.name.toLowerCase().trim();
-    const matchedSignals = (signals || []).filter(s => {
-      const data = s.extracted_data;
-      if (!data) return false;
-      const officials = data.officials as Array<{ name: string }> | undefined;
-      if (!Array.isArray(officials)) return false;
-      return officials.some(o => o.name && o.name.toLowerCase().trim() === nameKey);
-    });
+    const variants = nameVariants(minister.name, minister.name_ne);
 
-    // Also match signals on commitments this minister owns (via knowledge base keyOfficials matching title)
+    // Method 1: Structured extracted_data.officials match
+    const officialMatched = new Set<string>();
+    for (const s of signals || []) {
+      const officials = s.extracted_data?.officials;
+      if (!Array.isArray(officials)) continue;
+      if (officials.some((o: any) => {
+        const n = typeof o === 'string' ? o : o?.name;
+        return n && variants.some(v => n.toLowerCase().trim().includes(v));
+      })) {
+        officialMatched.add(s.id);
+      }
+    }
+
+    // Method 2: Title/content text search for minister name
+    const textMatched = new Set<string>();
+    for (const s of signals || []) {
+      if (officialMatched.has(s.id)) continue; // already matched
+      const haystack = [s.title, s.title_ne, s.content_summary].filter(Boolean).join(' ').toLowerCase();
+      if (variants.some(v => v.length >= 4 && haystack.includes(v))) {
+        textMatched.add(s.id);
+      }
+    }
+
+    // Method 3: Commitment ownership match (via knowledge base keyOfficials)
     const ownedCommitmentIds = PROMISES_KNOWLEDGE
       .filter(k => k.keyOfficials.some(o => o.toLowerCase() === minister.title?.toLowerCase()))
       .map(k => k.id);
 
-    const commitmentSignals = ownedCommitmentIds.length > 0
-      ? (signals || []).filter(s => {
-          const matched = s.matched_promise_ids;
-          if (!Array.isArray(matched)) return false;
-          return matched.some((id: number) => ownedCommitmentIds.includes(id));
-        })
-      : [];
+    const commitmentMatched = new Set<string>();
+    if (ownedCommitmentIds.length > 0) {
+      for (const s of signals || []) {
+        if (officialMatched.has(s.id) || textMatched.has(s.id)) continue;
+        const matched = s.matched_promise_ids;
+        if (Array.isArray(matched) && matched.some((id: number) => ownedCommitmentIds.includes(id))) {
+          commitmentMatched.add(s.id);
+        }
+      }
+    }
 
-    // Merge and deduplicate signals
-    const allSignalIds = new Set([
-      ...matchedSignals.map(s => s.id),
-      ...commitmentSignals.map(s => s.id),
-    ]);
-
+    // Merge all matched signals
+    const allSignalIds = new Set([...officialMatched, ...textMatched, ...commitmentMatched]);
     const allSignals = (signals || []).filter(s => allSignalIds.has(s.id));
 
     // Count classifications
@@ -73,7 +101,6 @@ export async function GET(req: NextRequest) {
       type: s.signal_type,
     }));
 
-    // Generate slug from name
     const slug = minister.name
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
@@ -92,13 +119,14 @@ export async function GET(req: NextRequest) {
       confidence: minister.confidence,
       weeklyActivity: {
         totalSignals: allSignals.length,
-        directMentions: matchedSignals.length,
-        commitmentSignals: commitmentSignals.length,
+        directMentions: officialMatched.size + textMatched.size,
+        commitmentSignals: commitmentMatched.size,
         confirming,
         contradicting,
         topSignals,
       },
       ownedCommitmentIds,
+      profile: minister.metadata?.profile ?? null,
     };
   });
 

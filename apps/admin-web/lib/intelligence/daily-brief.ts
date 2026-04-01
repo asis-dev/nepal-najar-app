@@ -132,6 +132,8 @@ const STOP_WORDS = new Set([
   'does', 'appear', 'related', 'promotional', 'message', 'viewers',
   'subscribe', 'channel', 'youtube', 'website', 'latest', 'news',
   'statement', 'classification', 'signal', 'source', 'reports',
+  'numbers', 'involves', 'relates', 'specify', 'details', 'mentioned',
+  'balen', 'shah', 'prime', 'minister', 'appointment', 'appointed',
   // Nepali stop words
   'को', 'मा', 'ले', 'र', 'छ', 'छन्', 'गरेको', 'भएको', 'हुने',
   'गरेका', 'गर्ने', 'भने', 'यो', 'यस', 'छैन', 'पनि', 'तथा',
@@ -837,6 +839,117 @@ function salvageAIResponse(raw: string): AIBriefResponse | null {
   return null;
 }
 
+// ── Signal quality filters ───────────────────────────────────────────────────
+
+const JUNK_PHRASES = [
+  'does not contain any information',
+  'does not provide specific information',
+  'appears to be a promotional message',
+  'encouraging viewers to subscribe',
+  'not contain any',
+  'no specific information',
+  'like, comment, and share',
+  'like comment and share',
+  'लाइक कमेन्ट र सेयर',
+  'लाइक कमेन्ट गर्नुहोस',
+  'does not specify',
+  'no concrete information',
+  'urging people to like',
+  'encourages support',
+];
+
+// YouTube engagement-bait title patterns — these are never real news
+const SPAM_TITLE_PATTERNS = [
+  /लाइक\s*कमेन्ट\s*र?\s*सेयर/i,
+  /#reels\s*#balen/i,
+  /सबैले\s*लाइक/i,
+  /हेर्न\s*चाहने\s*सबैले/i,
+  /#shorts\s.*#viral/i,
+  /like\s*comment\s*(and|&)\s*share/i,
+  /subscribe.*bell.*icon/i,
+  /छोरीलाई\s*काखमा/i,
+  /#FatherDaughter/i,
+  /#FamilyLove/i,
+];
+
+function isJunkSummary(s: string): boolean {
+  return JUNK_PHRASES.some((p) => s.toLowerCase().includes(p));
+}
+
+function isSpamTitle(title: string): boolean {
+  return SPAM_TITLE_PATTERNS.some((p) => p.test(title));
+}
+
+/** Filter out junk/spam signals — used globally before any processing */
+function filterSpamSignals(signals: RawSignal[]): RawSignal[] {
+  return signals.filter((s) => {
+    const summary = s.content_summary || '';
+    const title = s.title || '';
+    if (isJunkSummary(summary)) return false;
+    if (isSpamTitle(title)) return false;
+    if (isJunkSummary(title)) return false;
+    return true;
+  });
+}
+
+// ── Editorial priority — boost important signals, demote petty ones ─────────
+
+/** Patterns that indicate LOW editorial value — these get demoted in scoring */
+const LOW_VALUE_PATTERNS = [
+  /exchange\s*rate|विनिमय\s*दर|विदेशी\s*मुद्रा/i,          // routine forex
+  /samsung|सामसङ|apple|xiaomi|vivo|oppo/i,                   // product ads
+  /EMI|installment|discount|offer|अफर/i,                     // promotions
+  /जन्मजयन्ती|birth\s*anniversary|festival|पर्व|चाड/i,      // cultural/religious
+  /cricket|football|sports|खेल|क्रिकेट/i,                    // sports (unless policy)
+  /horoscope|rashifal|राशिफल/i,                              // astrology
+  /weather|forecast|मौसम|वर्षा.*हिमपात|हिमपात.*वर्षा|मौसम\s*पूर्वानुमान/i, // weather reports
+  /entertainment|bollywood|hollywood|glamour/i,                // entertainment
+  /net\s*worth|networth|luxury\s*car|bank\s*balance|fortune/i, // celebrity wealth clickbait
+  /storytelling|why\s*it\s*matters.*health/i,                  // generic health think-pieces
+  /Thalapathy|Vijay|Tamil|Tollywood|Kollywood/i,              // Indian entertainment
+  /Stay connected|Kendrabindu|Pvt\.\s*Ltd/i,                  // media house boilerplate
+  /dialogue\s*for\s*results/i,                                 // generic titles
+];
+
+/** Patterns that indicate HIGH editorial value — these get boosted */
+const HIGH_VALUE_PATTERNS = [
+  // Power & money
+  /corruption|भ्रष्टाचार|embezzlement|हिनामिना|ठगी|fraud/i,
+  /investigation|अनुसन्धान|CIB|CIAA|अख्तियार/i,
+  /arrest|गिरफ्तार|पक्राउ|custody|हिरासत/i,
+  /court|अदालत|verdict|फैसला|prosecution|मुद्दा/i,
+  /law|कानुन|bill|विधेयक|amendment|संशोधन/i,
+  /budget|बजेट|procurement|खरिद|spending|खर्च/i,
+  /reform|सुधार|policy|नीति|cabinet|मन्त्रिपरिषद/i,
+  /asset\s*(probe|investigation|scrutiny)|सम्पत्ति\s*जाँच|under\s*scrutiny/i,
+  /stalled|रोकिएको|delayed|ढिला|cancelled|रद्द/i,
+  /protest|विरोध|strike|हड्ताल|demonstration|आन्दोलन/i,
+  // Accountability & justice
+  /money\s*launder|काला\s*धन|travel\s*ban|प्रतिबन्ध/i,
+  /discriminat|भेदभाव|unconstitutional|असंवैधानिक|scraps?\s*provision/i,
+  /deploy\s*lawmaker|सांसद\s*परिचालन|ruling\s*party|सत्तारूढ/i,
+  // People's daily life
+  /highway.*closed|राजमार्ग.*बन्द|road.*closed|सडक.*बन्द|indefinite/i,
+  /digital\s*governance|e-governance|nagarik\s*app|QR|gate\s*pass|डिजिटल\s*शासन/i,
+  /province.*land|प्रदेश.*भवन|administrative\s*complex|प्रशासनिक\s*भवन/i,
+  /fuel\s*price|इन्धन.*मूल्य|हवाई\s*इन्धन|airfare|हवाई\s*भाडा/i,
+  /rescue|उद्धार|scam|ठगी|trafficking|ओसारपसार/i,
+];
+
+function editorialPriorityScore(signal: RawSignal): number {
+  const text = `${signal.title || ''} ${signal.content_summary || ''}`;
+  let boost = 0;
+  // High-value content gets a big boost
+  for (const p of HIGH_VALUE_PATTERNS) {
+    if (p.test(text)) { boost += 15; break; } // max one boost
+  }
+  // Low-value content gets demoted
+  for (const p of LOW_VALUE_PATTERNS) {
+    if (p.test(text)) { boost -= 30; break; } // effectively pushed out of top 25
+  }
+  return boost;
+}
+
 // ── Core: AI summarization ───────────────────────────────────────────────────
 
 async function generateAISummary(
@@ -846,24 +959,13 @@ async function generateAISummary(
   windowUsed: TimeWindowUsed = '24h',
 ): Promise<AIBriefResponse | null> {
   // Build context — strip all internal IDs, scores, and jargon so AI never sees them
-  // Filter out signals with junk AI summaries (these poison the brief)
-  const JUNK_PHRASES = [
-    'does not contain any information',
-    'does not provide specific information',
-    'appears to be a promotional message',
-    'encouraging viewers to subscribe',
-    'not contain any',
-    'no specific information',
-  ];
-  const isJunkSummary = (s: string) => JUNK_PHRASES.some((p) => s.toLowerCase().includes(p));
-
-  const usableSignals = signals.filter((s) => {
-    const summary = s.content_summary || '';
-    return !isJunkSummary(summary);
-  });
+  // Signals are already pre-filtered for spam at the top level
+  const usableSignals = signals;
 
   // Score signals for AI context: prefer fresh, RSS, with real summaries
   const now = Date.now();
+  const STALE_CUTOFF_MS = 36 * 60 * 60 * 1000; // 36 hours — anything older is stale for summary purposes
+
   const scoredSignals = (usableSignals.length > 0 ? usableSignals : signals).map((s) => {
     let score = 0;
     // Freshness: published_at within 24h gets max points
@@ -873,10 +975,11 @@ async function generateAISummary(
     const hoursOld = (now - effectiveDate) / (1000 * 60 * 60);
     if (hoursOld < 12) score += 50;
     else if (hoursOld < 24) score += 40;
-    else if (hoursOld < 48) score += 20;
-    else score += 5; // old news gets minimal score
-    // Source quality: RSS has better text, YouTube has broader reach — both matter
+    else if (hoursOld < 36) score += 15;
+    else score += 0; // old news gets ZERO score — effectively excluded from top 25
+    // Source quality: RSS has better text, YouTube channels are ok, YouTube search results are low quality
     if (s.source_id.startsWith('rss-')) score += 25;
+    else if (s.source_id.startsWith('yt-search-')) score += 5; // search results are often spam/engagement-bait
     else if (s.source_id.startsWith('yt-')) score += 15;
     else score += 20;
     // Has real content summary (not junk)
@@ -885,12 +988,23 @@ async function generateAISummary(
     if (s.published_at) score += 10;
     // Relevance score
     score += (s.relevance_score || 0) * 10;
+    // Editorial priority: boost corruption/law/reform, demote forex/ads/festivals
+    score += editorialPriorityScore(s);
     return { signal: s, score };
   });
 
-  // Sort by score descending, take top 25 for AI context
+  // Sort by score descending, take top 40 for AI context (was 25 — too few, important stories got cut)
+  // CRITICAL: exclude signals older than 36h from AI context to prevent stale news in summaries
   scoredSignals.sort((a, b) => b.score - a.score);
-  const topSignals = scoredSignals.slice(0, 25).map((s) => s.signal);
+  const freshScoredSignals = scoredSignals.filter((s) => {
+    const pubDate = s.signal.published_at ? new Date(s.signal.published_at).getTime() : 0;
+    const discDate = new Date(s.signal.discovered_at).getTime();
+    const effectiveDate = pubDate || discDate;
+    return (now - effectiveDate) < STALE_CUTOFF_MS;
+  });
+  // Fall back to all signals only if we have NO fresh signals at all
+  const candidateSignals = freshScoredSignals.length >= 3 ? freshScoredSignals : scoredSignals;
+  const topSignals = candidateSignals.slice(0, 40).map((s) => s.signal);
 
   const signalContext = topSignals.map((s, i) => {
     const title = s.title_ne || s.title;
@@ -915,52 +1029,76 @@ async function generateAISummary(
 
   const timeLabel = windowUsed === '24h' ? 'last 24 hours' : windowUsed === '48h' ? 'last 48 hours' : windowUsed === '72h' ? 'last 72 hours' : 'most recent available';
   const todayStr = todayDateString(); // e.g. "2026-03-31"
-  const systemPrompt = `You write a 2-minute Nepali daily news brief for ${todayStr}. It will be READ ALOUD on air by a news anchor.
+  const systemPrompt = `You are the lead editor of Nepal Republic (nepalrepublic.org), Nepal's #1 civic accountability platform.
+You produce a 2-minute daily news brief for ${todayStr}. It will be READ ALOUD on air and also shown as text on the app.
 
-Your job: take raw news data and turn it into a brief that a regular Nepali person finds useful and easy to follow. Connect the dots — explain WHY each thing matters to people's daily lives.
+YOUR EDITORIAL JUDGMENT is what makes this brief valuable. You must RANK and FILTER — not just list everything.
 
-CRITICAL — FRESHNESS:
+═══ EDITORIAL PRIORITY (this is the most important part) ═══
+Pick 10-12 bullets covering DIFFERENT topics. Rank by this priority:
+
+1. POWER & MONEY (always lead with these):
+   - New laws, policy changes, budget decisions, reform announcements
+   - Corruption cases, arrests, investigations, court verdicts
+   - Government contracts, procurement, spending
+   - Cabinet decisions, ministerial orders
+
+2. ACCOUNTABILITY & JUSTICE:
+   - Who got caught? Who is being investigated?
+   - Court cases involving politicians or officials
+   - CIAA, CIB, police action against powerful people
+   - Broken promises, failures, stalled projects
+
+3. PEOPLE'S DAILY LIFE:
+   - Price changes (fuel, food, rent)
+   - Infrastructure (roads, bridges, electricity, water)
+   - Health, education, employment
+   - Natural disasters, emergencies
+
+SKIP THESE (they are NOT news):
+   ❌ Foreign exchange rates (routine daily data, not news)
+   ❌ Religious festivals, cultural events (unless politically significant)
+   ❌ Product launches, company promotions, Samsung offers, etc.
+   ❌ Sports results (unless national team / policy-related)
+   ❌ YouTube spam, social media drama, celebrity gossip
+   ❌ Old news rehashed — if it happened 3+ days ago, SKIP IT
+   ❌ Vague statements like "PM emphasized development" (give SPECIFICS or skip)
+
+═══ FRESHNESS ═══
 - Today is ${todayStr}. ONLY include developments from TODAY or yesterday.
-- If something happened 3+ days ago (like someone becoming PM, cabinet formation, etc.), it is OLD NEWS. Do NOT include it unless there is a NEW development about it today.
-- "Balen became PM" is NOT news if it happened days ago. "Balen's first cabinet meeting decided X" IS news if it happened today.
-- Focus on: What CHANGED today? What NEW decision was made? What NEW statement was given? What NEW event happened?
-- If a news report is clearly about an old event re-shared on YouTube, SKIP IT.
+- "Balen became PM" is OLD. "Balen announced 11 new laws today" is NEW.
+- If a report is clearly about an old event re-shared, SKIP IT.
 
-RULES:
-- Write in simple everyday Nepali — a taxi driver or shopkeeper should understand every word
-- NO English words, NO acronyms (say ठगी not MBBS fraud, say अर्थतन्त्र not GDP)
-- NO fancy/textbook words like पारदर्शिता, विश्वसनीयता, लोकतान्त्रिक प्रक्रिया, प्रतिबद्धता
-- NO numbers, NO IDs, NO technical labels
-- Short sentences. Like talking to a friend over tea
-- 6-8 bullets covering DIFFERENT topics. No repeating the same story
-- Each bullet: what happened TODAY + why it matters to ordinary people (1-2 simple sentences)
-- 180-220 Nepali words total. Fill the 2 minutes with real substance
-- Name the person and what they did — then say what it means for us
+═══ WRITING STYLE ═══
+- Simple everyday Nepali — a taxi driver or shopkeeper should understand
+- NO English words, NO acronyms (say ठगी not fraud, say अर्थतन्त्र not GDP)
+- NO fancy words like पारदर्शिता, विश्वसनीयता, प्रतिबद्धता
+- Short punchy sentences. Like talking to a friend over tea.
+- Name the person → what they DID (specific action) → why it matters to us
+- Each bullet: 1-2 sentences max, clear and concrete
+- 180-220 Nepali words total
 
-GOOD examples:
-  "स्वर्णिमले आज बजेट कटौती गर्ने भने। हाम्रो बाटो र अस्पतालमा असर पर्छ।"
-  "सुदन गुरुङले घुस लिनेलाई छाड्दिन भने। भ्रष्टाचारमा कडाइ हुने देखिन्छ।"
-  "पोखरामा आज विरोध भयो। सडक अवरुद्ध छ।"
-BAD examples (old news rehashed):
-  "बालेन प्रधानमन्त्री भए।" (days old — skip unless NEW angle)
-  "राष्ट्रिय स्वतन्त्र पार्टीले सरकार बनायो।" (old — everyone knows this)
-
-NAME RULES:
-- Famous people: first name only (बालेन, not बालेन शाह)
-- Less known people: full name (सुदन गुरुङ, दीपक शाह)
-- "भए" is enough — don't say "शपथ ग्रहण गरेपछि पद सम्हाले"
+═══ GOOD vs BAD ═══
+GOOD: "बालेनले ३० दिनभित्र खरिद ऐन संशोधन गर्ने भने। ठेक्कामा हुने ठगी कम हुन सक्छ।"
+GOOD: "ओलीलाई ५ दिन हिरासतमा राख्न अदालतले दियो। फौजदारी मुद्दामा अनुसन्धान हुँदैछ।"
+GOOD: "११,५०० जना अधिकारीको सम्पत्ति जाँच सुरु। सन् १९९१ देखिको सम्पत्ति हेरिने।"
+BAD: "नेपालले विदेशी मुद्रा दर तोक्यो।" (routine, SKIP)
+BAD: "सामसङले नयाँ अफर ल्यायो।" (ad, SKIP)
+BAD: "महावीर जैनको जन्मजयन्ती मनाइयो।" (cultural, SKIP unless political)
+BAD: "प्रधानमन्त्रीले विकासमा जोड दिए।" (vague, give WHAT specifically)
 
 Respond in JSON:
 {
-  "summaryBullets": ["Simple short Nepali sentence", "Another simple sentence", ...],
-  "summaryBulletsEn": ["Same bullet in plain English", "Another bullet in English", ...],
+  "summaryBullets": ["Simple short Nepali sentence about a MAJOR development", ...],
+  "summaryBulletsEn": ["Same bullet in plain English", ...],
   "topStories": [
     {
-      "title": "Short Nepali headline (4-6 words)",
-      "titleEn": "Same headline in English",
-      "titleNe": "Same as title",
-      "summary": "One simple Nepali sentence about what it means for people",
-      "summaryEn": "Same sentence in English",
+      "title": "Short English headline (6-10 words, specific)",
+      "titleEn": "Same as title",
+      "titleNe": "Same headline in Nepali",
+      "summary": "2-3 sentence English summary explaining what happened and why it matters",
+      "summaryEn": "Same as summary",
+      "summaryNe": "Same summary in Nepali",
       "sentiment": "positive|negative|neutral|mixed",
       "signalIds": []
     }
@@ -974,9 +1112,14 @@ Respond in JSON:
   ]
 }`;
 
-  const userPrompt = `Write today's (${todayStr}) government brief from these ${timeLabel} news reports.
+  const userPrompt = `Write today's (${todayStr}) government accountability brief from these ${timeLabel} news reports.
 
-IMPORTANT: Only summarize things that happened TODAY or yesterday. Skip anything older — your audience already knows about it.
+EDITORIAL FILTER — before writing, mentally sort reports into:
+🔴 MUST INCLUDE: corruption cases, new laws, policy changes, arrests, court cases, reform actions, budget/spending
+🟡 MAYBE: infrastructure, health, education IF concrete (not vague "PM emphasized")
+⚪ SKIP: exchange rates, product offers, religious festivals, YouTube spam, vague statements, old news
+
+Only pick from 🔴 and 🟡. If you include a 🟡, it must have a SPECIFIC fact (what, who, how much, when).
 
 NEWS REPORTS (sorted by freshness and quality):
 ${signalContext}
@@ -987,8 +1130,8 @@ ${commitmentContext || 'No notable government activity.'}
 TOPICS COVERED BY MULTIPLE OUTLETS:
 ${topicContext || 'No trending topics.'}
 
-Total reports in period: ${signals.length}
-Remember: Focus on what is NEW today, not what everyone already heard about days ago.`;
+Total reports: ${signals.length}
+Remember: You are an EDITOR, not a stenographer. Cut the noise. Lead with what matters.`;
 
   try {
     const response = await aiComplete('summarize', systemPrompt, userPrompt);
@@ -1139,7 +1282,10 @@ function computeStoryImportance(
 // ── Main: generate daily brief ───────────────────────────────────────────────
 
 export async function generateDailyBrief(): Promise<DailyBrief> {
-  const { signals, windowUsed } = await fetchRecentSignals();
+  const { signals: rawSignals, windowUsed } = await fetchRecentSignals();
+  // Filter out spam/junk BEFORE any grouping — this ensures topStories fallback is clean too
+  const signals = filterSpamSignals(rawSignals);
+  console.log(`[DailyBrief] Spam filter: ${rawSignals.length} → ${signals.length} clean signals`);
   const commitmentGroups = groupByCommitment(signals);
   const topicGroups = groupByTopic(signals);
   const stats = computeStats(signals);
@@ -1287,31 +1433,65 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
       });
     }
   } else {
-    // Fallback: build from topic groups
-    for (const group of topicGroups.slice(0, 8)) {
-      const topSignal = group.signals[0];
-      const hasContradiction = group.signals.some((s) => s.classification === 'contradicts');
+    // Fallback: build from best unique signals — prefer RSS with real summaries
+    // Score each signal for story quality
+    const storySignals = [...signals]
+      .filter(s => {
+        // Must have a real title (not junk)
+        const title = s.title || '';
+        return title.length > 15 && !/^(The article|This article|No specific)/i.test(title);
+      })
+      .sort((a, b) => {
+        // Prefer RSS over YouTube
+        const aRSS = a.source_id.startsWith('rss-') ? 3 : a.source_id.startsWith('yt-search-') ? 0 : 1;
+        const bRSS = b.source_id.startsWith('rss-') ? 3 : b.source_id.startsWith('yt-search-') ? 0 : 1;
+        if (aRSS !== bRSS) return bRSS - aRSS;
+        // Prefer signals with real content summaries
+        const aLen = (a.content_summary || '').length;
+        const bLen = (b.content_summary || '').length;
+        return bLen - aLen;
+      });
+
+    // Pick unique stories (different titles)
+    const usedTitlePrefixes = new Set<string>();
+    for (const s of storySignals) {
+      if (topStories.length >= 8) break;
+      const titleKey = (s.title || '').toLowerCase().slice(0, 40);
+      if (usedTitlePrefixes.has(titleKey)) continue;
+      usedTitlePrefixes.add(titleKey);
+
+      const commitments = new Set<number>(s.matched_promise_ids || []);
       topStories.push({
-        title: group.topic,
-        summary: topSignal?.title || topSignal?.content_summary || '',
-        summaryNe: topSignal?.title_ne || topSignal?.content_summary || '',
-        signalCount: group.signals.length,
-        sources: [...group.sources],
-        relatedCommitments: [...group.relatedCommitments],
+        title: s.title || '',
+        titleNe: s.title_ne || undefined,
+        summary: s.content_summary || s.title || '',
+        summaryNe: s.title_ne || s.content_summary || '',
+        signalCount: 1,
+        sources: [s.source_id],
+        relatedCommitments: [...commitments],
         sentiment: 'neutral',
-        importance: computeStoryImportance(
-          group.signals.length,
-          group.sources.size,
-          group.relatedCommitments.size,
-          'neutral',
-          hasContradiction,
-        ),
+        importance: commitments.size > 0 ? 60 : 40,
       });
     }
   }
 
   // Sort by importance — most important first
   topStories.sort((a, b) => b.importance - a.importance);
+
+  // Deduplicate stories with same title and filter out international non-Nepal news
+  const INTL_KEYWORDS = /\b(israel|palestinian|trump|iran|us army|pentagon|middle east|ukraine|russia|china trade|european union|india is|india has|indian government|modi|pakistan|bangladesh|sri lanka)\b/i;
+  const seenTitles = new Set<string>();
+  const dedupedStories = topStories.filter((s) => {
+    const normalizedTitle = (s.title || '').trim().toLowerCase().slice(0, 60);
+    if (seenTitles.has(normalizedTitle)) return false;
+    seenTitles.add(normalizedTitle);
+    // Skip international news not related to Nepal
+    const fullText = `${s.title} ${s.summary}`;
+    if (INTL_KEYWORDS.test(fullText) && !/nepal/i.test(fullText)) return false;
+    return true;
+  });
+  topStories.length = 0;
+  topStories.push(...dedupedStories);
 
   // Build commitmentsMoved
   const commitmentsMoved: DailyBrief['commitmentsMoved'] = [];
@@ -1385,21 +1565,26 @@ async function storeDailyBrief(brief: DailyBrief): Promise<void> {
       .eq('date', brief.date)
       .single();
 
-    // ── Quality gate: never replace a good brief with a worse one ────────
+    // ── Quality gate: block garbage briefs from overwriting good ones ────────
     if (existing) {
-      const oldTopStories = Array.isArray(existing.top_stories) ? existing.top_stories.length : 0;
-      const newTopStories = brief.topStories?.length ?? 0;
-      const oldHasSummary = existing.summary_en && existing.summary_en.length > 50;
-      const newHasSummary = brief.summaryEn && brief.summaryEn.length > 50;
+      const existingSummaryLen = (existing.summary_en || '').length;
+      const newSummaryLen = (brief.summaryEn || '').length;
+      const newHasStories = (brief.topStories?.length ?? 0) > 0;
 
-      // If old brief had real content but new one is basically empty, keep the old one
-      if (oldHasSummary && !newHasSummary && oldTopStories > 0 && newTopStories === 0) {
-        console.warn('[DailyBrief] Quality gate: new brief is worse than existing. Keeping old brief.');
+      // Detect garbage: generic "Our sources were scanned" or very short summaries
+      const isGarbage = newSummaryLen < 200 ||
+        /sources were scanned/i.test(brief.summaryEn || '') ||
+        /Key areas: \w+\.$/i.test(brief.summaryEn || '');
+
+      // Block if new brief is garbage and existing one is better
+      if (isGarbage && existingSummaryLen > newSummaryLen) {
+        console.warn(`[DailyBrief] Quality gate: new brief looks like garbage (${newSummaryLen} chars). Keeping existing (${existingSummaryLen} chars).`);
         return;
       }
-      // If old brief had multiple stories but new brief has none, keep old
-      if (oldTopStories >= 3 && newTopStories === 0) {
-        console.warn('[DailyBrief] Quality gate: new brief has 0 top stories vs existing', oldTopStories, '. Keeping old brief.');
+
+      // Also block if new brief is completely empty
+      if (newSummaryLen < 20 && !newHasStories) {
+        console.warn('[DailyBrief] Quality gate: new brief has no content at all. Keeping old brief.');
         return;
       }
     }
@@ -1449,31 +1634,54 @@ export async function getDailyBrief(date?: string): Promise<DailyBrief | null> {
   const targetDate = date || todayDateString();
 
   try {
+    // Try exact date first
     const { data, error } = await supabase
       .from('daily_briefs')
       .select('*')
       .eq('date', targetDate)
       .single();
 
-    if (error || !data) return null;
+    // If found, check quality — reject garbage briefs (< 200 chars summary)
+    if (!error && data && (data.summary_en || '').length >= 200) {
+      return mapBriefRow(data);
+    }
 
-    return {
-      date: data.date,
-      pulse: data.pulse,
-      pulseLabel: data.pulse_label,
-      summaryEn: data.summary_en,
-      summaryNe: data.summary_ne,
-      topStories: data.top_stories || [],
-      commitmentsMoved: data.commitments_moved || [],
-      stats: data.stats || { totalSignals24h: 0, newSignals: 0, sourcesActive: 0, topSource: '' },
-      generatedAt: data.generated_at,
-      audioUrl: data.audio_url || null,
-      videoUrl: data.video_url || null,
-      audioDurationSeconds: data.audio_duration_seconds || null,
-    };
+    // If no good brief for today, fall back to most recent quality brief
+    const { data: recent } = await supabase
+      .from('daily_briefs')
+      .select('*')
+      .order('date', { ascending: false })
+      .limit(5);
+
+    if (recent && recent.length > 0) {
+      // Pick the most recent brief with a real summary (>= 200 chars)
+      const good = recent.find(r => (r.summary_en || '').length >= 200);
+      if (good) return mapBriefRow(good);
+      // If none are good, return the most recent anyway
+      return mapBriefRow(recent[0]);
+    }
+
+    return null;
   } catch {
     return null;
   }
+}
+
+function mapBriefRow(data: any): DailyBrief {
+  return {
+    date: data.date,
+    pulse: data.pulse,
+    pulseLabel: data.pulse_label,
+    summaryEn: data.summary_en,
+    summaryNe: data.summary_ne,
+    topStories: data.top_stories || [],
+    commitmentsMoved: data.commitments_moved || [],
+    stats: data.stats || { totalSignals24h: 0, newSignals: 0, sourcesActive: 0, topSource: '' },
+    generatedAt: data.generated_at,
+    audioUrl: data.audio_url || null,
+    videoUrl: data.video_url || null,
+    audioDurationSeconds: data.audio_duration_seconds || null,
+  };
 }
 
 /**

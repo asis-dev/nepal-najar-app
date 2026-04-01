@@ -110,57 +110,31 @@ function getModelConfig(task: TaskType): AIConfig {
     };
   }
 
-  // Priority 1: OpenClaw (API token or local CLI)
-  if (isOpenClawAvailable()) {
-    return {
-      provider: 'openclaw',
-      model: OPENCLAW_MODEL,
-      apiKey: getOpenClawAccessToken() || '',
-      baseUrl: OPENCLAW_BASE_URL,
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
-    };
-  }
-
-  // Priority 2: OpenAI direct (GPT-4.1-nano for classify, GPT-4.1-mini for reasoning)
-  if (process.env.OPENAI_API_KEY) {
-    return {
-      provider: 'openai',
-      model: task === 'reason' || task === 'extract' ? 'gpt-4.1-mini' : 'gpt-4.1-nano',
-      apiKey: process.env.OPENAI_API_KEY,
-      baseUrl: 'https://api.openai.com/v1',
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
-    };
-  }
-
-  // Priority 3: Gemini 2.5 Flash
-  if (process.env.GEMINI_API_KEY) {
-    return {
-      provider: 'gemini',
-      model: 'gemini-2.5-flash',
-      apiKey: process.env.GEMINI_API_KEY,
-      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
-    };
-  }
-
-  // Priority 4: OpenRouter
+  // Priority 1: Qwen via OpenRouter (FREE)
   if (process.env.OPENROUTER_API_KEY) {
     return {
       provider: 'openrouter',
-      model: task === 'reason' || task === 'extract'
-        ? 'deepseek/deepseek-r1'
-        : 'deepseek/deepseek-chat-v3-0324',
+      model: 'qwen/qwen3.6-plus-preview:free',
       apiKey: process.env.OPENROUTER_API_KEY,
       baseUrl: 'https://openrouter.ai/api/v1',
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+      maxTokens: task === 'classify' ? 1000 : 4000,
+      temperature: task === 'classify' ? 0.1 : 0.2,
     };
   }
 
-  // Priority 5: Local LM Studio
+  // Priority 2: OpenAI (paid)
+  if (process.env.OPENAI_API_KEY) {
+    return {
+      provider: 'openai',
+      model: task === 'reason' || task === 'extract' || task === 'summarize' ? 'gpt-4.1-mini' : 'gpt-4.1-nano',
+      apiKey: process.env.OPENAI_API_KEY,
+      baseUrl: 'https://api.openai.com/v1',
+      maxTokens: task === 'classify' ? 1000 : 4000,
+      temperature: task === 'classify' ? 0.1 : 0.2,
+    };
+  }
+
+  // Local LM Studio (offline only)
   return getLocalConfig(task);
 }
 
@@ -180,60 +154,67 @@ function buildProviderChain(task: TaskType): AIConfig[] {
         model: OPENCLAW_MODEL,
         apiKey: getOpenClawAccessToken() || '',
         baseUrl: OPENCLAW_BASE_URL,
-        maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-        temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+        maxTokens: task === 'classify' ? 1000 : 4000,
+        temperature: task === 'classify' ? 0.1 : 0.2,
       },
     ];
   }
 
   const chain: AIConfig[] = [];
 
-  if (isOpenClawAvailable()) {
+  // ── SUMMARIZE tasks (daily brief) → OpenAI ONLY ──
+  // The editorial brief prompt is tuned for OpenAI. Free models produce garbage.
+  if (task === 'summarize') {
+    if (process.env.OPENAI_API_KEY) {
+      chain.push({
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        apiKey: process.env.OPENAI_API_KEY,
+        baseUrl: 'https://api.openai.com/v1',
+        maxTokens: 4000,
+        temperature: 0.1,
+      });
+    }
+    // Fallback only: Qwen (no Gemini — it produces unparseable responses)
+    if (process.env.OPENROUTER_API_KEY) {
+      chain.push({
+        provider: 'openrouter',
+        model: 'qwen/qwen3.6-plus-preview:free',
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseUrl: 'https://openrouter.ai/api/v1',
+        maxTokens: 4000,
+        temperature: 0.1,
+      });
+    }
+    return chain;
+  }
+
+  // ── All other tasks (classify, reason, extract) ──
+  // Priority 1: OpenRouter/Qwen (FREE — try first)
+  if (process.env.OPENROUTER_API_KEY) {
     chain.push({
-      provider: 'openclaw',
-      model: OPENCLAW_MODEL,
-      apiKey: getOpenClawAccessToken() || '',
-      baseUrl: OPENCLAW_BASE_URL,
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+      provider: 'openrouter',
+      model: 'qwen/qwen3.6-plus-preview:free',
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseUrl: 'https://openrouter.ai/api/v1',
+      maxTokens: task === 'classify' ? 1000 : 4000,
+      temperature: task === 'classify' ? 0.1 : 0.2,
     });
   }
 
+  // Priority 2: OpenAI (paid fallback)
   if (process.env.OPENAI_API_KEY) {
     chain.push({
       provider: 'openai',
       model: task === 'reason' || task === 'extract' ? 'gpt-4.1-mini' : 'gpt-4.1-nano',
       apiKey: process.env.OPENAI_API_KEY,
       baseUrl: 'https://api.openai.com/v1',
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
+      maxTokens: task === 'classify' ? 1000 : 4000,
+      temperature: task === 'classify' ? 0.1 : 0.2,
     });
   }
 
-  if (process.env.GEMINI_API_KEY) {
-    chain.push({
-      provider: 'gemini',
-      model: 'gemini-2.5-flash',
-      apiKey: process.env.GEMINI_API_KEY,
-      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
-    });
-  }
-
-  if (process.env.OPENROUTER_API_KEY) {
-    chain.push({
-      provider: 'openrouter',
-      model: task === 'reason' || task === 'extract'
-        ? 'deepseek/deepseek-r1'
-        : 'deepseek/deepseek-chat-v3-0324',
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseUrl: 'https://openrouter.ai/api/v1',
-      maxTokens: task === 'classify' || task === 'summarize' ? 1000 : 4000,
-      temperature: task === 'classify' || task === 'summarize' ? 0.1 : 0.2,
-    });
-  }
-
+  // Local LM Studio (offline fallback)
   chain.push(getLocalConfig(task));
   return chain;
 }
@@ -244,7 +225,7 @@ function getLocalConfig(task?: TaskType): AIConfig {
     model: process.env.AI_MODEL || 'qwen3.5-27b',
     apiKey: process.env.AI_API_KEY || 'lm-studio',
     baseUrl: process.env.AI_BASE_URL || 'http://localhost:1234/v1',
-    maxTokens: task === 'classify' || task === 'summarize' ? 2000 : 6000,
+    maxTokens: task === 'classify' ? 2000 : 6000,
     temperature: 0.1,
   };
 }
@@ -256,6 +237,7 @@ const COST_PER_1M_TOKENS: Record<string, { input: number; output: number }> = {
   'gpt-4.1-nano': { input: 0.1, output: 0.4 },
   'deepseek/deepseek-r1': { input: 0.55, output: 2.19 },
   'deepseek/deepseek-chat-v3-0324': { input: 0.27, output: 1.1 },
+  'qwen/qwen3.6-plus-preview:free': { input: 0, output: 0 },
   'gemini-2.5-flash': { input: 0, output: 0 },
   local: { input: 0, output: 0 },
 };
@@ -452,15 +434,20 @@ async function callGeminiWithRetry(
   config: AIConfig,
   systemPrompt: string,
   userPrompt: string,
-  maxRetries = 2,
+  maxRetries = 1,
 ): Promise<AIResponse> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await callGemini(config, systemPrompt, userPrompt);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
+      // Daily quota exhausted — don't retry, fall back immediately
+      if (msg.includes('FreeTier') || msg.includes('per_day') || msg.includes('PerDay')) {
+        console.log(`[AI Router] Gemini daily quota exhausted — falling back to next provider`);
+        throw err;
+      }
       if (msg.includes('429') && attempt < maxRetries) {
-        const waitSec = 30 * (attempt + 1);
+        const waitSec = 10 * (attempt + 1); // shorter wait — 10s, not 30s
         console.log(`[AI Router] Gemini rate limited, waiting ${waitSec}s...`);
         await new Promise(r => setTimeout(r, waitSec * 1000));
         continue;

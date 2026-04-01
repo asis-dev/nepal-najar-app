@@ -33,6 +33,8 @@ export interface Minister {
   confidence?: string;
   weeklyActivity: MinisterWeeklyActivity;
   ownedCommitmentIds: number[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  profile?: any;
 }
 
 export interface MinistersResponse {
