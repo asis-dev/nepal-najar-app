@@ -123,34 +123,19 @@ export async function GET(request: NextRequest) {
           }}
         />
 
-        {/* Small decorative dots pattern (top-right) */}
+        {/* Small decorative accent line (top-right) */}
         <div
           style={{
             position: 'absolute',
-            top: '40px',
-            right: '50px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            opacity: 0.15,
+            top: '50px',
+            right: '60px',
+            width: '60px',
+            height: '3px',
+            borderRadius: '2px',
+            background: theme.accent,
+            opacity: 0.25,
           }}
-        >
-          {[0, 1, 2].map((row) => (
-            <div key={row} style={{ display: 'flex', gap: '8px' }}>
-              {[0, 1, 2, 3].map((col) => (
-                <div
-                  key={col}
-                  style={{
-                    width: '4px',
-                    height: '4px',
-                    borderRadius: '50%',
-                    background: theme.accent,
-                  }}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        />
 
         {/* Main content area — left-aligned for more editorial feel */}
         <div
@@ -165,7 +150,7 @@ export async function GET(request: NextRequest) {
           }}
         >
           {/* Section label pill */}
-          {theme.label && (
+          {theme.label ? (
             <div
               style={{
                 display: 'flex',
@@ -190,7 +175,7 @@ export async function GET(request: NextRequest) {
                 {theme.label}
               </span>
             </div>
-          )}
+          ) : null}
 
           {/* Title — large, bold, left-aligned */}
           <div
@@ -207,7 +192,7 @@ export async function GET(request: NextRequest) {
           </div>
 
           {/* Subtitle — metadata line */}
-          {subtitle && (
+          {subtitle ? (
             <div
               style={{
                 marginTop: '16px',
@@ -222,80 +207,72 @@ export async function GET(request: NextRequest) {
             >
               {subtitle}
             </div>
-          )}
+          ) : null}
 
-          {/* Progress bar + percentage (for commitments) */}
-          {progress && (
+          {/* Progress indicator (for commitments) */}
+          {progress !== null ? (
             <div
               style={{
-                marginTop: '32px',
+                marginTop: '28px',
                 display: 'flex',
+                flexDirection: 'row',
                 alignItems: 'center',
-                gap: '20px',
+                gap: '16px',
               }}
             >
-              {/* Big percentage number */}
               <div
                 style={{
-                  fontSize: '56px',
+                  fontSize: '52px',
                   fontWeight: 800,
                   color: statusColor,
-                  lineHeight: 1,
-                  letterSpacing: '-0.03em',
                 }}
               >
-                {progress}%
+                {`${progressNum}%`}
               </div>
-
               <div
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '8px',
-                  flex: 1,
-                  maxWidth: '400px',
+                  gap: '6px',
                 }}
               >
-                {/* Progress bar */}
                 <div
                   style={{
-                    width: '100%',
-                    height: '16px',
-                    borderRadius: '8px',
-                    background: 'rgba(255,255,255,0.06)',
-                    overflow: 'hidden',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    width: '300px',
+                    height: '14px',
+                    borderRadius: '7px',
+                    backgroundColor: 'rgba(255,255,255,0.08)',
                   }}
                 >
                   <div
                     style={{
+                      display: 'flex',
                       width: `${progressNum}%`,
-                      height: '100%',
-                      borderRadius: '8px',
-                      background: progressGradient,
-                      boxShadow: `0 0 20px ${statusColor}50`,
+                      height: '14px',
+                      borderRadius: '7px',
+                      backgroundColor: statusColor,
                     }}
                   />
                 </div>
-                {/* Status label under progress bar */}
-                {statusLabel && (
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      letterSpacing: '0.15em',
-                      color: statusColor,
-                    }}
-                  >
-                    {statusLabel}
-                  </div>
-                )}
+                <div
+                  style={{
+                    display: 'flex',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                    color: statusColor,
+                  }}
+                >
+                  {statusLabel || 'PROGRESS'}
+                </div>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Status badge (when no progress bar) */}
-          {statusLabel && !progress && (
+          {statusLabel && !progress ? (
             <div
               style={{
                 marginTop: '24px',
@@ -317,7 +294,7 @@ export async function GET(request: NextRequest) {
                 {statusLabel}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Bottom bar — brand + tagline */}
