@@ -9,7 +9,6 @@ import {
   ThumbsDown,
   MapPin,
   MessageSquare,
-  Share,
   Flag,
   Pencil,
   Loader2,
@@ -25,7 +24,7 @@ import {
   Banknote,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { shareIntentUrl, shareOrCopy } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { useAuth } from '@/lib/hooks/use-auth';
 import {
   useProposal,
@@ -146,7 +145,6 @@ export default function ProposalDetailPage() {
   const { data: updates } = useProposalUpdates(proposalId);
 
   const [newComment, setNewComment] = useState('');
-  const [copied, setCopied] = useState(false);
 
   const handleVote = useCallback(
     (type: 'up' | 'down') => {
@@ -158,29 +156,6 @@ export default function ProposalDetailPage() {
     },
     [userVote, castVote, removeVote],
   );
-
-  const handleShare = useCallback(async () => {
-    const url = window.location.href;
-    const result = await shareOrCopy({
-      title: proposal?.title ?? 'Community Proposal',
-      text: `${proposal?.title ?? 'Community Proposal'} — Nepal Republic`,
-      url,
-    });
-    if (result === 'copied') {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [proposal?.title]);
-
-  const handleWhatsApp = useCallback(() => {
-    const url = window.location.href;
-    const intent = shareIntentUrl('whatsapp', {
-      title: proposal?.title ?? 'Community Proposal',
-      text: `${proposal?.title ?? 'Community Proposal'} — Nepal Republic`,
-      url,
-    });
-    window.open(intent, '_blank', 'noopener,noreferrer');
-  }, [proposal?.title]);
 
   // Loading skeleton
   if (isLoading || !proposal) {
@@ -257,13 +232,15 @@ export default function ProposalDetailPage() {
                   <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
                     {isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
                   </h1>
-                  <button
-                    onClick={() => shareOrCopy({ title: proposal.title, text: `${proposal.title} — Community proposal on Nepal Republic. nepalrepublic.org`, url: `${window.location.origin}/proposals/${proposalId}` })}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all shrink-0 mt-1"
-                  >
-                    <Share className="w-3.5 h-3.5" />
-                    {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
-                  </button>
+                  <div className="shrink-0 mt-1">
+                    <ShareMenu
+                      shareUrl={`/proposals/${proposalId}`}
+                      shareTitle={proposal.title}
+                      shareText={`${proposal.title} — Community proposal on Nepal Republic. nepalrepublic.org`}
+                      ogParams={{ ogTitle: proposal.title, ogSubtitle: proposal.province || 'Community Proposal', ogSection: 'proposals' }}
+                      size="sm"
+                    />
+                  </div>
                 </div>
                 {((isNe && proposal.title) || (!isNe && proposal.title_ne)) && (
                   <p className="text-base text-gray-500 mt-1">
@@ -527,23 +504,15 @@ export default function ProposalDetailPage() {
                 )}
               </div>
 
-              {/* Action bar: Share, WhatsApp, Flag */}
+              {/* Action bar: Share + Flag */}
               <div className="flex items-center gap-3 flex-wrap">
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-gray-400 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-200 transition-all"
-                >
-                  <Share className="w-4 h-4" />
-                  {copied ? t('common.copied') : t('common.share')}
-                </button>
-
-                <button
-                  onClick={handleWhatsApp}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
-                >
-                  <Share className="w-4 h-4" />
-                  WhatsApp
-                </button>
+                <ShareMenu
+                  shareUrl={`/proposals/${proposalId}`}
+                  shareTitle={proposal.title}
+                  shareText={`${proposal.title} — Community proposal on Nepal Republic. nepalrepublic.org`}
+                  ogParams={{ ogTitle: proposal.title, ogSubtitle: proposal.province || 'Community Proposal', ogSection: 'proposals' }}
+                  size="md"
+                />
 
                 <button
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-gray-500 bg-white/[0.03] border border-white/[0.06] hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all ml-auto"

@@ -55,7 +55,8 @@ import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences
 import { useComparisonStore } from '@/lib/stores/comparison';
 import { ExportButton } from '@/components/public/export-button';
 import { exportPromisesCSV, exportPromisesPDF } from '@/lib/utils/export';
-import { commitmentShareText, shareIntentUrl, shareOrCopy } from '@/lib/utils/share';
+import { commitmentShareText, shareToPlatform } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { useEvidenceCounts } from '@/lib/hooks/use-evidence-vault';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import {
@@ -425,35 +426,18 @@ function BachanTrackerContent() {
   const shareSummaryText = locale === 'ne'
     ? 'नेपालका सार्वजनिक प्रतिबद्धताहरू प्रमाणसहित ट्र्याक गर्नुहोस्।'
     : 'Track Nepal\'s public commitments with evidence.';
-  const whatsappShareIntent = shareIntentUrl('whatsapp', {
+  const sharePayload = {
     title: shareSummaryTitle,
     text: shareSummaryText,
-    url: pageUrl,
-  });
-  const facebookShareIntent = shareIntentUrl('facebook', {
-    title: shareSummaryTitle,
-    text: shareSummaryText,
-    url: pageUrl,
-  });
-  const xShareIntent = shareIntentUrl('x', {
-    title: shareSummaryTitle,
-    text: shareSummaryText,
-    url: pageUrl,
-  });
+    url: '/explore/first-100-days',
+  };
 
-  function handleCopyLink() {
-    navigator.clipboard.writeText(pageUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  async function handleShareCard(e: React.MouseEvent, promise: GovernmentPromise) {
-    e.preventDefault();
-    e.stopPropagation();
-    const title = locale === 'ne' ? (promise.title_ne || promise.title) : promise.title;
-    const text = commitmentShareText({ title, progress: promise.progress, status: promise.status, locale });
-    const url = `${pageUrl.replace(/\/explore\/first-100-days.*/, '')}/explore/first-100-days/${promise.slug || promise.id}`;
-    await shareOrCopy({ title, text, url });
+  async function handleCopyLink() {
+    const result = await shareToPlatform('copy', sharePayload);
+    if (result === 'copied') {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   }
 
   const handleLoadMore = useCallback(() => {
@@ -1516,13 +1500,12 @@ function BachanTrackerContent() {
                               {promise.lastUpdate}
                             </span>
                           </div>
-                          <button
-                            onClick={(e) => handleShareCard(e, promise)}
-                            className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-500 hover:text-primary-400 transition-colors"
-                            title={t('commitment.shareWhatsApp')}
-                          >
-                            <Share className="w-3.5 h-3.5" />
-                          </button>
+                          <ShareMenu
+                            shareUrl={`/explore/first-100-days/${promise.slug || promise.id}`}
+                            shareText={commitmentShareText({ title: locale === 'ne' ? (promise.title_ne || promise.title) : promise.title, progress: promise.progress, status: promise.status, locale })}
+                            shareTitle={locale === 'ne' ? (promise.title_ne || promise.title) : promise.title}
+                            size="sm"
+                          />
                         </div>
 
                         <div className="absolute top-6 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
@@ -1634,19 +1617,19 @@ function BachanTrackerContent() {
 
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                     <button
-                      onClick={() => window.open(whatsappShareIntent, '_blank', 'noopener,noreferrer')}
+                      onClick={() => shareToPlatform('whatsapp', sharePayload)}
                       className="w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-semibold text-white bg-[#25D366]/20 border border-[#25D366]/40 hover:bg-[#25D366]/30 transition-all duration-200 shadow-[0_0_15px_rgba(37,211,102,0.15)] hover:shadow-[0_0_25px_rgba(37,211,102,0.25)]"
                     >
                       {t('commitment.shareWhatsApp')}
                     </button>
                     <button
-                      onClick={() => window.open(facebookShareIntent, '_blank', 'noopener,noreferrer')}
+                      onClick={() => shareToPlatform('facebook', sharePayload)}
                       className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-[#1877F2]/20 border border-[#1877F2]/30 hover:bg-[#1877F2]/30 transition-all duration-200"
                     >
                       Facebook
                     </button>
                     <button
-                      onClick={() => window.open(xShareIntent, '_blank', 'noopener,noreferrer')}
+                      onClick={() => shareToPlatform('x', sharePayload)}
                       className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.08] border border-white/[0.12] hover:bg-white/[0.14] transition-all duration-200"
                     >
                       X / Twitter

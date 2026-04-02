@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAccountability } from '@/lib/hooks/use-accountability';
-import { shareIntentUrl, shareOrCopy, reportCardShareText } from '@/lib/utils/share';
+import { shareToPlatform, reportCardShareText } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { useIsMobile } from '@/lib/hooks/use-mobile';
 import { TransparencyScoreSection } from '@/components/public/report-card/transparency-score';
 import { WhatsWorkingSection } from '@/components/public/report-card/whats-working';
@@ -37,20 +38,16 @@ export default function ReportCardPage() {
   const { locale, t } = useI18n();
   const isNe = locale === 'ne';
   const isMobile = useIsMobile();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nepalrepublic.org';
-
   const [activeTab, setActiveTab] = useState<Tab>('working');
   const [copied, setCopied] = useState(false);
   const [cacheBust, setCacheBust] = useState(0);
   const [isClient, setIsClient] = useState(false);
-  const [pageUrl, setPageUrl] = useState(`${siteUrl}/report-card`);
 
   const { data, isLoading } = useAccountability();
 
   useEffect(() => {
     setIsClient(true);
     setCacheBust(Math.floor(Date.now() / 600_000));
-    setPageUrl(window.location.href);
   }, []);
 
   const shareTitle = isNe
@@ -58,24 +55,21 @@ export default function ReportCardPage() {
     : `Nepal's weekly government report card — scored by AI`;
   const shareText = `${shareTitle}. nepalrepublic.org`;
 
-  function handleCopyLink() {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(pageUrl);
+  const reportSharePayload = { title: shareTitle, text: shareText, url: '/report-card' };
+
+  async function handleCopyLink() {
+    const result = await shareToPlatform('copy', reportSharePayload);
+    if (result === 'copied') {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   }
 
   async function handleNativeShare() {
-    await shareOrCopy({ title: shareTitle, text: shareText, url: pageUrl });
+    await shareToPlatform('native', reportSharePayload);
   }
 
   const supportsNativeShare = isClient && typeof navigator !== 'undefined' && !!navigator.share;
-  const whatsappShareUrl = shareIntentUrl('whatsapp', {
-    title: shareTitle,
-    text: shareText,
-    url: pageUrl,
-  });
   const totalIssues =
     (data?.whatsNotWorking.downSources.length ?? 0) +
     (data?.whatsNotWorking.silentPromises.length ?? 0);
@@ -112,13 +106,12 @@ export default function ReportCardPage() {
                 <p className="text-[9px] uppercase tracking-[0.2em] text-gray-500">
                   {t('reportCard.weeklyAccountability')}
                 </p>
-                <button
-                  onClick={() => shareOrCopy({ title: t('accountability.pageTitle'), text: reportCardShareText({ locale }), url: pageUrl })}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
-                >
-                  <Share className="w-3.5 h-3.5" />
-                  {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
-                </button>
+                <ShareMenu
+                  shareUrl="/report-card"
+                  shareText={reportCardShareText({ locale })}
+                  shareTitle={t('accountability.pageTitle')}
+                  size="sm"
+                />
               </div>
               <h1 className="text-base font-semibold text-white leading-tight mb-2">
                 {t('accountability.pageTitle')}
@@ -138,13 +131,12 @@ export default function ReportCardPage() {
                 <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
                   {t('reportCard.weeklyAccountabilityDesktop')}
                 </p>
-                <button
-                  onClick={() => shareOrCopy({ title: t('accountability.pageTitle'), text: reportCardShareText({ locale }), url: pageUrl })}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
-                >
-                  <Share className="w-3.5 h-3.5" />
-                  {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
-                </button>
+                <ShareMenu
+                  shareUrl="/report-card"
+                  shareText={reportCardShareText({ locale })}
+                  shareTitle={t('accountability.pageTitle')}
+                  size="sm"
+                />
               </div>
               <h1 className="text-2xl font-bold text-white mb-1">
                 {t('accountability.pageTitle')}
@@ -225,14 +217,12 @@ export default function ReportCardPage() {
                         </span>
                       </button>
                     )}
-                    <a
-                      href={whatsappShareUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => shareToPlatform('whatsapp', reportSharePayload)}
                       className={`rounded-xl border border-[#25D366]/30 bg-[#25D366]/20 ${isMobile ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} text-center font-medium text-white transition-all hover:bg-[#25D366]/30`}
                     >
                       WhatsApp
-                    </a>
+                    </button>
                     <button
                       onClick={handleCopyLink}
                       className={`rounded-xl ${isMobile ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} font-medium transition-all ${

@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { Check, Heart, MessageCircle, Share } from 'lucide-react';
+import { Heart, MessageCircle } from 'lucide-react';
 import { useWatchlistStore } from '@/lib/stores/preferences';
-import { shareOrCopy } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import type { ShareImageParams } from '@/lib/utils/share';
 
 interface CardActionsProps extends ShareImageParams {
@@ -12,7 +11,7 @@ interface CardActionsProps extends ShareImageParams {
   commitmentId?: string;
   /** Minister slug for watchlist (reuses same watchlist store) */
   ministerSlug?: string;
-  /** Share text */
+  /** Share text — short description of what's being shared */
   shareTitle: string;
   /** Share URL path (e.g. /explore/first-100-days/slug) */
   shareUrl: string;
@@ -45,8 +44,6 @@ export function CardActions({
   ogStatus,
 }: CardActionsProps) {
   const { watchedProjectIds, toggleWatch } = useWatchlistStore();
-  const [shareCopied, setShareCopied] = useState(false);
-  // Heart works for both commitments and ministers
   const heartId = commitmentId || (ministerSlug ? `minister:${ministerSlug}` : undefined);
   const isWatched = heartId ? watchedProjectIds.includes(heartId) : false;
   const iconSize = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
@@ -59,6 +56,11 @@ export function CardActions({
       {(commentCount ?? 0) > 0 && <span className={countClass}>{commentCount}</span>}
     </>
   );
+
+  // Build OG params only if at least ogTitle is provided
+  const ogParams = ogTitle
+    ? { ogTitle, ogSubtitle, ogSection, ogProgress, ogStatus }
+    : undefined;
 
   return (
     <div className="flex items-center gap-0.5">
@@ -94,31 +96,14 @@ export function CardActions({
         </span>
       )}
 
-      {/* Share */}
-      <button
-        onClick={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const result = await shareOrCopy({
-            title: shareTitle,
-            text: shareText || shareTitle,
-            url: shareUrl,
-            ogTitle,
-            ogSubtitle,
-            ogSection,
-            ogProgress,
-            ogStatus,
-          });
-          if (result === 'copied') {
-            setShareCopied(true);
-            setTimeout(() => setShareCopied(false), 1500);
-          }
-        }}
-        className={`${btnClass} text-gray-600 hover:text-gray-300 hover:bg-white/[0.06]`}
-        aria-label="Share"
-      >
-        {shareCopied ? <Check className={iconSize} /> : <Share className={iconSize} />}
-      </button>
+      {/* Share menu with platform picker */}
+      <ShareMenu
+        shareUrl={shareUrl}
+        shareText={shareText || shareTitle}
+        shareTitle={shareTitle}
+        ogParams={ogParams}
+        size={size}
+      />
     </div>
   );
 }

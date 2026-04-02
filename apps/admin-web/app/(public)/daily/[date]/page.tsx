@@ -11,9 +11,8 @@ import {
   Activity,
   AlertCircle,
   Calendar,
-  Share,
 } from 'lucide-react';
-import { shareOrCopy, dailyBriefShareText } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { useI18n } from '@/lib/i18n';
 import { useDailyActivity } from '@/lib/hooks/use-promises';
 import { Breadcrumb } from '@/components/public/breadcrumb';
@@ -166,13 +165,13 @@ export default function DailyDatePage() {
                   <div className="flex items-center gap-2 justify-center">
                     <Calendar className="w-4 h-4 text-cyan-400" />
                     <span className="text-sm font-medium text-white">{displayDate}</span>
-                    <button
-                      onClick={() => shareOrCopy({ title: displayDate, text: dailyBriefShareText({ date: dateParam, locale }), url: `${window.location.origin}/daily/${dateParam}` })}
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
-                    >
-                      <Share className="w-3.5 h-3.5" />
-                      {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
-                    </button>
+                    <ShareMenu
+                      shareUrl={`/daily/${dateParam}`}
+                      shareTitle={displayDate}
+                      shareText={isNe ? `${displayDate} — दैनिक गतिविधि। nepalrepublic.org` : `${displayDate} — Daily activity. nepalrepublic.org`}
+                      ogParams={{ ogTitle: displayDate, ogSubtitle: isNe ? 'दैनिक गतिविधि' : 'Daily Activity', ogSection: 'daily' }}
+                      size="sm"
+                    />
                   </div>
                   {isToday && (
                     <span className="text-[10px] text-primary-400 font-medium">

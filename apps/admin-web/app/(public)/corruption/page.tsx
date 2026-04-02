@@ -10,13 +10,12 @@ import {
   FileText,
   Clock,
   Scale,
-  Share,
   User,
   Radar,
   Newspaper,
   Eye,
 } from 'lucide-react';
-import { shareOrCopy } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { CardActions } from '@/components/public/card-actions';
 import { PublicPageHero } from '@/components/public/page-hero';
 import { useCorruptionCases, useCorruptionStats } from '@/lib/hooks/use-corruption';
@@ -105,13 +104,13 @@ export default function CorruptionPage() {
         <div className="public-shell">
           <div className="relative overflow-hidden rounded-xl border border-primary-500/20 bg-gradient-to-r from-primary-500/[0.06] via-transparent to-red-500/[0.06] p-4">
             <div className="absolute top-2 right-3">
-              <button
-                onClick={() => shareOrCopy({ title: 'Corruption Tracker', text: 'Track corruption cases, investigations, and accountability across Nepal\'s government. nepalrepublic.org', url: `${typeof window !== 'undefined' ? window.location.origin : ''}/corruption` })}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-medium text-gray-400 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
-              >
-                <Share className="w-3 h-3" />
-                {isNe ? 'शेयर' : 'Share'}
-              </button>
+              <ShareMenu
+                shareUrl="/corruption"
+                shareTitle={isNe ? 'भ्रष्टाचार ट्र्याकर' : 'Corruption Tracker'}
+                shareText={isNe ? 'नेपालको सरकारमा भ्रष्टाचारका घटना, अनुसन्धान र जवाफदेहिताको अनुगमन। nepalrepublic.org' : 'Track corruption cases, investigations, and accountability across Nepal\'s government. nepalrepublic.org'}
+                ogParams={{ ogTitle: 'Corruption Tracker', ogSubtitle: `${stats?.totalCases ?? 0} cases tracked`, ogSection: 'corruption' }}
+                size="sm"
+              />
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className="flex items-center gap-2">

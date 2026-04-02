@@ -26,9 +26,8 @@ import {
   ShieldQuestion,
   User,
   DollarSign,
-  Share,
 } from 'lucide-react';
-import { shareOrCopy } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { ReactionBar } from '@/components/public/reaction-bar';
 import { useMinistersWeekly } from '@/lib/hooks/use-ministers';
 import { useI18n } from '@/lib/i18n';
@@ -166,13 +165,13 @@ export default function MinisterDetailPage() {
               </p>
               <p className="mt-0.5 text-xs text-gray-500">{minister.ministry}</p>
             </div>
-            <button
-              onClick={() => shareOrCopy({ title: minister.name, text: `${minister.name} — ${minister.title}. Track their commitments on Nepal Republic. nepalrepublic.org`, url: `${window.location.origin}/ministers/${slug}` })}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all shrink-0"
-            >
-              <Share className="w-3.5 h-3.5" />
-              {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
-            </button>
+            <ShareMenu
+              shareUrl={`/ministers/${slug}`}
+              shareTitle={minister.name}
+              shareText={`${minister.name} — ${minister.title}. Track their commitments on Nepal Republic. nepalrepublic.org`}
+              ogParams={{ ogTitle: minister.name, ogSubtitle: minister.title, ogSection: 'ministers' }}
+              size="sm"
+            />
           </div>
 
           {(minister.appointedDate || days !== null) && (

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Share,
   Bookmark,
   Building2,
   Truck,
@@ -40,7 +39,8 @@ import { VoteWidget } from '@/components/public/vote-widget';
 import { SourceVoteWidget } from '@/components/public/source-vote-widget';
 import { useWatchlistStore } from '@/lib/stores/preferences';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { commitmentShareText, shareOrCopy } from '@/lib/utils/share';
+import { commitmentShareText } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import {
   getPromiseBySlug,
@@ -437,14 +437,10 @@ export default function PromiseDetailPage() {
 
   const visibleSources = showAllSignals ? allSources : allSources.slice(0, 5);
 
-  // Share handler
-  const handleShare = async () => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    if (!promise) return;
-    const title = locale === 'ne' ? (promise.title_ne || promise.title) : promise.title;
-    const text = commitmentShareText({ title, progress: promise.progress, status: promise.status, locale });
-    await shareOrCopy({ title, text, url });
-  };
+  // Share helper — compute text for ShareMenu
+  const shareTitle = promise ? (locale === 'ne' ? (promise.title_ne || promise.title) : promise.title) : '';
+  const shareText = promise ? commitmentShareText({ title: shareTitle, progress: promise.progress, status: promise.status, locale }) : '';
+  const shareUrl = promise ? `/explore/first-100-days/${promise.slug || promise.id}` : '';
 
   /* ── Not found ── */
   if (!promise) {
@@ -1063,13 +1059,12 @@ export default function PromiseDetailPage() {
             </button>
 
             {/* Share */}
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-white/[0.05] text-gray-300 border border-white/[0.08] transition-all hover:bg-white/[0.08]"
-            >
-              <Share className="w-3.5 h-3.5" />
-              {t('detail.share')}
-            </button>
+            <ShareMenu
+              shareUrl={shareUrl}
+              shareText={shareText}
+              shareTitle={shareTitle}
+              size="sm"
+            />
 
             {/* Submit Evidence */}
             <button
@@ -1100,13 +1095,12 @@ export default function PromiseDetailPage() {
               : t('detail.watch')}
           </button>
 
-          <button
-            onClick={handleShare}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.06] transition-all"
-          >
-            <Share className="w-4 h-4" />
-            {t('detail.share')}
-          </button>
+          <ShareMenu
+            shareUrl={shareUrl}
+            shareText={shareText}
+            shareTitle={shareTitle}
+            size="md"
+          />
 
           <button
             onClick={() => evidenceRef.current?.scrollIntoView({ behavior: 'smooth' })}

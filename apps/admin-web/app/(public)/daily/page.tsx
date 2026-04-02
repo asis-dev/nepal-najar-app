@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Flame,
   Trophy,
-  Share,
   Calendar,
   Activity,
   AlertCircle,
@@ -20,7 +19,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { shareOrCopy, dailyBriefShareText } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { useEngagementStore } from '@/lib/stores/engagement';
 import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences';
 import { PublicPageHero } from '@/components/public/page-hero';
@@ -136,20 +135,6 @@ export default function DailyPage() {
     ? (activity?.inactivePromises ?? [])
     : (activity?.inactivePromises ?? []).slice(0, INACTIVE_INITIAL_SHOW);
 
-  // Share streak handler
-  async function handleShareStreak() {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    const text = isNe
-      ? `Nepal Republic मा मेरो streak ${currentStreak} दिन!`
-      : `My Nepal Republic streak is ${currentStreak} days!`;
-
-    await shareOrCopy({
-      title: 'Nepal Republic Streak',
-      text,
-      url,
-    });
-  }
-
   // Skeleton while hydrating
   if (!hydrated) {
     return (
@@ -199,14 +184,14 @@ export default function DailyPage() {
 
         <section className="public-section pt-0 pb-0">
           <div className="public-shell">
-            <div className="mx-auto max-w-3xl text-center">
-              <button
-                onClick={() => shareOrCopy({ title: t('dailyStreak.activityDashboard'), text: dailyBriefShareText({ date: todayDateStr, locale }), url: `${window.location.origin}/daily` })}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
-              >
-                <Share className="w-3.5 h-3.5" />
-                {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
-              </button>
+            <div className="mx-auto max-w-3xl flex justify-center">
+              <ShareMenu
+                shareUrl="/daily"
+                shareTitle={t('dailyStreak.activityDashboard')}
+                shareText={isNe ? 'दैनिक गतिविधि ड्यासबोर्ड — nepalrepublic.org' : 'Daily Activity Dashboard — nepalrepublic.org'}
+                ogParams={{ ogTitle: t('dailyStreak.activityDashboard'), ogSubtitle: t('dailyStreak.heroSubtitle'), ogSection: 'daily' }}
+                size="sm"
+              />
             </div>
           </div>
         </section>
@@ -697,14 +682,13 @@ export default function DailyPage() {
 
         {/* Share Streak */}
         <section className="px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="max-w-2xl mx-auto text-center">
-            <button
-              onClick={handleShareStreak}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200 shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_25px_rgba(59,130,246,0.25)]"
-            >
-              <Share className="w-4 h-4" />
-              {t('dailyStreak.shareStreak')}
-            </button>
+          <div className="max-w-2xl mx-auto flex justify-center">
+            <ShareMenu
+              shareUrl="/daily"
+              shareTitle="Nepal Republic Streak"
+              shareText={isNe ? `Nepal Republic मा मेरो streak ${currentStreak} दिन!` : `My Nepal Republic streak is ${currentStreak} days!`}
+              size="md"
+            />
           </div>
         </section>
 

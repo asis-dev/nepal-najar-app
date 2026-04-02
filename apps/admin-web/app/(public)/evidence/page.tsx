@@ -25,10 +25,9 @@ import {
   User,
   Tag,
   Video,
-  Share,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { shareOrCopy } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { PublicPageHero } from '@/components/public/page-hero';
 import { EvidenceSourceBadge, deriveSourceType } from '@/components/public/evidence-source-badge';
 
@@ -294,13 +293,13 @@ export default function EvidenceVaultPage() {
         <section className="public-section pt-0 pb-0">
           <div className="public-shell">
             <div className="mx-auto max-w-5xl">
-              <button
-                onClick={() => shareOrCopy({ title: t('evidencePage.whoSaidWhatWhen'), text: isNe ? 'प्रमाण भण्डार — कसले के कहिले भने? nepalrepublic.org' : 'Evidence Vault — Who said what, when? nepalrepublic.org', url: `${window.location.origin}/evidence` })}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
-              >
-                <Share className="w-3.5 h-3.5" />
-                {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
-              </button>
+              <ShareMenu
+                shareUrl="/evidence"
+                shareTitle={t('evidencePage.whoSaidWhatWhen')}
+                shareText={isNe ? 'प्रमाण भण्डार — कसले के कहिले भने? nepalrepublic.org' : 'Evidence Vault — Who said what, when? nepalrepublic.org'}
+                ogParams={{ ogTitle: t('evidencePage.evidenceVault'), ogSubtitle: t('evidencePage.whoSaidWhatWhen'), ogSection: 'evidence' }}
+                size="sm"
+              />
             </div>
           </div>
         </section>

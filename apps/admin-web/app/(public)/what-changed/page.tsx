@@ -12,9 +12,8 @@ import {
   Shield,
   AlertOctagon,
   RefreshCw,
-  Share,
 } from 'lucide-react';
-import { shareOrCopy } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { useI18n } from '@/lib/i18n';
 
 interface ChangeItem {
@@ -212,13 +211,15 @@ export default function WhatChangedPage() {
               <h1 className="text-lg sm:text-xl font-bold text-white">
                 {isNe ? 'के परिवर्तन भयो?' : 'What Changed?'}
               </h1>
-              <button
-                onClick={() => shareOrCopy({ title: isNe ? 'के परिवर्तन भयो?' : 'What Changed?', text: isNe ? 'हालैका अपडेट, नयाँ समस्या र प्रमाणित परिवर्तनहरू। nepalrepublic.org' : 'Recent updates, new issues, and verified changes. nepalrepublic.org', url: `${window.location.origin}/what-changed` })}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
-              >
-                <Share className="w-3.5 h-3.5" />
-                {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
-              </button>
+              <div className="ml-auto">
+                <ShareMenu
+                  shareUrl="/what-changed"
+                  shareTitle={isNe ? 'के परिवर्तन भयो?' : 'What Changed?'}
+                  shareText={isNe ? 'हालैका अपडेट, नयाँ समस्या र प्रमाणित परिवर्तनहरू। nepalrepublic.org' : 'Recent updates, new issues, and verified changes. nepalrepublic.org'}
+                  ogParams={{ ogTitle: isNe ? 'के परिवर्तन भयो?' : 'What Changed?', ogSubtitle: isNe ? 'हालैका अपडेट' : 'Recent updates', ogSection: 'what-changed' }}
+                  size="sm"
+                />
+              </div>
             </div>
             <p className="text-sm text-gray-400 mb-4">
               {isNe

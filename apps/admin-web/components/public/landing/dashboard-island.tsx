@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Loader2, AlertTriangle, Share, Play, Pause } from 'lucide-react';
+import { Loader2, AlertTriangle, Play, Pause } from 'lucide-react';
 import { DailyBriefPlayer } from '@/components/public/daily-brief-player';
 import { useI18n } from '@/lib/i18n';
 import { useIsMobile } from '@/lib/hooks/use-mobile';
@@ -16,7 +16,8 @@ import { useWatchlistStore, usePreferencesStore, useUserPreferencesStore } from 
 import { useAuth } from '@/lib/hooks/use-auth';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import { computeGhantiScore, GRADE_COLORS } from '@/lib/data/ghanti-score';
-import { scorecardShareText, shareOrCopy } from '@/lib/utils/share';
+import { scorecardShareText } from '@/lib/utils/share';
+import { ShareMenu } from '@/components/public/share-menu';
 import { useDailyBrief } from '@/lib/hooks/use-daily-brief';
 import { useContradictions } from '@/lib/hooks/use-contradictions';
 import { UnifiedDailyBrief } from '@/components/public/landing/unified-daily-brief';
@@ -352,20 +353,14 @@ export function DashboardIsland() {
             >
               {/* Share icon — top right */}
               {nowMs && ghantiScore && (
-                <button
-                  onClick={() => {
-                    const text = scorecardShareText({
-                      grade: ghantiScore?.grade,
-                      score: ghantiScore?.score,
-                      dayInTerm,
-                      locale,
-                    });
-                    shareOrCopy({ title: 'Nepal Republic', text, url: window.location.origin });
-                  }}
-                  className="absolute top-2.5 right-2.5 inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] hover:text-gray-300 transition-all z-10"
-                >
-                  <Share className="w-3 h-3" />
-                </button>
+                <div className="absolute top-2.5 right-2.5 z-10">
+                  <ShareMenu
+                    shareUrl="/"
+                    shareText={scorecardShareText({ grade: ghantiScore.grade, score: ghantiScore.score, locale })}
+                    shareTitle="Nepal Republic"
+                    size="sm"
+                  />
+                </div>
               )}
               <div className="flex items-center gap-3 sm:gap-5">
                 {/* Compact ring */}
