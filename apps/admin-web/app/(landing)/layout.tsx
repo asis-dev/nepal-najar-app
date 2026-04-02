@@ -13,11 +13,13 @@ export async function generateMetadata(): Promise<Metadata> {
   const stats = await getCorruptionStats();
   const amount = formatAmountNpr(stats.totalAmountNpr);
 
+  const ogStats = `109 Commitments Tracked|${stats.totalCases} Corruption Cases|रू ${amount} Exposed|80+ Live Sources`;
+
   return createMetadata({
     title: 'Track promises. Report reality. Verify truth.',
     description: `Independent AI platform holding Nepal's government accountable. 109 commitments monitored. रू ${amount} in corruption exposed. ${stats.totalCases} cases. Daily briefings powered by 80+ sources.`,
     path: '/',
-    ogImage: `/api/og?title=${encodeURIComponent('Track promises. Report reality. Verify truth.')}&subtitle=${encodeURIComponent('AI-powered civic intelligence for Nepal')}`,
+    ogImage: `/api/og?title=${encodeURIComponent('Track promises. Report reality. Verify truth.')}&subtitle=${encodeURIComponent('Independent AI platform holding Nepal\'s government accountable')}&section=dashboard&stats=${encodeURIComponent(ogStats)}`,
   });
 }
 

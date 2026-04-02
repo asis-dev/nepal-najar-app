@@ -3,12 +3,10 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
-// Nepal flag colors
 const NEPAL_RED = '#DC143C';
 const NEPAL_BLUE = '#003893';
 const BELL_GOLD = '#D9A441';
 
-// Section-specific accent colors & emoji
 const SECTION_THEMES: Record<string, { accent: string; emoji: string; label: string; tagline: string }> = {
   commitments: { accent: '#22d3ee', emoji: '📊', label: 'COMMITMENT TRACKER', tagline: 'Tracking government promises with AI-backed evidence' },
   corruption:  { accent: '#ef4444', emoji: '🔍', label: 'CORRUPTION WATCH',  tagline: 'Follow the money. Expose the truth.' },
@@ -19,28 +17,29 @@ const SECTION_THEMES: Record<string, { accent: string; emoji: string; label: str
   articles:    { accent: '#60a5fa', emoji: '📰', label: 'NEWS INTELLIGENCE', tagline: 'AI-verified news coverage of government activity' },
   stories:     { accent: '#d946ef', emoji: '📡', label: 'DAILY BRIEF',      tagline: 'AI-curated daily intelligence on Nepal' },
   scorecard:   { accent: '#8b5cf6', emoji: '📊', label: 'SCORECARD',        tagline: 'AI-scored government accountability' },
+  dashboard:   { accent: '#22d3ee', emoji: '🇳🇵', label: 'LIVE DASHBOARD',   tagline: 'AI-powered civic intelligence for Nepal' },
 };
 
 const DEFAULT_THEME = { accent: '#22d3ee', emoji: '🔔', label: '', tagline: 'AI-powered civic intelligence for Nepal' };
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const title = searchParams.get('title') || 'Track promises. Report reality. Verify truth.';
+  const title = searchParams.get('title') || 'Nepal Republic';
   const subtitle = searchParams.get('subtitle') || '';
   const progress = searchParams.get('progress');
   const status = searchParams.get('status');
   const section = searchParams.get('section');
+  const stats = searchParams.get('stats'); // e.g. "109 commitments|435 corruption cases|80+ sources"
 
   const theme = (section && SECTION_THEMES[section]) || DEFAULT_THEME;
-  const isGeneric = !searchParams.get('title'); // no specific page content
+  const isDefault = !searchParams.get('title');
 
-  // Status colors & labels
+  // Status colors
   const statusColor =
     status === 'in_progress' ? '#22d3ee'
     : status === 'delivered' ? '#10b981'
     : status === 'stalled' ? '#ef4444'
     : status === 'not_started' ? '#6b7280'
-    // Corruption statuses
     : status === 'alleged' ? '#f59e0b'
     : status === 'under_investigation' ? '#f97316'
     : status === 'charged' ? '#ef4444'
@@ -50,8 +49,8 @@ export async function GET(request: NextRequest) {
 
   const statusLabel =
     status === 'in_progress' ? 'IN PROGRESS'
-    : status === 'delivered' ? '✅ DELIVERED'
-    : status === 'stalled' ? '⚠️ STALLED'
+    : status === 'delivered' ? 'DELIVERED'
+    : status === 'stalled' ? 'STALLED'
     : status === 'not_started' ? 'NOT STARTED'
     : status === 'alleged' ? 'ALLEGED'
     : status === 'under_investigation' ? 'UNDER INVESTIGATION'
@@ -63,26 +62,18 @@ export async function GET(request: NextRequest) {
 
   const progressNum = progress ? Math.min(100, Number(progress)) : 0;
 
-  // Background gradient changes per section
   const bgGradient = section === 'corruption'
-    ? `linear-gradient(145deg, #0a0808 0%, #1a0505 30%, ${NEPAL_RED}15 60%, #0a0808 100%)`
+    ? `linear-gradient(160deg, #0c0506 0%, #1c0808 30%, #2a0a0a 60%, #0c0506 100%)`
     : section === 'commitments'
-    ? `linear-gradient(145deg, #080a12 0%, ${NEPAL_BLUE}18 40%, #06b6d415 70%, #080a12 100%)`
+    ? `linear-gradient(160deg, #060810 0%, #0a1020 40%, #081018 70%, #060810 100%)`
     : section === 'ministers'
-    ? `linear-gradient(145deg, #080a12 0%, ${NEPAL_BLUE}20 50%, #080a12 100%)`
-    : `linear-gradient(145deg, #0a0a12 0%, ${NEPAL_BLUE}15 40%, ${NEPAL_RED}10 70%, #0a0a12 100%)`;
+    ? `linear-gradient(160deg, #060810 0%, #0c1428 50%, #060810 100%)`
+    : `linear-gradient(160deg, #08080f 0%, #0c1020 40%, #100a14 70%, #08080f 100%)`;
 
-  // Progress bar gradient
-  const progressGradient = progressNum < 20
-    ? `linear-gradient(90deg, ${NEPAL_RED}, #ef4444)`
-    : progressNum >= 80
-    ? 'linear-gradient(90deg, #059669, #10b981)'
-    : progressNum >= 50
-    ? 'linear-gradient(90deg, #2563eb, #06b6d4)'
-    : `linear-gradient(90deg, ${NEPAL_BLUE}, #3b82f6)`;
+  const titleSize = title.length > 80 ? 30 : title.length > 50 ? 36 : 44;
 
-  // Determine font sizes based on title length
-  const titleSize = title.length > 80 ? 32 : title.length > 50 ? 38 : 46;
+  // Parse stats into items
+  const statItems = stats ? stats.split('|').slice(0, 4) : [];
 
   return new ImageResponse(
     (
@@ -92,125 +83,134 @@ export async function GET(request: NextRequest) {
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
           background: bgGradient,
           fontFamily: 'system-ui, sans-serif',
           position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        {/* Top accent line — Nepal flag gradient */}
+        {/* Top accent bar */}
         <div
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
-            height: '6px',
+            height: '5px',
             background: `linear-gradient(90deg, ${NEPAL_RED}, ${BELL_GOLD}, ${NEPAL_BLUE})`,
           }}
         />
 
-        {/* Large decorative accent circle */}
+        {/* Subtle glow behind content */}
         <div
           style={{
             position: 'absolute',
-            top: '-200px',
-            right: '-100px',
-            width: '600px',
-            height: '600px',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '700px',
+            height: '400px',
             borderRadius: '50%',
-            background: `radial-gradient(circle, ${theme.accent}12 0%, transparent 70%)`,
+            background: `radial-gradient(ellipse, ${theme.accent}08 0%, transparent 70%)`,
           }}
         />
 
-        {/* Small decorative accent line (top-right) */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '50px',
-            right: '60px',
-            width: '60px',
-            height: '3px',
-            borderRadius: '2px',
-            background: theme.accent,
-            opacity: 0.25,
-          }}
-        />
-
-        {/* Main content area — left-aligned for more editorial feel */}
+        {/* Main centered content */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
+            alignItems: 'center',
             justifyContent: 'center',
-            flex: 1,
-            padding: '60px 70px',
-            position: 'relative',
-            zIndex: 10,
+            textAlign: 'center',
+            padding: '50px 80px',
+            maxWidth: '1100px',
           }}
         >
-          {/* Section label pill */}
-          {theme.label ? (
+          {/* Brand + section label row */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '24px',
+            }}
+          >
+            {/* Bell logo */}
             <div
               style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                background: `linear-gradient(135deg, ${NEPAL_RED}, ${NEPAL_BLUE})`,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                marginBottom: '20px',
+                justifyContent: 'center',
               }}
             >
-              <span style={{ fontSize: '18px' }}>{theme.emoji}</span>
+              <span style={{ fontSize: '18px' }}>🔔</span>
+            </div>
+            <span
+              style={{
+                fontSize: '14px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                color: BELL_GOLD,
+              }}
+            >
+              NEPAL REPUBLIC
+            </span>
+            {/* Section pill */}
+            {theme.label ? (
               <span
                 style={{
-                  fontSize: '12px',
+                  fontSize: '10px',
                   fontWeight: 700,
-                  letterSpacing: '0.2em',
+                  letterSpacing: '0.15em',
                   color: theme.accent,
-                  padding: '4px 14px',
+                  padding: '3px 12px',
                   borderRadius: '100px',
                   background: `${theme.accent}15`,
                   border: `1px solid ${theme.accent}30`,
+                  marginLeft: '4px',
                 }}
               >
                 {theme.label}
               </span>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
-          {/* Title — large, bold, left-aligned */}
+          {/* Title */}
           <div
             style={{
               fontSize: `${titleSize}px`,
               fontWeight: 800,
               color: 'white',
               lineHeight: 1.2,
-              maxWidth: '950px',
               letterSpacing: '-0.02em',
+              marginBottom: subtitle ? '12px' : '0px',
             }}
           >
             {title}
           </div>
 
-          {/* Subtitle — metadata line */}
+          {/* Subtitle */}
           {subtitle ? (
             <div
               style={{
-                marginTop: '16px',
                 fontSize: '18px',
-                color: 'rgba(255,255,255,0.55)',
-                lineHeight: 1.5,
-                maxWidth: '800px',
+                color: 'rgba(255,255,255,0.5)',
+                lineHeight: 1.4,
                 display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
               }}
             >
               {subtitle}
             </div>
           ) : null}
 
-          {/* Progress indicator (for commitments) */}
-          {progress !== null ? (
+          {/* Progress bar (commitments) */}
+          {progress ? (
             <div
               style={{
                 marginTop: '28px',
@@ -222,9 +222,10 @@ export async function GET(request: NextRequest) {
             >
               <div
                 style={{
-                  fontSize: '52px',
+                  fontSize: '48px',
                   fontWeight: 800,
                   color: statusColor,
+                  display: 'flex',
                 }}
               >
                 {`${progressNum}%`}
@@ -240,9 +241,9 @@ export async function GET(request: NextRequest) {
                   style={{
                     display: 'flex',
                     flexDirection: 'row',
-                    width: '300px',
-                    height: '14px',
-                    borderRadius: '7px',
+                    width: '280px',
+                    height: '12px',
+                    borderRadius: '6px',
                     backgroundColor: 'rgba(255,255,255,0.08)',
                   }}
                 >
@@ -250,8 +251,8 @@ export async function GET(request: NextRequest) {
                     style={{
                       display: 'flex',
                       width: `${progressNum}%`,
-                      height: '14px',
-                      borderRadius: '7px',
+                      height: '12px',
+                      borderRadius: '6px',
                       backgroundColor: statusColor,
                     }}
                   />
@@ -259,7 +260,7 @@ export async function GET(request: NextRequest) {
                 <div
                   style={{
                     display: 'flex',
-                    fontSize: '12px',
+                    fontSize: '11px',
                     fontWeight: 700,
                     letterSpacing: '0.12em',
                     color: statusColor,
@@ -271,22 +272,23 @@ export async function GET(request: NextRequest) {
             </div>
           ) : null}
 
-          {/* Status badge (when no progress bar) */}
+          {/* Status badge (when no progress) */}
           {statusLabel && !progress ? (
             <div
               style={{
-                marginTop: '24px',
+                marginTop: '20px',
                 display: 'flex',
               }}
             >
               <div
                 style={{
-                  padding: '8px 20px',
+                  display: 'flex',
+                  padding: '6px 20px',
                   borderRadius: '100px',
-                  background: `${statusColor}18`,
-                  border: `1.5px solid ${statusColor}35`,
+                  backgroundColor: `${statusColor}18`,
+                  border: `1px solid ${statusColor}30`,
                   color: statusColor,
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: 700,
                   letterSpacing: '0.15em',
                 }}
@@ -295,81 +297,63 @@ export async function GET(request: NextRequest) {
               </div>
             </div>
           ) : null}
+
+          {/* Stats row (for dashboard shares) */}
+          {statItems.length > 0 ? (
+            <div
+              style={{
+                marginTop: '32px',
+                display: 'flex',
+                flexDirection: 'row',
+                gap: '24px',
+              }}
+            >
+              {statItems.map((stat, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: 'rgba(255,255,255,0.7)',
+                    }}
+                  >
+                    {stat.trim()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
-        {/* Bottom bar — brand + tagline */}
+        {/* Bottom bar */}
         <div
           style={{
+            position: 'absolute',
+            bottom: '22px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 70px 28px',
-            position: 'relative',
-            zIndex: 10,
+            gap: '8px',
+            color: 'rgba(255,255,255,0.3)',
+            fontSize: '13px',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-            }}
-          >
-            {/* Bell icon */}
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: `linear-gradient(135deg, ${NEPAL_RED}, ${NEPAL_BLUE})`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span style={{ fontSize: '16px' }}>🔔</span>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  letterSpacing: '0.15em',
-                  color: BELL_GOLD,
-                }}
-              >
-                NEPAL REPUBLIC
-              </span>
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: 'rgba(255,255,255,0.35)',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                nepalrepublic.org
-              </span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              fontSize: '13px',
-              color: 'rgba(255,255,255,0.3)',
-              maxWidth: '400px',
-              textAlign: 'right',
-            }}
-          >
-            {theme.tagline}
-          </div>
+          <span style={{ color: BELL_GOLD }}>nepalrepublic.org</span>
+          <span style={{ display: 'flex' }}>·</span>
+          <span style={{ display: 'flex' }}>{theme.tagline}</span>
         </div>
 
-        {/* Bottom accent line */}
+        {/* Bottom accent */}
         <div
           style={{
             position: 'absolute',
