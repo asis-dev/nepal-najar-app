@@ -78,6 +78,18 @@ interface ProcessJobsResult {
   }>;
 }
 
+function getAnalysisLookbackCutoff(): string | null {
+  const configured = Number.parseInt(
+    process.env.INTELLIGENCE_ANALYSIS_LOOKBACK_HOURS || '168',
+    10,
+  );
+  if (!Number.isFinite(configured)) {
+    return new Date(Date.now() - 168 * 60 * 60 * 1000).toISOString();
+  }
+  if (configured <= 0) return null;
+  return new Date(Date.now() - configured * 60 * 60 * 1000).toISOString();
+}
+
 function buildDedupeKey<T extends IntelligenceJobType>(
   jobType: T,
   payload: JobPayloadMap[T],
@@ -173,7 +185,7 @@ export async function enqueueDiscoveryJobsForSignals(
       await enqueueIntelligenceJob({
         jobType: 'discover_commitment',
         payload: { signalId: signal.id },
-        priority: 50,
+        priority: 60,
       }),
     );
   }
@@ -196,7 +208,7 @@ export async function enqueueSignalAnalysisJobs(options: {
       await enqueueIntelligenceJob({
         jobType: 'process_signals_batch',
         payload: { batchSize, trigger, sequence },
-        priority: 70,
+        priority: 55,
       }),
     );
   }
@@ -210,24 +222,30 @@ export async function getSignalAnalysisBacklog(): Promise<{
   total: number;
 }> {
   const supabase = getSupabase();
-  const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = getAnalysisLookbackCutoff();
 
-  const { count: unclassifiedCount } = await supabase
+  let unclassifiedQuery = supabase
     .from('intelligence_signals')
     .select('id', { count: 'exact', head: true })
-    .eq('tier1_processed', false)
-    .gte('discovered_at', cutoff24h);
+    .eq('tier1_processed', false);
+  if (cutoff) {
+    unclassifiedQuery = unclassifiedQuery.gte('discovered_at', cutoff);
+  }
+  const { count: unclassifiedCount } = await unclassifiedQuery;
 
   // Counting "matched_promise_ids.length > 0" directly through PostgREST is awkward,
   // so we fetch a bounded candidate set and filter locally.
-  const { data: tier3Candidates } = await supabase
+  let tier3CandidatesQuery = supabase
     .from('intelligence_signals')
     .select('matched_promise_ids')
     .eq('tier1_processed', true)
     .eq('tier3_processed', false)
     .gte('relevance_score', 0.3)
-    .gte('discovered_at', cutoff24h)
     .limit(5000);
+  if (cutoff) {
+    tier3CandidatesQuery = tier3CandidatesQuery.gte('discovered_at', cutoff);
+  }
+  const { data: tier3Candidates } = await tier3CandidatesQuery;
 
   const tier3Pending = (tier3Candidates || []).filter(
     (row) =>
@@ -345,7 +363,7 @@ export async function enqueueStatusPipelineJob(
   return enqueueIntelligenceJob({
     jobType: 'run_status_pipeline',
     payload: { trigger },
-    priority: 60,
+    priority: 65,
   });
 }
 
@@ -391,7 +409,7 @@ async function releaseStaleRunningJobs(maxAgeMinutes = 20): Promise<number> {
     .from('intelligence_jobs')
     .select('id')
     .eq('status', 'running')
-    .lt('locked_at', cutoffIso);
+    .or(`locked_at.is.null,locked_at.lt.${cutoffIso}`);
 
   if (error || !staleJobs || staleJobs.length === 0) {
     return 0;
@@ -604,6 +622,10 @@ async function processSingleJob(
       analyzed: result.analyzed,
       persisted: result.persisted,
       recommendations: result.recommendations.length,
+      autoReviewed: result.autoReviewed,
+      autoApproved: result.autoApproved,
+      autoApplied: result.autoApplied,
+      autoDeferred: result.autoDeferred,
     };
   }
 

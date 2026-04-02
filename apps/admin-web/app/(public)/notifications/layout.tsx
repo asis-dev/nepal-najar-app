@@ -1,15 +1,11 @@
-import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Notifications | Nepal Republic',
+export const metadata = createMetadata({
+  title: 'Notifications',
   description:
-    'Manage your notification preferences — push alerts, email digests, and province-specific updates on government commitments. सूचना सेटिङ।',
-  openGraph: {
-    title: 'Notifications | Nepal Republic',
-    description:
-      'Stay updated on government commitment changes with push notifications and email digests.',
-  },
-};
+    'Manage your notification preferences — push alerts, email digests, and province-specific updates on government commitments.',
+  path: '/notifications',
+});
 
 export default function NotificationsLayout({
   children,

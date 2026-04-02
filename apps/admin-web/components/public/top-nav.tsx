@@ -43,7 +43,13 @@ import { SearchOverlay } from '@/components/public/search-overlay';
 
 /* Live scan stats for header badge */
 function useScanStats() {
-  const [stats, setStats] = useState<{ signalsToday: number; sourcesToday: number } | null>(null);
+  const [stats, setStats] = useState<{
+    signalsToday: number;
+    sourcesToday: number;
+    latestSweepAt?: string | null;
+    latestSweepStatus?: string | null;
+    isStale?: boolean;
+  } | null>(null);
   useEffect(() => {
     fetch('/api/scan-stats')
       .then((r) => (r.ok ? r.json() : null))
@@ -251,19 +257,6 @@ export function TopNav() {
           </div>
 
           <div className="hidden items-center justify-end gap-2 lg:flex shrink-0">
-            {/* Today's scan count */}
-            {scanStats && scanStats.signalsToday > 0 && (
-              <div
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-medium text-emerald-300"
-                title={locale === 'ne'
-                  ? `आज ${scanStats.signalsToday} स्रोतहरू स्क्यान गरियो`
-                  : `${scanStats.signalsToday} sources scanned today`}
-              >
-                <Activity className="h-3.5 w-3.5" />
-                <span>{scanStats.signalsToday.toLocaleString()}</span>
-                <span className="text-emerald-400/60">{locale === 'ne' ? 'स्क्यान' : 'scanned'}</span>
-              </div>
-            )}
             {/* Pulse activity indicator */}
             <Link
               href="/trending"
@@ -276,6 +269,18 @@ export function TopNav() {
               </div>
               <TrendingUp className="h-3.5 w-3.5" />
             </Link>
+            {scanStats?.latestSweepAt && (
+              <span
+                className={`rounded-xl border px-2 py-1 text-[10px] font-medium ${
+                  scanStats.isStale
+                    ? 'border-amber-500/30 text-amber-300'
+                    : 'border-emerald-500/30 text-emerald-300'
+                }`}
+                title={`Last intelligence sweep: ${new Date(scanStats.latestSweepAt).toLocaleString()}`}
+              >
+                {scanStats.isStale ? 'Data stale' : 'Fresh data'}
+              </span>
+            )}
             <NotificationBell />
             {/* Desktop search bar */}
             <button
@@ -411,23 +416,6 @@ export function TopNav() {
           </div>
         </div>
 
-        <div className="pb-1 md:hidden">
-          <Link
-            href="/complaints"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/35 bg-amber-500/20 px-3 py-2.5 text-sm font-semibold text-amber-100 transition-colors hover:bg-amber-500/30"
-          >
-            <MessageSquareWarning className="h-4 w-4" />
-            {locale === 'ne' ? 'नागरिक समस्या दर्ता' : 'Report Civic Issue'}
-          </Link>
-          {scanStats && scanStats.signalsToday > 0 && (
-            <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-emerald-400/70">
-              <Activity className="h-3 w-3" />
-              <span>
-                {scanStats.signalsToday.toLocaleString()} {locale === 'ne' ? 'स्रोत आज स्क्यान' : 'sources scanned today'}
-              </span>
-            </div>
-          )}
-        </div>
       </div>
 
       {mobileOpen && (

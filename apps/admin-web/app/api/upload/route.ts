@@ -40,7 +40,7 @@ function generateId(): string {
 export async function POST(req: NextRequest) {
   // ── Rate limit: 20 uploads per hour per IP ──
   const ip = getClientIp(req);
-  const { success: rateLimitOk } = rateLimit(`upload:${ip}`, 20, 3600000);
+  const { success: rateLimitOk } = await rateLimit(`upload:${ip}`, 20, 3600000);
   if (!rateLimitOk) {
     return NextResponse.json(
       { error: 'Upload rate limit exceeded. Try again later.' },

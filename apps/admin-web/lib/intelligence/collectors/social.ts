@@ -233,7 +233,7 @@ export async function collectAllSocial(): Promise<{
       postsFound += posts.length;
 
       for (const post of posts) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('intelligence_signals')
           .upsert(
             {
@@ -262,9 +262,12 @@ export async function collectAllSocial(): Promise<{
               onConflict: 'source_id,external_id',
               ignoreDuplicates: true,
             },
-          );
+          )
+          .select('id');
 
-        if (!error) newPosts++;
+        if (!error && Array.isArray(data) && data.length > 0) {
+          newPosts++;
+        }
       }
 
       // Update source

@@ -9,7 +9,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/server';
 import { matchArticleToPromises } from '@/lib/scraper/matcher';
 
 export async function POST(request: Request) {
-  if (!validateScrapeAuth(request)) {
+  if (!(await validateScrapeAuth(request))) {
     return unauthorizedResponse();
   }
 

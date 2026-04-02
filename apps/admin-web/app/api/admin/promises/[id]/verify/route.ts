@@ -6,25 +6,16 @@
  *
  * Body: { status, progress, source_url, reason }
  */
+import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { isAdminAuthed } from '@/lib/auth/admin';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/server';
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  // Auth check — admin cookie or Bearer token
-  const cookieStore = cookies();
-  const adminCookie = cookieStore.get('admin_session')?.value;
-  const authHeader = request.headers.get('authorization');
-  const adminSecret = process.env.ADMIN_SECRET;
-
-  const isAuthed =
-    (adminCookie && adminSecret && adminCookie === adminSecret) ||
-    (authHeader && adminSecret && authHeader === `Bearer ${adminSecret}`);
-
-  if (!isAuthed) {
+  if (!(await isAdminAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

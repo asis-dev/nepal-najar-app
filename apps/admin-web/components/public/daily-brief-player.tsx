@@ -15,6 +15,10 @@ interface DailyBriefPlayerProps {
   onStoryHighlight?: (index: number) => void;
   /** Hide the header label (when parent provides its own label) */
   hideHeader?: boolean;
+  /** Inline label shown before the play button (e.g. "EN" or "ने") */
+  inlineLabel?: string;
+  /** Color class for inline label */
+  inlineLabelColor?: string;
 }
 
 function formatTime(seconds: number): string {
@@ -30,6 +34,8 @@ export function DailyBriefPlayer({
   storyCount = 0,
   onStoryHighlight,
   hideHeader = false,
+  inlineLabel,
+  inlineLabelColor,
 }: DailyBriefPlayerProps) {
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
@@ -42,7 +48,11 @@ export function DailyBriefPlayer({
 
   const hasVideo = !!videoUrl;
 
-  // Bind media events
+  // Stable ref for onStoryHighlight to avoid re-creating audio on parent re-renders
+  const onStoryHighlightRef = useRef(onStoryHighlight);
+  useEffect(() => { onStoryHighlightRef.current = onStoryHighlight; }, [onStoryHighlight]);
+
+  // Bind media events — no dependencies on callbacks to prevent re-render teardown
   const bindMedia = useCallback(
     (el: HTMLVideoElement | HTMLAudioElement | null) => {
       if (!el) return;
@@ -56,31 +66,45 @@ export function DailyBriefPlayer({
       const onEnd = () => {
         setIsPlaying(false);
         setCurrentTime(0);
-        onStoryHighlight?.(-1);
+        onStoryHighlightRef.current?.(-1);
       };
-      const onErr = () => setIsLoaded(false);
+      const onErr = (e: Event) => {
+        console.warn('[AudioPlayer] Error:', (e as ErrorEvent).message || 'playback error');
+        setIsLoaded(false);
+      };
+      const onStalled = () => {
+        console.warn('[AudioPlayer] Stalled — attempting to resume');
+        // Try to resume if stalled (network issue)
+        if (!el.paused && el.readyState < 3) {
+          el.load();
+        }
+      };
 
       el.addEventListener('loadedmetadata', onMeta);
       el.addEventListener('timeupdate', onTime);
       el.addEventListener('ended', onEnd);
       el.addEventListener('error', onErr);
+      el.addEventListener('stalled', onStalled);
 
       return () => {
         el.removeEventListener('loadedmetadata', onMeta);
         el.removeEventListener('timeupdate', onTime);
         el.removeEventListener('ended', onEnd);
         el.removeEventListener('error', onErr);
+        el.removeEventListener('stalled', onStalled);
       };
     },
-    [onStoryHighlight],
+    [], // stable — no deps, uses refs for callbacks
   );
 
   // For audio-only mode, create hidden Audio element
+  // Only re-creates when audioUrl changes, NOT on parent re-renders
   useEffect(() => {
     if (hasVideo) return; // Video element handles itself via ref
 
     const audio = new Audio(audioUrl);
-    audio.preload = 'metadata';
+    audio.preload = 'auto'; // download full file to prevent mid-play stops
+    audio.crossOrigin = 'anonymous'; // allow CORS for Supabase storage
     const cleanup = bindMedia(audio);
 
     return () => {
@@ -98,15 +122,15 @@ export function DailyBriefPlayer({
     const storyDuration = (duration * 0.7) / storyCount;
 
     if (currentTime < introEnd) {
-      onStoryHighlight?.(-1);
+      onStoryHighlightRef.current?.(-1);
     } else {
       const storyIndex = Math.min(
         Math.floor((currentTime - introEnd) / storyDuration),
         storyCount - 1,
       );
-      onStoryHighlight?.(storyIndex);
+      onStoryHighlightRef.current?.(storyIndex);
     }
-  }, [currentTime, duration, storyCount, isPlaying, onStoryHighlight]);
+  }, [currentTime, duration, storyCount, isPlaying]);
 
   const togglePlay = useCallback(() => {
     const media = mediaRef.current;
@@ -146,8 +170,8 @@ export function DailyBriefPlayer({
 
   return (
     <div
-      className={`mb-3 overflow-hidden rounded-xl border border-white/[0.08] bg-gradient-to-r from-[#D9A441]/[0.06] to-[#003893]/[0.06] transition-all ${
-        isExpanded ? 'p-0' : 'p-3'
+      className={`mb-2 overflow-hidden rounded-lg border border-white/[0.08] bg-gradient-to-r from-[#D9A441]/[0.06] to-[#003893]/[0.06] transition-all ${
+        isExpanded ? 'p-0' : 'px-3 py-2'
       }`}
     >
       {/* Video element (when available) */}
@@ -202,13 +226,19 @@ export function DailyBriefPlayer({
         )}
 
         {/* Player controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Inline label (e.g. "EN" or "ने") */}
+          {inlineLabel && (
+            <span className={`text-[9px] font-bold uppercase tracking-wider shrink-0 ${inlineLabelColor || 'text-gray-400'}`}>
+              {inlineLabel}
+            </span>
+          )}
           {/* Play/Pause button (audio mode or collapsed video) */}
           {(!hasVideo || isExpanded) && (
             <button
               onClick={togglePlay}
               disabled={!isLoaded}
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all ${
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all ${
                 isPlaying
                   ? 'bg-[#D9A441] text-black shadow-lg shadow-[#D9A441]/20'
                   : isLoaded
@@ -216,7 +246,7 @@ export function DailyBriefPlayer({
                     : 'bg-white/[0.06] text-white/20'
               }`}
             >
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+              {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="ml-0.5 h-3 w-3" />}
             </button>
           )}
 

@@ -7,6 +7,7 @@
  */
 
 import { getSupabase } from '@/lib/supabase/server';
+import { buildOrIlikeClause } from '@/lib/supabase/filter-utils';
 import type {
   CorruptionCase,
   CorruptionEntity,
@@ -95,9 +96,10 @@ export async function getCorruptionCases(
       query = query.contains('related_body_slugs', [filters.related_body_slug]);
     }
     if (filters.search) {
-      query = query.or(
-        `title.ilike.%${filters.search}%,summary.ilike.%${filters.search}%`,
-      );
+      const searchClause = buildOrIlikeClause(['title', 'summary'], filters.search);
+      if (searchClause) {
+        query = query.or(searchClause);
+      }
     }
 
     const { data, error, count } = await query;
@@ -214,9 +216,10 @@ export async function getCorruptionEntities(
       query = query.eq('party_affiliation', filters.party_affiliation);
     }
     if (filters.search) {
-      query = query.or(
-        `name.ilike.%${filters.search}%,name_ne.ilike.%${filters.search}%,bio.ilike.%${filters.search}%`,
-      );
+      const searchClause = buildOrIlikeClause(['name', 'name_ne', 'bio'], filters.search);
+      if (searchClause) {
+        query = query.or(searchClause);
+      }
     }
 
     const { data, error, count } = await query;
@@ -338,6 +341,7 @@ export async function getCorruptionStats(): Promise<CorruptionStats> {
     casesByType: {},
     casesByStatus: {},
     casesBySeverity: {},
+    amountByStatus: {},
     totalEntities: 0,
   };
 
@@ -372,6 +376,7 @@ export async function getCorruptionStats(): Promise<CorruptionStats> {
     const casesByType: Partial<Record<CorruptionType, number>> = {};
     const casesByStatus: Partial<Record<CaseStatus, number>> = {};
     const casesBySeverity: Partial<Record<Severity, number>> = {};
+    const amountByStatus: Partial<Record<CaseStatus, number>> = {};
 
     // Count resolved cases (convicted, acquitted, closed) for conviction rate
     let resolvedCases = 0;
@@ -391,6 +396,7 @@ export async function getCorruptionStats(): Promise<CorruptionStats> {
 
       casesByType[c.corruption_type] = (casesByType[c.corruption_type] ?? 0) + 1;
       casesByStatus[c.status] = (casesByStatus[c.status] ?? 0) + 1;
+      amountByStatus[c.status] = (amountByStatus[c.status] ?? 0) + (c.estimated_amount_npr ?? 0);
       if (c.severity) {
         casesBySeverity[c.severity] = (casesBySeverity[c.severity] ?? 0) + 1;
       }
@@ -405,6 +411,7 @@ export async function getCorruptionStats(): Promise<CorruptionStats> {
       casesByType,
       casesByStatus,
       casesBySeverity,
+      amountByStatus,
       totalEntities: entitiesCountRes.count ?? 0,
     };
   } catch (err) {

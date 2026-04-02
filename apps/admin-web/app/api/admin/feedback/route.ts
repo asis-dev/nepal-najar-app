@@ -9,7 +9,7 @@ import {
 import { enqueueFeedbackReviewJobs } from '@/lib/intelligence/jobs';
 
 export async function GET(request: NextRequest) {
-  if (!isAdminAuthed(request)) {
+  if (!(await isAdminAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isAdminAuthed(request)) {
+  if (!(await isAdminAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

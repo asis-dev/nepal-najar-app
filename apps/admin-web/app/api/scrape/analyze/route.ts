@@ -17,7 +17,7 @@ import { recomputePromiseStatus } from '@/lib/scraper/promise-recomputer';
 export const maxDuration = 300; // 5 min for local model processing
 
 export async function POST(request: Request) {
-  if (!validateScrapeAuth(request)) {
+  if (!(await validateScrapeAuth(request))) {
     return unauthorizedResponse();
   }
 

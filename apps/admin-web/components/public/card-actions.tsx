@@ -1,13 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Heart, MessageCircle, Share } from 'lucide-react';
+import { Check, Heart, MessageCircle, Share } from 'lucide-react';
 import { useWatchlistStore } from '@/lib/stores/preferences';
 import { shareOrCopy } from '@/lib/utils/share';
 
 interface CardActionsProps {
   /** Commitment ID for watchlist */
   commitmentId?: string;
+  /** Minister slug for watchlist (reuses same watchlist store) */
+  ministerSlug?: string;
   /** Share text */
   shareTitle: string;
   /** Share URL path (e.g. /explore/first-100-days/slug) */
@@ -26,6 +29,7 @@ interface CardActionsProps {
 
 export function CardActions({
   commitmentId,
+  ministerSlug,
   shareTitle,
   shareUrl,
   shareText,
@@ -35,7 +39,10 @@ export function CardActions({
   detailUrl,
 }: CardActionsProps) {
   const { watchedProjectIds, toggleWatch } = useWatchlistStore();
-  const isWatched = commitmentId ? watchedProjectIds.includes(commitmentId) : false;
+  const [shareCopied, setShareCopied] = useState(false);
+  // Heart works for both commitments and ministers
+  const heartId = commitmentId || (ministerSlug ? `minister:${ministerSlug}` : undefined);
+  const isWatched = heartId ? watchedProjectIds.includes(heartId) : false;
   const iconSize = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
   const btnClass = 'shrink-0 p-1.5 rounded-lg transition-colors';
   const countClass = 'text-[10px] tabular-nums text-gray-500 -ml-0.5';
@@ -50,12 +57,12 @@ export function CardActions({
   return (
     <div className="flex items-center gap-0.5">
       {/* Heart / Follow */}
-      {commitmentId && (
+      {heartId && (
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            toggleWatch(commitmentId);
+            toggleWatch(heartId);
           }}
           className={`${btnClass} flex items-center gap-0.5 ${isWatched ? 'text-rose-400' : 'text-gray-600 hover:text-rose-400'} hover:bg-white/[0.06]`}
           aria-label={isWatched ? 'Unfollow' : 'Follow'}
@@ -83,16 +90,23 @@ export function CardActions({
 
       {/* Share */}
       <button
-        onClick={(e) => {
+        onClick={async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          const fullUrl = `${window.location.origin}${shareUrl}`;
-          shareOrCopy({ title: shareTitle, text: shareText || shareTitle, url: fullUrl });
+          const result = await shareOrCopy({
+            title: shareTitle,
+            text: shareText || shareTitle,
+            url: shareUrl,
+          });
+          if (result === 'copied') {
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 1500);
+          }
         }}
         className={`${btnClass} text-gray-600 hover:text-gray-300 hover:bg-white/[0.06]`}
         aria-label="Share"
       >
-        <Share className={iconSize} />
+        {shareCopied ? <Check className={iconSize} /> : <Share className={iconSize} />}
       </button>
     </div>
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
+import { buildOrIlikeClause } from '@/lib/supabase/filter-utils';
 import { getComplaintAuthContext } from '@/lib/complaints/access';
 import { createCluster, type ComplaintCluster } from '@/lib/complaints/clusters';
 
@@ -29,8 +30,10 @@ export async function GET(request: NextRequest) {
   if (issueType) query = query.eq('issue_type', issueType);
   if (municipality) query = query.eq('municipality', municipality);
   if (q && q.trim()) {
-    const term = q.trim();
-    query = query.or(`title.ilike.%${term}%,summary.ilike.%${term}%`);
+    const searchClause = buildOrIlikeClause(['title', 'summary'], q);
+    if (searchClause) {
+      query = query.or(searchClause);
+    }
   }
 
   const { data, error, count } = await query;

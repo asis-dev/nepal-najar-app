@@ -14,9 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const amount = formatAmountNpr(stats.totalAmountNpr);
 
   return createMetadata({
-    title: 'AI-Powered Civic Intelligence for Nepal',
+    title: 'Track promises. Report reality. Verify truth.',
     description: `Independent AI platform holding Nepal's government accountable. 109 commitments monitored. रू ${amount} in corruption exposed. ${stats.totalCases} cases. Daily briefings powered by 80+ sources.`,
     path: '/',
+    ogImage: `/api/og?title=${encodeURIComponent('Track promises. Report reality. Verify truth.')}&subtitle=${encodeURIComponent('AI-powered civic intelligence for Nepal')}`,
   });
 }
 

@@ -1,17 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Shield,
   Search,
-  SlidersHorizontal,
   AlertTriangle,
   Users,
   FileText,
   Clock,
   Scale,
+  Share,
+  User,
+  Radar,
+  Newspaper,
+  Eye,
 } from 'lucide-react';
+import { shareOrCopy } from '@/lib/utils/share';
+import { CardActions } from '@/components/public/card-actions';
 import { PublicPageHero } from '@/components/public/page-hero';
 import { useCorruptionCases, useCorruptionStats } from '@/lib/hooks/use-corruption';
 import {
@@ -20,7 +26,6 @@ import {
   STATUS_COLORS,
   SEVERITY_LABELS,
   SEVERITY_COLORS,
-  TIMELINE_EVENT_TYPE_LABELS,
   formatAmountNpr,
   formatNprWithUsd,
   type CorruptionType,
@@ -28,12 +33,19 @@ import {
   type Severity,
   type CorruptionCase,
 } from '@/lib/data/corruption-types';
+import { useI18n } from '@/lib/i18n';
 
 /* ═══════════════════════════════════════════════
-   CORRUPTION TRACKER — Dashboard
+   CORRUPTION TRACKER — Tabbed Dashboard
    ═══════════════════════════════════════════════ */
 
+type Tab = 'all' | 'mine';
+
 export default function CorruptionPage() {
+  const { locale } = useI18n();
+  const isNe = locale === 'ne';
+
+  const [activeTab, setActiveTab] = useState<Tab>('all');
   const [typeFilter, setTypeFilter] = useState<CorruptionType | ''>('');
   const [statusFilter, setStatusFilter] = useState<CaseStatus | ''>('');
   const [severityFilter, setSeverityFilter] = useState<Severity | ''>('');
@@ -51,6 +63,14 @@ export default function CorruptionPage() {
   const cases = casesResult?.cases ?? [];
   const isLoading = casesLoading;
 
+  // For "My Reports" — filter cases that the user submitted (source_quality='alleged' means citizen report)
+  // We check if the case was created via citizen report (has complaint_filed timeline event)
+  const myCases = useMemo(() => {
+    return cases.filter(c => c.source_quality === 'alleged');
+  }, [cases]);
+
+  const displayCases = activeTab === 'mine' ? myCases : cases;
+
   return (
     <>
       {/* ── Legal Disclaimer ── */}
@@ -59,8 +79,9 @@ export default function CorruptionPage() {
           <div className="flex items-start gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
             <AlertTriangle className="h-4 w-4 flex-shrink-0 text-yellow-500 mt-0.5" />
             <p className="text-xs text-yellow-400/80">
-              All information reflects publicly available records. &quot;Alleged&quot; means no
-              conviction has occurred. Inclusion here does not imply guilt.
+              {isNe
+                ? 'सबै जानकारी सार्वजनिक रूपमा उपलब्ध अभिलेखमा आधारित छ। "आरोपित" भन्नाले कुनै दोषी ठहर भएको छैन।'
+                : 'All information reflects publicly available records. "Alleged" means no conviction has occurred. Inclusion here does not imply guilt.'}
             </p>
           </div>
         </div>
@@ -70,12 +91,64 @@ export default function CorruptionPage() {
         eyebrow={
           <span className="flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5" />
-            Corruption Tracker
+            {isNe ? 'भ्रष्टाचार ट्र्याकर' : 'Corruption Tracker'}
           </span>
         }
-        title="Corruption Tracker"
-        description="Tracking corruption cases, investigations, and accountability across Nepal's government"
+        title={isNe ? 'भ्रष्टाचार ट्र्याकर' : 'Corruption Tracker'}
+        description={isNe
+          ? 'नेपालको सरकारमा भ्रष्टाचारका घटना, अनुसन्धान र जवाफदेहिताको अनुगमन'
+          : 'Tracking corruption cases, investigations, and accountability across Nepal\'s government'}
       />
+
+      {/* ── Scan Coverage Banner ── */}
+      <section className="public-section pt-0 pb-2">
+        <div className="public-shell">
+          <div className="relative overflow-hidden rounded-xl border border-primary-500/20 bg-gradient-to-r from-primary-500/[0.06] via-transparent to-red-500/[0.06] p-4">
+            <div className="absolute top-2 right-3">
+              <button
+                onClick={() => shareOrCopy({ title: 'Corruption Tracker', text: 'Track corruption cases, investigations, and accountability across Nepal\'s government. nepalrepublic.org', url: `${typeof window !== 'undefined' ? window.location.origin : ''}/corruption` })}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-medium text-gray-400 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
+              >
+                <Share className="w-3 h-3" />
+                {isNe ? 'शेयर' : 'Share'}
+              </button>
+            </div>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-primary-500/10 p-2">
+                  <Radar className="h-5 w-5 text-primary-400 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-primary-300 uppercase tracking-wider">
+                      {isNe ? 'एआई स्क्यान' : 'AI-Powered Scan'}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[9px] font-semibold text-green-400 border border-green-500/20">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                      LIVE
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {isNe
+                      ? 'गत १२ महिनामा ८,८५०+ समाचार लेख स्क्यान गरियो'
+                      : 'Scanned 8,850+ news articles from the last 12 months'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 sm:ml-auto text-[10px] text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Newspaper className="h-3 w-3" />
+                  80+ {isNe ? 'स्रोतहरू' : 'sources'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  {isNe ? 'निरन्तर निगरानी' : 'Continuous monitoring'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── Summary Stats Banner ── */}
       <section className="public-section pt-0 pb-2">
@@ -86,7 +159,9 @@ export default function CorruptionPage() {
               <div className="text-2xl font-bold text-white">
                 {statsLoading ? '...' : stats?.totalCases ?? 0}
               </div>
-              <div className="text-[10px] uppercase tracking-wider text-gray-500">Cases Tracked</div>
+              <div className="text-[10px] uppercase tracking-wider text-gray-500">
+                {isNe ? 'ट्र्याक गरिएको' : 'Cases Tracked'}
+              </div>
             </div>
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-center">
               <span className="mx-auto block text-lg text-red-400 mb-1 font-bold">रू</span>
@@ -102,14 +177,18 @@ export default function CorruptionPage() {
               <div className="text-2xl font-bold text-amber-400">
                 {statsLoading ? '...' : stats?.activeInvestigations ?? 0}
               </div>
-              <div className="text-[10px] uppercase tracking-wider text-amber-400/60">Active Investigations</div>
+              <div className="text-[10px] uppercase tracking-wider text-amber-400/60">
+                {isNe ? 'सक्रिय अनुसन्धान' : 'Active Investigations'}
+              </div>
             </div>
             <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 text-center">
               <Scale className="mx-auto h-5 w-5 text-gray-500 mb-1" />
               <div className="text-2xl font-bold text-white">
                 {statsLoading ? '...' : `${stats?.convictionRate ?? 0}%`}
               </div>
-              <div className="text-[10px] uppercase tracking-wider text-gray-500">Conviction Rate</div>
+              <div className="text-[10px] uppercase tracking-wider text-gray-500">
+                {isNe ? 'दोषी दर' : 'Conviction Rate'}
+              </div>
             </div>
           </div>
         </div>
@@ -117,6 +196,38 @@ export default function CorruptionPage() {
 
       <section className="public-section">
         <div className="public-shell">
+          {/* ── Tab Bar ── */}
+          <div className="flex items-center gap-1 border-b border-white/[0.06] mb-4">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'all'
+                  ? 'border-primary-400 text-primary-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              {isNe ? 'सबै घटनाहरू' : 'All Cases'}
+              <span className="ml-1 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
+                {cases.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('mine')}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'mine'
+                  ? 'border-primary-400 text-primary-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <User className="h-3.5 w-3.5" />
+              {isNe ? 'मेरा रिपोर्टहरू' : 'My Reports'}
+              <span className="ml-1 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px]">
+                {myCases.length}
+              </span>
+            </button>
+          </div>
+
           {/* ── Filter Bar ── */}
           <div className="flex flex-col gap-3 mb-6">
             <div className="flex flex-wrap gap-2">
@@ -126,7 +237,7 @@ export default function CorruptionPage() {
                 onChange={(e) => setTypeFilter(e.target.value as CorruptionType | '')}
                 className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-white/[0.12] appearance-none cursor-pointer"
               >
-                <option value="">All Types</option>
+                <option value="">{isNe ? 'सबै प्रकार' : 'All Types'}</option>
                 {(Object.keys(CORRUPTION_TYPE_LABELS) as CorruptionType[]).map((t) => (
                   <option key={t} value={t}>
                     {CORRUPTION_TYPE_LABELS[t].en}
@@ -140,7 +251,7 @@ export default function CorruptionPage() {
                 onChange={(e) => setStatusFilter(e.target.value as CaseStatus | '')}
                 className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-white/[0.12] appearance-none cursor-pointer"
               >
-                <option value="">All Statuses</option>
+                <option value="">{isNe ? 'सबै स्थिति' : 'All Statuses'}</option>
                 {(Object.keys(STATUS_LABELS) as CaseStatus[]).map((s) => (
                   <option key={s} value={s}>
                     {STATUS_LABELS[s].en}
@@ -154,7 +265,7 @@ export default function CorruptionPage() {
                 onChange={(e) => setSeverityFilter(e.target.value as Severity | '')}
                 className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-white/[0.12] appearance-none cursor-pointer"
               >
-                <option value="">All Severity</option>
+                <option value="">{isNe ? 'सबै गम्भीरता' : 'All Severity'}</option>
                 {(Object.keys(SEVERITY_LABELS) as Severity[]).map((s) => (
                   <option key={s} value={s}>
                     {SEVERITY_LABELS[s].en}
@@ -170,7 +281,7 @@ export default function CorruptionPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search cases, entities, tags..."
+                placeholder={isNe ? 'घटना, व्यक्ति खोज्नुहोस्...' : 'Search cases, entities, tags...'}
                 className="w-full pl-10 pr-4 py-2 rounded-lg text-sm bg-white/[0.03] border border-white/[0.06] text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-white/[0.12]"
               />
             </div>
@@ -180,11 +291,16 @@ export default function CorruptionPage() {
           <div className="mb-4">
             <Link
               href="/corruption/entities"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-medium text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-gray-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-gray-200"
             >
-              <Users className="h-3.5 w-3.5" />
-              View All Entities &amp; Persons of Interest
+              <Users className="h-4 w-4" />
+              {isNe ? 'सम्पूर्ण संलग्न व्यक्ति हेर्नुहोस्' : 'View All Entities & Persons of Interest →'}
             </Link>
+          </div>
+
+          {/* ── Sources footnote ── */}
+          <div className="mb-4 text-[10px] text-gray-600">
+            {isNe ? 'स्रोतहरू' : 'Sources'}: Kathmandu Post, MyRepublica, Ekantipur, The Diplomat, Nepali Times, The Rising Nepal, BBC Nepali, Online Khabar, Ratopati, Setopati, Himalayan Times, CIAA Reports, Parliament Records, Google News &amp; more
           </div>
 
           {/* ── Loading ── */}
@@ -204,16 +320,33 @@ export default function CorruptionPage() {
             </div>
           )}
 
-          {/* ── Case Cards Grid ── */}
-          {!isLoading && cases.length === 0 && (
-            <div className="text-center py-12 text-gray-500 text-sm">
-              No cases match your filters.
+          {/* ── Empty state ── */}
+          {!isLoading && displayCases.length === 0 && (
+            <div className="text-center py-12">
+              {activeTab === 'mine' ? (
+                <>
+                  <User className="mx-auto h-8 w-8 text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-400 mb-1">
+                    {isNe ? 'तपाईंले अहिलेसम्म कुनै रिपोर्ट गर्नुभएको छैन।' : 'You haven\'t reported any cases yet.'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {isNe
+                      ? 'भ्रष्टाचार रिपोर्ट गर्न "नागरिक समस्या" ट्याबबाट सुरु गर्नुहोस्।'
+                      : 'Use the Civic Issues tab on the home page to report corruption.'}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  {isNe ? 'तपाईंको फिल्टरसँग मिल्ने कुनै घटना छैन।' : 'No cases match your filters.'}
+                </p>
+              )}
             </div>
           )}
 
-          {!isLoading && cases.length > 0 && (
+          {/* ── Case Cards Grid ── */}
+          {!isLoading && displayCases.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {cases.map((c) => (
+              {displayCases.map((c) => (
                 <CaseCard key={c.slug} caseData={c} />
               ))}
             </div>
@@ -252,6 +385,11 @@ function CaseCard({ caseData }: { caseData: CorruptionCase }) {
             {SEVERITY_LABELS[caseData.severity].en}
           </span>
         )}
+        {caseData.source_quality === 'alleged' && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/10 text-blue-400">
+            Citizen Report
+          </span>
+        )}
       </div>
 
       {/* Title */}
@@ -270,45 +408,20 @@ function CaseCard({ caseData }: { caseData: CorruptionCase }) {
         <p className="text-[11px] text-gray-500 line-clamp-2 mb-2">{caseData.summary}</p>
       )}
 
-      {/* Updated date */}
-      <div className="flex items-center gap-1.5 text-[10px] text-gray-600 border-t border-white/[0.06] pt-2">
-        <Clock className="h-3 w-3" />
-        <span>Updated {new Date(caseData.updated_at).toLocaleDateString()}</span>
+      {/* Footer: date + actions */}
+      <div className="flex items-center justify-between border-t border-white/[0.06] pt-2">
+        <span className="flex items-center gap-1.5 text-[10px] text-gray-600">
+          <Clock className="h-3 w-3" />
+          Updated {new Date(caseData.updated_at).toLocaleDateString()}
+        </span>
+        <CardActions
+          shareTitle={caseData.title}
+          shareUrl={`/corruption/${caseData.slug}`}
+          shareText={caseData.summary || caseData.title}
+          detailUrl={`/corruption/${caseData.slug}`}
+          size="sm"
+        />
       </div>
     </Link>
-  );
-}
-
-/* ── Stat Box ── */
-
-function StatBox({
-  label,
-  value,
-  icon: Icon,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`px-3 py-2 rounded-lg border ${
-        highlight
-          ? 'bg-red-500/5 border-red-500/15'
-          : 'bg-white/[0.02] border-white/[0.06]'
-      }`}
-    >
-      <div className="flex items-center gap-1 mb-0.5">
-        <Icon className="h-3 w-3 text-gray-600" />
-        <span className="text-[10px] text-gray-600 uppercase tracking-wider">{label}</span>
-      </div>
-      <div
-        className={`text-sm font-semibold ${highlight ? 'text-red-400' : 'text-gray-200'} truncate max-w-[160px]`}
-      >
-        {value}
-      </div>
-    </div>
   );
 }

@@ -24,7 +24,7 @@ import { matchArticleToPromises } from '@/lib/scraper/matcher';
 export const maxDuration = 60; // Vercel Pro: 60s timeout
 
 export async function POST(request: Request) {
-  if (!validateScrapeAuth(request)) {
+  if (!(await validateScrapeAuth(request))) {
     return unauthorizedResponse();
   }
 

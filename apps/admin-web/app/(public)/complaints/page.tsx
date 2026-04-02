@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, BellRing, Loader2, MapPin, MessageSquareWarning, Mic, Search, Send, Square } from 'lucide-react';
+import { AlertCircle, ChevronRight, Loader2, MapPin, MessageSquareWarning, Mic, Search, Send, Square } from 'lucide-react';
 import { useComplaints } from '@/lib/hooks/use-complaints';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
@@ -33,10 +33,68 @@ const ISSUE_TYPES = [
   'other',
 ];
 
-function formatTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown time';
-  return date.toLocaleString();
+function timeAgo(value: string, isNe: boolean): string {
+  const diff = Date.now() - new Date(value).getTime();
+  if (Number.isNaN(diff)) return '';
+  const hours = Math.floor(diff / 3_600_000);
+  if (hours < 1) return isNe ? 'अहिले' : 'now';
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d`;
+  return `${Math.floor(days / 30)}mo`;
+}
+
+function statusDotColor(status: string): string {
+  if (status === 'resolved' || status === 'closed') return 'bg-emerald-400';
+  if (status === 'in_progress' || status === 'acknowledged') return 'bg-cyan-400';
+  if (status === 'needs_info') return 'bg-amber-400';
+  return 'bg-gray-500';
+}
+
+function statusBadgeColor(status: string): string {
+  if (status === 'resolved' || status === 'closed') return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  if (status === 'in_progress' || status === 'acknowledged') return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
+  if (status === 'needs_info') return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+  return 'text-gray-400 bg-white/[0.04] border-white/[0.08]';
+}
+
+/** Compact issue row used in both panels */
+function IssueRow({ complaint, isNe }: { complaint: any; isNe: boolean }) {
+  return (
+    <Link
+      href={`/complaints/${complaint.id}`}
+      className="flex items-start gap-2.5 py-2.5 transition-colors hover:bg-white/[0.03] rounded-lg group px-1"
+    >
+      <div className="mt-1.5 shrink-0">
+        <div className={`h-2 w-2 rounded-full ${statusDotColor(complaint.status)}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="text-[13px] font-medium text-gray-200 truncate group-hover:text-white transition-colors">
+          {isNe && complaint.title_ne ? complaint.title_ne : complaint.title}
+        </h3>
+        <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+          <span className={`inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize ${statusBadgeColor(complaint.status)}`}>
+            {complaint.status.replace('_', ' ')}
+          </span>
+          <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-gray-400 capitalize">
+            {complaint.issue_type}
+          </span>
+          {(complaint.municipality || complaint.ward_number) && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-500">
+              <MapPin className="h-2.5 w-2.5" />
+              {[complaint.municipality, complaint.ward_number ? `W${complaint.ward_number}` : null]
+                .filter(Boolean)
+                .join(', ')}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="shrink-0 flex items-center gap-2">
+        <span className="text-[10px] text-gray-600 tabular-nums">{timeAgo(complaint.last_activity_at, isNe)}</span>
+        <ChevronRight className="h-3 w-3 text-gray-700 group-hover:text-gray-500 transition-colors" />
+      </div>
+    </Link>
+  );
 }
 
 export default function ComplaintsPage() {
@@ -45,11 +103,13 @@ export default function ComplaintsPage() {
   const isNe = locale === 'ne';
   const { isAuthenticated, isVerifier } = useAuth();
 
-  const [mode, setMode] = useState<'all' | 'mine' | 'followed'>('all');
+  // ── All issues filters ──
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [issueType, setIssueType] = useState('');
+  const [rightTab, setRightTab] = useState<'all' | 'mine' | 'followed'>('all');
 
+  // ── Report form state ──
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [rawTranscript, setRawTranscript] = useState('');
@@ -67,22 +127,23 @@ export default function ComplaintsPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaChunksRef = useRef<Blob[]>([]);
 
-  const filters = useMemo(
+  // ── Issues query (switches between all / mine / followed based on rightTab) ──
+  const issueFilters = useMemo(
     () => ({
-      mine: isAuthenticated && mode === 'mine',
-      followed: isAuthenticated && mode === 'followed',
+      mine: isAuthenticated && rightTab === 'mine',
+      followed: isAuthenticated && rightTab === 'followed',
       q: search || undefined,
       status: status || undefined,
       issue_type: issueType || undefined,
       limit: 40,
       offset: 0,
     }),
-    [isAuthenticated, issueType, mode, search, status],
+    [isAuthenticated, rightTab, search, status, issueType],
   );
+  const { data: issueData, isLoading: issueLoading, error: issueError, refetch: refetchAll } = useComplaints(issueFilters);
+  const issueComplaints = issueData?.complaints || [];
 
-  const { data, isLoading, error, refetch } = useComplaints(filters);
-  const complaints = data?.complaints || [];
-
+  // ── Voice recording ──
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state !== 'recording') return;
@@ -272,7 +333,7 @@ export default function ComplaintsPage() {
       );
 
       await queryClient.invalidateQueries({ queryKey: ['complaints'] });
-      await refetch();
+      await refetchAll();
     } catch (submitErr) {
       const message =
         submitErr instanceof Error
@@ -289,19 +350,20 @@ export default function ComplaintsPage() {
   return (
     <div className="public-page">
       <section className="public-section pb-4">
-        <div className="public-shell space-y-5">
+        <div className="public-shell space-y-4">
+          {/* ── Hero ── */}
           <div className="glass-card p-5 sm:p-6">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-200">
               <MessageSquareWarning className="h-3.5 w-3.5" />
               {isNe ? 'नागरिक समस्या ट्र्याकर' : 'Citizen Issue Tracker'}
             </div>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">
-              {isNe ? 'समस्या रिपोर्ट गर्नुहोस्, ट्र्याक गर्नुहोस्, फलोअप गर्नुहोस्' : 'Report local issues, track progress, and follow updates'}
+              {isNe ? 'समस्या रिपोर्ट गर्नुहोस्, ट्र्याक गर्नुहोस्, फलोअप गर्नुहोस्' : 'Report, track & follow up on local issues'}
             </h1>
             <p className="mt-2 text-sm text-gray-300 sm:text-base">
               {isNe
-                ? 'सडकको खाल्डो, पानी, फोहर, बिजुली वा सेवासम्बन्धी समस्या दर्ता गर्नुहोस्। एआईले विभाग सुझाव दिन्छ, तर सार्वजनिक स्थिति समीक्षा पछि मात्र बदलिन्छ।'
-                : 'Log roads, water, sanitation, power, and service issues. AI suggests routing, but public status changes only after reviewer approval.'}
+                ? 'सडकको खाल्डो, पानी, फोहर, बिजुली वा सेवासम्बन्धी समस्या दर्ता गर्नुहोस्।'
+                : 'Log roads, water, sanitation, power, and service issues. AI suggests routing, but public status changes only after review.'}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
@@ -315,250 +377,213 @@ export default function ComplaintsPage() {
                   href="/complaints/ops"
                   className="inline-flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/20"
                 >
-                  {isNe ? 'Operations Hub' : 'Operations Hub'}
+                  Operations Hub
                 </Link>
               )}
             </div>
           </div>
 
-          <form onSubmit={handleSubmitComplaint} className="glass-card p-5 sm:p-6">
-            <h2 className="text-lg font-semibold text-white">
-              {isNe ? 'नयाँ नागरिक समस्या' : 'New Civic Issue'}
-            </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={isNe ? 'शीर्षक (वैकल्पिक)' : 'Title (optional)'}
-                className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-primary-500/40 focus:outline-none"
-              />
-              <div className="grid grid-cols-2 gap-2">
+          {/* ══ SPLIT LAYOUT: Form+MyIssues (left) | All Issues (right) ══ */}
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+
+            {/* ── LEFT COLUMN: Report Form + My Issues ── */}
+            <div className="space-y-4">
+              {/* Report form */}
+              <form onSubmit={handleSubmitComplaint} className="glass-card p-4 sm:p-5">
+                <h2 className="text-base font-semibold text-white mb-3">
+                  {isNe ? 'नयाँ समस्या रिपोर्ट' : 'Report New Issue'}
+                </h2>
                 <input
-                  value={municipality}
-                  onChange={(e) => setMunicipality(e.target.value)}
-                  placeholder={isNe ? 'पालिका' : 'Municipality'}
-                  className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-primary-500/40 focus:outline-none"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder={isNe ? 'शीर्षक (वैकल्पिक)' : 'Title (optional)'}
+                  className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary-500/40 focus:outline-none"
                 />
-                <input
-                  value={ward}
-                  onChange={(e) => setWard(e.target.value)}
-                  placeholder={isNe ? 'वडा नं' : 'Ward'}
-                  className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-primary-500/40 focus:outline-none"
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <input
+                    value={municipality}
+                    onChange={(e) => setMunicipality(e.target.value)}
+                    placeholder={isNe ? 'पालिका' : 'Municipality'}
+                    className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary-500/40 focus:outline-none"
+                  />
+                  <input
+                    value={ward}
+                    onChange={(e) => setWard(e.target.value)}
+                    placeholder={isNe ? 'वडा नं' : 'Ward'}
+                    className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary-500/40 focus:outline-none"
+                  />
+                </div>
+                <textarea
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    setInputMode(rawTranscript.trim().length > 0 ? 'mixed' : 'text');
+                  }}
+                  rows={3}
+                  placeholder={
+                    isNe
+                      ? 'समस्या के हो? कहाँ हो? कहिले देखि हो?...'
+                      : 'Describe the issue, location, timeline...'
+                  }
+                  className="mt-2 w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary-500/40 focus:outline-none"
                 />
-              </div>
-            </div>
-            <textarea
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                setInputMode(rawTranscript.trim().length > 0 ? 'mixed' : 'text');
-              }}
-              rows={4}
-              placeholder={
-                isNe
-                  ? 'समस्या के हो? कहाँ हो? कहिले देखि हो? कुनै जोखिम छ भने उल्लेख गर्नुहोस्...'
-                  : 'Describe the issue, location, timeline, and any urgency or risk...'
-              }
-              className="mt-3 w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-primary-500/40 focus:outline-none"
-            />
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isTranscribing || isSubmitting}
-                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-60 ${
-                  isRecording
-                    ? 'border-red-400/40 bg-red-500/20 text-red-100 hover:bg-red-500/30'
-                    : 'border-cyan-400/40 bg-cyan-500/20 text-cyan-50 hover:bg-cyan-500/30'
-                }`}
-              >
-                {isRecording ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
-                {isRecording
-                  ? (isNe ? 'रिकर्डिङ रोक्नुहोस्' : 'Stop recording')
-                  : (isNe ? 'आवाजमा समस्या बोल्नुहोस्' : 'Speak issue')}
-              </button>
-
-              {isTranscribing && (
-                <span className="inline-flex items-center gap-1 text-xs text-cyan-200">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  {isNe ? 'ट्रान्सक्राइब हुँदैछ...' : 'Transcribing...'}
-                </span>
-              )}
-            </div>
-
-            {voiceMessage && (
-              <p className="mt-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
-                {voiceMessage}
-              </p>
-            )}
-            {voiceError && (
-              <p className="mt-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-                {voiceError}
-              </p>
-            )}
-
-            <label className="mt-3 flex items-center gap-2 text-sm text-gray-300">
-              <input
-                type="checkbox"
-                checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-                className="h-4 w-4 rounded border-white/20 bg-white/5"
-              />
-              {isNe ? 'नाम सार्वजनिक नगर्नुहोस्' : 'Submit anonymously'}
-            </label>
-
-            {submitMessage && (
-              <p className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
-                {submitMessage}
-              </p>
-            )}
-            {submitError && (
-              <p className="mt-3 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-                {submitError}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-primary-500/40 bg-primary-500/20 px-4 py-2.5 text-sm font-semibold text-primary-100 transition-colors hover:bg-primary-500/30 disabled:opacity-60"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {isSubmitting ? (isNe ? 'पठाउँदै...' : 'Submitting...') : isNe ? 'समस्या पठाउनुहोस्' : 'Submit Issue'}
-            </button>
-          </form>
-
-          <div className="glass-card p-4 sm:p-5">
-            <div className="grid gap-3 md:grid-cols-[auto_auto_auto_1fr_auto_auto]">
-              <div className="inline-flex rounded-xl border border-white/[0.1] bg-white/[0.03] p-1">
-                {(['all', 'mine', 'followed'] as const).map((tab) => (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <button
-                    key={tab}
-                    onClick={() => setMode(tab)}
-                    disabled={!isAuthenticated && tab !== 'all'}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      mode === tab
-                        ? 'bg-white/[0.12] text-white'
-                        : 'text-gray-400 hover:text-gray-200'
-                    } disabled:cursor-not-allowed disabled:opacity-45`}
+                    type="button"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isTranscribing || isSubmitting}
+                    className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                      isRecording
+                        ? 'border-red-400/40 bg-red-500/20 text-red-100 hover:bg-red-500/30'
+                        : 'border-cyan-400/40 bg-cyan-500/20 text-cyan-50 hover:bg-cyan-500/30'
+                    }`}
                   >
-                    {tab === 'all'
-                      ? isNe
-                        ? 'सबै'
-                        : 'All'
-                      : tab === 'mine'
-                        ? isNe
-                          ? 'मेरो'
-                          : 'Mine'
-                        : isNe
-                          ? 'फलो गरिएका'
-                          : 'Following'}
+                    {isRecording ? <Square className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+                    {isRecording
+                      ? (isNe ? 'रोक्नुहोस्' : 'Stop')
+                      : (isNe ? 'बोल्नुहोस्' : 'Speak')}
                   </button>
-                ))}
+                  {isTranscribing && (
+                    <span className="inline-flex items-center gap-1 text-xs text-cyan-200">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      {isNe ? 'ट्रान्सक्राइब...' : 'Transcribing...'}
+                    </span>
+                  )}
+                  <label className="ml-auto flex items-center gap-1.5 text-xs text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={isAnonymous}
+                      onChange={(e) => setIsAnonymous(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-white/20 bg-white/5"
+                    />
+                    {isNe ? 'गुमनाम' : 'Anonymous'}
+                  </label>
+                </div>
+
+                {voiceMessage && (
+                  <p className="mt-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-100">
+                    {voiceMessage}
+                  </p>
+                )}
+                {voiceError && (
+                  <p className="mt-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-200">
+                    {voiceError}
+                  </p>
+                )}
+                {submitMessage && (
+                  <p className="mt-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200">
+                    {submitMessage}
+                  </p>
+                )}
+                {submitError && (
+                  <p className="mt-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-200">
+                    {submitError}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary-500/40 bg-primary-500/20 px-4 py-2.5 text-sm font-semibold text-primary-100 transition-colors hover:bg-primary-500/30 disabled:opacity-60"
+                >
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {isSubmitting ? (isNe ? 'पठाउँदै...' : 'Submitting...') : isNe ? 'समस्या पठाउनुहोस्' : 'Submit Issue'}
+                </button>
+              </form>
+
+            </div>
+
+            {/* ── RIGHT COLUMN: All Community Issues ── */}
+            <div className="glass-card flex flex-col overflow-hidden">
+              {/* Header with tabs + filters */}
+              <div className="border-b border-white/[0.06] p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex rounded-lg border border-white/[0.1] bg-white/[0.03] p-0.5">
+                    {([
+                      { key: 'all' as const, label: isNe ? 'सबै' : 'All', needsAuth: false },
+                      { key: 'mine' as const, label: isNe ? 'मेरो' : 'Mine', needsAuth: true },
+                      { key: 'followed' as const, label: isNe ? 'फलो' : 'Following', needsAuth: true },
+                    ]).map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setRightTab(tab.key)}
+                        disabled={tab.needsAuth && !isAuthenticated}
+                        className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
+                          rightTab === tab.key
+                            ? 'bg-white/[0.12] text-white'
+                            : 'text-gray-400 hover:text-gray-200'
+                        } disabled:cursor-not-allowed disabled:opacity-45`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[11px] text-gray-500 tabular-nums">
+                    {issueData?.total || 0} {isNe ? 'समस्या' : 'issues'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.03] px-2 py-1.5 text-[11px] text-gray-200 focus:outline-none"
+                  >
+                    <option value="">{isNe ? 'स्थिति' : 'Status'}</option>
+                    {STATUS_OPTIONS.map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={issueType}
+                    onChange={(e) => setIssueType(e.target.value)}
+                    className="shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.03] px-2 py-1.5 text-[11px] text-gray-200 focus:outline-none"
+                  >
+                    <option value="">{isNe ? 'विषय' : 'Type'}</option>
+                    {ISSUE_TYPES.map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </select>
+                  <label className="relative flex flex-1 min-w-0 items-center">
+                    <Search className="pointer-events-none absolute left-2 h-3 w-3 text-gray-500" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={isNe ? 'खोज्नुहोस्...' : 'Search...'}
+                      className="w-full rounded-lg border border-white/[0.1] bg-white/[0.03] py-1.5 pl-7 pr-2 text-[11px] text-white placeholder:text-gray-500 focus:outline-none"
+                    />
+                  </label>
+                </div>
               </div>
 
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 py-2 text-xs text-gray-200 focus:outline-none"
-              >
-                <option value="">{isNe ? 'सबै स्थिति' : 'All status'}</option>
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={issueType}
-                onChange={(e) => setIssueType(e.target.value)}
-                className="rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 py-2 text-xs text-gray-200 focus:outline-none"
-              >
-                <option value="">{isNe ? 'सबै विषय' : 'All issues'}</option>
-                {ISSUE_TYPES.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-
-              <label className="relative flex items-center">
-                <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-gray-500" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={isNe ? 'समस्या खोज्नुहोस्...' : 'Search civic issues...'}
-                  className="w-full rounded-xl border border-white/[0.1] bg-white/[0.03] py-2 pl-8 pr-3 text-xs text-white placeholder:text-gray-500 focus:outline-none"
-                />
-              </label>
-
-              <div className="flex items-center gap-2 text-xs text-gray-300">
-                <BellRing className="h-3.5 w-3.5 text-primary-300" />
-                {isNe ? `${data?.total || 0} ट्र्याक गरिएका` : `${data?.total || 0} tracked`}
+              {/* Scrollable issue list */}
+              <div className="flex-1 overflow-y-auto max-h-[70vh] px-3 py-1 divide-y divide-white/[0.04]">
+                {issueLoading ? (
+                  <div className="py-10 text-center text-sm text-gray-400">
+                    <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                    {isNe ? 'लोड हुँदैछ...' : 'Loading...'}
+                  </div>
+                ) : issueError ? (
+                  <div className="py-8 text-center text-sm text-red-300">
+                    <AlertCircle className="mx-auto mb-2 h-5 w-5" />
+                    {issueError instanceof Error ? issueError.message : isNe ? 'लोड असफल' : 'Failed to load'}
+                  </div>
+                ) : issueComplaints.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-gray-500">
+                    {rightTab === 'mine'
+                      ? (isNe ? 'तपाईंले अहिलेसम्म कुनै समस्या रिपोर्ट गर्नुभएको छैन।' : 'You haven\'t reported any issues yet.')
+                      : rightTab === 'followed'
+                        ? (isNe ? 'फलो गरिएका समस्या छैनन्।' : 'No followed issues yet.')
+                        : (isNe ? 'समस्या फेला परेन।' : 'No issues found.')}
+                  </div>
+                ) : (
+                  issueComplaints.map((complaint) => (
+                    <IssueRow key={complaint.id} complaint={complaint} isNe={isNe} />
+                  ))
+                )}
               </div>
             </div>
-          </div>
 
-          <div className="space-y-3">
-            {isLoading ? (
-              <div className="glass-card p-6 text-sm text-gray-300">
-                <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                {isNe ? 'समस्याहरू लोड हुँदैछ...' : 'Loading civic issues...'}
-              </div>
-            ) : error ? (
-              <div className="glass-card border border-red-400/30 bg-red-500/10 p-6 text-sm text-red-200">
-                <AlertCircle className="mr-2 inline h-4 w-4" />
-                {error instanceof Error ? error.message : isNe ? 'लोड गर्न असफल भयो।' : 'Failed to load civic issues.'}
-              </div>
-            ) : complaints.length === 0 ? (
-              <div className="glass-card p-8 text-center text-sm text-gray-300">
-                {isNe ? 'समस्या फेला परेन।' : 'No civic issues found.'}
-              </div>
-            ) : (
-              complaints.map((complaint) => (
-                <Link
-                  key={complaint.id}
-                  href={`/complaints/${complaint.id}`}
-                  className="glass-card block p-4 transition-colors hover:bg-white/[0.05]"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-white/[0.15] bg-white/[0.03] px-2.5 py-1 text-[11px] uppercase tracking-wide text-gray-300">
-                      {complaint.status.replace('_', ' ')}
-                    </span>
-                    <span className="rounded-full border border-primary-400/30 bg-primary-500/10 px-2.5 py-1 text-[11px] uppercase tracking-wide text-primary-200">
-                      {complaint.issue_type}
-                    </span>
-                    {complaint.is_following && (
-                      <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[11px] text-cyan-200">
-                        {isNe ? 'फलो गर्दै' : 'Following'}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="mt-2 text-base font-semibold text-white">
-                    {isNe && complaint.title_ne ? complaint.title_ne : complaint.title}
-                  </h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-gray-300">
-                    {isNe && complaint.description_ne ? complaint.description_ne : complaint.description}
-                  </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                    <span>{complaint.reporter_name || (complaint.is_anonymous ? 'Anonymous' : 'Citizen')}</span>
-                    <span>{formatTime(complaint.last_activity_at)}</span>
-                    {(complaint.municipality || complaint.ward_number) && (
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {[complaint.municipality, complaint.ward_number ? `Ward ${complaint.ward_number}` : null]
-                          .filter(Boolean)
-                          .join(', ')}
-                      </span>
-                    )}
-                    <span>{complaint.evidence_count} evidence</span>
-                    <span>{complaint.follower_count} following</span>
-                  </div>
-                </Link>
-              ))
-            )}
           </div>
         </div>
       </section>

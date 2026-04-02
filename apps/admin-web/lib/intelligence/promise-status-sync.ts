@@ -70,9 +70,12 @@ export async function syncPromiseStatuses(options?: {
   applyStatusChanges?: boolean;
 }): Promise<SyncResult> {
   const supabase = getSupabase();
+  const allowDirectWrites =
+    process.env.INTELLIGENCE_ALLOW_DIRECT_STATUS_WRITES === 'true';
   const applyStatusChanges =
     options?.applyStatusChanges ??
-    process.env.INTELLIGENCE_AUTO_STATUS_SYNC === 'true';
+    (allowDirectWrites &&
+      process.env.INTELLIGENCE_AUTO_STATUS_SYNC === 'true');
   const result: SyncResult = {
     promisesChecked: 0,
     statusesUpdated: 0,

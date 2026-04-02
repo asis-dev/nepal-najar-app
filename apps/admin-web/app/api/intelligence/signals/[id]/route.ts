@@ -2,13 +2,15 @@
  * GET / PATCH / DELETE  /api/intelligence/signals/[id]
  *
  * Manage a single intelligence signal.
- *   GET    — return full signal row (ADMIN_SECRET or SCRAPE_SECRET)
- *   PATCH  — edit classification, confidence, review status, etc. (ADMIN_SECRET or SCRAPE_SECRET)
- *   DELETE — soft-delete (mark rejected) (ADMIN_SECRET only)
+ *   GET    — return full signal row (admin session or SCRAPE_SECRET)
+ *   PATCH  — edit classification, confidence, review status, etc. (admin session or SCRAPE_SECRET)
+ *   DELETE — soft-delete (mark rejected) (admin session only)
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { isAdminAuthed } from '@/lib/auth/admin';
 import { getSupabase } from '@/lib/supabase/server';
 import { recordSignalReviewAudit } from '@/lib/intelligence/review-audit';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 // ---------------------------------------------------------------------------
 // Auth helpers
@@ -16,15 +18,16 @@ import { recordSignalReviewAudit } from '@/lib/intelligence/review-audit';
 
 type AuthLevel = 'admin' | 'scrape' | null;
 
-function getAuthLevel(request: NextRequest): AuthLevel {
-  const auth = request.headers.get('Authorization');
-  if (!auth) return null;
+async function getAuthLevel(request: NextRequest): Promise<AuthLevel> {
+  if (await isAdminAuthed(request)) {
+    return 'admin';
+  }
 
-  const adminSecret = process.env.ADMIN_SECRET;
   const scrapeSecret = process.env.SCRAPE_SECRET;
+  if (bearerMatchesSecret(request, scrapeSecret)) {
+    return 'scrape';
+  }
 
-  if (adminSecret && auth === `Bearer ${adminSecret}`) return 'admin';
-  if (scrapeSecret && auth === `Bearer ${scrapeSecret}`) return 'scrape';
   return null;
 }
 
@@ -51,7 +54,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authLevel = getAuthLevel(request);
+  const authLevel = await getAuthLevel(request);
   if (!authLevel) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -91,7 +94,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authLevel = getAuthLevel(request);
+  const authLevel = await getAuthLevel(request);
   if (!authLevel) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -273,7 +276,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authLevel = getAuthLevel(request);
+  const authLevel = await getAuthLevel(request);
   if (authLevel !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

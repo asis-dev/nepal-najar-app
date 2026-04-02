@@ -10,7 +10,7 @@ import { validateScrapeAuth, unauthorizedResponse } from '@/lib/scraper/auth';
 import { scrapeSource, scrapers } from '@/lib/scraper';
 
 export async function POST(request: Request) {
-  if (!validateScrapeAuth(request)) {
+  if (!(await validateScrapeAuth(request))) {
     return unauthorizedResponse();
   }
 
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
 /** GET — list available sources */
 export async function GET(request: Request) {
-  if (!validateScrapeAuth(request)) {
+  if (!(await validateScrapeAuth(request))) {
     return unauthorizedResponse();
   }
 

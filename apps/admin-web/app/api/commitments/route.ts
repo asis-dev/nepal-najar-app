@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPromises } from '@/lib/data';
 import { isPublicCommitment, toPublicCommitment } from '@/lib/data/commitments';
 
+const COMMITMENTS_CACHE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=900',
+};
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const status = searchParams.get('status');
@@ -20,6 +24,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       total: filteredCommitments.length,
       commitments: filteredCommitments,
+    }, {
+      headers: COMMITMENTS_CACHE_HEADERS,
     });
   }
 
@@ -28,5 +34,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     total: commitments.length,
     commitments,
+  }, {
+    headers: COMMITMENTS_CACHE_HEADERS,
   });
 }

@@ -8,6 +8,7 @@
 
 import { getSupabase } from '@/lib/supabase/server';
 import { computeCommitmentProgress } from './progress-extractor';
+import { aiComplete } from './ai-router';
 
 export interface StatusRecommendation {
   id?: string;
@@ -29,10 +30,13 @@ export interface StatusRecommendation {
 
 interface SignalRow {
   id: string;
+  source_id: string;
   title: string | null;
   content: string | null;
+  url: string | null;
+  published_at: string | null;
   classification: string;
-  matched_promise_ids: number[];
+  matched_promise_ids?: number[] | null;
   relevance_score: number;
   confidence: number | null;
   tier3_processed: boolean;
@@ -60,13 +64,56 @@ interface RecommendationRow {
   contradicts_count: number;
   review_state: 'pending' | 'approved' | 'rejected' | 'applied';
   created_at: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 interface PipelineResult {
   analyzed: number;
   updated: number;
   persisted: number;
+  autoReviewed: number;
+  autoApproved: number;
+  autoApplied: number;
+  autoDeferred: number;
   recommendations: StatusRecommendation[];
+}
+
+interface SignalEvidence {
+  id: string;
+  sourceId: string;
+  classification: string;
+  confidence: number;
+  relevanceScore: number;
+  title: string;
+  excerpt: string;
+  url: string;
+  publishedAt: string | null;
+}
+
+interface AutopilotGateResult {
+  eligible: boolean;
+  reasons: string[];
+  metrics: {
+    uniqueSources: number;
+    confirms: number;
+    contradicts: number;
+    signalCount: number;
+  };
+}
+
+interface VerifierDecision {
+  approved: boolean;
+  confidence: number;
+  rationale: string;
+  blocker?: string;
+}
+
+interface AutopilotResult {
+  reviewed: boolean;
+  approved: boolean;
+  applied: boolean;
+  deferred: boolean;
+  reason: string;
 }
 
 const COMPLETION_KEYWORDS = [
@@ -89,6 +136,148 @@ function containsCompletionEvidence(text: string): boolean {
   return COMPLETION_KEYWORDS.some((keyword) => lower.includes(keyword));
 }
 
+function parseBoundedInt(value: string | undefined, fallback: number, min: number, max: number): number {
+  const parsed = Number.parseInt(value || '', 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(parsed, max));
+}
+
+function parseBoundedFloat(value: string | undefined, fallback: number, min: number, max: number): number {
+  const parsed = Number.parseFloat(value || '');
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(parsed, max));
+}
+
+function getAutopilotConfig() {
+  return {
+    enabled: process.env.INTELLIGENCE_STATUS_AUTOPILOT_ENABLED !== 'false',
+    // Launch-safe default: recommendations are reviewed but not auto-applied
+    // unless explicitly enabled.
+    autoApply: process.env.INTELLIGENCE_STATUS_AUTOPILOT_AUTO_APPLY === 'true',
+    minSignals: parseBoundedInt(process.env.INTELLIGENCE_STATUS_AUTOPILOT_MIN_SIGNALS, 5, 2, 25),
+    minUniqueSources: parseBoundedInt(process.env.INTELLIGENCE_STATUS_AUTOPILOT_MIN_UNIQUE_SOURCES, 2, 1, 10),
+    minConfidence: parseBoundedFloat(process.env.INTELLIGENCE_STATUS_AUTOPILOT_MIN_CONFIDENCE, 0.75, 0.3, 0.99),
+  };
+}
+
+function cleanText(value: string | null | undefined, fallback = ''): string {
+  return typeof value === 'string' ? value.trim() : fallback;
+}
+
+function buildSignalEvidence(signals: SignalRow[]): SignalEvidence[] {
+  return signals
+    .map((signal) => ({
+      id: signal.id,
+      sourceId: signal.source_id,
+      classification: cleanText(signal.classification, 'neutral'),
+      confidence: signal.confidence ?? 0,
+      relevanceScore: signal.relevance_score ?? 0,
+      title: cleanText(signal.title, 'Untitled signal'),
+      excerpt: cleanText(signal.content, '').slice(0, 500),
+      url: cleanText(signal.url, ''),
+      publishedAt: signal.published_at,
+    }))
+    .sort((left, right) => {
+      if (right.confidence !== left.confidence) return right.confidence - left.confidence;
+      return right.relevanceScore - left.relevanceScore;
+    })
+    .slice(0, 12);
+}
+
+function evaluateAutopilotGate(
+  recommendation: StatusRecommendation,
+  evidence: SignalEvidence[],
+): AutopilotGateResult {
+  const config = getAutopilotConfig();
+  const reasons: string[] = [];
+  const uniqueSources = new Set(evidence.map((item) => item.sourceId).filter(Boolean));
+  const confirms = evidence.filter((item) =>
+    item.classification === 'confirms' ||
+    item.classification === 'budget_allocation' ||
+    item.classification === 'policy_change',
+  ).length;
+  const contradicts = evidence.filter((item) => item.classification === 'contradicts').length;
+  const signalCount = recommendation.signalCount;
+
+  if (signalCount < config.minSignals) {
+    reasons.push(`Only ${signalCount} signals (minimum ${config.minSignals} required).`);
+  }
+
+  if (uniqueSources.size < config.minUniqueSources) {
+    reasons.push(`Only ${uniqueSources.size} unique sources (minimum ${config.minUniqueSources} required).`);
+  }
+
+  if (recommendation.confidence < config.minConfidence) {
+    reasons.push(
+      `Recommendation confidence ${recommendation.confidence.toFixed(2)} below threshold ${config.minConfidence.toFixed(2)}.`,
+    );
+  }
+
+  if (
+    recommendation.recommendedStatus === 'delivered' &&
+    (confirms < 5 || contradicts > 0)
+  ) {
+    reasons.push('Delivered status requires at least 5 confirming signals and zero contradictions.');
+  }
+
+  if (
+    recommendation.recommendedStatus === 'stalled' &&
+    (contradicts < 3 || contradicts <= confirms)
+  ) {
+    reasons.push('Stalled status requires at least 3 contradictions and more contradictions than confirmations.');
+  }
+
+  if (
+    recommendation.currentStatus === 'not_started' &&
+    recommendation.recommendedStatus === 'in_progress' &&
+    confirms < 3
+  ) {
+    reasons.push('Not-started → in-progress requires at least 3 confirming signals.');
+  }
+
+  if (recommendation.reason.toLowerCase().includes('statement-type signals')) {
+    reasons.push('Statement-only evidence is not auto-applicable.');
+  }
+
+  return {
+    eligible: reasons.length === 0,
+    reasons,
+    metrics: {
+      uniqueSources: uniqueSources.size,
+      confirms,
+      contradicts,
+      signalCount,
+    },
+  };
+}
+
+function parseVerifierDecision(content: string): VerifierDecision | null {
+  const trimmed = content
+    .replace(/```json\n?/gi, '')
+    .replace(/```\n?/g, '')
+    .trim();
+
+  if (!trimmed) return null;
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const approved = parsed.approved;
+    const confidence = parsed.confidence;
+    const rationale = parsed.rationale;
+    if (typeof approved !== 'boolean') return null;
+    if (typeof confidence !== 'number' || !Number.isFinite(confidence)) return null;
+    if (typeof rationale !== 'string' || rationale.trim().length === 0) return null;
+    return {
+      approved,
+      confidence: Math.max(0, Math.min(1, confidence)),
+      rationale: rationale.trim(),
+      blocker: typeof parsed.blocker === 'string' ? parsed.blocker.trim() : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function mapRecommendationRow(row: RecommendationRow): StatusRecommendation {
   return {
     id: row.id,
@@ -104,6 +293,249 @@ function mapRecommendationRow(row: RecommendationRow): StatusRecommendation {
     reviewState: row.review_state,
     createdAt: row.created_at,
   };
+}
+
+async function updateRecommendationMetadata(
+  recommendationId: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const supabase = getSupabase();
+  const { data: existing, error: existingError } = await supabase
+    .from('intelligence_status_recommendations')
+    .select('metadata')
+    .eq('id', recommendationId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  const existingMetadata =
+    existing?.metadata &&
+    typeof existing.metadata === 'object' &&
+    !Array.isArray(existing.metadata)
+      ? (existing.metadata as Record<string, unknown>)
+      : {};
+
+  const { error } = await supabase
+    .from('intelligence_status_recommendations')
+    .update({
+      metadata: {
+        ...existingMetadata,
+        ...patch,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', recommendationId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+async function runAIVerifier(
+  recommendation: StatusRecommendation,
+  evidence: SignalEvidence[],
+  gate: AutopilotGateResult,
+): Promise<VerifierDecision | null> {
+  const systemPrompt = `You are a strict civic accountability verifier.
+You validate whether a proposed public status change should be auto-published.
+Reject if evidence is weak, contradictory, or not implementation-focused.
+Return JSON only with:
+{
+  "approved": boolean,
+  "confidence": number,
+  "rationale": string,
+  "blocker": string | null
+}`;
+
+  const signalLines = evidence.map((item, index) =>
+    `${index + 1}. [${item.classification}] c=${item.confidence.toFixed(2)} r=${item.relevanceScore.toFixed(2)} src=${item.sourceId} date=${item.publishedAt || 'unknown'} title="${item.title}"`,
+  );
+
+  const userPrompt = `Validate this status-change recommendation.
+
+Current status: ${recommendation.currentStatus}
+Recommended status: ${recommendation.recommendedStatus}
+Recommendation confidence: ${recommendation.confidence}
+Recommendation reason: ${recommendation.reason}
+Signal count: ${recommendation.signalCount}
+Confirms: ${recommendation.confirmsCount}
+Contradicts: ${recommendation.contradictsCount}
+Progress percent: ${recommendation.progressPercent ?? 'unknown'}
+
+Deterministic gate metrics:
+- unique sources: ${gate.metrics.uniqueSources}
+- confirms: ${gate.metrics.confirms}
+- contradicts: ${gate.metrics.contradicts}
+- signal count: ${gate.metrics.signalCount}
+
+Top evidence:
+${signalLines.join('\n')}
+
+Rules:
+- Approve only if evidence clearly supports a real implementation-status change.
+- Do NOT approve based on announcements or statements alone.
+- If contradictions are material, reject.
+- Be conservative for "delivered".`;
+
+  try {
+    const response = await aiComplete('reason', systemPrompt, userPrompt);
+    return parseVerifierDecision(response.content);
+  } catch (err) {
+    console.warn(
+      '[StatusPipeline] AI verifier failed:',
+      err instanceof Error ? err.message : 'unknown',
+    );
+    return null;
+  }
+}
+
+async function maybeAutopilotRecommendation(
+  recommendation: StatusRecommendation,
+  evidence: SignalEvidence[],
+): Promise<AutopilotResult> {
+  const config = getAutopilotConfig();
+  if (!config.enabled) {
+    return {
+      reviewed: false,
+      approved: false,
+      applied: false,
+      deferred: true,
+      reason: 'Autopilot disabled by configuration.',
+    };
+  }
+
+  if (!recommendation.id) {
+    return {
+      reviewed: false,
+      approved: false,
+      applied: false,
+      deferred: true,
+      reason: 'Recommendation ID missing.',
+    };
+  }
+
+  const gate = evaluateAutopilotGate(recommendation, evidence);
+  if (!gate.eligible) {
+    await updateRecommendationMetadata(recommendation.id, {
+      autopilot: {
+        attempted_at: new Date().toISOString(),
+        gate_passed: false,
+        gate_reasons: gate.reasons,
+        metrics: gate.metrics,
+      },
+    });
+    return {
+      reviewed: true,
+      approved: false,
+      applied: false,
+      deferred: true,
+      reason: gate.reasons.join(' '),
+    };
+  }
+
+  const verifier = await runAIVerifier(recommendation, evidence, gate);
+  if (!verifier) {
+    await updateRecommendationMetadata(recommendation.id, {
+      autopilot: {
+        attempted_at: new Date().toISOString(),
+        gate_passed: true,
+        ai_verifier: 'unavailable',
+        metrics: gate.metrics,
+      },
+    });
+    return {
+      reviewed: true,
+      approved: false,
+      applied: false,
+      deferred: true,
+      reason: 'AI verifier unavailable.',
+    };
+  }
+
+  await updateRecommendationMetadata(recommendation.id, {
+    autopilot: {
+      attempted_at: new Date().toISOString(),
+      gate_passed: true,
+      gate_reasons: [],
+      metrics: gate.metrics,
+      verifier,
+    },
+  });
+
+  if (!verifier.approved || verifier.confidence < 0.8) {
+    return {
+      reviewed: true,
+      approved: false,
+      applied: false,
+      deferred: true,
+      reason:
+        verifier.blocker ||
+        `AI verifier rejected with confidence ${verifier.confidence.toFixed(2)}.`,
+    };
+  }
+
+  await reviewStatusRecommendation(
+    recommendation.id,
+    'approved',
+    'ai-verifier',
+    verifier.rationale,
+  );
+
+  if (!config.autoApply) {
+    return {
+      reviewed: true,
+      approved: true,
+      applied: false,
+      deferred: false,
+      reason: 'AI verifier approved; waiting for manual apply.',
+    };
+  }
+
+  const applyReason = `${recommendation.reason} [AI verifier: ${verifier.rationale}]`;
+  const applied = await applyStatusUpdate(
+    recommendation.promiseId,
+    recommendation.recommendedStatus,
+    applyReason,
+    {
+      recommendationId: recommendation.id,
+      reviewer: 'ai-verifier',
+    },
+  );
+
+  return {
+    reviewed: true,
+    approved: true,
+    applied,
+    deferred: !applied,
+    reason: applied
+      ? 'AI verifier approved and status was auto-applied.'
+      : 'AI verifier approved but apply step failed.',
+  };
+}
+
+async function fetchEvidenceForPromise(promiseId: number): Promise<SignalEvidence[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('intelligence_signals')
+    .select(
+      'id, source_id, title, content, url, published_at, classification, relevance_score, confidence, tier3_processed, review_status',
+    )
+    .contains('matched_promise_ids', [promiseId]);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const matchedSignals: SignalRow[] = ((data as SignalRow[]) ?? []).filter(
+    (signal) =>
+      signal.tier3_processed === true &&
+      (signal.confidence ?? 0) >= 0.3 &&
+      signal.review_status !== 'rejected',
+  );
+
+  return buildSignalEvidence(matchedSignals);
 }
 
 async function loadTrackablePromises(): Promise<PromiseRow[]> {
@@ -131,13 +563,13 @@ async function loadTrackablePromises(): Promise<PromiseRow[]> {
 
 async function upsertStatusRecommendation(
   recommendation: StatusRecommendation,
-): Promise<void> {
+): Promise<StatusRecommendation> {
   const supabase = getSupabase();
   const promiseId = String(recommendation.promiseId);
 
   const { data: existing, error: existingError } = await supabase
     .from('intelligence_status_recommendations')
-    .select('id')
+      .select('id, created_at')
     .eq('promise_id', promiseId)
     .eq('review_state', 'pending')
     .maybeSingle();
@@ -173,16 +605,45 @@ async function upsertStatusRecommendation(
     if (error) {
       throw new Error(error.message);
     }
-    return;
+
+    return {
+      ...recommendation,
+      id: existing.id,
+      createdAt:
+        typeof existing.created_at === 'string'
+          ? existing.created_at
+          : recommendation.createdAt,
+      reviewState: 'pending',
+    };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('intelligence_status_recommendations')
-    .insert(payload);
+    .insert(payload)
+    .select('id, created_at')
+    .single();
 
   if (error) {
     throw new Error(error.message);
   }
+
+  const inserted = data && typeof data === 'object' ? data : null;
+  return {
+    ...recommendation,
+    id:
+      inserted &&
+      'id' in inserted &&
+      typeof (inserted as { id?: unknown }).id === 'string'
+        ? (inserted as { id: string }).id
+        : recommendation.id,
+    createdAt:
+      inserted &&
+      'created_at' in inserted &&
+      typeof (inserted as { created_at?: unknown }).created_at === 'string'
+        ? (inserted as { created_at: string }).created_at
+        : recommendation.createdAt,
+    reviewState: 'pending',
+  };
 }
 
 export async function listStatusRecommendations(options?: {
@@ -240,19 +701,15 @@ export async function reviewStatusRecommendation(
   notes?: string | null,
 ): Promise<StatusRecommendation | null> {
   const supabase = getSupabase();
+  const reviewedAt = new Date().toISOString();
   const { data, error } = await supabase
     .from('intelligence_status_recommendations')
     .update({
       review_state: action,
       reviewed_by: reviewer,
-      reviewed_at: new Date().toISOString(),
-      metadata: notes
-        ? {
-            review_notes: notes,
-          }
-        : undefined,
-      applied_at: action === 'applied' ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
+      reviewed_at: reviewedAt,
+      applied_at: action === 'applied' ? reviewedAt : null,
+      updated_at: reviewedAt,
     })
     .eq('id', recommendationId)
     .select(
@@ -262,6 +719,15 @@ export async function reviewStatusRecommendation(
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (notes && notes.trim().length > 0) {
+    await updateRecommendationMetadata(recommendationId, {
+      review_notes: notes.trim(),
+      review_action: action,
+      review_actor: reviewer,
+      review_timestamp: reviewedAt,
+    });
   }
 
   return data ? mapRecommendationRow(data as RecommendationRow) : null;
@@ -277,7 +743,7 @@ export async function analyzePromiseStatus(
   const { data: signals, error } = await supabase
     .from('intelligence_signals')
     .select(
-      'id, title, content, classification, matched_promise_ids, relevance_score, confidence, tier3_processed, review_status',
+      'id, source_id, title, content, url, published_at, classification, matched_promise_ids, relevance_score, confidence, tier3_processed, review_status',
     )
     .contains('matched_promise_ids', [promiseId]);
 
@@ -454,22 +920,52 @@ export async function runStatusPipeline(): Promise<PipelineResult> {
   }
 
   let persisted = 0;
+  let autoReviewed = 0;
+  let autoApproved = 0;
+  let autoApplied = 0;
+  let autoDeferred = 0;
+  const persistedRecommendations: StatusRecommendation[] = [];
+
   for (const recommendation of recommendations) {
-    await upsertStatusRecommendation(recommendation);
+    const storedRecommendation = await upsertStatusRecommendation(recommendation);
     persisted++;
+    persistedRecommendations.push(storedRecommendation);
+
+    try {
+      const evidence = await fetchEvidenceForPromise(storedRecommendation.promiseId);
+      const autopilot = await maybeAutopilotRecommendation(
+        storedRecommendation,
+        evidence,
+      );
+      if (autopilot.reviewed) autoReviewed++;
+      if (autopilot.approved) autoApproved++;
+      if (autopilot.applied) autoApplied++;
+      if (autopilot.reviewed && autopilot.deferred) autoDeferred++;
+    } catch (err) {
+      autoDeferred++;
+      console.warn(
+        `[StatusPipeline] Autopilot verify/apply failed for promise ${storedRecommendation.promiseId}:`,
+        err instanceof Error ? err.message : 'unknown',
+      );
+    }
   }
 
   console.log(
     `[StatusPipeline] Analyzed ${promises.length} commitments, ` +
       `${recommendations.length} status changes recommended, ` +
-      `${persisted} recommendations persisted.`,
+      `${persisted} recommendations persisted, ` +
+      `${autoReviewed} AI-verified, ${autoApplied} auto-applied.`,
   );
 
   return {
     analyzed: promises.length,
     updated: recommendations.length,
     persisted,
-    recommendations,
+    autoReviewed,
+    autoApproved,
+    autoApplied,
+    autoDeferred,
+    recommendations: persistedRecommendations,
   };
 }
 

@@ -17,7 +17,9 @@ import {
   ArrowRight,
   CheckCircle,
   HelpCircle,
+  Share,
 } from 'lucide-react';
+import { shareOrCopy, corruptionShareText } from '@/lib/utils/share';
 import { useCorruptionCase } from '@/lib/hooks/use-corruption';
 import { ReactionBar } from '@/components/public/reaction-bar';
 import { CorruptionComments } from '@/components/public/corruption-comments';
@@ -182,6 +184,13 @@ export default function CaseDetailPage() {
           <div className="flex items-center gap-4 text-xs text-gray-500 mb-6">
             <span>Created: {new Date(caseData.created_at).toLocaleDateString()}</span>
             <span>Updated: {new Date(caseData.updated_at).toLocaleDateString()}</span>
+            <button
+              onClick={() => shareOrCopy({ title: caseData.title, text: corruptionShareText({ title: caseData.title }), url: `${window.location.origin}/corruption/${slug}` })}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
+            >
+              <Share className="w-3.5 h-3.5" />
+              Share
+            </button>
           </div>
         </div>
       </section>

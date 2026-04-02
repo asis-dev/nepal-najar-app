@@ -2,11 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware';
 
 /**
+ * Edge-compatible constant-time string comparison.
+ * Cannot use node:crypto in Edge runtime, so we do it manually.
+ */
+function secretsEqual(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
+/**
  * Nepal Republic — Route Protection Middleware
  *
  * Dashboard routes require Supabase auth + admin role.
  * Public routes pass through freely.
- * Falls back to legacy ADMIN_SECRET cookie if Supabase is not configured.
+ * Legacy ADMIN_SECRET fallback is opt-in via ENABLE_LEGACY_ADMIN_SECRET=true.
  */
 
 // Routes that are always public (no auth required)
@@ -53,6 +66,9 @@ const PUBLIC_PREFIXES = [
   '/api/reputation',
   '/api/verifier-applications',
   '/api/complaints',
+  '/api/daily-brief',
+  '/api/report-card',
+  '/api/social-post',
   '/complaints',
 ];
 
@@ -79,8 +95,23 @@ const DASHBOARD_PREFIXES = [
   '/submissions',
 ];
 
+function applySecurityHeaders(response: NextResponse, request: NextRequest): NextResponse {
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(self), interest-cohort=()'
+  );
+  if (request.nextUrl.protocol === 'https:') {
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const allowLegacyAdminSecret = process.env.ENABLE_LEGACY_ADMIN_SECRET === 'true';
 
   // Let public routes pass through
   if (
@@ -92,12 +123,12 @@ export async function middleware(request: NextRequest) {
       try {
         const { supabase, response } = createSupabaseMiddlewareClient(request);
         await supabase.auth.getUser();
-        return response;
+        return applySecurityHeaders(response, request);
       } catch {
-        return NextResponse.next();
+        return applySecurityHeaders(NextResponse.next(), request);
       }
     }
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next(), request);
   }
 
   // Check if this is a dashboard route
@@ -106,10 +137,10 @@ export async function middleware(request: NextRequest) {
   );
 
   if (!isDashboardRoute) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next(), request);
   }
 
-  // Dashboard route — try Supabase auth first, fall back to legacy cookie
+  // Dashboard route — require Supabase auth by default.
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     try {
       const { supabase, response } = createSupabaseMiddlewareClient(request);
@@ -118,7 +149,7 @@ export async function middleware(request: NextRequest) {
       if (error || !user) {
         const loginUrl = new URL('/admin-login', request.url);
         loginUrl.searchParams.set('from', pathname);
-        return NextResponse.redirect(loginUrl);
+        return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
       }
 
       // Check admin role
@@ -131,16 +162,28 @@ export async function middleware(request: NextRequest) {
       if (!profile || profile.role !== 'admin') {
         const loginUrl = new URL('/admin-login', request.url);
         loginUrl.searchParams.set('error', 'not-admin');
-        return NextResponse.redirect(loginUrl);
+        return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
       }
 
-      return response;
+      return applySecurityHeaders(response, request);
     } catch {
-      // Supabase auth failed — fall through to legacy check
+      if (!allowLegacyAdminSecret) {
+        const loginUrl = new URL('/admin-login', request.url);
+        loginUrl.searchParams.set('error', 'auth-unavailable');
+        loginUrl.searchParams.set('from', pathname);
+        return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
+      }
     }
   }
 
-  // Legacy fallback: ADMIN_SECRET cookie check
+  if (!allowLegacyAdminSecret) {
+    const loginUrl = new URL('/admin-login', request.url);
+    loginUrl.searchParams.set('error', 'not-configured');
+    loginUrl.searchParams.set('from', pathname);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
+  }
+
+  // Legacy fallback (explicitly enabled): ADMIN_SECRET cookie check
   const adminToken =
     request.cookies.get('admin_session')?.value ||
     request.cookies.get('np-admin-token')?.value;
@@ -149,16 +192,16 @@ export async function middleware(request: NextRequest) {
   if (!adminSecret) {
     const loginUrl = new URL('/admin-login', request.url);
     loginUrl.searchParams.set('error', 'not-configured');
-    return NextResponse.redirect(loginUrl);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
   }
 
-  if (!adminToken || adminToken !== adminSecret) {
+  if (!adminToken || !secretsEqual(adminToken, adminSecret)) {
     const loginUrl = new URL('/admin-login', request.url);
     loginUrl.searchParams.set('from', pathname);
-    return NextResponse.redirect(loginUrl);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
   }
 
-  return NextResponse.next();
+  return applySecurityHeaders(NextResponse.next(), request);
 }
 
 export const config = {

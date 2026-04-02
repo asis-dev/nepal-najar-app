@@ -8,7 +8,7 @@ import { isAdminAuthed } from '@/lib/auth/admin';
 import { getSupabase } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
-  if (!isAdminAuthed(request)) {
+  if (!(await isAdminAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

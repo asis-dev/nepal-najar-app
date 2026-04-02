@@ -4,7 +4,7 @@ import { getSupabase } from '@/lib/supabase/server';
 
 const VALID_REVIEW_STATES = ['candidate', 'reviewed', 'published', 'rejected'] as const;
 
-function isAuthed(request: NextRequest): boolean {
+async function isAuthed(request: NextRequest): Promise<boolean> {
   return isAdminAuthed(request);
 }
 
@@ -12,7 +12,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!isAuthed(request)) {
+  if (!(await isAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

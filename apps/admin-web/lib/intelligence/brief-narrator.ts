@@ -11,11 +11,8 @@
 
 import { getSupabase } from '@/lib/supabase/server';
 import type { DailyBrief } from './daily-brief';
-import {
-  isHindiLeaning,
-  looksLikeNepali,
-  normalizeNepaliRegister,
-} from './nepali-text';
+import { normalizeNepaliRegister } from './nepali-text';
+import { dayInOffice } from './government-era';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,250 +26,66 @@ export interface BriefAudioResult {
 
 // ── Script Generation ────────────────────────────────────────────────────────
 
-const PULSE_LABELS_NE: Record<string, string> = {
-  calm: 'शान्त',
-  moderate: 'मध्यम',
-  active: 'सक्रिय',
-  'very active': 'धेरै सक्रिय',
-};
-
-const SENTIMENT_NE: Record<string, string> = {
-  positive: 'सकारात्मक',
-  negative: 'नकारात्मक',
-  neutral: 'तटस्थ',
-  mixed: 'मिश्रित',
-};
-
-const DIRECTION_NE: Record<string, string> = {
-  confirms: 'पुष्टि',
-  contradicts: 'विरोधाभास',
-  new_activity: 'नयाँ गतिविधि',
-};
-
 /**
- * Convert a DailyBrief into a natural Nepali narration script using AI.
- * Written like a real Nepali news anchor — warm, conversational, easy to follow.
- * ~300-350 words, ~2 min audio at 120 wpm Nepali reading speed.
+ * Convert a DailyBrief into a Nepali narration script.
+ *
+ * IMPORTANT: This does NOT make a separate AI call. It reads the SAME content
+ * that's already in the brief (summaryNe + topStories). This ensures the audio
+ * and the on-screen text always match — no more "two different summaries".
+ *
+ * Structure: greeting → summary bullets → sign-off. ~180-220 words.
  */
 export async function generateBriefScript(brief: DailyBrief): Promise<string> {
-  // Build context for AI — use more data for a comprehensive 2-minute brief
-  const stories = (brief.topStories || []).slice(0, 5);
-  const moved = (brief.commitmentsMoved || []).slice(0, 5);
-  const pulseLabelNe = PULSE_LABELS_NE[(brief.pulseLabel || '').toLowerCase()] || 'मध्यम';
-  const day = Math.max(1, Math.floor((Date.now() - new Date('2026-03-26').getTime()) / 86400000));
-
-  const storyLines = stories.map((s, i) => {
-    const title = s.titleNe || s.title;
-    const sentimentNe = SENTIMENT_NE[s.sentiment] || 'तटस्थ';
-    const sources = s.sources?.join(', ') || '';
-    const commitmentCount = s.relatedCommitments?.length || 0;
-    return `${i + 1}. ${title} — ${s.summary} (${sentimentNe}, ${s.signalCount} वटा कभरेज, स्रोत: ${sources}, ${commitmentCount} प्रतिबद्धतासँग सम्बन्धित)`;
-  }).join('\n');
-
-  const movedLines = moved.map((m) => {
-    const directionNe = DIRECTION_NE[m.direction] || 'नयाँ गतिविधि';
-    return `- ${m.title}: ${directionNe} (${m.signalCount} संकेत, मुख्य: ${m.keySignal})`;
-  }).join('\n');
-
-  // Stats for overview section
-  const stats = brief.stats || { totalSignals24h: 0, newSignals: 0, sourcesActive: 0, topSource: '' };
-
-  const prompt = `You are a professional Nepali news anchor for Nepal Republic (नेपाल रिपब्लिक), a civic accountability platform tracking Nepal's government commitments.
-
-Write a daily brief script in NEPALI (नेपाली) for audio narration. This should sound like a Kathmandu news bulletin: sharp, relevant, and focused on government accountability.
-
-CONTENT RULES:
-- ONLY stories about government performance, policy, corruption, civic services, infrastructure, accountability
-- SKIP: commodity prices, gold rates, sports, festivals, entertainment, mushroom farming, celebrity news, forex rates
-- Each story: 1-2 sentences MAX. What happened, why it matters. Move on.
-- Do NOT repeat the same point in different words. No padding.
-- Say "नागरिकहरूले सोध्नुपर्नेछ" at MOST once in the entire script
-
-Structure:
-
-1. "नमस्कार, नेपाल रिपब्लिकको दैनिक ब्रिफमा स्वागत छ। आज सरकारको ${day} औं दिन हो।"
-
-2. TODAY'S SUMMARY (10-14 sentences total): 4-6 accountability-relevant developments. 1-2 sentences each. Name ministries, officials, amounts. No padding.
-
-3. WATCHPOINT (1-2 sentences): One area where government must answer.
-
-4. "भोलि फेरि भेटौंला। नेपाल रिपब्लिक सुन्नुभएकोमा धन्यवाद।"
-
-Rules:
-- ONLY Nepali (Devanagari). No English.
-- STRICT WORD LIMIT: 180-220 words. Count carefully. If over 220, cut stories.
-- No jargon: no "signal", "source", "pulse", "coverage count"
-- Platform: "नेपाल रिपब्लिक" — always use this name
-- Nepal newsroom Nepali. "तर" not "लेकिन", "र" not "और", "छ" not "है"
-- Pure prose. No markdown, bullets, numbering.
-- Paragraph breaks between sections.
-
-Data:
-${brief.summaryNe || brief.summaryEn}
-
-Stories:
-${storyLines || 'No major stories today'}
-
-Movement:
-${movedLines || 'No significant movement today'}
-
-Script (180-220 words max, Nepali only):`;
-
-  try {
-    const { aiComplete: ai } = await import('./ai-router');
-    const response = await ai('summarize', 'You write natural Nepali broadcast scripts.', prompt);
-    const script = normalizeNepaliRegister(response.content.trim());
-    // Ensure it's actually in Nepali (basic check)
-    if (script.length > 80 && looksLikeNepali(script) && !isHindiLeaning(script)) {
-      return script;
-    }
-  } catch (err) {
-    console.warn('[BriefNarrator] AI script generation failed, using fallback:', err instanceof Error ? err.message : 'unknown');
-  }
-
-  // Fallback: simple but still natural-sounding
-  return generateFallbackScript(brief);
-}
-
-/** Fallback script if AI generation fails — still targets ~300 words for 2-min audio */
-function generateFallbackScript(brief: DailyBrief): string {
-  const stories = (brief.topStories || []).slice(0, 5);
-  const moved = (brief.commitmentsMoved || []).slice(0, 5);
-  const day = Math.max(1, Math.floor((Date.now() - new Date('2026-03-26').getTime()) / 86400000));
-  const stats = brief.stats || { totalSignals24h: 0, newSignals: 0, sourcesActive: 0, topSource: '' };
-  const pulseLabelNe = PULSE_LABELS_NE[(brief.pulseLabel || '').toLowerCase()] || 'मध्यम';
-
+  const day = dayInOffice();
   const lines: string[] = [];
 
-  // Section 1: Greeting & context
-  lines.push(`नमस्कार। नेपाल रिपब्लिकको दैनिक ब्रिफमा यहाँलाई स्वागत छ।`);
-  lines.push(`आज नयाँ सरकारको ${day} औं दिन हो। आजको समग्र गतिविधि ${pulseLabelNe} रहेको छ।`);
+  // Greeting
+  lines.push(`नमस्कार, नेपाल रिपब्लिकको दैनिक ब्रिफमा स्वागत छ। आज सरकारको ${day} औं दिन हो।`);
   lines.push('');
 
-  // Section 2: Activity overview
-  if (stats.totalSignals24h > 0) {
-    lines.push(`गत चौबीस घण्टामा ${stats.totalSignals24h} वटा समाचार र कभरेज ${stats.sourcesActive} वटा स्रोतबाट संकलन गरिएको छ।`);
-    if (stats.topSource) {
-      lines.push(`सबैभन्दा सक्रिय स्रोत ${stats.topSource} रहेको छ।`);
-    }
+  // Main content: use the SAME summaryNe that's shown on screen
+  if (brief.summaryNe && brief.summaryNe.trim().length > 20) {
+    // Clean up bullet formatting for spoken delivery
+    const spokenSummary = brief.summaryNe
+      .replace(/^[-•]\s*/gm, '')           // remove bullet markers
+      .replace(/\n{3,}/g, '\n\n')          // collapse excessive newlines
+      .trim();
+    lines.push(spokenSummary);
     lines.push('');
   }
 
-  // Section 3: Summary
-  if (brief.summaryNe) {
-    const cleaned = normalizeNepaliRegister(brief.summaryNe
-      .replace(/\s*\(Commitments?\s*[\d,\s]+\)\s*/g, ' ')
-      .replace(/\s*-\s*(Confirmed|Shows new|New activity|No new)[^.\n-]*/g, ' ')
-      .replace(/\s{2,}/g, ' ')
-      .trim());
-    lines.push(cleaned);
-    lines.push('');
-  }
+  // Sign-off
+  lines.push('भोलि फेरि भेटौंला। नेपाल रिपब्लिक सुन्नुभएकोमा धन्यवाद।');
 
-  // Section 4: Top stories with detail
-  if (stories.length > 0) {
-    lines.push('आजका मुख्य घटनाहरू यसरी देखिएका छन्।');
-    lines.push('');
-    for (const story of stories) {
-      const title = normalizeNepaliRegister(story.titleNe || story.title);
-      const sentimentNe = SENTIMENT_NE[story.sentiment] || 'तटस्थ';
-      lines.push(`${title}।`);
-      if (story.summary) {
-        lines.push(`${normalizeNepaliRegister(story.summary)}।`);
-      }
-      lines.push(`यो विषयमा ${story.signalCount} वटा कभरेज आएको छ र यसको प्रभाव ${sentimentNe} देखिएको छ।`);
-      lines.push('');
-    }
-  }
-
-  // Section 5: Commitments that moved
-  if (moved.length > 0) {
-    lines.push('सरकारका प्रतिबद्धताहरूमा पनि आज केही हलचल देखिएको छ।');
-    for (const m of moved) {
-      const directionNe = DIRECTION_NE[m.direction] || 'नयाँ गतिविधि';
-      const title = normalizeNepaliRegister(m.title);
-      const keySignal = normalizeNepaliRegister(m.keySignal);
-      if (m.direction === 'confirms') {
-        lines.push(`${title} मा प्रगति ${directionNe} भएको छ। ${keySignal}।`);
-      } else if (m.direction === 'contradicts') {
-        lines.push(`${title} मा ${directionNe} देखिएको छ। ${keySignal}।`);
-      } else {
-        lines.push(`${title} मा ${directionNe} देखिएको छ। ${keySignal}।`);
-      }
-    }
-    lines.push('');
-  }
-
-  // Section 6: Watchpoint
-  const stalledOrContradicted = moved.filter(m => m.direction === 'contradicts');
-  if (stalledOrContradicted.length > 0) {
-    const watch = stalledOrContradicted[0];
-    lines.push(`आज विशेष ध्यान दिनुपर्ने कुरा भनेको ${normalizeNepaliRegister(watch.title)} हो। यसमा सरकारले भनेको र भइरहेको बीचमा अन्तर देखिएको छ। नागरिकहरूले यसलाई नजिकबाट हेर्नुपर्छ।`);
-    lines.push('');
-  } else if (stories.length > 0) {
-    const topStory = stories[0];
-    lines.push(`आज विशेष ध्यान दिनुपर्ने कुरा भनेको ${normalizeNepaliRegister(topStory.titleNe || topStory.title)} हो। यसले आम नागरिकको जीवनमा कस्तो प्रभाव पार्छ भन्ने कुरा हामी नजिकबाट हेरिरहेका छौं।`);
-    lines.push('');
-  }
-
-  // Section 7: Forward look & sign-off
-  lines.push('भोलिको ब्रिफमा थप अपडेट ल्याउनेछौं। सरकारका प्रतिबद्धताहरू पूरा भइरहेका छन् कि छैनन्, नेपाल रिपब्लिकले निरन्तर ट्र्याक गरिरहनेछ।');
-  lines.push('अहिलेलाई यत्ति। नेपाल रिपब्लिक सुन्नुभएकोमा धन्यवाद।');
   return normalizeNepaliRegister(lines.join('\n'));
 }
 
+// generateFallbackScript removed — no longer needed since scripts read from the brief directly
+
 /**
  * Generate an English version of the daily brief for audio narration.
+ *
+ * Like the Nepali version, this reads the SAME summaryEn content — no separate AI call.
  */
 export async function generateEnglishBriefScript(brief: DailyBrief): Promise<string> {
-  const stories = (brief.topStories || []).slice(0, 5);
-  const moved = (brief.commitmentsMoved || []).slice(0, 5);
-  const day = Math.max(1, Math.floor((Date.now() - new Date('2026-03-26').getTime()) / 86400000));
+  const day = dayInOffice();
+  const lines: string[] = [];
 
-  const storyLines = stories.map((s, i) => {
-    return `${i + 1}. ${s.title} — ${s.summary} (${s.signalCount} sources)`;
-  }).join('\n');
+  lines.push(`Hello, welcome to the Nepal Republic daily brief. Day ${day} of the new government.`);
 
-  const movedLines = moved.map((m) => {
-    return `- ${m.title}: ${m.direction} (${m.signalCount} signals, key: ${m.keySignal})`;
-  }).join('\n');
-
-  const prompt = `Write a short English daily brief script for Nepal Republic, a government accountability platform.
-
-Structure:
-1. "Hello, welcome to the Nepal Republic daily brief. Day ${day} of the new government."
-2. Cover 4-6 key developments in 1-2 sentences each. Focus on government accountability, policy, corruption, civic issues.
-3. End with: "That's all for today. Thank you for listening to Nepal Republic."
-
-Rules:
-- 150-200 words MAX. Be concise.
-- Skip gold prices, forex, sports, entertainment, festivals
-- Each story: what happened + why it matters. No padding.
-- Plain conversational English. No jargon.
-- Pure prose, no bullets or markdown.
-
-Stories:
-${storyLines || 'No major stories'}
-
-Commitments:
-${movedLines || 'No movement'}
-
-Write the script (150-200 words):`;
-
-  try {
-    const { aiComplete: ai } = await import('./ai-router');
-    const response = await ai('summarize', 'You write concise English news brief scripts.', prompt);
-    return response.content.trim();
-  } catch {
-    // Fallback
-    const lines: string[] = [];
-    lines.push(`Hello, welcome to the Nepal Republic daily brief. Day ${day} of the new government.`);
-    if (brief.summaryEn) {
-      lines.push(brief.summaryEn.replace(/^-\s*/gm, '').split('\n').filter(l => l.trim()).join(' '));
-    }
-    lines.push("That's all for today. Thank you for listening to Nepal Republic.");
-    return lines.join('\n\n');
+  if (brief.summaryEn && brief.summaryEn.trim().length > 20) {
+    // Convert bullet list to spoken prose
+    const spokenSummary = brief.summaryEn
+      .replace(/^[-•]\s*/gm, '')
+      .split('\n')
+      .filter(l => l.trim())
+      .join(' ');
+    lines.push(spokenSummary);
   }
+
+  lines.push("That's all for today. Thank you for listening to Nepal Republic.");
+
+  return lines.join('\n\n');
 }
 
 /**
@@ -289,13 +102,13 @@ function estimateDuration(script: string, lang: 'ne' | 'en' = 'ne'): number {
 
 /**
  * Generate audio using Microsoft Edge TTS (free, no API key needed).
- * Uses ne-NP-HemkalaNeural for Nepali, en-US-AriaNeural for English.
+ * Uses ne-NP-SagarNeural for Nepali, en-US-AriaNeural for English.
  */
 async function generateWithEdgeTTS(script: string, lang: 'ne' | 'en' = 'ne'): Promise<Buffer> {
   const { MsEdgeTTS } = await import('msedge-tts');
   const tts = new MsEdgeTTS();
 
-  const voice = lang === 'ne' ? 'ne-NP-HemkalaNeural' : 'en-US-AriaNeural';
+  const voice = lang === 'ne' ? 'ne-NP-SagarNeural' : 'en-US-AriaNeural';
   await tts.setMetadata(voice, 'audio-24khz-96kbitrate-mono-mp3' as any);
 
   const { audioStream } = tts.toStream(script);
@@ -379,14 +192,14 @@ async function generateWithOpenAI(script: string): Promise<Buffer> {
 
 /**
  * Generate MP3 audio from a script using available TTS provider.
- * For Nepali: Edge TTS (Hemkala) is preferred — free, high quality.
+ * For Nepali: Edge TTS (Sagar) is preferred — free, high quality.
  * For English: Edge TTS (Aria) first, then OpenAI fallback.
  */
 async function generateAudio(script: string, lang: 'ne' | 'en' = 'ne'): Promise<{ buffer: Buffer; provider: string }> {
-  // Priority 1: Edge TTS (free, Hemkala for Nepali, Aria for English)
+  // Priority 1: Edge TTS (free, Sagar for Nepali, Aria for English)
   try {
     const buffer = await generateWithEdgeTTS(script, lang);
-    return { buffer, provider: `edge-tts-${lang === 'ne' ? 'hemkala' : 'aria'}` };
+    return { buffer, provider: `edge-tts-${lang === 'ne' ? 'sagar' : 'aria'}` };
   } catch (err) {
     console.warn('[BriefNarrator] Edge TTS failed:', err instanceof Error ? err.message : 'unknown');
   }
@@ -475,7 +288,7 @@ const DID_AVATAR_URL =
 /**
  * Create a video with Kayla (CoffeeShop) via D-ID Clips API.
  *
- * Uses Premium+ presenter with Hemkala Nepali voice for text mode,
+ * Uses Premium+ presenter with Sagar Nepali voice for text mode,
  * or pre-generated audio for audio mode.
  * Falls back to /talks endpoint with static image if clips fails.
  */
@@ -513,7 +326,7 @@ async function createDIDClip(
           input: scriptOrAudioUrl,
           provider: {
             type: 'microsoft' as const,
-            voice_id: process.env.DID_VOICE_ID || 'ne-NP-HemkalaNeural',
+            voice_id: process.env.DID_VOICE_ID || 'ne-NP-SagarNeural',
           },
           subtitles: false,
         }
@@ -560,7 +373,7 @@ async function createDIDTalk(
           input: scriptOrAudioUrl,
           provider: {
             type: 'microsoft' as const,
-            voice_id: process.env.DID_VOICE_ID || 'ne-NP-HemkalaNeural',
+            voice_id: process.env.DID_VOICE_ID || 'ne-NP-SagarNeural',
           },
           subtitles: false,
         }
@@ -681,7 +494,7 @@ export async function generateAndStoreDailyAudio(
     console.log(`[BriefNarrator] NE script: ${neScript.split(/\s+/).length} words, ~${neDuration}s`);
     console.log(`[BriefNarrator] EN script: ${enScript.split(/\s+/).length} words, ~${enDuration}s`);
 
-    // Step 2: Generate both MP3s in parallel (Hemkala for NE, Aria for EN)
+    // Step 2: Generate both MP3s in parallel (Sagar for NE, Aria for EN)
     const [neAudio, enAudio] = await Promise.all([
       generateAudio(neScript, 'ne'),
       generateAudio(enScript, 'en'),

@@ -15,11 +15,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return createMetadata({ title: 'Commitment Not Found' });
   }
 
-  const title = `${promise.title_ne} — ${promise.title}`;
-  const description = promise.description_ne || promise.description;
+  const statusLabel = promise.status === 'in_progress' ? 'In Progress'
+    : promise.status === 'delivered' ? 'Delivered'
+    : promise.status === 'stalled' ? 'Stalled'
+    : 'Not Started';
+
+  const title = promise.title;
+  const subtitle = `${promise.progress}% ${statusLabel} — Verified by AI across public sources`;
+  const description = promise.description || promise.summary || subtitle;
+
   const ogParams = new URLSearchParams({
-    title: promise.title_ne,
-    subtitle: promise.title,
+    title,
+    subtitle,
     progress: String(promise.progress),
     status: promise.status,
   });

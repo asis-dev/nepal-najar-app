@@ -8,6 +8,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabase, createSupabaseServerClient } from '@/lib/supabase/server';
+import { sanitizeEqToken } from '@/lib/supabase/filter-utils';
 import { rateLimit, getClientIp } from '@/lib/middleware/rate-limit';
 
 const ALLOWED_CATEGORIES = [
@@ -63,7 +64,12 @@ export async function GET(request: NextRequest) {
 
   // Filter out drafts unless they belong to the current user
   if (currentUserId) {
-    query = query.or(`status.neq.draft,author_id.eq.${currentUserId}`);
+    const userToken = sanitizeEqToken(currentUserId);
+    if (userToken) {
+      query = query.or(`status.neq.draft,author_id.eq.${userToken}`);
+    } else {
+      query = query.neq('status', 'draft');
+    }
   } else {
     query = query.neq('status', 'draft');
   }
@@ -113,7 +119,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   // Rate limit: 10/min per IP
   const ip = getClientIp(request);
-  const { success: rateLimitOk } = rateLimit(`proposals:${ip}`, 10, 60000);
+  const { success: rateLimitOk } = await rateLimit(`proposals:${ip}`, 10, 60000);
   if (!rateLimitOk) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },

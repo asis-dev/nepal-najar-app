@@ -6,7 +6,7 @@ import {
   ArrowLeft,
   Flame,
   Trophy,
-  Share2,
+  Share,
   Calendar,
   Activity,
   AlertCircle,
@@ -20,6 +20,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { shareOrCopy, dailyBriefShareText } from '@/lib/utils/share';
 import { useEngagementStore } from '@/lib/stores/engagement';
 import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences';
 import { PublicPageHero } from '@/components/public/page-hero';
@@ -136,24 +137,17 @@ export default function DailyPage() {
     : (activity?.inactivePromises ?? []).slice(0, INACTIVE_INITIAL_SHOW);
 
   // Share streak handler
-  function handleShareStreak() {
+  async function handleShareStreak() {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
     const text = isNe
-      ? `Nepal Republic ma mero streak ${currentStreak} din! Join me: ${typeof window !== 'undefined' ? window.location.href : ''}`
-      : `My Nepal Republic streak is ${currentStreak} days! Join me: ${typeof window !== 'undefined' ? window.location.href : ''}`;
+      ? `Nepal Republic मा मेरो streak ${currentStreak} दिन!`
+      : `My Nepal Republic streak is ${currentStreak} days!`;
 
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({
-        title: 'Nepal Republic Streak',
-        text,
-        url: typeof window !== 'undefined' ? window.location.href : '',
-      }).catch(() => {});
-    } else {
-      window.open(
-        `https://wa.me/?text=${encodeURIComponent(text)}`,
-        '_blank',
-        'noopener,noreferrer',
-      );
-    }
+    await shareOrCopy({
+      title: 'Nepal Republic Streak',
+      text,
+      url,
+    });
   }
 
   // Skeleton while hydrating
@@ -202,6 +196,20 @@ export default function DailyPage() {
           title={t('dailyStreak.heroSubtitle')}
           centered
         />
+
+        <section className="public-section pt-0 pb-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-3xl text-center">
+              <button
+                onClick={() => shareOrCopy({ title: t('dailyStreak.activityDashboard'), text: dailyBriefShareText({ date: todayDateStr, locale }), url: `${window.location.origin}/daily` })}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
+              >
+                <Share className="w-3.5 h-3.5" />
+                {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
+              </button>
+            </div>
+          </div>
+        </section>
 
         {/* ═══════════════════════════════════════════
             HERO STAT: X of 109 promises had activity
@@ -694,7 +702,7 @@ export default function DailyPage() {
               onClick={handleShareStreak}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500/20 border border-primary-500/40 hover:bg-primary-500/30 transition-all duration-200 shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:shadow-[0_0_25px_rgba(59,130,246,0.25)]"
             >
-              <Share2 className="w-4 h-4" />
+              <Share className="w-4 h-4" />
               {t('dailyStreak.shareStreak')}
             </button>
           </div>

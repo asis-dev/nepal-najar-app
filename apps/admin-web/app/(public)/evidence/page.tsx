@@ -25,9 +25,12 @@ import {
   User,
   Tag,
   Video,
+  Share,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { shareOrCopy } from '@/lib/utils/share';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { buildOrIlikeClause } from '@/lib/supabase/filter-utils';
 import { PublicPageHero } from '@/components/public/page-hero';
 import { EvidenceSourceBadge, deriveSourceType } from '@/components/public/evidence-source-badge';
 
@@ -225,9 +228,13 @@ export default function EvidenceVaultPage() {
 
     // Apply search
     if (searchQuery.trim()) {
-      query = query.or(
-        `official_name.ilike.%${searchQuery}%,quote_text.ilike.%${searchQuery}%,source_title.ilike.%${searchQuery}%`,
+      const searchClause = buildOrIlikeClause(
+        ['official_name', 'quote_text', 'source_title'],
+        searchQuery,
       );
+      if (searchClause) {
+        query = query.or(searchClause);
+      }
     }
 
     const { data, count, error } = await query;
@@ -312,6 +319,21 @@ export default function EvidenceVaultPage() {
             </div>
           }
         />
+
+        {/* Share button */}
+        <section className="public-section pt-0 pb-0">
+          <div className="public-shell">
+            <div className="mx-auto max-w-5xl">
+              <button
+                onClick={() => shareOrCopy({ title: t('evidencePage.whoSaidWhatWhen'), text: isNe ? 'प्रमाण भण्डार — कसले के कहिले भने? nepalrepublic.org' : 'Evidence Vault — Who said what, when? nepalrepublic.org', url: `${window.location.origin}/evidence` })}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
+              >
+                <Share className="w-3.5 h-3.5" />
+                {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
+              </button>
+            </div>
+          </div>
+        </section>
 
         {/* Search & Filters */}
         <section className="public-section pt-0">

@@ -275,6 +275,7 @@ export interface CorruptionStats {
   casesByType: Partial<Record<CorruptionType, number>>;
   casesByStatus: Partial<Record<CaseStatus, number>>;
   casesBySeverity: Partial<Record<Severity, number>>;
+  amountByStatus: Partial<Record<CaseStatus, number>>;
   totalEntities: number;
 }
 

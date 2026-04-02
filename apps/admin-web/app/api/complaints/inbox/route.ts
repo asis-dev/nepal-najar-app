@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
+import { buildOrIlikeClause, sanitizeEqToken } from '@/lib/supabase/filter-utils';
 import type { ComplaintCase } from '@/lib/complaints/types';
 import {
   getAccessibleDepartmentKeysForUser,
@@ -36,10 +37,18 @@ export async function GET(request: NextRequest) {
 
   if (status) query = query.eq('status', status);
   if (department) {
-    query = query.or(`assigned_department_key.eq.${department},department_key.eq.${department}`);
+    const departmentToken = sanitizeEqToken(department);
+    if (departmentToken) {
+      query = query.or(
+        `assigned_department_key.eq.${departmentToken},department_key.eq.${departmentToken}`,
+      );
+    }
   }
   if (q.length > 0) {
-    query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+    const searchClause = buildOrIlikeClause(['title', 'description'], q);
+    if (searchClause) {
+      query = query.or(searchClause);
+    }
   }
 
   const { data, error } = await query;

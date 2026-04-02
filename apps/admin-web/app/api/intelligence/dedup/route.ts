@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 export async function POST(req: NextRequest) {
-  // Auth check
-  const auth = req.headers.get('authorization');
   const secret = process.env.SCRAPE_SECRET;
   if (!secret) {
     return NextResponse.json({ error: 'SCRAPE_SECRET not configured' }, { status: 500 });
   }
-  if (auth !== `Bearer ${secret}`) {
+  if (!bearerMatchesSecret(req, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -25,12 +24,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization');
   const secret = process.env.SCRAPE_SECRET;
   if (!secret) {
     return NextResponse.json({ error: 'SCRAPE_SECRET not configured' }, { status: 500 });
   }
-  if (auth !== `Bearer ${secret}`) {
+  if (!bearerMatchesSecret(req, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

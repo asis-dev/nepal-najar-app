@@ -58,7 +58,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   // Rate limit: 60/hour per IP
   const ip = getClientIp(request);
-  const { success: rateLimitOk } = rateLimit(`proposal-votes:${ip}`, 60, 3600000);
+  const { success: rateLimitOk } = await rateLimit(`proposal-votes:${ip}`, 60, 3600000);
   if (!rateLimitOk) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },

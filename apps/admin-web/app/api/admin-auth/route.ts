@@ -4,47 +4,15 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 /**
  * Admin auth API — now delegates to Supabase Auth.
  *
- * POST: Legacy password login (kept for backwards compatibility).
- * DELETE: Sign out — clears both Supabase session and legacy cookie.
+ * POST: Legacy password login is disabled (OTP / Supabase only).
+ * DELETE: Sign out — clears Supabase session and legacy cookies.
  */
 
-export async function POST(request: NextRequest) {
-  try {
-    const { password } = await request.json();
-
-    // Legacy: ADMIN_SECRET password check (backwards compat)
-    const adminSecret = process.env.ADMIN_SECRET;
-
-    if (!adminSecret) {
-      return NextResponse.json(
-        { error: 'Admin access not configured. Use OTP login instead.' },
-        { status: 503 }
-      );
-    }
-
-    if (!password || password !== adminSecret) {
-      return NextResponse.json(
-        { error: 'Invalid password' },
-        { status: 401 }
-      );
-    }
-
-    const response = NextResponse.json({ success: true });
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7,
-    };
-    // Keep both cookie names for backward compatibility across old/new admin routes.
-    response.cookies.set('np-admin-token', adminSecret, cookieOptions);
-    response.cookies.set('admin_session', adminSecret, cookieOptions);
-
-    return response;
-  } catch {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-  }
+export async function POST(_request: NextRequest) {
+  return NextResponse.json(
+    { error: 'Legacy admin password login is disabled. Use OTP sign-in at /admin-login.' },
+    { status: 410 },
+  );
 }
 
 export async function DELETE() {

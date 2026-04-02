@@ -1,20 +1,14 @@
-import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Civic Issues | Nepal Republic',
-  description:
-    'Report and track civic issues in Nepal — roads, water, sanitation, electricity, and public services. AI-assisted routing with community follow-up. नागरिक समस्या ट्र्याकर।',
-  openGraph: {
-    title: 'Civic Issues | Nepal Republic',
-    description:
-      'Report local issues, track progress, and follow updates on roads, water, sanitation, and public services across Nepal.',
-  },
-};
+const ogParams = new URLSearchParams({ title: 'Civic Issues', subtitle: 'Report local issues — roads, water, sanitation, and public services. AI monitors resolution.', section: 'complaints' });
 
-export default function ComplaintsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata = createMetadata({
+  title: 'Civic Issues',
+  description: 'Report civic issues in Nepal — roads, water, sanitation, electricity, and public services. AI-assisted routing with community follow-up. नागरिक समस्या रिपोर्ट।',
+  path: '/complaints',
+  ogImage: `/api/og?${ogParams.toString()}`,
+});
+
+export default function ComplaintsLayout({ children }: { children: React.ReactNode }) {
   return children;
 }

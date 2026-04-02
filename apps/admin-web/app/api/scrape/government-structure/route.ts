@@ -3,7 +3,7 @@ import { validateScrapeAuth, unauthorizedResponse } from '@/lib/scraper/auth';
 import { buildGovernmentStructureSnapshot } from '@/lib/org-structure/engine';
 
 export async function POST(request: Request) {
-  if (!validateScrapeAuth(request)) {
+  if (!(await validateScrapeAuth(request))) {
     return unauthorizedResponse();
   }
 

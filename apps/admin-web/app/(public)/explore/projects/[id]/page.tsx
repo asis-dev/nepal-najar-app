@@ -24,6 +24,7 @@ import {
 } from '@/lib/hooks/use-projects';
 import { useState } from 'react';
 import { useI18n } from '@/lib/i18n';
+import { normalizeShareUrl, shareIntentUrl, shareOrCopy } from '@/lib/utils/share';
 
 /* ── Status helpers ─────────────────────────────────── */
 
@@ -170,16 +171,17 @@ function ShareButtons({ title, shareLabel, copiedLabel }: { title: string; share
   const [copied, setCopied] = useState(false);
 
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const encodedTitle = encodeURIComponent(title);
-  const encodedUrl = encodeURIComponent(shareUrl);
+  const normalizedUrl = normalizeShareUrl(shareUrl);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
+    const result = await shareOrCopy({
+      title,
+      text: title,
+      url: normalizedUrl,
+    });
+    if (result === 'copied') {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback — ignore
     }
   };
 
@@ -187,10 +189,11 @@ function ShareButtons({ title, shareLabel, copiedLabel }: { title: string; share
     'flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/50 transition-all hover:border-cyan-500/30 hover:bg-cyan-500/10 hover:text-cyan-300';
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-white/40 mr-1">{shareLabel}</span>
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-white/40 mr-1">{shareLabel}</span>
       <a
-        href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
+        href={shareIntentUrl('facebook', { title, text: title, url: normalizedUrl })}
         target="_blank"
         rel="noopener noreferrer"
         className={btnClass}
@@ -201,7 +204,7 @@ function ShareButtons({ title, shareLabel, copiedLabel }: { title: string; share
         </svg>
       </a>
       <a
-        href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`}
+        href={shareIntentUrl('x', { title, text: title, url: normalizedUrl })}
         target="_blank"
         rel="noopener noreferrer"
         className={btnClass}
@@ -212,7 +215,7 @@ function ShareButtons({ title, shareLabel, copiedLabel }: { title: string; share
         </svg>
       </a>
       <a
-        href={`https://wa.me/?text=${encodedTitle}%20${encodedUrl}`}
+        href={shareIntentUrl('whatsapp', { title, text: title, url: normalizedUrl })}
         target="_blank"
         rel="noopener noreferrer"
         className={btnClass}
@@ -223,6 +226,7 @@ function ShareButtons({ title, shareLabel, copiedLabel }: { title: string; share
       <button onClick={handleCopy} className={btnClass} title={copiedLabel}>
         {copied ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Link2 className="h-4 w-4" />}
       </button>
+      </div>
     </div>
   );
 }

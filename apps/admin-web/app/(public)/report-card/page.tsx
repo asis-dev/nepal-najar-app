@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Share2,
+  Share,
   Copy,
   Check,
   Download,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAccountability } from '@/lib/hooks/use-accountability';
+import { shareIntentUrl, shareOrCopy, reportCardShareText } from '@/lib/utils/share';
 import { useIsMobile } from '@/lib/hooks/use-mobile';
 import { TransparencyScoreSection } from '@/components/public/report-card/transparency-score';
 import { WhatsWorkingSection } from '@/components/public/report-card/whats-working';
@@ -66,16 +67,15 @@ export default function ReportCardPage() {
   }
 
   async function handleNativeShare() {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({ title: shareTitle, text: shareText, url: pageUrl });
-      } catch {
-        /* cancelled */
-      }
-    }
+    await shareOrCopy({ title: shareTitle, text: shareText, url: pageUrl });
   }
 
   const supportsNativeShare = isClient && typeof navigator !== 'undefined' && !!navigator.share;
+  const whatsappShareUrl = shareIntentUrl('whatsapp', {
+    title: shareTitle,
+    text: shareText,
+    url: pageUrl,
+  });
   const totalIssues =
     (data?.whatsNotWorking.downSources.length ?? 0) +
     (data?.whatsNotWorking.silentPromises.length ?? 0);
@@ -108,9 +108,18 @@ export default function ReportCardPage() {
           /* ── Mobile compact hero ── */
           <section className="px-3 pt-3 pb-0">
             <div className="max-w-4xl mx-auto">
-              <p className="text-[9px] uppercase tracking-[0.2em] text-gray-500 mb-0.5">
-                {t('reportCard.weeklyAccountability')}
-              </p>
+              <div className="flex items-center justify-between mb-0.5">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-gray-500">
+                  {t('reportCard.weeklyAccountability')}
+                </p>
+                <button
+                  onClick={() => shareOrCopy({ title: t('accountability.pageTitle'), text: reportCardShareText({ locale }), url: pageUrl })}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
+                >
+                  <Share className="w-3.5 h-3.5" />
+                  {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
+                </button>
+              </div>
               <h1 className="text-base font-semibold text-white leading-tight mb-2">
                 {t('accountability.pageTitle')}
               </h1>
@@ -125,9 +134,18 @@ export default function ReportCardPage() {
           /* ── Desktop hero — compact layout ── */
           <section className="px-6 lg:px-8 pt-6 pb-2">
             <div className="max-w-5xl mx-auto">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1">
-                {t('reportCard.weeklyAccountabilityDesktop')}
-              </p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                  {t('reportCard.weeklyAccountabilityDesktop')}
+                </p>
+                <button
+                  onClick={() => shareOrCopy({ title: t('accountability.pageTitle'), text: reportCardShareText({ locale }), url: pageUrl })}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
+                >
+                  <Share className="w-3.5 h-3.5" />
+                  {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
+                </button>
+              </div>
               <h1 className="text-2xl font-bold text-white mb-1">
                 {t('accountability.pageTitle')}
               </h1>
@@ -182,7 +200,7 @@ export default function ReportCardPage() {
               <details className={`glass-card overflow-hidden ${isMobile ? 'mb-1' : ''}`}>
                 <summary className={`flex cursor-pointer items-center justify-between gap-3 ${isMobile ? 'px-3 py-2 text-[11px]' : 'p-4 text-sm'} font-medium text-gray-400 transition-colors hover:text-white`}>
                   <span className="inline-flex items-center gap-1.5">
-                    <Share2 className={isMobile ? 'h-3 w-3' : 'h-4 w-4'} />
+                    <Share className={isMobile ? 'h-3 w-3' : 'h-4 w-4'} />
                     {isMobile ? t('reportCard.shareReportCard') : t('accountability.weeklyImage')}
                   </span>
                   <span className={`${isMobile ? 'text-[9px]' : 'text-xs'} uppercase tracking-[0.18em] text-gray-600`}>
@@ -202,13 +220,13 @@ export default function ReportCardPage() {
                         className={`rounded-xl border border-primary-500/30 bg-primary-500/20 ${isMobile ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} font-medium text-white transition-all hover:bg-primary-500/30`}
                       >
                         <span className="inline-flex items-center gap-1.5">
-                          <Share2 className="h-3.5 w-3.5" />
+                          <Share className="h-3.5 w-3.5" />
                           {t('accountability.share')}
                         </span>
                       </button>
                     )}
                     <a
-                      href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+                      href={whatsappShareUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`rounded-xl border border-[#25D366]/30 bg-[#25D366]/20 ${isMobile ? 'px-3 py-1.5 text-[11px]' : 'px-4 py-2 text-xs'} text-center font-medium text-white transition-all hover:bg-[#25D366]/30`}

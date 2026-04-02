@@ -20,19 +20,40 @@ interface ReactionData {
   userReaction: string | null;
 }
 
-export function ReactionBar({ caseSlug }: { caseSlug: string }) {
+/**
+ * Generic reaction bar — works for corruption cases, ministers, commitments, etc.
+ * Uses `entityType:entitySlug` as the key in the DB.
+ * For backward compat, corruption cases still use bare slug.
+ */
+export function ReactionBar({
+  caseSlug,
+  entityType,
+  entitySlug,
+}: {
+  /** @deprecated Use entityType + entitySlug instead */
+  caseSlug?: string;
+  entityType?: 'corruption' | 'minister' | 'commitment';
+  entitySlug?: string;
+}) {
+  // Build the slug key — backward compat for corruption
+  const slugKey = caseSlug
+    ? caseSlug
+    : entityType && entitySlug
+      ? `${entityType}:${entitySlug}`
+      : '';
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [optimistic, setOptimistic] = useState<string | null>(null);
 
   const { data } = useQuery<ReactionData>({
-    queryKey: ['corruption-reactions', caseSlug],
+    queryKey: ['reactions', slugKey],
     queryFn: async () => {
-      const res = await fetch(`/api/corruption/reactions?slug=${caseSlug}`);
+      const res = await fetch(`/api/corruption/reactions?slug=${encodeURIComponent(slugKey)}`);
       if (!res.ok) return { counts: {}, userReaction: null };
       return res.json();
     },
     staleTime: 30_000,
+    enabled: !!slugKey,
   });
 
   const mutation = useMutation({
@@ -40,7 +61,7 @@ export function ReactionBar({ caseSlug }: { caseSlug: string }) {
       const res = await fetch('/api/corruption/reactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: caseSlug, reaction }),
+        body: JSON.stringify({ slug: slugKey, reaction }),
       });
       if (!res.ok) throw new Error('Failed');
       return res.json();
@@ -51,7 +72,7 @@ export function ReactionBar({ caseSlug }: { caseSlug: string }) {
       setOptimistic(current === reaction ? null : reaction);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['corruption-reactions', caseSlug] });
+      queryClient.invalidateQueries({ queryKey: ['reactions', slugKey] });
     },
   });
 

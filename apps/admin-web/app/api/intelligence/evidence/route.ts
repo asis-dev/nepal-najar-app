@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
 import { collectSocialEvidence } from '@/lib/intelligence/evidence/social-collector';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 /**
  * Evidence Collection API
@@ -11,10 +12,9 @@ import { collectSocialEvidence } from '@/lib/intelligence/evidence/social-collec
 
 // POST: Trigger evidence collection
 export async function POST(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
   const secret = process.env.SCRAPE_SECRET;
 
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!bearerMatchesSecret(request, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

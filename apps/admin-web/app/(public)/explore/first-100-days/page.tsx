@@ -15,7 +15,7 @@ import {
   Circle,
   AlertTriangle,
   ArrowRight,
-  Share2,
+  Share,
   ExternalLink,
   Calendar,
   Filter,
@@ -55,7 +55,7 @@ import { usePreferencesStore, useWatchlistStore } from '@/lib/stores/preferences
 import { useComparisonStore } from '@/lib/stores/comparison';
 import { ExportButton } from '@/components/public/export-button';
 import { exportPromisesCSV, exportPromisesPDF } from '@/lib/utils/export';
-import { commitmentShareText } from '@/lib/utils/share';
+import { commitmentShareText, shareIntentUrl, shareOrCopy } from '@/lib/utils/share';
 import { useEvidenceCounts } from '@/lib/hooks/use-evidence-vault';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import {
@@ -421,8 +421,25 @@ function BachanTrackerContent() {
 
   // Share handlers
   const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://nepalrepublic.org/explore/first-100-days';
-  const whatsappText = `Nepal Republic — Live Commitment Tracker \uD83C\uDDF3\uD83C\uDDF5 Check which public commitments are moving: ${pageUrl}`;
-  const shareText = `Nepal Republic — \u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E \u091F\u094D\u0930\u094D\u092F\u093E\u0915\u0930 | Track Nepal's public commitments with evidence. ${pageUrl}`;
+  const shareSummaryTitle = `Nepal Republic — Live Commitment Tracker`;
+  const shareSummaryText = locale === 'ne'
+    ? 'नेपालका सार्वजनिक प्रतिबद्धताहरू प्रमाणसहित ट्र्याक गर्नुहोस्।'
+    : 'Track Nepal\'s public commitments with evidence.';
+  const whatsappShareIntent = shareIntentUrl('whatsapp', {
+    title: shareSummaryTitle,
+    text: shareSummaryText,
+    url: pageUrl,
+  });
+  const facebookShareIntent = shareIntentUrl('facebook', {
+    title: shareSummaryTitle,
+    text: shareSummaryText,
+    url: pageUrl,
+  });
+  const xShareIntent = shareIntentUrl('x', {
+    title: shareSummaryTitle,
+    text: shareSummaryText,
+    url: pageUrl,
+  });
 
   function handleCopyLink() {
     navigator.clipboard.writeText(pageUrl);
@@ -430,13 +447,13 @@ function BachanTrackerContent() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function handleShareCard(e: React.MouseEvent, promise: GovernmentPromise) {
+  async function handleShareCard(e: React.MouseEvent, promise: GovernmentPromise) {
     e.preventDefault();
     e.stopPropagation();
     const title = locale === 'ne' ? (promise.title_ne || promise.title) : promise.title;
     const text = commitmentShareText({ title, progress: promise.progress, status: promise.status, locale });
     const url = `${pageUrl.replace(/\/explore\/first-100-days.*/, '')}/explore/first-100-days/${promise.slug || promise.id}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${text}\n${url}`)}`, '_blank', 'noopener,noreferrer');
+    await shareOrCopy({ title, text, url });
   }
 
   const handleLoadMore = useCallback(() => {
@@ -1504,7 +1521,7 @@ function BachanTrackerContent() {
                             className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-500 hover:text-primary-400 transition-colors"
                             title={t('commitment.shareWhatsApp')}
                           >
-                            <Share2 className="w-3.5 h-3.5" />
+                            <Share className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
@@ -1607,7 +1624,7 @@ function BachanTrackerContent() {
                 <div className="glass-card p-8 sm:p-10 text-center">
                   <div className="flex items-center justify-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center shadow-[0_0_25px_rgba(37,211,102,0.3)]">
-                      <Share2 className="w-6 h-6 text-white" />
+                      <Share className="w-6 h-6 text-white" />
                     </div>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">{t('commitment.shareTracker')}</h3>
@@ -1617,37 +1634,19 @@ function BachanTrackerContent() {
 
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                     <button
-                      onClick={() =>
-                        window.open(
-                          `https://wa.me/?text=${encodeURIComponent(whatsappText)}`,
-                          '_blank',
-                          'noopener,noreferrer'
-                        )
-                      }
+                      onClick={() => window.open(whatsappShareIntent, '_blank', 'noopener,noreferrer')}
                       className="w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-semibold text-white bg-[#25D366]/20 border border-[#25D366]/40 hover:bg-[#25D366]/30 transition-all duration-200 shadow-[0_0_15px_rgba(37,211,102,0.15)] hover:shadow-[0_0_25px_rgba(37,211,102,0.25)]"
                     >
                       {t('commitment.shareWhatsApp')}
                     </button>
                     <button
-                      onClick={() =>
-                        window.open(
-                          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`,
-                          '_blank',
-                          'noopener,noreferrer'
-                        )
-                      }
+                      onClick={() => window.open(facebookShareIntent, '_blank', 'noopener,noreferrer')}
                       className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-[#1877F2]/20 border border-[#1877F2]/30 hover:bg-[#1877F2]/30 transition-all duration-200"
                     >
                       Facebook
                     </button>
                     <button
-                      onClick={() =>
-                        window.open(
-                          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
-                          '_blank',
-                          'noopener,noreferrer'
-                        )
-                      }
+                      onClick={() => window.open(xShareIntent, '_blank', 'noopener,noreferrer')}
                       className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.08] border border-white/[0.12] hover:bg-white/[0.14] transition-all duration-200"
                     >
                       X / Twitter

@@ -33,11 +33,13 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000;
  * Stable audio URL wrapper — computes cache-bust ONCE on mount so
  * parent re-renders don't change the URL and destroy the Audio element.
  */
-function BriefAudioRow({ baseAudioUrl, durationSeconds, storyCount, onStoryHighlight }: {
+function BriefAudioRow({ baseAudioUrl, durationSeconds, storyCount, onStoryHighlight, signalCount, sourceCount }: {
   baseAudioUrl: string;
   durationSeconds?: number;
   storyCount: number;
   onStoryHighlight: (index: number) => void;
+  signalCount?: number;
+  sourceCount?: number;
 }) {
   // useMemo with empty deps = computed once per mount, stable across re-renders
   const { enUrl, neUrl } = useMemo(() => {
@@ -50,30 +52,38 @@ function BriefAudioRow({ baseAudioUrl, durationSeconds, storyCount, onStoryHighl
   }, [baseAudioUrl]);
 
   return (
-    <div className="mb-2 flex gap-2">
-      <div className="flex-1 min-w-0">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-400 px-1">
-          English Audio Brief
-        </div>
-        <DailyBriefPlayer
-          audioUrl={enUrl}
-          durationSeconds={durationSeconds}
-          storyCount={storyCount}
-          onStoryHighlight={onStoryHighlight}
-          hideHeader
-        />
+    <div className="mb-1.5">
+      <div className="mb-1 flex items-center justify-between px-1">
+        <span className="text-[10px] font-medium text-gray-500">
+          Listen to the daily brief
+        </span>
+        <span className="text-[10px] text-gray-600 tabular-nums">
+          {signalCount ? `${signalCount} signals` : ''}{signalCount && sourceCount ? ' · ' : ''}{sourceCount ? `${sourceCount} sources` : ''}
+        </span>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400 px-1">
-          नेपाली अडियो ब्रिफ
+      <div className="flex gap-2">
+        <div className="flex-1 min-w-0">
+          <DailyBriefPlayer
+            audioUrl={enUrl}
+            durationSeconds={durationSeconds}
+            storyCount={storyCount}
+            onStoryHighlight={onStoryHighlight}
+            hideHeader
+            inlineLabel="EN"
+            inlineLabelColor="text-cyan-400"
+          />
         </div>
-        <DailyBriefPlayer
-          audioUrl={neUrl}
-          durationSeconds={durationSeconds}
-          storyCount={storyCount}
-          onStoryHighlight={onStoryHighlight}
-          hideHeader
-        />
+        <div className="flex-1 min-w-0">
+          <DailyBriefPlayer
+            audioUrl={neUrl}
+            durationSeconds={durationSeconds}
+            storyCount={storyCount}
+            onStoryHighlight={onStoryHighlight}
+            hideHeader
+            inlineLabel="ने"
+            inlineLabelColor="text-amber-400"
+          />
+        </div>
       </div>
     </div>
   );
@@ -92,6 +102,15 @@ export function DashboardIsland() {
   const { brief, isLoading: briefLoading } = useDailyBrief();
   const contradictionCount = useContradictions();
   useAuth(); // ensure auth store is hydrated
+
+  /* ── Scan stats (today's count) ── */
+  const [scannedToday, setScannedToday] = useState<number | null>(null);
+  useEffect(() => {
+    fetch('/api/scan-stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setScannedToday(d.signalsToday ?? null))
+      .catch(() => {});
+  }, []);
 
   /* ── Audio state ── */
   const [playingAboutLang, setPlayingAboutLang] = useState<'en' | 'ne' | null>(null);
@@ -229,517 +248,218 @@ export function DashboardIsland() {
     <section className="px-4 pt-4 md:pt-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-3xl lg:max-w-4xl">
         {/* ── Hero ── */}
-        <div className="mb-4 md:mb-6 text-center">
+        <div className="mb-3 md:mb-6 text-center">
           <h1 className="text-base sm:text-xl md:text-2xl font-bold tracking-tight text-white leading-tight">
             {locale === 'ne'
               ? t('home.heroTitle')
               : 'Track promises. Report reality. Verify truth.'}
           </h1>
-          <p className="mt-2 text-sm text-gray-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-1.5 text-[13px] text-gray-400 max-w-2xl mx-auto leading-relaxed">
             {locale === 'ne'
               ? t('brand.heroSubheadline')
-              : 'AI-powered tracking of government commitments, real-world issues, and evidence so you can see how the system actually performs.'}
+              : 'AI-powered civic intelligence on promises, issues & evidence.'}
           </p>
+
+          {/* Stats strip */}
+          {nowMs && (
+            <div className="mt-2.5 flex items-center justify-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-[10px] font-semibold text-gray-300">
+                {isPreInauguration
+                  ? t('home.preLaunchCountdown').replace('{count}', String(daysUntilInauguration))
+                  : `${locale === 'ne' ? 'दिन' : 'Day'} ${dayInTerm}`}
+              </span>
+              {showLetterGrade && ghantiScore && (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${GRADE_COLORS[ghantiScore.grade].bg} ${GRADE_COLORS[ghantiScore.grade].text}`}>
+                  {ghantiScore.grade}
+                </span>
+              )}
+              {contradictionCount > 0 && (
+                <Link
+                  href="/what-changed?tab=contradictions"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[10px] font-semibold text-red-400 hover:bg-red-500/20 transition-colors"
+                >
+                  <AlertTriangle className="w-2.5 h-2.5" />
+                  {contradictionCount} {locale === 'ne' ? 'विवाद' : 'disputes'}
+                </Link>
+              )}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-[10px] text-cyan-400/80 font-medium">
+                {(sourceCount / 1000).toFixed(1)}K {locale === 'ne' ? 'स्क्यान' : 'scanned'}
+              </span>
+              {scannedToday != null && scannedToday > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-medium">
+                  {scannedToday} {locale === 'ne' ? 'आज निकालिएको' : 'extracted today'}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* ── Why Nepal Republic Exists — audio CTA ── */}
-        <div
-          className="mb-4 md:mb-5 rounded-xl border border-white/[0.06] px-4 py-3"
-          style={{
-            background:
-              'linear-gradient(135deg, rgba(220,20,60,0.06) 0%, rgba(0,56,147,0.06) 100%)',
-          }}
-        >
-          <p className="text-[13px] font-medium text-gray-300 text-center mb-2.5">
-            {locale === 'ne' ? 'यो एप किन बन्यो? सुन्नुहोस्' : 'Why does this app exist? Listen'}
-          </p>
-          <div className="flex items-center justify-center gap-2.5">
-            <button
-              onClick={() => {
-                if (playingAboutLang === 'en') {
-                  aboutAudioRef.current?.pause();
-                  setPlayingAboutLang(null);
-                  return;
-                }
-                if (aboutAudioRef.current) aboutAudioRef.current.pause();
-                aboutAudioRef.current = new Audio('/audio/about-en.mp3');
-                aboutAudioRef.current.addEventListener('ended', () =>
-                  setPlayingAboutLang(null),
-                );
-                aboutAudioRef.current.play().catch(() => {});
-                setPlayingAboutLang('en');
-              }}
-              className="group inline-flex items-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-[13px] font-medium text-cyan-200 transition-colors hover:bg-cyan-500/20"
-            >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500 shadow-md shadow-cyan-500/30 transition-transform group-hover:scale-110">
-                {playingAboutLang === 'en'
-                  ? <Pause className="h-3.5 w-3.5 text-white" />
-                  : <Play className="h-3.5 w-3.5 text-white fill-white" />}
-              </span>
-              {playingAboutLang === 'en' ? 'Playing…' : 'English'}
-            </button>
-            <button
-              onClick={() => {
-                if (playingAboutLang === 'ne') {
-                  aboutAudioRef.current?.pause();
-                  setPlayingAboutLang(null);
-                  return;
-                }
-                if (aboutAudioRef.current) aboutAudioRef.current.pause();
-                aboutAudioRef.current = new Audio('/audio/about-ne.mp3');
-                aboutAudioRef.current.addEventListener('ended', () =>
-                  setPlayingAboutLang(null),
-                );
-                aboutAudioRef.current.play().catch(() => {});
-                setPlayingAboutLang('ne');
-              }}
-              className="group inline-flex items-center gap-2 rounded-lg border border-orange-400/30 bg-orange-500/10 px-4 py-2 text-[13px] font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
-            >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 shadow-md shadow-orange-500/30 transition-transform group-hover:scale-110">
-                {playingAboutLang === 'ne'
-                  ? <Pause className="h-3.5 w-3.5 text-white" />
-                  : <Play className="h-3.5 w-3.5 text-white fill-white" />}
-              </span>
-              {playingAboutLang === 'ne' ? 'सुन्दै…' : 'नेपालीमा'}
-            </button>
-          </div>
-        </div>
-
-        {/* ── Insight Card — what's happening RIGHT NOW ── */}
-        <div
-          className="relative overflow-hidden rounded-2xl border border-white/[0.08] p-3 sm:p-5 md:p-7"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-            boxShadow:
-              '0 20px 60px rgba(2,8,20,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
-          }}
-        >
-          <div
-            className="hidden md:block absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] pointer-events-none"
-            style={{
-              background:
-                'radial-gradient(ellipse, rgba(59,130,246,0.06) 0%, transparent 70%)',
+        {/* ── Listen about app + Report Civic Issue — single row ── */}
+        <div className="mb-3 md:mb-5 flex items-center gap-2">
+          <button
+            className="flex flex-1 basis-1/2 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-600/15 px-2.5 py-2.5 text-[12px] font-bold text-red-100 transition-colors hover:bg-red-600/25"
+            onClick={() => {
+              const lang = locale === 'ne' ? 'ne' : 'en';
+              if (playingAboutLang === lang) {
+                aboutAudioRef.current?.pause();
+                setPlayingAboutLang(null);
+                return;
+              }
+              if (aboutAudioRef.current) aboutAudioRef.current.pause();
+              aboutAudioRef.current = new Audio(`/audio/about-${lang}.mp3`);
+              aboutAudioRef.current.addEventListener('ended', () => setPlayingAboutLang(null));
+              aboutAudioRef.current.play().catch(() => {});
+              setPlayingAboutLang(lang);
             }}
-          />
-
-          {/* ── Promise Momentum Hero ── */}
-          {(() => {
-            const total = stats?.total ?? 109;
-            const active =
-              (stats?.inProgress ?? 0) +
-              (stats?.stalled ?? 0) +
-              (stats?.delivered ?? 0);
-            const activityPct =
-              total > 0 ? Math.round((active / total) * 100) : 0;
-            const avgProg = stats?.avgProgress ?? 0;
-            const stalledCount = stats?.stalled ?? 0;
-            const inProgressCount = stats?.inProgress ?? 0;
-            const deliveredCount = stats?.delivered ?? 0;
-            const ringSize = isMobile ? 110 : 140;
-            const sw = isMobile ? 8 : 10;
-            const r = (ringSize - sw) / 2;
-            const circ = 2 * Math.PI * r;
-            const prog = (activityPct / 100) * circ;
-            const dashOff = circ - prog;
-            const ringColor =
-              activityPct >= 70
-                ? '#10b981'
-                : activityPct >= 40
-                  ? '#06b6d4'
-                  : '#f59e0b';
-
-            const insightSentence =
-              locale === 'ne'
-                ? stalledCount > 10
-                  ? `${stalledCount} वचनबद्धता रोकिएका छन्। ${inProgressCount} अगाडि बढिरहेका छन्। औसत प्रगति ${avgProg}% मात्र।`
-                  : `${inProgressCount} वचनबद्धता अगाडि बढिरहेका छन्। ${stalledCount} रोकिएका छन्। औसत ${avgProg}%।`
-                : stalledCount > 10
-                  ? `${stalledCount} promises are stuck. ${inProgressCount} are moving. Average progress is only ${avgProg}%.`
-                  : `${inProgressCount} promises are moving forward. ${stalledCount} are stuck. Average is ${avgProg}%.`;
-
-            return (
-              <>
-                {/* Day counter + key insight */}
-                <div className="mb-4 md:mb-5">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500">
-                      {isPreInauguration
-                        ? t('home.preLaunchCountdown').replace(
-                            '{count}',
-                            String(daysUntilInauguration),
-                          )
-                        : `${locale === 'ne' ? 'दिन' : 'Day'} ${dayInTerm}`}
-                    </span>
-                    {showLetterGrade ? (
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold ${GRADE_COLORS[ghantiScore!.grade].bg} ${GRADE_COLORS[ghantiScore!.grade].text}`}
-                      >
-                        {ghantiScore!.grade}
-                      </span>
-                    ) : (
-                      <span className="text-[8px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/20">
-                        {locale === 'ne' ? 'आधाररेखा' : 'Baseline'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-center text-sm sm:text-base text-gray-300 font-medium leading-relaxed max-w-lg mx-auto">
-                    {insightSentence}
-                  </p>
-                </div>
-
-                {/* Ring + status summary */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6 mb-4">
-                  {/* Activity ring */}
-                  <div className="relative flex-shrink-0">
-                    <svg
-                      width={ringSize}
-                      height={ringSize}
-                      className="transform -rotate-90"
-                    >
-                      <circle
-                        cx={ringSize / 2}
-                        cy={ringSize / 2}
-                        r={r}
-                        fill="none"
-                        stroke="rgba(255,255,255,0.06)"
-                        strokeWidth={sw}
-                      />
-                      <circle
-                        cx={ringSize / 2}
-                        cy={ringSize / 2}
-                        r={r}
-                        fill="none"
-                        stroke={ringColor}
-                        strokeWidth={sw}
-                        strokeLinecap="round"
-                        strokeDasharray={circ}
-                        strokeDashoffset={dashOff}
-                        style={{
-                          transition: 'stroke-dashoffset 1.5s ease-out',
-                          filter: `drop-shadow(0 0 10px ${ringColor}50)`,
-                        }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl md:text-3xl font-bold text-white">
-                        {activityPct}%
-                      </span>
-                      <span className="text-[9px] text-gray-500">
-                        {locale === 'ne' ? 'सक्रिय' : 'active'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right side: interpreted status + progress bar */}
-                  <div className="flex-1 w-full min-w-0 text-center sm:text-left">
-                    <div className="space-y-1.5 mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-sm text-gray-300">
-                          <span className="font-semibold text-emerald-400">
-                            {inProgressCount}
-                          </span>
-                          <span className="text-gray-500">
-                            {' '}
-                            {locale === 'ne'
-                              ? 'अगाडि बढ्दै'
-                              : 'moving forward'}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-red-500" />
-                        <span className="text-sm text-gray-300">
-                          <span className="font-semibold text-red-400">
-                            {stalledCount}
-                          </span>
-                          <span className="text-gray-500">
-                            {' '}
-                            {locale === 'ne'
-                              ? 'रोकिएको — कारवाही चाहिन्छ'
-                              : 'stuck — need attention'}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-amber-500" />
-                        <span className="text-sm text-gray-300">
-                          <span className="font-semibold text-amber-400">
-                            {stats?.notStarted ?? 0}
-                          </span>
-                          <span className="text-gray-500">
-                            {' '}
-                            {locale === 'ne'
-                              ? 'सुरु भएको छैन'
-                              : 'not started yet'}
-                          </span>
-                        </span>
-                      </div>
-                      {deliveredCount > 0 && (
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-blue-500" />
-                          <span className="text-sm text-gray-300">
-                            <span className="font-semibold text-blue-400">
-                              {deliveredCount}
-                            </span>
-                            <span className="text-gray-500">
-                              {' '}
-                              {locale === 'ne' ? 'पूरा भयो' : 'delivered'}
-                            </span>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Average progress bar */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-1000"
-                            style={{ width: `${avgProg}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium text-gray-400 tabular-nums">
-                          {avgProg}%
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-gray-600">
-                        {locale === 'ne'
-                          ? 'समग्र औसत प्रगति'
-                          : 'overall average progress'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-
-          {/* Worst category chips — gated behind nowMs to prevent hydration mismatch */}
-          {nowMs && showLetterGrade && worstCategories.length > 0 && (
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mb-3 md:mb-4">
-              {worstCategories.map((cat) => {
-                const chipColor =
-                  cat.score >= 40
-                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                    : cat.score >= 20
-                      ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                      : 'bg-red-500/10 text-red-400 border-red-500/20';
-                return (
-                  <span
-                    key={cat.category}
-                    className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${chipColor}`}
-                  >
-                    {locale === 'ne' ? cat.categoryNe : cat.category}:{' '}
-                    {cat.score}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Source credibility line */}
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1 text-[11px] text-gray-500 mb-2">
-            <span className="text-cyan-400/80 font-medium">
-              {locale === 'ne'
-                ? `${(sourceCount / 1000).toFixed(1)}K सन्दर्भ स्क्यान`
-                : `${(sourceCount / 1000).toFixed(1)}K references scanned`}
-            </span>
-            <span className="text-gray-700">&middot;</span>
-            <span>
-              {locale === 'ne' ? '८०+ स्रोत' : '80+ sources'}
-            </span>
-            <span className="text-gray-700">&middot;</span>
-            <span className="inline-flex items-center gap-1">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              </span>
-              {t('home.live')}
-            </span>
-          </div>
-
-
-          {/* Share hero score — gated behind nowMs to prevent hydration mismatch */}
-          {nowMs && ghantiScore && (
-            <div className="flex items-center justify-center sm:justify-start gap-2 mb-3">
-              <button
-                onClick={() => {
-                  const text = scorecardShareText({
-                    grade: showLetterGrade ? ghantiScore.grade : undefined,
-                    score: showLetterGrade ? ghantiScore.score : undefined,
-                    dayInTerm,
-                    locale,
-                  });
-                  shareOrCopy({
-                    title: 'Nepal Republic',
-                    text,
-                    url: window.location.origin,
-                  });
-                }}
-                className="inline-flex items-center gap-1.5 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                <Share className="w-3 h-3" />
-                {showLetterGrade
-                  ? t('home.shareScore')
-                  : t('home.shareSnapshot')}
-              </button>
-              <span className="text-gray-700 mx-1">&middot;</span>
-              <Link
-                href="/how-we-score"
-                className="text-[10px] text-gray-500 hover:text-cyan-400 transition-colors"
-              >
-                {t('home.howWeScore')} &rarr;
-              </Link>
-            </div>
-          )}
-
-          {/* Score disclaimer asterisk */}
-          {nowMs && ghantiScore && (
-            <p className="text-center text-[9px] text-gray-600 mb-2 md:mb-3">
-              <span className="group relative inline-flex items-center gap-0.5 cursor-help">
-                *{' '}
-                {showLetterGrade
-                  ? t('home.scoreDisclaimer')
-                  : t('home.baselineDisclaimer')}
-                <span className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-56 p-2 rounded-lg bg-gray-800 border border-white/10 text-[10px] text-gray-300 leading-relaxed shadow-xl z-50">
-                  {showLetterGrade
-                    ? t('home.scoreDisclaimerFull')
-                    : t('home.baselineDisclaimerFull')}
-                </span>
-              </span>
-            </p>
-          )}
-
-          {/* This week activity line — desktop only */}
-          {!statsLoading && (
-            <div className="hidden md:block text-sm text-gray-400 mb-3 text-left">
-              <span className="text-gray-500 font-medium">
-                {t('home.thisWeek')}
-              </span>{' '}
-              {weekActivity.movedForward > 0 && (
-                <span className="text-emerald-400">
-                  {t('home.movedUp').replace(
-                    '{count}',
-                    String(weekActivity.movedForward),
-                  )}
-                </span>
-              )}
-              {weekActivity.movedForward > 0 &&
-                weekActivity.stalledCount > 0 && (
-                  <span className="text-gray-600"> &middot; </span>
-                )}
-              {weekActivity.stalledCount > 0 && (
-                <span className="text-red-400">
-                  {t('home.stalledDown').replace(
-                    '{count}',
-                    String(weekActivity.stalledCount),
-                  )}
-                </span>
-              )}
-              {weekActivity.movedForward === 0 &&
-                weekActivity.stalledCount === 0 && (
-                  <span className="text-gray-500">
-                    {t('home.noStatusChanges')}
-                  </span>
-                )}
-            </div>
-          )}
-
-          {/* Top movers — desktop only */}
-          {topMovers.length > 0 && (
-            <div className="hidden md:block text-sm text-gray-400 mb-3 text-left">
-              <span className="text-base leading-none">
-                {'\uD83D\uDD25'}
-              </span>{' '}
-              {topMovers.map((m, i) => (
-                <span key={i}>
-                  {i > 0 && (
-                    <span className="text-gray-600"> &middot; </span>
-                  )}
-                  <span className="text-gray-300">
-                    {m.title.length > 30
-                      ? m.title.slice(0, 30) + '...'
-                      : m.title}
-                  </span>
-                  {m.progress > 0 && (
-                    <span className="text-emerald-400 ml-1">
-                      {'\u2191'}
-                      {m.progress}%
-                    </span>
-                  )}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Contradictions warning */}
-          {contradictionCount > 0 && (
-            <div className="flex items-center gap-2 text-xs md:text-sm text-amber-400/90 mb-2 md:mb-4 justify-center md:justify-start">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              <span>
-                {contradictionCount !== 1
-                  ? t('home.contradictionsPlural').replace(
-                      '{count}',
-                      String(contradictionCount),
-                    )
-                  : t('home.contradictions').replace(
-                      '{count}',
-                      String(contradictionCount),
-                    )}
-              </span>
-            </div>
-          )}
-
-          {/* Daily brief divider + Story Cards */}
-          <div className="border-t border-white/[0.06] pt-2 md:pt-4 mb-2 md:mb-4">
-            {briefLoading ? (
-              <div className="flex items-center gap-2.5 text-xs md:text-sm text-gray-400">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400" />
-                <span>
-                  {t('home.scanning').replace(
-                    '{count}',
-                    String(sourceCount),
-                  )}
-                </span>
-              </div>
-            ) : brief ? (
-              <div>
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-gray-500 mb-2 md:mb-3">
-                  <span>{'\uD83D\uDCCB'}</span>
-                  {t('home.todaysBrief')}
-                </div>
-
-                {/* Audio players — EN and NE side by side on same row */}
-                {brief.audioUrl && <BriefAudioRow
-                  baseAudioUrl={brief.audioUrl}
-                  durationSeconds={brief.audioDurationSeconds || undefined}
-                  storyCount={brief.topStories?.length || 0}
-                  onStoryHighlight={setAudioHighlightIdx}
-                />}
-
-                {/* Unified daily brief — single cohesive card */}
-                <UnifiedDailyBrief
-                  brief={brief}
-                  highlights={brief.readerHighlights ?? []}
-                  locale={locale}
-                  isMobile={isMobile}
-                />
-              </div>
-            ) : (
-              <div className="text-xs md:text-sm text-gray-500 py-2">
-                {locale === 'ne' ? 'आजको ब्रिफ तयार हुँदैछ...' : "Today's brief is being prepared..."}
-              </div>
-            )}
-          </div>
-
-          {/* Pulse bar — desktop only */}
-          <div className="hidden md:block">
-            <PulseBar score={pulse || brief?.pulse || 0} />
-          </div>
+          >
+            {playingAboutLang
+              ? <Pause className="h-4 w-4" />
+              : <Play className="h-4 w-4 fill-current" />}
+            {playingAboutLang
+              ? (locale === 'ne' ? 'बजाउँदै…' : 'Playing…')
+              : (locale === 'ne' ? 'एप बारे सुन्नुहोस्' : 'About this app')}
+          </button>
+          <Link
+            href="/complaints"
+            className="flex flex-1 basis-1/2 items-center justify-center gap-1.5 rounded-xl border border-amber-400/30 bg-amber-500/15 px-2.5 py-2.5 text-[12px] font-bold text-amber-100 transition-colors hover:bg-amber-500/25"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            {locale === 'ne' ? 'नागरिक समस्या दर्ता' : 'Report Civic Issue'}
+          </Link>
         </div>
+
+        {/* ── Scorecard Strip — compact ring + stats ── */}
+        {(() => {
+          const total = stats?.total ?? 109;
+          const active = (stats?.inProgress ?? 0) + (stats?.stalled ?? 0) + (stats?.delivered ?? 0);
+          const activityPct = total > 0 ? Math.round((active / total) * 100) : 0;
+          const avgProg = stats?.avgProgress ?? 0;
+          const stalledCount = stats?.stalled ?? 0;
+          const inProgressCount = stats?.inProgress ?? 0;
+          const deliveredCount = stats?.delivered ?? 0;
+          const ringSize = isMobile ? 80 : 120;
+          const sw = isMobile ? 6 : 8;
+          const r = (ringSize - sw) / 2;
+          const circ = 2 * Math.PI * r;
+          const prog = (activityPct / 100) * circ;
+          const dashOff = circ - prog;
+          const ringColor = activityPct >= 70 ? '#10b981' : activityPct >= 40 ? '#06b6d4' : '#f59e0b';
+
+          return (
+            <div
+              className="relative rounded-2xl border border-white/[0.08] p-3 sm:p-5 mb-3"
+              style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)' }}
+            >
+              {/* Share icon — top right */}
+              {nowMs && ghantiScore && (
+                <button
+                  onClick={() => {
+                    const text = scorecardShareText({
+                      grade: ghantiScore?.grade,
+                      score: ghantiScore?.score,
+                      dayInTerm,
+                      locale,
+                    });
+                    shareOrCopy({ title: 'Nepal Republic', text, url: window.location.origin });
+                  }}
+                  className="absolute top-2.5 right-2.5 inline-flex items-center justify-center rounded-full p-1.5 text-gray-500 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] hover:text-gray-300 transition-all z-10"
+                >
+                  <Share className="w-3 h-3" />
+                </button>
+              )}
+              <div className="flex items-center gap-3 sm:gap-5">
+                {/* Compact ring */}
+                <div className="relative flex-shrink-0">
+                  <svg width={ringSize} height={ringSize} className="transform -rotate-90">
+                    <circle cx={ringSize / 2} cy={ringSize / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={sw} />
+                    <circle cx={ringSize / 2} cy={ringSize / 2} r={r} fill="none" stroke={ringColor} strokeWidth={sw} strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dashOff}
+                      style={{ transition: 'stroke-dashoffset 1.5s ease-out', filter: `drop-shadow(0 0 8px ${ringColor}50)` }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-lg md:text-2xl font-bold text-white">{activityPct}%</span>
+                    <span className="text-[8px] text-gray-500">{locale === 'ne' ? 'सक्रिय' : 'active'}</span>
+                  </div>
+                </div>
+
+                {/* Right side: inline status counts + progress */}
+                <div className="flex-1 min-w-0">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="text-xs"><span className="font-semibold text-emerald-400">{inProgressCount}</span> <span className="text-gray-500">{locale === 'ne' ? 'अगाडि' : 'moving'}</span></span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      <span className="text-xs"><span className="font-semibold text-red-400">{stalledCount}</span> <span className="text-gray-500">{locale === 'ne' ? 'रोकिएको' : 'stuck'}</span></span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-amber-500" />
+                      <span className="text-xs"><span className="font-semibold text-amber-400">{stats?.notStarted ?? 0}</span> <span className="text-gray-500">{locale === 'ne' ? 'सुरु नभएको' : 'waiting'}</span></span>
+                    </div>
+                    {deliveredCount > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-blue-500" />
+                        <span className="text-xs"><span className="font-semibold text-blue-400">{deliveredCount}</span> <span className="text-gray-500">{locale === 'ne' ? 'पूरा' : 'done'}</span></span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-1000" style={{ width: `${avgProg}%` }} />
+                    </div>
+                    <span className="text-[10px] font-medium text-gray-400 tabular-nums">{avgProg}%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Worst categories row */}
+              <div className="mt-2.5 flex flex-wrap gap-1">
+                {nowMs && showLetterGrade && worstCategories.slice(0, 3).map((cat) => {
+                  const chipColor = cat.score >= 40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : cat.score >= 20 ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20';
+                  return (
+                    <span key={cat.category} className={`text-[9px] px-1.5 py-0.5 rounded-full border ${chipColor}`}>
+                      {locale === 'ne' ? cat.categoryNe : cat.category}: {cat.score}
+                    </span>
+                  );
+                })}
+              </div>
+
+              {/* Pulse bar — inline */}
+              <div className="mt-1.5">
+                <PulseBar score={pulse} />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── Daily Brief ── */}
+        {brief && !briefLoading && (
+          <div className="mb-3">
+            {brief.audioUrl && (
+              <BriefAudioRow
+                baseAudioUrl={brief.audioUrl}
+                durationSeconds={brief.audioDurationSeconds ?? undefined}
+                storyCount={brief.topStories?.length ?? 0}
+                onStoryHighlight={setAudioHighlightIdx}
+                signalCount={brief.stats?.totalSignals24h}
+                sourceCount={brief.stats?.sourcesActive}
+              />
+            )}
+            <UnifiedDailyBrief
+              brief={brief}
+              highlights={brief.readerHighlights ?? []}
+              locale={locale}
+              isMobile={!!isMobile}
+              weekMoved={weekActivity.movedForward}
+              weekStalled={weekActivity.stalledCount}
+            />
+          </div>
+        )}
+
+
       </div>
     </section>
   );

@@ -18,7 +18,7 @@ const ALLOWED_MEDIA_TYPES = new Set([
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  const { success } = rateLimit(`complaints-transcribe:${ip}`, 20, 60 * 60 * 1000);
+  const { success } = await rateLimit(`complaints-transcribe:${ip}`, 20, 60 * 60 * 1000);
   if (!success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },

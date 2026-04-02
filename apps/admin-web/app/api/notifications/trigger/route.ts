@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 /**
  * Internal API endpoint for triggering notifications when a promise status changes.
@@ -12,12 +13,11 @@ import { getSupabase } from '@/lib/supabase/server';
  */
 export async function POST(request: NextRequest) {
   // Verify admin auth or API secret
-  const authHeader = request.headers.get('authorization');
   const apiSecret = process.env.NOTIFICATION_API_SECRET;
 
   let isAuthorized = false;
 
-  if (apiSecret && authHeader === `Bearer ${apiSecret}`) {
+  if (bearerMatchesSecret(request, apiSecret)) {
     isAuthorized = true;
   }
 

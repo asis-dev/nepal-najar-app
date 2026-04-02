@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateScrapeAuth } from '@/lib/scraper/auth';
 import {
   researchPolitician,
   researchAllPoliticians,
 } from '@/lib/intelligence/research/politician-researcher';
 import { POLITICIANS } from '@/lib/intelligence/research/politician-profiles';
+import {
+  getBearerToken,
+  secretsEqual,
+} from '@/lib/security/request-auth';
 
 // POST: Start research on a specific politician or all
 export async function POST(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
-  const secret = process.env.SCRAPE_SECRET;
-
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!(await validateScrapeAuth(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -101,17 +103,15 @@ export async function POST(request: NextRequest) {
 
 // GET: List available politicians and their research status
 export async function GET(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
-  const cronSecret =
-    request.headers.get('x-vercel-cron-secret') ||
-    request.nextUrl.searchParams.get('secret');
-  const secret = process.env.SCRAPE_SECRET;
+  const bearerSecret = getBearerToken(request);
+  const cronHeaderSecret = request.headers.get('x-vercel-cron-secret');
+  const cronSecret = process.env.CRON_SECRET;
+  const isCronAuth =
+    !!cronSecret &&
+    (secretsEqual(cronHeaderSecret, cronSecret) || secretsEqual(bearerSecret, cronSecret));
+  const isScrapeAuth = await validateScrapeAuth(request);
 
-  if (
-    (!secret || auth !== `Bearer ${secret}`) &&
-    cronSecret !== secret &&
-    cronSecret !== process.env.CRON_SECRET
-  ) {
+  if (!isCronAuth && !isScrapeAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

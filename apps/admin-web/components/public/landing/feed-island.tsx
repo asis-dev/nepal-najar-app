@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { ArrowRight, ChevronDown, ChevronUp, Loader2, Shield, Clock, Share2 } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp, Loader2, Shield, Clock, Share } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAllPromises } from '@/lib/hooks/use-promises';
 import { useTrending } from '@/lib/hooks/use-trending';
@@ -35,6 +35,7 @@ import { FeedTabBar } from './feed-tab-bar';
 import { FeedCommitmentCard } from './feed-commitment-card';
 import { StaleRow } from './stale-row';
 import { FollowingEmptyState, TrendingEmptyState } from './empty-states';
+import { shareOrCopy } from '@/lib/utils/share';
 
 /* ═══════════════════════════════════════════
    FeedIsland — client component owning the
@@ -542,22 +543,18 @@ export function FeedIsland() {
                     </div>
                     {/* Share summary */}
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const shareTitle = locale === 'ne'
                           ? 'Nepal Republic — भ्रष्टाचार अनुसन्धान'
                           : 'Follow The Money — Nepal Republic';
                         const text = locale === 'ne'
                           ? `🔍 ${investigating} अनुसन्धानमा (रू ${formatAmountNpr(investigatingAmt)})\n⚖️ ${onTrial} मुद्दा विचाराधीन (रू ${formatAmountNpr(onTrialAmt)})\n🔴 ${convicted} दोषी ठहर (रू ${formatAmountNpr(convictedAmt)})\n\nजम्मा: रू ${formatAmountNpr(corruptionStats.totalAmountNpr)} — ${corruptionStats.totalCases} घटना\n\nhttps://nepalrepublic.org/corruption`
                           : `🔍 ${investigating} under investigation (रू ${formatAmountNpr(investigatingAmt)})\n⚖️ ${onTrial} on trial (रू ${formatAmountNpr(onTrialAmt)})\n🔴 ${convicted} convicted (रू ${formatAmountNpr(convictedAmt)})\n\nTotal: रू ${formatAmountNpr(corruptionStats.totalAmountNpr)} — ${corruptionStats.totalCases} cases exposed\n\nhttps://nepalrepublic.org/corruption`;
-                        if (navigator.share) {
-                          navigator.share({ title: shareTitle, text, url: 'https://nepalrepublic.org/corruption' }).catch(() => {});
-                        } else {
-                          navigator.clipboard.writeText(text).catch(() => {});
-                        }
+                        await shareOrCopy({ title: shareTitle, text, url: '/corruption' });
                       }}
                       className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] py-2 text-[11px] font-medium text-gray-400 hover:text-white hover:bg-white/[0.08] transition-colors"
                     >
-                      <Share2 className="h-3.5 w-3.5" />
+                      <Share className="h-3.5 w-3.5" />
                       {locale === 'ne' ? 'सेयर गर्नुहोस्' : 'Share This'}
                     </button>
                   </div>
@@ -595,22 +592,18 @@ export function FeedIsland() {
                       <span>Updated {new Date(c.updated_at).toLocaleDateString()}</span>
                     </div>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const amt = c.estimated_amount_npr ? ` — रू ${formatAmountNpr(c.estimated_amount_npr)}` : '';
                         const statusLabel = locale === 'ne' ? STATUS_LABELS[c.status].ne : STATUS_LABELS[c.status].en;
                         const text = locale === 'ne'
                           ? `🔍 ${c.title}${amt}\nस्थिति: ${statusLabel}\n\n${c.summary || ''}\n\nNepal Republic मा हेर्नुहोस्\nhttps://nepalrepublic.org/corruption/${c.slug}`
                           : `🔍 ${c.title}${amt}\nStatus: ${statusLabel}\n\n${c.summary || ''}\n\nFollow the money on Nepal Republic\nhttps://nepalrepublic.org/corruption/${c.slug}`;
-                        if (navigator.share) {
-                          navigator.share({ title: c.title, text, url: `https://nepalrepublic.org/corruption/${c.slug}` }).catch(() => {});
-                        } else {
-                          navigator.clipboard.writeText(text).catch(() => {});
-                        }
+                        await shareOrCopy({ title: c.title, text, url: `/corruption/${c.slug}` });
                       }}
                       className="shrink-0 p-1.5 rounded-lg text-gray-600 hover:text-gray-300 hover:bg-white/[0.06] transition-colors"
                       aria-label="Share case"
                     >
-                      <Share2 className="h-3.5 w-3.5" />
+                      <Share className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>

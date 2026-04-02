@@ -8,7 +8,7 @@ import { validateScrapeAuth, unauthorizedResponse } from '@/lib/scraper/auth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
-  if (!validateScrapeAuth(request)) {
+  if (!(await validateScrapeAuth(request))) {
     return unauthorizedResponse();
   }
 

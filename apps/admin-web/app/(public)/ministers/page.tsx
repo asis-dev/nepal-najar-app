@@ -19,7 +19,7 @@ const SORT_LABELS: Record<SortOption, { en: string; ne: string }> = {
 };
 
 export default function MinistersPage() {
-  const { locale } = useI18n();
+  const { locale, localizeField } = useI18n();
   const isNe = locale === 'ne';
 
   const { ministers, period, isLoading } = useMinistersWeekly();
@@ -99,7 +99,7 @@ export default function MinistersPage() {
               {mostActive && mostActive.weeklyActivity.totalSignals > 0 && (
                 <StatPill
                   label={isNe ? 'सबैभन्दा सक्रिय' : 'Most Active'}
-                  value={isNe && mostActive.nameNe ? mostActive.nameNe : mostActive.name}
+                  value={localizeField(mostActive.name, mostActive.nameNe)}
                 />
               )}
             </div>

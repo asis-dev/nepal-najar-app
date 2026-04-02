@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeFacebookPages } from '@/lib/intelligence/collectors/facebook-scraper';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 // POST: Trigger Facebook scrape manually
 export async function POST(request: NextRequest) {
-  // Auth check — same pattern as other intelligence routes
-  const auth = request.headers.get('Authorization');
   const secret = process.env.SCRAPE_SECRET;
 
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!bearerMatchesSecret(request, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

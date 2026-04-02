@@ -5,6 +5,10 @@
 
 const BRAND = 'Nepal Republic';
 const SITE = 'nepalrepublic.org';
+const DEFAULT_SITE_URL =
+  (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nepalrepublic.org').replace(/\/+$/, '');
+
+type SharePlatform = 'x' | 'facebook' | 'whatsapp' | 'copy' | 'native';
 
 /** Generate share text for a commitment/promise */
 export function commitmentShareText(opts: {
@@ -39,13 +43,13 @@ export function scorecardShareText(opts: {
 
   if (locale === 'ne') {
     return grade
-      ? `नेपाल सरकारको ग्रेड: ${grade} (${score}/100)। AI ले ८०+ स्रोत स्क्यान गरेर प्रमाणित। ${SITE}`
-      : `दिन ${dayInTerm}: AI ले १०९ सरकारी वचनबद्धता अनुगमन गर्दैछ। ${SITE}`;
+      ? `नेपाल सरकारको ग्रेड: ${grade} (${score}/100)। AI-प्रमाण सहित ट्र्याक गरिएको। ${SITE}`
+      : `दिन ${dayInTerm}: सरकारी प्रतिबद्धता र प्रगति ट्र्याक हुँदैछ। ${SITE}`;
   }
 
   return grade
-    ? `Nepal's government scored ${grade} (${score}/100) — verified by AI across 80+ sources. ${SITE}`
-    : `Day ${dayInTerm}: AI is monitoring 109 government commitments. See who delivers and who fails → ${SITE}`;
+    ? `Nepal's government scored ${grade} (${score}/100) — tracked with AI-backed evidence. ${SITE}`
+    : `Day ${dayInTerm}: Government commitments are being tracked with evidence. ${SITE}`;
 }
 
 /** Generate share text for report card */
@@ -59,9 +63,9 @@ export function reportCardShareText(opts: { locale?: string }): string {
 /** Generate share text for daily brief */
 export function dailyBriefShareText(opts: { date: string; locale?: string }): string {
   if (opts.locale === 'ne') {
-    return `आजको नेपाल ब्रिफ (${opts.date}) — AI ले ८०+ स्रोतबाट संकलित। ${SITE}`;
+    return `आजको नेपाल ब्रिफ (${opts.date}) — AI-सहायता र सार्वजनिक प्रमाणमा आधारित। ${SITE}`;
   }
-  return `Today's Nepal brief (${opts.date}) — compiled by AI from 80+ sources. ${SITE}`;
+  return `Today's Nepal brief (${opts.date}) — AI-assisted and evidence-grounded. ${SITE}`;
 }
 
 /** Generate share text for corruption case */
@@ -98,18 +102,156 @@ export function ogImageUrl(opts: {
   return `/api/og?${params.toString()}`;
 }
 
+function detectWindowOrigin() {
+  if (typeof window === 'undefined') return DEFAULT_SITE_URL;
+  return window.location.origin;
+}
+
+export function normalizeShareUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return DEFAULT_SITE_URL;
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const base = detectWindowOrigin();
+  const withSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `${base}${withSlash}`;
+}
+
+export function withShareUtm(url: string, platform: SharePlatform): string {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.searchParams.has('utm_source')) {
+      parsed.searchParams.set('utm_source', platform);
+    }
+    if (!parsed.searchParams.has('utm_medium')) {
+      parsed.searchParams.set('utm_medium', 'social');
+    }
+    if (!parsed.searchParams.has('utm_campaign')) {
+      parsed.searchParams.set('utm_campaign', 'community_share');
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+function collapseWhitespace(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function truncate(value: string, max: number) {
+  if (value.length <= max) return value;
+  return `${value.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+}
+
+export function composeShareMessage(opts: {
+  title: string;
+  text?: string;
+  comment?: string;
+}): string {
+  const { title, text, comment } = opts;
+  const parts = [comment, text, title]
+    .map((item) => (item ? collapseWhitespace(item) : ''))
+    .filter(Boolean);
+
+  return truncate(parts.join('\n\n'), 420);
+}
+
+export function shareIntentUrl(platform: Exclude<SharePlatform, 'copy' | 'native'>, opts: {
+  title: string;
+  text?: string;
+  comment?: string;
+  url: string;
+}): string {
+  const normalizedUrl = normalizeShareUrl(opts.url);
+  const trackedUrl = withShareUtm(normalizedUrl, platform);
+  const message = composeShareMessage(opts);
+
+  if (platform === 'x') {
+    const xText = truncate(message, 240);
+    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(trackedUrl)}`;
+  }
+
+  if (platform === 'facebook') {
+    const quote = truncate(message, 240);
+    return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(trackedUrl)}&quote=${encodeURIComponent(quote)}`;
+  }
+
+  return `https://wa.me/?text=${encodeURIComponent(`${message}\n${trackedUrl}`)}`;
+}
+
+/**
+ * Fetch the OG image for a page and return it as a shareable File.
+ * Falls back to null if anything fails (CORS, timeout, etc.).
+ */
+async function fetchShareImage(opts: {
+  title?: string;
+  subtitle?: string;
+  section?: string;
+}): Promise<File | null> {
+  try {
+    const imgUrl = ogImageUrl({
+      title: opts.title,
+      subtitle: opts.subtitle,
+      section: opts.section,
+    });
+    const origin = typeof window !== 'undefined' ? window.location.origin : DEFAULT_SITE_URL;
+    const fullUrl = imgUrl.startsWith('/') ? `${origin}${imgUrl}` : imgUrl;
+
+    const res = await fetch(fullUrl, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+
+    const blob = await res.blob();
+    return new File([blob], 'nepal-republic-share.png', { type: blob.type || 'image/png' });
+  } catch {
+    return null;
+  }
+}
+
 /** Universal share helper — handles native share + clipboard fallback */
-export async function shareOrCopy(opts: { title: string; text: string; url: string }): Promise<'shared' | 'copied' | 'failed'> {
+export async function shareOrCopy(opts: {
+  title: string;
+  text?: string;
+  comment?: string;
+  url: string;
+  /** Optional OG image params — when provided, generates an image for IG Stories / visual shares */
+  ogTitle?: string;
+  ogSubtitle?: string;
+  ogSection?: string;
+}): Promise<'shared' | 'copied' | 'failed'> {
+  const normalizedUrl = normalizeShareUrl(opts.url);
+  const trackedNativeUrl = withShareUtm(normalizedUrl, 'native');
+  const trackedCopyUrl = withShareUtm(normalizedUrl, 'copy');
+  const message = composeShareMessage(opts);
+
   if (typeof navigator !== 'undefined' && navigator.share) {
     try {
-      await navigator.share(opts);
+      // Try to attach an image so Instagram Stories, Snapchat, etc. can accept the share
+      let files: File[] | undefined;
+      const imageFile = await fetchShareImage({
+        title: opts.ogTitle || opts.title,
+        subtitle: opts.ogSubtitle,
+        section: opts.ogSection,
+      });
+
+      if (imageFile && navigator.canShare?.({ files: [imageFile] })) {
+        files = [imageFile];
+      }
+
+      await navigator.share({
+        title: opts.title,
+        text: message,
+        url: trackedNativeUrl,
+        ...(files ? { files } : {}),
+      });
       return 'shared';
     } catch {
       return 'failed';
     }
   }
   try {
-    await navigator.clipboard.writeText(`${opts.text}\n${opts.url}`);
+    await navigator.clipboard.writeText(`${message}\n${trackedCopyUrl}`);
     return 'copied';
   } catch {
     return 'failed';

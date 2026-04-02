@@ -13,15 +13,15 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/server';
 import { matchArticleToPromises } from '@/lib/scraper/matcher';
 import { buildGovernmentStructureSnapshot } from '@/lib/org-structure/engine';
 import { recomputeAllPromises } from '@/lib/scraper/promise-recomputer';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 export const maxDuration = 300; // 5 min for full scrape cycle
 
 export async function GET(request: Request) {
   // Verify auth — either Vercel CRON_SECRET or Bearer token
   const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get('authorization');
-  const isCronAuth = cronSecret && authHeader === `Bearer ${cronSecret}`;
-  const isScrapeAuth = validateScrapeAuth(request);
+  const isCronAuth = bearerMatchesSecret(request, cronSecret);
+  const isScrapeAuth = await validateScrapeAuth(request);
 
   if (!isCronAuth && !isScrapeAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

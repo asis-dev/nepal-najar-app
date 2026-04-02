@@ -2,8 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
 import { PROMISES_KNOWLEDGE } from '@/lib/intelligence/knowledge-base';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 300;
+export const revalidate = 43200; // 12 hour ISR cache — data changes on sweep (2x/day)
+
+/** Detect if a string contains Devanagari script (Nepali) */
+const HAS_DEVANAGARI = /[\u0900-\u097F]/;
+
+/** Normalize title: if title is in Nepali, swap to title_ne */
+function normalizeTitles(title: string | null, titleNe: string | null): { title: string; titleNe?: string } {
+  const t = (title || '') as string;
+  const tNe = (titleNe || '') as string;
+
+  if (HAS_DEVANAGARI.test(t)) {
+    return {
+      title: tNe && !HAS_DEVANAGARI.test(tNe) ? tNe : t.slice(0, 200),
+      titleNe: t,
+    };
+  }
+
+  return { title: t || 'Update', titleNe: tNe || undefined };
+}
 
 /** Build name variants for fuzzy matching (first name, last name, full name, Nepali name) */
 function nameVariants(name: string, nameNe?: string | null): string[] {
@@ -90,16 +107,19 @@ export async function GET(req: NextRequest) {
     const confirming = allSignals.filter(s => s.classification === 'confirms').length;
     const contradicting = allSignals.filter(s => s.classification === 'contradicts').length;
 
-    // Top 5 signals sorted by recency
-    const topSignals = allSignals.slice(0, 5).map(s => ({
-      id: s.id,
-      title: s.title,
-      titleNe: s.title_ne,
-      classification: s.classification,
-      discoveredAt: s.discovered_at,
-      url: s.url,
-      type: s.signal_type,
-    }));
+    // Top 5 signals sorted by recency — normalize titles so Nepali is in titleNe
+    const topSignals = allSignals.slice(0, 5).map(s => {
+      const norm = normalizeTitles(s.title, s.title_ne);
+      return {
+        id: s.id,
+        title: norm.title,
+        titleNe: norm.titleNe,
+        classification: s.classification,
+        discoveredAt: s.discovered_at,
+        url: s.url,
+        type: s.signal_type,
+      };
+    });
 
     const slug = minister.name
       .toLowerCase()
@@ -137,6 +157,6 @@ export async function GET(req: NextRequest) {
     ministers,
     period: { days, from: cutoff, to: new Date().toISOString() },
   }, {
-    headers: { 'Cache-Control': 'public, max-age=300' },
+    headers: { 'Cache-Control': 'public, s-maxage=43200, stale-while-revalidate=86400' },
   });
 }

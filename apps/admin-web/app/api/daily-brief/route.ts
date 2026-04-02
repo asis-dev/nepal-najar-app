@@ -4,6 +4,7 @@ import {
   generateDailyBrief,
   buildReaderHighlights,
 } from '@/lib/intelligence/daily-brief';
+import { validateScrapeAuth } from '@/lib/scraper/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 // Allow up to 5 minutes for brief generation (AI summary + optional audio)
@@ -80,11 +81,8 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    // Check auth — accept either user session or service secret
-    const headersList = await import('next/headers').then(m => m.headers());
-    const authHeader = headersList.get('authorization') || '';
-    const secret = process.env.SCRAPE_SECRET || process.env.ADMIN_SECRET;
-    const hasServiceAuth = secret && authHeader === `Bearer ${secret}`;
+    // Check auth — accept either user session or scrape/admin service auth
+    const hasServiceAuth = await validateScrapeAuth(request);
 
     if (!hasServiceAuth) {
       const supabase = await createSupabaseServerClient();

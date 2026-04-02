@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getSupabase } from '@/lib/supabase/server';
+import { buildOrIlikeClause } from '@/lib/supabase/filter-utils';
 import { rateLimit, getClientIp } from '@/lib/middleware/rate-limit';
 import { triageComplaintInput } from '@/lib/intelligence/complaint-triage';
 import { checkForDuplicateOnCreate } from '@/lib/intelligence/complaint-dedup';
@@ -93,8 +94,10 @@ export async function GET(request: NextRequest) {
   if (district) query = query.eq('district', district);
   if (municipality) query = query.eq('municipality', municipality);
   if (q && q.trim().length > 0) {
-    const term = q.trim();
-    query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`);
+    const searchClause = buildOrIlikeClause(['title', 'description'], q);
+    if (searchClause) {
+      query = query.or(searchClause);
+    }
   }
 
   const { data, error, count } = await query;
@@ -171,7 +174,7 @@ interface CreateComplaintBody {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  const { success } = rateLimit(`complaints:${ip}`, 12, 60000);
+  const { success } = await rateLimit(`complaints:${ip}`, 12, 60000);
   if (!success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },

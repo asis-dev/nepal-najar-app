@@ -2,7 +2,7 @@
  * GET /api/admin/corrections — list recent corrections
  * POST /api/admin/corrections — submit a correction and execute it
  *
- * Auth: ADMIN_SECRET required (Bearer token or admin_session cookie).
+ * Auth: admin Supabase session (legacy ADMIN_SECRET is optional via env opt-in).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -50,7 +50,7 @@ interface CorrectionBody {
 // ---------------------------------------------------------------------------
 
 export async function GET(request: NextRequest) {
-  if (!isAdminAuthed(request)) {
+  if (!(await isAdminAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
-  if (!isAdminAuthed(request)) {
+  if (!(await isAdminAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { validateScrapeAuth, unauthorizedResponse } from '@/lib/scraper/auth';
 
 export async function POST(request: Request) {
-  if (!validateScrapeAuth(request)) {
+  if (!(await validateScrapeAuth(request))) {
     return unauthorizedResponse();
   }
 

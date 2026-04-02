@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Activity, MessageSquare, Target, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
 import { CardActions } from '@/components/public/card-actions';
 import type { Minister } from '@/lib/hooks/use-ministers';
+import { useI18n } from '@/lib/i18n';
 
 interface MinisterCardProps {
   minister: Minister;
@@ -17,6 +18,7 @@ function activityLevel(totalSignals: number): { label: string; color: string; do
 }
 
 export function MinisterCard({ minister, locale }: MinisterCardProps) {
+  const { localizeField } = useI18n();
   const isNe = locale === 'ne';
   const { weeklyActivity } = minister;
   const activity = activityLevel(weeklyActivity.totalSignals);
@@ -31,10 +33,10 @@ export function MinisterCard({ minister, locale }: MinisterCardProps) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-semibold text-gray-100">
-            {isNe && minister.nameNe ? minister.nameNe : minister.name}
+            {localizeField(minister.name, minister.nameNe)}
           </h3>
           <p className="mt-0.5 truncate text-xs text-gray-400">
-            {isNe && minister.titleNe ? minister.titleNe : minister.title}
+            {localizeField(minister.title, minister.titleNe)}
           </p>
           <p className="mt-0.5 truncate text-xs text-gray-500">
             {minister.ministry}
@@ -75,7 +77,7 @@ export function MinisterCard({ minister, locale }: MinisterCardProps) {
       {/* Top signal headline */}
       {topSignal && (
         <p className="mt-2.5 line-clamp-2 text-xs leading-relaxed text-gray-300">
-          {isNe && topSignal.titleNe ? topSignal.titleNe : topSignal.title}
+          {localizeField(topSignal.title, topSignal.titleNe, 'Signal detected')}
         </p>
       )}
 
@@ -87,8 +89,10 @@ export function MinisterCard({ minister, locale }: MinisterCardProps) {
         </span>
         <div className="flex items-center gap-1">
           <CardActions
+            ministerSlug={minister.slug}
             shareTitle={`${minister.name} - ${weeklyActivity.totalSignals} signals this week`}
             shareUrl={`/ministers/${minister.slug}`}
+            detailUrl={`/ministers/${minister.slug}`}
             size="sm"
           />
           <ChevronRight className="h-3.5 w-3.5 text-gray-600 transition-colors group-hover:text-gray-400" />

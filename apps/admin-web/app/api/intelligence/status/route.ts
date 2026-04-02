@@ -11,6 +11,13 @@ export async function GET() {
     .order('started_at', { ascending: false })
     .limit(5);
 
+  const latestSweep = sweeps?.[0] || null;
+  const latestSweepAt = latestSweep?.finished_at || latestSweep?.started_at || null;
+  const freshnessHours = latestSweepAt
+    ? (Date.now() - new Date(latestSweepAt).getTime()) / (1000 * 60 * 60)
+    : null;
+  const sweepFresh = freshnessHours != null && freshnessHours <= 24;
+
   // Get signal counts
   const { count: totalSignals } = await supabase
     .from('intelligence_signals')
@@ -58,6 +65,12 @@ export async function GET() {
     .order('last_checked_at', { ascending: false });
 
   return NextResponse.json({
+    health: {
+      latestSweepAt,
+      freshnessHours,
+      sweepFresh,
+      degraded: !sweepFresh || (failedJobs.count || 0) > 0,
+    },
     sweeps: sweeps || [],
     signals: {
       total: totalSignals || 0,

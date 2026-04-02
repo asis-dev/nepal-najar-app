@@ -12,7 +12,9 @@ import {
   Shield,
   AlertOctagon,
   RefreshCw,
+  Share,
 } from 'lucide-react';
+import { shareOrCopy } from '@/lib/utils/share';
 import { useI18n } from '@/lib/i18n';
 
 interface ChangeItem {
@@ -86,11 +88,12 @@ function useWhatChanged(days: number) {
   return useQuery<WhatChangedResponse>({
     queryKey: ['what-changed', days],
     queryFn: async () => {
-      const res = await fetch(`/api/what-changed?days=${days}`, { cache: 'no-store' });
+      const res = await fetch(`/api/what-changed?days=${days}`);
       if (!res.ok) throw new Error('Failed to load changes');
       return res.json();
     },
-    staleTime: 60_000,
+    staleTime: 12 * 60 * 60_000, // 12 hours — data only changes on sweep (2x/day)
+    gcTime: 24 * 60 * 60_000, // 24 hours
   });
 }
 
@@ -105,9 +108,9 @@ function ConfidenceDot({ confidence }: { confidence?: number }) {
   return <span className={`inline-block w-2 h-2 rounded-full ${color}`} title={`${Math.round(confidence * 100)}%`} />;
 }
 
-function ChangeCard({ item, isNe }: { item: ChangeItem; isNe: boolean }) {
+function ChangeCard({ item, isNe, localizeField }: { item: ChangeItem; isNe: boolean; localizeField: (text?: string | null, textNe?: string | null, fallback?: string) => string }) {
   const Icon = TYPE_ICONS[item.type] || Newspaper;
-  const title = isNe && item.title_ne ? item.title_ne : item.title;
+  const title = localizeField(item.title, item.title_ne, item.summary || 'Update');
   const time = isNe ? relativeTimeNe(item.created_at) : relativeTime(item.created_at);
 
   const content = (
@@ -171,7 +174,7 @@ const TAB_LABELS: Record<FeedTab, { en: string; ne: string }> = {
 };
 
 export default function WhatChangedPage() {
-  const { locale } = useI18n();
+  const { locale, localizeField } = useI18n();
   const isNe = locale === 'ne';
   const [days, setDays] = useState(7);
   const [activeTab, setActiveTab] = useState<FeedTab>('national');
@@ -209,6 +212,13 @@ export default function WhatChangedPage() {
               <h1 className="text-lg sm:text-xl font-bold text-white">
                 {isNe ? 'के परिवर्तन भयो?' : 'What Changed?'}
               </h1>
+              <button
+                onClick={() => shareOrCopy({ title: isNe ? 'के परिवर्तन भयो?' : 'What Changed?', text: isNe ? 'हालैका अपडेट, नयाँ समस्या र प्रमाणित परिवर्तनहरू। nepalrepublic.org' : 'Recent updates, new issues, and verified changes. nepalrepublic.org', url: `${window.location.origin}/what-changed` })}
+                className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all"
+              >
+                <Share className="w-3.5 h-3.5" />
+                {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
+              </button>
             </div>
             <p className="text-sm text-gray-400 mb-4">
               {isNe
@@ -276,7 +286,7 @@ export default function WhatChangedPage() {
             ) : (
               <div className="space-y-3">
                 {items.map((item) => (
-                  <ChangeCard key={item.id} item={item} isNe={isNe} />
+                  <ChangeCard key={item.id} item={item} isNe={isNe} localizeField={localizeField} />
                 ))}
               </div>
             )}

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   // Rate limit: 10/day per IP
   const ip = getClientIp(request);
-  const { success: rateLimitOk } = rateLimit(`proposal-flags:${ip}`, 10, 86400000);
+  const { success: rateLimitOk } = await rateLimit(`proposal-flags:${ip}`, 10, 86400000);
   if (!rateLimitOk) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. Maximum 10 flags per day.' },

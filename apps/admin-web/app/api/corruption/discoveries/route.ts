@@ -4,6 +4,7 @@ import {
   approveCorruptionDiscovery,
   rejectCorruptionDiscovery,
 } from '@/lib/intelligence/corruption-discovery';
+import { validateScrapeAuth } from '@/lib/scraper/auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -48,23 +49,10 @@ export async function GET(req: NextRequest) {
  * On approve: creates corruption_case + entities + evidence linking signal_id.
  * On reject: updates metadata status to 'rejected'.
  *
- * Auth: Bearer SCRAPE_SECRET or ADMIN_SECRET
+ * Auth: Bearer SCRAPE_SECRET or admin session
  */
 export async function POST(req: NextRequest) {
-  // Auth check
-  const secret =
-    process.env.SCRAPE_SECRET || process.env.ADMIN_SECRET;
-  if (!secret) {
-    return NextResponse.json(
-      { error: 'Server secret not configured' },
-      { status: 500 },
-    );
-  }
-
-  const authHeader = req.headers.get('authorization') || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-
-  if (token !== secret) {
+  if (!(await validateScrapeAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

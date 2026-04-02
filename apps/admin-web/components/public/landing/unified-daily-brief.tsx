@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { DailyBrief, ReaderHighlight } from '@/lib/data/landing-types';
+import { pickLocalizedField } from '@/lib/i18n';
 
 const DIRECTION_ICON: Record<string, string> = {
   confirms: '↗',
@@ -34,11 +35,15 @@ export function UnifiedDailyBrief({
   highlights,
   locale,
   isMobile,
+  weekMoved,
+  weekStalled,
 }: {
   brief: DailyBrief;
   highlights: ReaderHighlight[];
   locale: string;
   isMobile: boolean;
+  weekMoved?: number;
+  weekStalled?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
@@ -57,26 +62,17 @@ export function UnifiedDailyBrief({
 
   // Build narrative body from available data
   const buildNarrative = () => {
-    if (locale === 'ne') {
-      if (brief.summaryNe) return brief.summaryNe;
-      if (brief.summaryEn && isDevanagari(brief.summaryEn)) {
-        return brief.summaryEn
-          .replace(/^-\s*/gm, '')
-          .split('\n')
-          .filter(line => line.trim())
-          .join(' ');
-      }
-      return `${totalSignals} सिग्नलहरू ${sourcesActive} स्रोतबाट संकलन गरिएको छ। ${movedCount} प्रतिबद्धताहरूमा नयाँ गतिविधि देखियो।`;
-    }
-
-    if (brief.summaryEn && !isDevanagari(brief.summaryEn)) {
-      return brief.summaryEn
+    const raw = pickLocalizedField(locale, brief.summaryEn, brief.summaryNe);
+    if (raw) {
+      return raw
         .replace(/^-\s*/gm, '')
         .split('\n')
-        .filter(line => line.trim())
+        .filter((line: string) => line.trim())
         .join(' ');
     }
-
+    if (locale === 'ne') {
+      return `${totalSignals} सिग्नलहरू ${sourcesActive} स्रोतबाट संकलन गरिएको छ। ${movedCount} प्रतिबद्धताहरूमा नयाँ गतिविधि देखियो।`;
+    }
     return `${totalSignals} intelligence signals were collected from ${sourcesActive} sources in the last 24 hours. ${movedCount} government commitments showed new activity.`;
   };
 
@@ -86,31 +82,11 @@ export function UnifiedDailyBrief({
     if (!stories || stories.length === 0) return null;
     const story = stories[0];
 
-    let displaySummary: string;
-    if (locale === 'ne') {
-      if (story.summaryNe && isDevanagari(story.summaryNe)) {
-        displaySummary = story.summaryNe;
-      } else if (isDevanagari(story.summary)) {
-        displaySummary = story.summary;
-      } else {
-        displaySummary = '';
-      }
-    } else {
-      if (story.summary && !isDevanagari(story.summary)) {
-        displaySummary = story.summary;
-      } else if (story.summaryNe && !isDevanagari(story.summaryNe)) {
-        displaySummary = story.summaryNe;
-      } else {
-        displaySummary = '';
-      }
-    }
-
+    const displaySummary = pickLocalizedField(locale, story.summary, story.summaryNe);
     if (!displaySummary || displaySummary.length < 30) return null;
 
     return {
-      title: locale === 'ne'
-        ? (story.titleNe && isDevanagari(story.titleNe) ? story.titleNe : isDevanagari(story.title) ? story.title : story.titleNe || story.title)
-        : (story.title && !isDevanagari(story.title) ? story.title : story.titleNe && !isDevanagari(story.titleNe) ? story.titleNe : story.title),
+      title: pickLocalizedField(locale, story.title, story.titleNe, 'Top Story'),
       summary: displaySummary,
       signalCount: story.signalCount,
       sentiment: story.sentiment,
@@ -122,35 +98,37 @@ export function UnifiedDailyBrief({
 
   return (
     <div className="rounded-xl border border-white/[0.1] bg-gradient-to-b from-white/[0.04] to-white/[0.01] overflow-hidden">
-      {/* Pulse badge + brief header */}
-      <div className="flex items-center gap-2 px-4 pt-3.5 pb-1">
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${pulseColor}`}>
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-          {locale === 'ne'
-            ? pulseLabel === 'very active' ? 'अति सक्रिय' : pulseLabel === 'active' ? 'सक्रिय' : pulseLabel === 'moderate' ? 'मध्यम' : 'शान्त'
-            : pulseLabel}
-        </span>
-        <span className="text-[10px] text-gray-600">
-          Day {Math.max(1, Math.ceil((Date.now() - new Date('2026-03-26T00:00:00+05:45').getTime()) / 86400000))}
-        </span>
-      </div>
-
       {/* Narrative body */}
-      <div className="px-4 pt-1 pb-3">
+      <div className="px-4 pt-3 pb-3">
         <p className={`text-[13px] md:text-sm leading-[1.7] text-gray-300 ${!summaryExpanded ? 'line-clamp-3' : ''}`}>
+          <span className="font-semibold text-cyan-400">{locale === 'ne' ? 'आजको ब्रिफ:' : "Today's Brief:"}</span>{' '}
           {buildNarrative()}
         </p>
 
-        {buildNarrative().length > 150 && (
-          <button
-            onClick={() => setSummaryExpanded(!summaryExpanded)}
-            className="mt-1 text-[11px] text-cyan-400/70 hover:text-cyan-300 transition-colors"
-          >
-            {summaryExpanded
-              ? (locale === 'ne' ? 'कम देखाउनुहोस्' : 'Show less')
-              : (locale === 'ne' ? 'थप पढ्नुहोस्' : 'Read more')}
-          </button>
-        )}
+        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+          {buildNarrative().length > 150 && (
+            <button
+              onClick={() => setSummaryExpanded(!summaryExpanded)}
+              className="text-[11px] text-cyan-400/70 hover:text-cyan-300 transition-colors"
+            >
+              {summaryExpanded
+                ? (locale === 'ne' ? 'कम देखाउनुहोस्' : 'Show less')
+                : (locale === 'ne' ? 'थप पढ्नुहोस्' : 'Read more')}
+            </button>
+          )}
+          {buildNarrative().length > 150 && <span className="text-gray-700">·</span>}
+          <Link href="/what-changed" className="text-[10px] text-cyan-400/80 hover:text-cyan-300 underline underline-offset-2 decoration-cyan-400/30 transition-colors">
+            {locale === 'ne' ? 'के परिवर्तन भयो?' : 'What changed?'}
+          </Link>
+          <span className="text-gray-700">·</span>
+          <Link href="/sectors" className="text-[10px] text-cyan-400/80 hover:text-cyan-300 underline underline-offset-2 decoration-cyan-400/30 transition-colors">
+            {locale === 'ne' ? 'क्षेत्रगत' : 'Sectors'}
+          </Link>
+          <span className="text-gray-700">·</span>
+          <Link href="/ministers" className="text-[10px] text-cyan-400/80 hover:text-cyan-300 underline underline-offset-2 decoration-cyan-400/30 transition-colors">
+            {locale === 'ne' ? 'मन्त्रीहरू यो हप्ता' : 'Ministers this week'}
+          </Link>
+        </div>
 
         {/* Top story highlight */}
         {topStoryNarrative && topStoryNarrative.signalCount >= 10 && (
@@ -176,80 +154,51 @@ export function UnifiedDailyBrief({
             )}
           </div>
         )}
+
       </div>
 
-      {/* Key Movements */}
+      {/* Key Movements — horizontal scrolling marquee */}
       {highlights.length > 0 && (
-        <div className="border-t border-white/[0.06] px-3 pt-2.5 pb-3">
-          <h4 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 px-1 mb-2">
-            {locale === 'ne' ? 'प्रमुख गतिविधि' : 'Key Movements'}
-          </h4>
-          <div className="space-y-[5px]">
-            {visibleHighlights.map((item) => (
-              <Link
-                key={item.commitmentId}
-                href={`/explore/first-100-days/${item.slug}`}
-                className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors hover:bg-white/[0.04] ${DIRECTION_BG[item.direction]}`}
-              >
-                <span className={`text-xs flex-shrink-0 ${DIRECTION_COLOR[item.direction]}`}>
-                  {DIRECTION_ICON[item.direction]}
-                </span>
-                <span className="text-[12px] text-gray-200 truncate flex-1 min-w-0">
-                  {locale === 'ne' ? item.titleNe : item.title}
-                </span>
-                <span className="text-[10px] text-gray-500 flex-shrink-0 tabular-nums">
-                  {item.signalCount}
-                </span>
-              </Link>
-            ))}
+        <div className="border-t border-white/[0.06] py-2 overflow-hidden">
+          <div className="flex items-center justify-between px-3 mb-1.5">
+            <h4 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500">
+              {locale === 'ne' ? 'प्रमुख गतिविधि' : 'Key Movements'}
+            </h4>
+            {(weekMoved != null && weekMoved > 0) && (
+              <span className="text-[10px] text-gray-500">
+                <span className="text-emerald-400 font-semibold">{weekMoved}</span> {locale === 'ne' ? 'अगाडि' : 'moved'}
+                {weekStalled != null && weekStalled > 0 && (
+                  <> · <span className="text-red-400 font-semibold">{weekStalled}</span> {locale === 'ne' ? 'रोकिएको' : 'stuck'}</>
+                )}
+                {' '}<span className="text-gray-600">{locale === 'ne' ? 'यो हप्ता' : 'this week'}</span>
+              </span>
+            )}
           </div>
-
-          {hasMore && (
-            <button
-              onClick={() => setExpanded(true)}
-              className="mt-1.5 w-full text-center text-[11px] text-cyan-400/70 hover:text-cyan-300 transition-colors py-1"
-            >
-              {locale === 'ne'
-                ? `+ ${highlights.length - 3} थप हेर्नुहोस्`
-                : `+ ${highlights.length - 3} more`}
-            </button>
-          )}
+          <div className="relative overflow-hidden">
+            <div className="flex animate-marquee gap-4 whitespace-nowrap">
+              {[...highlights, ...highlights].map((item, i) => (
+                <Link
+                  key={`${item.commitmentId}-${i}`}
+                  href={`/explore/first-100-days/${item.slug}`}
+                  className="inline-flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity"
+                >
+                  <span className={`text-[11px] ${DIRECTION_COLOR[item.direction]}`}>
+                    {DIRECTION_ICON[item.direction]}
+                  </span>
+                  <span className="text-[11px] text-gray-300">
+                    {pickLocalizedField(locale, item.title, item.titleNe, 'Commitment')}
+                  </span>
+                  <span className="text-[10px] text-gray-600 tabular-nums">
+                    ({item.signalCount})
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Quick links */}
-      <div className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-2.5">
-        <Link
-          href="/what-changed"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-colors"
-        >
-          {locale === 'ne' ? 'के परिवर्तन भयो?' : 'What Changed?'}
-        </Link>
-        <Link
-          href="/sectors"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-colors"
-        >
-          {locale === 'ne' ? 'क्षेत्रगत' : 'Sectors'}
-        </Link>
-      </div>
 
-      {/* Footer */}
-      <div className="flex items-center gap-3 border-t border-white/[0.06] px-4 py-2 text-[10px] text-gray-600">
-        <span>{totalSignals} {locale === 'ne' ? 'सिग्नल' : 'signals'}</span>
-        <span className="text-gray-700">·</span>
-        <span>{sourcesActive} {locale === 'ne' ? 'स्रोत' : 'sources'}</span>
-        {brief.stats?.topSource && (
-          <>
-            <span className="text-gray-700">·</span>
-            <span className="truncate">
-              {brief.stats.topSource
-                .replace(/^(rss|yt|fb|x|tiktok|reddit|telegram|threads)-/i, '')
-                .replace(/-/g, ' ')
-                .replace(/\b\w/g, c => c.toUpperCase())}
-            </span>
-          </>
-        )}
-      </div>
     </div>
   );
 }

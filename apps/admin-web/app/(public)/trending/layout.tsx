@@ -1,13 +1,10 @@
-import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Trending — Nepal Republic',
-  description: 'See what\'s trending in Nepal politics right now',
-  openGraph: {
-    title: 'Trending — Nepal Republic',
-    description: 'See what\'s trending in Nepal politics right now',
-  },
-};
+export const metadata = createMetadata({
+  title: 'Trending',
+  description: 'See what is trending in Nepal governance and civic accountability right now.',
+  path: '/trending',
+});
 
 export default function TrendingLayout({
   children,

@@ -2,7 +2,7 @@
  * GET /api/admin/signals
  *
  * Admin-only: fetch intelligence signals with filters.
- * Auth: admin_session cookie or Bearer ADMIN_SECRET.
+ * Auth: admin Supabase session (legacy ADMIN_SECRET is optional via env opt-in).
  *
  * Query params:
  *   review_status  — pending | approved | edited | rejected
@@ -16,7 +16,7 @@ import { isAdminAuthed } from '@/lib/auth/admin';
 import { getSupabase } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
-  if (!isAdminAuthed(request)) {
+  if (!(await isAdminAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

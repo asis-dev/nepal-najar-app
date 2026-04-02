@@ -1,23 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { DailyBrief } from '@/lib/data/landing-types';
 
 export function useDailyBrief() {
-  const [brief, setBrief] = useState<DailyBrief | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/daily-brief', { signal: controller.signal, cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && !data.error) setBrief(data);
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-    return () => controller.abort();
-  }, []);
+  const { data: brief = null, isLoading } = useQuery<DailyBrief | null>({
+    queryKey: ['daily-brief'],
+    queryFn: async () => {
+      const res = await fetch('/api/daily-brief');
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data && !data.error) return data as DailyBrief;
+      return null;
+    },
+    staleTime: 30 * 60 * 1000, // 30 min — brief only changes 2x/day via cron
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
 
   return { brief, isLoading };
 }

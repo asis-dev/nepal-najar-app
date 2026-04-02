@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Share2,
+  Share,
   Bookmark,
   Building2,
   Truck,
@@ -40,7 +40,7 @@ import { VoteWidget } from '@/components/public/vote-widget';
 import { SourceVoteWidget } from '@/components/public/source-vote-widget';
 import { useWatchlistStore } from '@/lib/stores/preferences';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { commitmentShareText } from '@/lib/utils/share';
+import { commitmentShareText, shareOrCopy } from '@/lib/utils/share';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import {
   getPromiseBySlug,
@@ -270,7 +270,7 @@ function SectionHeader({ icon, title }: { icon: string; title: string }) {
 export default function PromiseDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { locale, t } = useI18n();
+  const { locale, t, localizeField } = useI18n();
   const { toggleWatch, isWatched } = useWatchlistStore();
   const { isAuthenticated } = useAuth();
   const { data: livePromises } = useAllPromises();
@@ -443,13 +443,7 @@ export default function PromiseDetailPage() {
     if (!promise) return;
     const title = locale === 'ne' ? (promise.title_ne || promise.title) : promise.title;
     const text = commitmentShareText({ title, progress: promise.progress, status: promise.status, locale });
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: text, text, url });
-      } catch { /* cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(`${text}\n${url}`);
-    }
+    await shareOrCopy({ title, text, url });
   };
 
   /* ── Not found ── */
@@ -892,7 +886,7 @@ export default function PromiseDetailPage() {
                             <div className="flex items-center gap-2">
                               <span className="text-base flex-shrink-0">{item.icon}</span>
                               <span className="text-sm font-semibold text-white">
-                                {isNe && item.titleNe ? item.titleNe : item.titleEn}
+                                {localizeField(item.titleEn, item.titleNe, 'Update')}
                               </span>
                             </div>
                             <span className="flex items-center gap-1.5 text-[10px] text-gray-500 whitespace-nowrap flex-shrink-0">
@@ -901,7 +895,7 @@ export default function PromiseDetailPage() {
                             </span>
                           </div>
                           <p className="text-xs text-gray-400 leading-relaxed mb-1.5">
-                            {isNe && item.descriptionNe ? item.descriptionNe : item.descriptionEn}
+                            {localizeField(item.descriptionEn, item.descriptionNe)}
                           </p>
                           <p className="text-[10px] text-gray-600">
                             {'\uD83D\uDC65'} {item.affectedPeople}
@@ -1073,7 +1067,7 @@ export default function PromiseDetailPage() {
               onClick={handleShare}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-white/[0.05] text-gray-300 border border-white/[0.08] transition-all hover:bg-white/[0.08]"
             >
-              <Share2 className="w-3.5 h-3.5" />
+              <Share className="w-3.5 h-3.5" />
               {t('detail.share')}
             </button>
 
@@ -1110,7 +1104,7 @@ export default function PromiseDetailPage() {
             onClick={handleShare}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.06] transition-all"
           >
-            <Share2 className="w-4 h-4" />
+            <Share className="w-4 h-4" />
             {t('detail.share')}
           </button>
 

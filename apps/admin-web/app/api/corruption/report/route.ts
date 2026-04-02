@@ -45,7 +45,7 @@ interface CreateCorruptionReportBody {
 export async function POST(request: NextRequest) {
   // Rate limit: 5 per hour per IP (corruption reports are sensitive)
   const ip = getClientIp(request);
-  const { success } = rateLimit(`corruption-report:${ip}`, 5, 3600000);
+  const { success } = await rateLimit(`corruption-report:${ip}`, 5, 3600000);
   if (!success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. You may submit up to 5 corruption reports per hour.' },

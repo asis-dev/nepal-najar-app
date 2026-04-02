@@ -9,7 +9,7 @@ import {
   ThumbsDown,
   MapPin,
   MessageSquare,
-  Share2,
+  Share,
   Flag,
   Pencil,
   Loader2,
@@ -25,6 +25,7 @@ import {
   Banknote,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { shareIntentUrl, shareOrCopy } from '@/lib/utils/share';
 import { useAuth } from '@/lib/hooks/use-auth';
 import {
   useProposal,
@@ -160,12 +161,12 @@ export default function ProposalDetailPage() {
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: proposal?.title, url });
-      } catch { /* cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(url);
+    const result = await shareOrCopy({
+      title: proposal?.title ?? 'Community Proposal',
+      text: `${proposal?.title ?? 'Community Proposal'} — Nepal Republic`,
+      url,
+    });
+    if (result === 'copied') {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -173,8 +174,12 @@ export default function ProposalDetailPage() {
 
   const handleWhatsApp = useCallback(() => {
     const url = window.location.href;
-    const text = `${proposal?.title ?? ''} - ${url}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    const intent = shareIntentUrl('whatsapp', {
+      title: proposal?.title ?? 'Community Proposal',
+      text: `${proposal?.title ?? 'Community Proposal'} — Nepal Republic`,
+      url,
+    });
+    window.open(intent, '_blank', 'noopener,noreferrer');
   }, [proposal?.title]);
 
   // Loading skeleton
@@ -248,9 +253,18 @@ export default function ProposalDetailPage() {
 
               {/* Title */}
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
-                  {isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
-                </h1>
+                <div className="flex items-start justify-between gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+                    {isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
+                  </h1>
+                  <button
+                    onClick={() => shareOrCopy({ title: proposal.title, text: `${proposal.title} — Community proposal on Nepal Republic. nepalrepublic.org`, url: `${window.location.origin}/proposals/${proposalId}` })}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all shrink-0 mt-1"
+                  >
+                    <Share className="w-3.5 h-3.5" />
+                    {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
+                  </button>
+                </div>
                 {((isNe && proposal.title) || (!isNe && proposal.title_ne)) && (
                   <p className="text-base text-gray-500 mt-1">
                     {isNe ? proposal.title : proposal.title_ne}
@@ -519,7 +533,7 @@ export default function ProposalDetailPage() {
                   onClick={handleShare}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-gray-400 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-200 transition-all"
                 >
-                  <Share2 className="w-4 h-4" />
+                  <Share className="w-4 h-4" />
                   {copied ? t('common.copied') : t('common.share')}
                 </button>
 
@@ -527,7 +541,7 @@ export default function ProposalDetailPage() {
                   onClick={handleWhatsApp}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
                 >
-                  <Share2 className="w-4 h-4" />
+                  <Share className="w-4 h-4" />
                   WhatsApp
                 </button>
 

@@ -713,7 +713,7 @@ export async function scrapeFacebookPages(): Promise<ScrapeResult> {
         const mediaType = post.postType === 'video' ? 'video' : 'text';
         const signalType = post.postType === 'video' ? 'video' : 'post';
 
-        const { error } = await supabase.from('intelligence_signals').upsert(
+        const { data, error } = await supabase.from('intelligence_signals').upsert(
           {
             source_id: page.id,
             signal_type: signalType,
@@ -745,9 +745,11 @@ export async function scrapeFacebookPages(): Promise<ScrapeResult> {
             },
           },
           { onConflict: 'source_id,external_id', ignoreDuplicates: true },
-        );
+        ).select('id');
 
-        if (!error) newPosts++;
+        if (!error && Array.isArray(data) && data.length > 0) {
+          newPosts++;
+        }
       }
 
       // Update or create the intelligence source record
@@ -789,7 +791,7 @@ export async function scrapeFacebookPages(): Promise<ScrapeResult> {
       postsFound += broadPosts.length;
 
       for (const post of broadPosts) {
-        const { error } = await supabase.from('intelligence_signals').upsert(
+        const { data, error } = await supabase.from('intelligence_signals').upsert(
           {
             source_id: 'fb-broad-search',
             signal_type: post.postType === 'video' ? 'video' : 'post',
@@ -814,9 +816,11 @@ export async function scrapeFacebookPages(): Promise<ScrapeResult> {
             },
           },
           { onConflict: 'source_id,external_id', ignoreDuplicates: true },
-        );
+        ).select('id');
 
-        if (!error) newPosts++;
+        if (!error && Array.isArray(data) && data.length > 0) {
+          newPosts++;
+        }
       }
 
       // Register the broad search source

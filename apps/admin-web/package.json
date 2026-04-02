@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build",
+    "build": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test": "jest --passWithNoTests",
-    "db:migrate:intelligence": "node scripts/run-pg-migration.js"
+    "launch:check": "node scripts/launch-preflight.js",
+    "db:migrate:intelligence": "node scripts/run-pg-migration.js",
+    "audio:about": "npx tsx scripts/generate-about-audio.ts"
   },
   "dependencies": {
     "@deck.gl/core": "^9.2.11",
@@ -28,7 +30,7 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.460.0",
     "nepali-date-converter": "^2.0.0",
-    "next": "^14.2.0",
+    "next": "^14.2.35",
     "next-intl": "^3.26.5",
     "postgres": "^3.4.8",
     "react": "^18.3.0",
@@ -48,6 +50,8 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "autoprefixer": "^10.4.0",
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.2.0",

@@ -50,7 +50,8 @@ export function useMinistersWeekly(days = 7) {
       if (!res.ok) throw new Error('Failed to fetch ministers');
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 min
+    staleTime: 12 * 60 * 60 * 1000, // 12 hours — data only changes on sweep (2x/day)
+    gcTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
   return {

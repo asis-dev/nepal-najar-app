@@ -92,7 +92,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const ip = getClientIp(request);
-  const { success } = rateLimit(`complaint-evidence:${ip}`, 15, 60000);
+  const { success } = await rateLimit(`complaint-evidence:${ip}`, 15, 60000);
   if (!success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },

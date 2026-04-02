@@ -12,6 +12,7 @@ import type {
   TimelineEventType,
   DatePrecision,
 } from '@/lib/data/corruption-types';
+import { validateScrapeAuth } from '@/lib/scraper/auth';
 import { getSupabase } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -41,21 +42,10 @@ export async function GET(req: NextRequest) {
  * Create a corruption case programmatically with full related data.
  * Used by the discovery approval flow and manual case creation.
  *
- * Auth: Bearer SCRAPE_SECRET or ADMIN_SECRET
+ * Auth: Bearer SCRAPE_SECRET or admin session
  */
 export async function POST(req: NextRequest) {
-  // Auth check
-  const secret = process.env.SCRAPE_SECRET || process.env.ADMIN_SECRET;
-  if (!secret) {
-    return NextResponse.json(
-      { error: 'Server secret not configured' },
-      { status: 500 },
-    );
-  }
-
-  const authHeader = req.headers.get('authorization') || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-  if (token !== secret) {
+  if (!(await validateScrapeAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

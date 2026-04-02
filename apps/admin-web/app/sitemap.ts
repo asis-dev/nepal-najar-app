@@ -5,7 +5,7 @@ import type { PromiseCategory } from '@/lib/data/promises';
 import { getPromises } from '@/lib/data';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import { PROVINCES, ALL_DISTRICTS } from '@/lib/seo/nepal-geo';
-import { getAllOfficials, getAllTopics, CATEGORIES, STATUSES } from '@/lib/seo/seo-helpers';
+import { getAllOfficials, getAllTopics, STATUSES } from '@/lib/seo/seo-helpers';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nepalrepublic.org';
 
@@ -44,6 +44,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/watchlist`, lastModified: now, changeFrequency: 'weekly', priority: 0.65 },
     { url: `${SITE_URL}/complaints`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/corruption`, lastModified: now, changeFrequency: 'daily', priority: 0.75 },
+    { url: `${SITE_URL}/ministers`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/me`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 },
+    { url: `${SITE_URL}/privacy`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/terms`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/moderation-policy`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
   ];
 
   const publicPromises = promises.filter((p) => p.isPublic !== false);

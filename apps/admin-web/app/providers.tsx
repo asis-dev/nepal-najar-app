@@ -3,13 +3,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { I18nProvider } from '@/lib/i18n';
-import { CivicSkyBackground } from '@/components/ui/civic-sky-background';
 import { PersistHydrator } from '@/components/public/persist-hydrator';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { mergeOnLogin } from '@/lib/services/preferences-sync';
 import { useWatchlistStore, useUserPreferencesStore } from '@/lib/stores/preferences';
 import { CompareFab } from '@/components/public/compare-fab';
+import { OnboardingGate } from '@/components/public/onboarding/onboarding-gate';
+import { OnboardingChecklist } from '@/components/public/onboarding/onboarding-checklist';
 
 /** Initialize Supabase auth session on app load + merge preferences on sign-in */
 function AuthInitializer() {
@@ -71,9 +72,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <AuthInitializer />
-        <CivicSkyBackground />
         <PersistHydrator />
         {children}
+        <OnboardingGate />
+        <OnboardingChecklist />
         <CompareFab />
       </I18nProvider>
     </QueryClientProvider>

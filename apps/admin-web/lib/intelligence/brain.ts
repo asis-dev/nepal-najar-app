@@ -131,6 +131,18 @@ function requiresTier3(matchedPromiseIds: number[]): boolean {
   return matchedPromiseIds.length > 0;
 }
 
+function getAnalysisLookbackCutoff(): string | null {
+  const configured = Number.parseInt(
+    process.env.INTELLIGENCE_ANALYSIS_LOOKBACK_HOURS || '168',
+    10,
+  );
+  if (!Number.isFinite(configured)) {
+    return new Date(Date.now() - 168 * 60 * 60 * 1000).toISOString();
+  }
+  if (configured <= 0) return null;
+  return new Date(Date.now() - configured * 60 * 60 * 1000).toISOString();
+}
+
 function nextReviewStatus(
   reviewRequired: boolean,
   existing: unknown,
@@ -626,15 +638,18 @@ export async function processSignalsBatch(
   const totalCostUsd = 0;
   const errors: string[] = [];
 
-  // TIER 1: Classify unprocessed signals (last 24h only to control costs)
-  const tier1Cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: unclassified } = await supabase
+  // TIER 1: Classify unprocessed signals (lookback window is configurable)
+  const tier1Cutoff = getAnalysisLookbackCutoff();
+  let tier1Query = supabase
     .from('intelligence_signals')
     .select('*')
     .eq('tier1_processed', false)
-    .gte('discovered_at', tier1Cutoff)
     .order('discovered_at', { ascending: false })
     .limit(batchSize * 2);
+  if (tier1Cutoff) {
+    tier1Query = tier1Query.gte('discovered_at', tier1Cutoff);
+  }
+  const { data: unclassified } = await tier1Query;
 
   if (unclassified) {
     // Chunk signals into batches of 5 for efficient AI classification
@@ -650,8 +665,15 @@ export async function processSignalsBatch(
       chunks.push(unclassified.slice(i, i + TIER1_BATCH_SIZE));
     }
 
-    const PARALLEL_CHUNKS = 3;
+    // Use fewer parallel chunks for free-tier models (OpenRouter/Qwen) to avoid rate limits
+    const isFreeTier = Boolean(process.env.OPENROUTER_API_KEY) && !process.env.OPENAI_API_KEY;
+    const PARALLEL_CHUNKS = isFreeTier ? 1 : 3;
+    const INTER_BATCH_DELAY_MS = isFreeTier ? 2000 : 200; // 2s delay for free tier
     for (let c = 0; c < chunks.length; c += PARALLEL_CHUNKS) {
+      // Rate-limit delay between batches to avoid timeout/429 errors
+      if (c > 0) {
+        await new Promise(resolve => setTimeout(resolve, INTER_BATCH_DELAY_MS));
+      }
       const parallelBatch = chunks.slice(c, c + PARALLEL_CHUNKS);
 
       const chunkResults = await Promise.allSettled(
@@ -767,17 +789,20 @@ export async function processSignalsBatch(
     }
   }
 
-  // TIER 3: Deep analysis on relevant signals (last 24h only to control costs)
-  const tier3Cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: relevant } = await supabase
+  // TIER 3: Deep analysis on relevant signals (lookback window is configurable)
+  const tier3Cutoff = getAnalysisLookbackCutoff();
+  let tier3Query = supabase
     .from('intelligence_signals')
     .select('*')
     .eq('tier1_processed', true)
     .eq('tier3_processed', false)
     .gte('relevance_score', 0.5)
-    .gte('discovered_at', tier3Cutoff)
     .order('relevance_score', { ascending: false })
     .limit(batchSize);
+  if (tier3Cutoff) {
+    tier3Query = tier3Query.gte('discovered_at', tier3Cutoff);
+  }
+  const { data: relevant } = await tier3Query;
 
   if (relevant) {
     const tier3Candidates = relevant.filter((signal) => {

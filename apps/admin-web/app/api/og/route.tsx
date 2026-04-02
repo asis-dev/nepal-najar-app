@@ -10,22 +10,22 @@ const BELL_GOLD = '#D9A441';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const title = searchParams.get('title') || 'Nepal Republic';
-  const subtitle = searchParams.get('subtitle') || 'AI-Powered Civic Intelligence';
+  const title = searchParams.get('title') || 'Track promises. Report reality. Verify truth.';
+  const subtitle = searchParams.get('subtitle') || 'AI-powered civic intelligence for Nepal';
   const progress = searchParams.get('progress');
   const status = searchParams.get('status');
-  const section = searchParams.get('section'); // tracker, complaints, corruption, report, proposals
+  const section = searchParams.get('section'); // commitments, complaints, corruption, report, proposals
 
   // Section-specific taglines
   const tagline = section === 'complaints'
     ? 'Report it. Route it. Resolve it.'
     : section === 'corruption'
-    ? 'Follow the money. Track every case.'
+    ? 'Follow the money. Expose the truth.'
     : section === 'report'
     ? 'AI-scored government accountability.'
     : section === 'proposals'
     ? 'Propose. Vote. Build.'
-    : 'Track promises. Report reality. Verify the truth.';
+    : 'AI-powered civic intelligence for Nepal.';
 
   // Status colors
   const statusColor =

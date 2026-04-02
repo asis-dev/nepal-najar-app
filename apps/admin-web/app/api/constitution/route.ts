@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
+import { buildOrIlikeClause } from '@/lib/supabase/filter-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (search) {
-    query = query.or(`article_title.ilike.%${search}%,body_en.ilike.%${search}%`);
+    const searchClause = buildOrIlikeClause(['article_title', 'body_en'], search);
+    if (searchClause) {
+      query = query.or(searchClause);
+    }
   }
 
   if (promiseId) {

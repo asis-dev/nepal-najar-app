@@ -1,15 +1,11 @@
-import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Reputation | Nepal Republic',
+export const metadata = createMetadata({
+  title: 'Reputation',
   description:
-    'Your community reputation and karma — track your level, evidence contributions, verifications, and progress toward becoming a verifier. प्रतिष्ठा र कर्म।',
-  openGraph: {
-    title: 'Reputation | Nepal Republic',
-    description:
-      'Track your civic karma, level progress, and contributions to Nepal Republic community verification.',
-  },
-};
+    'Your community reputation and karma — see your level, evidence contributions, verifications, and progress toward becoming a verifier.',
+  path: '/reputation',
+});
 
 export default function ReputationLayout({
   children,

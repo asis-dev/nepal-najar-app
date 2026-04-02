@@ -1,15 +1,11 @@
-import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'About | Nepal Republic',
+export const metadata = createMetadata({
+  title: 'About',
   description:
-    'Nepal Republic is an independent civic accountability platform tracking 109 government commitments with AI intelligence and community verification.',
-  openGraph: {
-    title: 'About Nepal Republic',
-    description:
-      'Public commitments. Public record. Learn how Nepal Republic tracks government accountability across 109 commitments using 80+ sources.',
-  },
-};
+    'Nepal Republic is an independent AI-powered civic intelligence platform monitoring government commitments with public evidence and community verification.',
+  path: '/about',
+});
 
 export default function AboutLayout({
   children,

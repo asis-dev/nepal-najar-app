@@ -91,6 +91,7 @@ const config: Config = {
         'slide-in-right': 'slide-in-right 0.3s ease-out',
         'count-up': 'count-up 1s ease-out',
         'progress-fill': 'progress-fill 1.2s ease-out',
+        'marquee': 'marquee 30s linear infinite',
       },
       keyframes: {
         'glow-pulse': {
@@ -123,6 +124,10 @@ const config: Config = {
         },
         'progress-fill': {
           '0%': { width: '0%' },
+        },
+        'marquee': {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
         },
       },
     },

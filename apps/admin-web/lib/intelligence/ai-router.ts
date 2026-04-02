@@ -48,6 +48,8 @@ const OPENCLAW_AGENT = process.env.OPENCLAW_AGENT || 'main';
 const OPENCLAW_ONLY =
   process.env.INTELLIGENCE_OPENCLAW_ONLY === 'true' ||
   process.env.OPENCLAW_ONLY === 'true';
+const OPENCLAW_PREFERRED =
+  process.env.INTELLIGENCE_PREFER_OPENCLAW !== 'false';
 
 function resolveHomePath(filePath: string): string {
   if (filePath.startsWith('~/')) {
@@ -98,6 +100,18 @@ function isOpenClawAvailable(): boolean {
   return Boolean(getOpenClawAccessToken()) || isOpenClawCliAvailable();
 }
 
+function getOpenClawConfig(task: TaskType): AIConfig | null {
+  if (!isOpenClawAvailable()) return null;
+  return {
+    provider: 'openclaw',
+    model: OPENCLAW_MODEL,
+    apiKey: getOpenClawAccessToken() || '',
+    baseUrl: OPENCLAW_BASE_URL,
+    maxTokens: task === 'classify' ? 1000 : 4000,
+    temperature: task === 'classify' ? 0.1 : 0.2,
+  };
+}
+
 function getModelConfig(task: TaskType): AIConfig {
   if (task === 'transcribe') {
     return {
@@ -144,27 +158,23 @@ function buildProviderChain(task: TaskType): AIConfig[] {
   }
 
   if (OPENCLAW_ONLY) {
-    if (!isOpenClawAvailable()) {
+    const openClawConfig = getOpenClawConfig(task);
+    if (!openClawConfig) {
       return [];
     }
 
-    return [
-      {
-        provider: 'openclaw',
-        model: OPENCLAW_MODEL,
-        apiKey: getOpenClawAccessToken() || '',
-        baseUrl: OPENCLAW_BASE_URL,
-        maxTokens: task === 'classify' ? 1000 : 4000,
-        temperature: task === 'classify' ? 0.1 : 0.2,
-      },
-    ];
+    return [openClawConfig];
   }
 
   const chain: AIConfig[] = [];
+  const openClawConfig = getOpenClawConfig(task);
 
   // ── SUMMARIZE tasks (daily brief) → OpenAI ONLY ──
   // The editorial brief prompt is tuned for OpenAI. Free models produce garbage.
   if (task === 'summarize') {
+    if (OPENCLAW_PREFERRED && openClawConfig) {
+      chain.push(openClawConfig);
+    }
     if (process.env.OPENAI_API_KEY) {
       chain.push({
         provider: 'openai',
@@ -190,6 +200,10 @@ function buildProviderChain(task: TaskType): AIConfig[] {
   }
 
   // ── All other tasks (classify, reason, extract) ──
+  if (OPENCLAW_PREFERRED && openClawConfig) {
+    chain.push(openClawConfig);
+  }
+
   // Priority 1: OpenRouter/Qwen (FREE — try first)
   if (process.env.OPENROUTER_API_KEY) {
     chain.push({

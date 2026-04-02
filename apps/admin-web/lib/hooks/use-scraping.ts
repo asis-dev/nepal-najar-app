@@ -42,13 +42,11 @@ export function useScrapingStatus() {
     queryKey: ['scraping', 'status'],
     queryFn: async (): Promise<ScrapingStatus> => {
       try {
-        const res = await fetch('/api/scrape/status', {
-          headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_SCRAPE_SECRET || ''}` },
-        });
+        const res = await fetch('/api/scrape/status');
         if (!res.ok) throw new Error('Status fetch failed');
         const data = await res.json();
         // Map from our API response shape
-        const runs = data.recentRuns ?? [];
+        const runs = data.recentRuns ?? data.runs ?? [];
         const lastRun = runs[0];
         return {
           total: data.stats?.totalArticles ?? 0,
@@ -83,10 +81,7 @@ export function useScraperHealth() {
   return useQuery({
     queryKey: ['scraper-health'],
     queryFn: async () => {
-      const secret = process.env.NEXT_PUBLIC_SCRAPE_SECRET;
-      const res = await fetch('/api/scrape/status', {
-        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
-      });
+      const res = await fetch('/api/scrape/status');
       if (!res.ok) throw new Error('Failed to fetch scraper health');
       return res.json();
     },
@@ -103,7 +98,6 @@ export function useTriggerScraping() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SCRAPE_SECRET || ''}`,
         },
         body: JSON.stringify({
           source: payload?.source ?? 'kathmandu-post',

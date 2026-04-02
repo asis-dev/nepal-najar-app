@@ -16,6 +16,7 @@ import { getSupabase } from '@/lib/supabase/server';
 import { PROMISES_KNOWLEDGE } from './knowledge-base';
 import { CATEGORY_NE, type PromiseCategory } from '@/lib/data/promises';
 import { recordSignalReviewAudit } from './review-audit';
+import { getCommitmentCatalogSummary } from './commitment-context';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -128,8 +129,19 @@ export function hasCommitmentLanguage(signal: Signal): boolean {
 // ---------------------------------------------------------------------------
 
 /** Compact list of existing commitment titles for the AI prompt */
-function getExistingCommitmentsSummary(): string {
-  return PROMISES_KNOWLEDGE.map((p) => `#${p.id}: ${p.title}`).join('\n');
+async function getExistingCommitmentsSummary(): Promise<{
+  total: number;
+  lines: string[];
+}> {
+  const dynamicCatalog = await getCommitmentCatalogSummary();
+  if (dynamicCatalog.lines.length > 0) {
+    return dynamicCatalog;
+  }
+
+  return {
+    total: PROMISES_KNOWLEDGE.length,
+    lines: PROMISES_KNOWLEDGE.map((p) => `#${p.id}: ${p.title}`),
+  };
 }
 
 interface AIDiscoveryResult {
@@ -151,11 +163,12 @@ interface AIDiscoveryResult {
 async function analyzeForNewCommitment(
   signal: Signal,
 ): Promise<AIDiscoveryResult | null> {
+  const commitmentCatalog = await getExistingCommitmentsSummary();
   const systemPrompt = `You are an intelligence analyst for Nepal Republic, a government promise tracker.
 Your task: determine if a signal contains a NEW government commitment that is NOT already tracked.
 
-EXISTING TRACKED COMMITMENTS (${PROMISES_KNOWLEDGE.length} total):
-${getExistingCommitmentsSummary()}
+EXISTING TRACKED COMMITMENTS (${commitmentCatalog.total} total):
+${commitmentCatalog.lines.join('\n')}
 
 RULES:
 1. A "commitment" is a specific, actionable pledge by a government official or body — not a vague statement.

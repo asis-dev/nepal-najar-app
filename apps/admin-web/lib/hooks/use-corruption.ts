@@ -85,6 +85,7 @@ export function useCorruptionStats() {
           casesByType: {},
           casesByStatus: {},
           casesBySeverity: {},
+          amountByStatus: {},
           totalEntities: 0,
         } as CorruptionStats;
       }

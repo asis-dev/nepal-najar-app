@@ -695,7 +695,7 @@ export async function collectAllYouTube(): Promise<{
         videosFound += videos.length;
 
         for (const video of videos) {
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('intelligence_signals')
             .upsert(
               {
@@ -720,9 +720,12 @@ export async function collectAllYouTube(): Promise<{
                 onConflict: 'source_id,external_id',
                 ignoreDuplicates: true,
               },
-            );
+            )
+            .select('id');
 
-          if (!error) newVideos++;
+          if (!error && Array.isArray(data) && data.length > 0) {
+            newVideos++;
+          }
         }
 
         // Update source
@@ -775,7 +778,7 @@ export async function collectAllYouTube(): Promise<{
         );
 
         for (const video of videos) {
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('intelligence_signals')
             .upsert(
               {
@@ -799,11 +802,12 @@ export async function collectAllYouTube(): Promise<{
                 onConflict: 'source_id,external_id',
                 ignoreDuplicates: true,
               },
-            );
+            )
+            .select('id');
 
-          if (!error) {
+          if (!error && Array.isArray(data) && data.length > 0) {
             newVideos++;
-          } else {
+          } else if (error) {
             errors.push(
               `YouTube search "${query}" DB insert failed (${error.message})`,
             );
@@ -851,7 +855,7 @@ export async function collectAllYouTube(): Promise<{
         for (const video of videos) {
           if (!video.videoId) continue;
 
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('intelligence_signals')
             .upsert(
               {
@@ -875,11 +879,12 @@ export async function collectAllYouTube(): Promise<{
                 onConflict: 'source_id,external_id',
                 ignoreDuplicates: true,
               },
-            );
+            )
+            .select('id');
 
-          if (!error) {
+          if (!error && Array.isArray(data) && data.length > 0) {
             newVideos++;
-          } else {
+          } else if (error) {
             errors.push(
               `DuckDuckGo YouTube "${query}" DB insert failed (${error.message})`,
             );

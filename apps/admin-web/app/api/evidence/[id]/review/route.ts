@@ -60,7 +60,7 @@ export async function POST(
 
   // Rate limit: 10/min per IP
   const ip = getClientIp(req);
-  const { success: rateLimitOk } = rateLimit(`evidence-review:${ip}`, 10, 60000);
+  const { success: rateLimitOk } = await rateLimit(`evidence-review:${ip}`, 10, 60000);
   if (!rateLimitOk) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },

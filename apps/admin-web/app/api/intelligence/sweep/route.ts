@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runFullSweep } from '@/lib/intelligence/sweep';
+import { validateScrapeAuth } from '@/lib/scraper/auth';
 import { getSupabase } from '@/lib/supabase/server';
+import { sendOpsAlert } from '@/lib/intelligence/ops-alerts';
+import {
+  bearerMatchesSecret,
+  secretsEqual,
+} from '@/lib/security/request-auth';
 
 async function releaseStaleRunningSweeps(maxAgeMinutes = 120): Promise<number> {
   const supabase = getSupabase();
@@ -38,11 +44,7 @@ async function hasActiveRunningSweep(): Promise<boolean> {
 
 // POST: Trigger a manual sweep
 export async function POST(request: NextRequest) {
-  // Auth check
-  const auth = request.headers.get('Authorization');
-  const secret = process.env.SCRAPE_SECRET;
-
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!(await validateScrapeAuth(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -56,6 +58,12 @@ export async function POST(request: NextRequest) {
     await releaseStaleRunningSweeps(staleMinutes);
     const alreadyRunning = await hasActiveRunningSweep();
     if (alreadyRunning) {
+      await sendOpsAlert({
+        severity: 'warning',
+        source: 'sweep',
+        title: 'Sweep skipped (already running)',
+        message: 'Manual sweep request skipped because another sweep is already running.',
+      });
       return NextResponse.json(
         { status: 'skipped', reason: 'Another sweep is already running' },
         { status: 409 },
@@ -71,6 +79,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (err) {
+    await sendOpsAlert({
+      severity: 'error',
+      source: 'sweep',
+      title: 'Manual sweep failed',
+      message: err instanceof Error ? err.message : 'Sweep failed with unknown error',
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Sweep failed' },
       { status: 500 },
@@ -80,20 +94,14 @@ export async function POST(request: NextRequest) {
 
 // GET: Trigger scheduled sweep (for Vercel Cron)
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  const bearerSecret = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice('Bearer '.length)
-    : null;
+  const cronHeaderSecret = request.headers.get('x-vercel-cron-secret');
+  const cronSecret = process.env.CRON_SECRET;
+  const isCronAuth =
+    !!cronSecret &&
+    (secretsEqual(cronHeaderSecret, cronSecret) || bearerMatchesSecret(request, cronSecret));
+  const isScrapeAuth = await validateScrapeAuth(request);
 
-  const cronSecret =
-    request.headers.get('x-vercel-cron-secret') ||
-    request.nextUrl.searchParams.get('secret') ||
-    bearerSecret;
-
-  if (
-    cronSecret !== process.env.CRON_SECRET &&
-    cronSecret !== process.env.SCRAPE_SECRET
-  ) {
+  if (!isCronAuth && !isScrapeAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -106,6 +114,12 @@ export async function GET(request: NextRequest) {
     await releaseStaleRunningSweeps(staleMinutes);
     const alreadyRunning = await hasActiveRunningSweep();
     if (alreadyRunning) {
+      await sendOpsAlert({
+        severity: 'warning',
+        source: 'sweep',
+        title: 'Scheduled sweep skipped (already running)',
+        message: 'Scheduled sweep skipped because another sweep is already running.',
+      });
       return NextResponse.json({
         status: 'skipped',
         reason: 'Another sweep is already running',
@@ -114,7 +128,10 @@ export async function GET(request: NextRequest) {
 
     const mode = request.nextUrl.searchParams.get('mode') || 'full';
     const isRssOnly = mode === 'rss-only';
-    const skipAnalysisByDefault = mode !== 'full';
+    // Scheduled sweeps on Vercel have 300s timeout — ALWAYS skip heavy AI analysis
+    // and let the worker cron (runs 15 min later) handle classification.
+    // Only manual sweeps (POST) run analysis inline.
+    const skipAnalysisByDefault = true;
 
     const result = await runFullSweep({
       sweepType: 'scheduled',
@@ -131,6 +148,12 @@ export async function GET(request: NextRequest) {
       duration: result.duration,
     });
   } catch (err) {
+    await sendOpsAlert({
+      severity: 'error',
+      source: 'sweep',
+      title: 'Scheduled sweep failed',
+      message: err instanceof Error ? err.message : 'Sweep failed with unknown error',
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Sweep failed' },
       { status: 500 },

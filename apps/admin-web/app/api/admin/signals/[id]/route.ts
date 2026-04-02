@@ -3,7 +3,7 @@
  *
  * Admin-only: update a signal's review_status, classification, confidence,
  * matched_promise_ids, review_notes, etc.
- * Auth: admin_session cookie or Bearer ADMIN_SECRET.
+ * Auth: admin Supabase session (legacy ADMIN_SECRET is optional via env opt-in).
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdminAuthed } from '@/lib/auth/admin';
@@ -20,7 +20,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!isAdminAuthed(request)) {
+  if (!(await isAdminAuthed(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
 import { aiComplete } from '@/lib/intelligence/ai-router';
+import { validateScrapeAuth } from '@/lib/scraper/auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 min max
@@ -13,12 +14,11 @@ export const maxDuration = 300; // 5 min max
  * Designed to run once daily at Nepal 7 PM (13:15 UTC).
  */
 export async function GET(req: NextRequest) {
-  // Auth check — cron secret or admin
-  const authHeader = req.headers.get('authorization') || '';
-  const secret = process.env.SCRAPE_SECRET || process.env.ADMIN_SECRET;
+  // Auth check — Vercel cron or scrape/admin auth
   const isCron = req.headers.get('x-vercel-cron') === '1';
+  const isScrapeOrAdmin = await validateScrapeAuth(req);
 
-  if (!isCron && !(secret && authHeader === `Bearer ${secret}`)) {
+  if (!isCron && !isScrapeOrAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -1,15 +1,11 @@
-import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'How It Works | Nepal Republic',
+export const metadata = createMetadata({
+  title: 'How It Works',
   description:
-    'Learn how Nepal Republic tracks government commitments using AI intelligence, community verification, and combined scoring. Nepal\'s citizen-powered accountability platform.',
-  openGraph: {
-    title: 'How Nepal Republic Works',
-    description:
-      'AI intelligence + community verification = the truth about every government commitment. See how Nepal\'s accountability platform works.',
-  },
-};
+    'Learn how Nepal Republic monitors government commitments using AI intelligence, community verification, and evidence-grounded scoring.',
+  path: '/how-it-works',
+});
 
 export default function HowItWorksLayout({
   children,

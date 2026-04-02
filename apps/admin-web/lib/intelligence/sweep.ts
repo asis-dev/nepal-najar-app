@@ -266,7 +266,8 @@ export async function runFullSweep(
   } = options;
   const sweepStartedAtIso = new Date().toISOString();
   const autoSyncPromiseStatuses =
-    process.env.INTELLIGENCE_AUTO_STATUS_SYNC === 'true';
+    process.env.INTELLIGENCE_AUTO_STATUS_SYNC === 'true' &&
+    process.env.INTELLIGENCE_ALLOW_DIRECT_STATUS_WRITES === 'true';
   const inlineStatusWorker =
     process.env.INTELLIGENCE_INLINE_STATUS_WORKER === 'true';
   const inlineAnalysisWorker =
@@ -749,7 +750,9 @@ export async function runFullSweep(
           );
         }
       } else {
-        console.log('[Sweep] Skipping legacy status sync because review-safe mode is enabled.');
+        console.log(
+          '[Sweep] Skipping direct status sync (review-safe mode). Enable INTELLIGENCE_ALLOW_DIRECT_STATUS_WRITES=true only if intentional.',
+        );
       }
     }
 
@@ -936,10 +939,10 @@ export async function runFullSweep(
     }
 
     // ===== DAILY BRIEF REGENERATION PHASE =====
-    // Always regenerate brief + audio on full sweeps, even if analysis was queued.
-    // storeDailyBrief preserves existing audio, and we re-generate audio each time
-    // so users always hear the latest summary.
-    if (!skipAnalysis && !rssOnly) {
+    // Runs on every full sweep regardless of skipAnalysis — brief generation is
+    // lightweight (~60-90s: one AI summary call + TTS), well within the 300s timeout.
+    // skipAnalysis only skips heavy batch signal classification, not the brief.
+    if (!rssOnly) {
       console.log('[Sweep] Regenerating daily brief...');
       try {
         const { generateDailyBrief } = await import('./daily-brief');

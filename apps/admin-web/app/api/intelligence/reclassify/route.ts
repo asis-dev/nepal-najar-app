@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 // POST: Reset all signals for reclassification, then trigger a sweep
 export async function POST(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
   const secret = process.env.SCRAPE_SECRET;
 
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!bearerMatchesSecret(request, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { transcribeAndIngest } from '@/lib/intelligence/collectors/audio-transcriber';
 import { enqueueTranscriptionJobs } from '@/lib/intelligence/jobs';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 /**
  * POST /api/intelligence/transcribe
@@ -12,11 +13,9 @@ import { enqueueTranscriptionJobs } from '@/lib/intelligence/jobs';
  * Auth: Bearer $SCRAPE_SECRET
  */
 export async function POST(request: NextRequest) {
-  // Auth check
-  const auth = request.headers.get('Authorization');
   const secret = process.env.SCRAPE_SECRET;
 
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!bearerMatchesSecret(request, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

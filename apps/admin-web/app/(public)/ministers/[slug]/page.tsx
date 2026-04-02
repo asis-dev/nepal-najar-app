@@ -26,7 +26,10 @@ import {
   ShieldQuestion,
   User,
   DollarSign,
+  Share,
 } from 'lucide-react';
+import { shareOrCopy } from '@/lib/utils/share';
+import { ReactionBar } from '@/components/public/reaction-bar';
 import { useMinistersWeekly } from '@/lib/hooks/use-ministers';
 import { useI18n } from '@/lib/i18n';
 import { promises } from '@/lib/data/promises';
@@ -74,7 +77,7 @@ function daysInOffice(appointedDate?: string): number | null {
 export default function MinisterDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { locale } = useI18n();
+  const { locale, localizeField } = useI18n();
   const isNe = locale === 'ne';
 
   const { ministers, isLoading } = useMinistersWeekly();
@@ -153,13 +156,24 @@ export default function MinisterDetailPage() {
 
         {/* Minister header */}
         <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-5">
-          <h1 className="text-xl font-bold text-gray-100">
-            {isNe && minister.nameNe ? minister.nameNe : minister.name}
-          </h1>
-          <p className="mt-1 text-sm text-gray-300">
-            {isNe && minister.titleNe ? minister.titleNe : minister.title}
-          </p>
-          <p className="mt-0.5 text-xs text-gray-500">{minister.ministry}</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold text-gray-100">
+                {localizeField(minister.name, minister.nameNe)}
+              </h1>
+              <p className="mt-1 text-sm text-gray-300">
+                {localizeField(minister.title, minister.titleNe)}
+              </p>
+              <p className="mt-0.5 text-xs text-gray-500">{minister.ministry}</p>
+            </div>
+            <button
+              onClick={() => shareOrCopy({ title: minister.name, text: `${minister.name} — ${minister.title}. Track their commitments on Nepal Republic. nepalrepublic.org`, url: `${window.location.origin}/ministers/${slug}` })}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-white transition-all shrink-0"
+            >
+              <Share className="w-3.5 h-3.5" />
+              {isNe ? 'शेयर गर्नुहोस्' : 'Share'}
+            </button>
+          </div>
 
           {(minister.appointedDate || days !== null) && (
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-400">
@@ -225,7 +239,7 @@ export default function MinisterDetailPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="flex-1 text-sm leading-relaxed text-gray-200">
-                        {isNe && signal.titleNe ? signal.titleNe : signal.title}
+                        {localizeField(signal.title, signal.titleNe, 'Signal detected')}
                       </p>
                       {signal.url && (
                         <a
@@ -312,6 +326,11 @@ export default function MinisterDetailPage() {
             </div>
           </section>
         )}
+
+        {/* Reactions */}
+        <section className="mt-6">
+          <ReactionBar entityType="minister" entitySlug={slug} />
+        </section>
 
         {/* No activity state */}
         {weeklyActivity.topSignals.length === 0 && ownedCommitments.length === 0 && (

@@ -1,20 +1,14 @@
-import type { Metadata } from 'next';
+import { createMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Nepal Constitution | Nepal Republic',
-  description:
-    'Browse the Constitution of Nepal 2015 (संविधान २०७२) — all articles organized by part, with amendments tracked and commitments linked to constitutional provisions.',
-  openGraph: {
-    title: 'Nepal Constitution | Nepal Republic',
-    description:
-      'Explore the Constitution of Nepal 2015 with articles, amendments, and links to government commitments.',
-  },
-};
+const ogParams = new URLSearchParams({ title: 'Nepal Constitution 2015', subtitle: 'Browse all articles organized by part, with amendments tracked and commitments linked.' });
 
-export default function ConstitutionLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata = createMetadata({
+  title: 'Nepal Constitution',
+  description: 'Browse the Constitution of Nepal 2015 (संविधान २०७२) — all articles organized by part, with amendments tracked and commitments linked to constitutional provisions.',
+  path: '/constitution',
+  ogImage: `/api/og?${ogParams.toString()}`,
+});
+
+export default function ConstitutionLayout({ children }: { children: React.ReactNode }) {
   return children;
 }

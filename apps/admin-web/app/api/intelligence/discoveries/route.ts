@@ -4,15 +4,15 @@ import {
   approveDiscovery,
   rejectDiscovery,
 } from '@/lib/intelligence/commitment-discovery';
+import { bearerMatchesSecret } from '@/lib/security/request-auth';
 
 // ---------------------------------------------------------------------------
 // Auth helper — same pattern as other intelligence routes
 // ---------------------------------------------------------------------------
 
 function isAuthorized(request: NextRequest): boolean {
-  const auth = request.headers.get('Authorization');
   const secret = process.env.SCRAPE_SECRET;
-  return !!secret && auth === `Bearer ${secret}`;
+  return bearerMatchesSecret(request, secret);
 }
 
 // ---------------------------------------------------------------------------

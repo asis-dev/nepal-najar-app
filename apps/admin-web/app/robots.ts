@@ -10,6 +10,43 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
         disallow: ['/home', '/login', '/api/'],
       },
+      // Social crawlers need OG image access for rich previews.
+      {
+        userAgent: ['Twitterbot', 'facebookexternalhit', 'Facebot', 'LinkedInBot', 'Slackbot', 'Discordbot', 'WhatsApp'],
+        allow: ['/', '/api/og', '/api/og/', '/api/og/commitment/', '/api/og/province/'],
+        disallow: ['/home', '/login'],
+      },
+      // Allow AI crawlers to access public API data for GEO
+      {
+        userAgent: 'GPTBot',
+        allow: ['/', '/llms.txt', '/llms-full.txt'],
+        disallow: ['/api/', '/home', '/login'],
+      },
+      {
+        userAgent: 'ChatGPT-User',
+        allow: ['/', '/llms.txt', '/llms-full.txt'],
+        disallow: ['/api/', '/home', '/login'],
+      },
+      {
+        userAgent: 'Google-Extended',
+        allow: ['/', '/llms.txt', '/llms-full.txt'],
+        disallow: ['/api/', '/home', '/login'],
+      },
+      {
+        userAgent: 'PerplexityBot',
+        allow: ['/', '/llms.txt', '/llms-full.txt'],
+        disallow: ['/api/', '/home', '/login'],
+      },
+      {
+        userAgent: 'ClaudeBot',
+        allow: ['/', '/llms.txt', '/llms-full.txt'],
+        disallow: ['/api/', '/home', '/login'],
+      },
+      {
+        userAgent: 'Applebot-Extended',
+        allow: ['/', '/llms.txt', '/llms-full.txt'],
+        disallow: ['/api/', '/home', '/login'],
+      },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,
   };

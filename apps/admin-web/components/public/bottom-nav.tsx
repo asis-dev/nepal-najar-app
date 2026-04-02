@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Eye, ClipboardList, BarChart3, Award, Users, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut, Swords, Scale, AlertCircle, Shield } from 'lucide-react';
+import { Award, Users, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut, Swords, Scale, AlertCircle, Shield, ClipboardCheck, MessageSquareWarning, Target, Home } from 'lucide-react';
 import { useTrending } from '@/lib/hooks/use-trending';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
@@ -16,11 +16,11 @@ const PULSE_COLORS = {
 } as const;
 
 const navItems = [
-  { href: '/', icon: Eye, label: 'Home', labelNe: 'गृह', hasPulse: true },
-  { href: '/explore/first-100-days', icon: ClipboardList, label: 'Tracker', labelNe: 'ट्र्याकर' },
-  { href: '/report-card', icon: BarChart3, label: 'Report', labelNe: 'रिपोर्ट' },
-  { href: '/ministers', icon: Users, label: 'Ministers', labelNe: 'मन्त्री' },
-  { href: '/complaints', icon: AlertCircle, label: 'Civic Issues', labelNe: 'नागरिक समस्या' },
+  { href: '/', icon: Home, label: 'Home', labelNe: 'गृह', hasPulse: true },
+  { href: '/explore/first-100-days', icon: Target, label: 'Tracker', labelNe: 'ट्र्याकर' },
+  { href: '/report-card', icon: ClipboardCheck, label: 'Report', labelNe: 'रिपोर्ट' },
+  { href: '/ministers', icon: Users, label: 'Cabinet', labelNe: 'क्याबिनेट' },
+  { href: '/complaints', icon: MessageSquareWarning, label: 'Issues', labelNe: 'समस्या' },
   { href: '/me', icon: User, label: 'Me', labelNe: 'म', isMe: true },
 ];
 
@@ -201,13 +201,14 @@ export function BottomNav() {
             <span className={`relative inline-flex h-2 w-2 rounded-full ${pulseDotColor}`} />
           </div>
         </div>
-        <div className="mx-auto flex h-14 max-w-md items-center justify-around rounded-2xl border border-white/[0.1] bg-np-void/95 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
-          {navItems.map(({ href, icon: Icon, label, isMe, hasPulse }) => {
+        <div className="mx-auto flex h-16 max-w-md items-center justify-around rounded-2xl border border-white/[0.1] bg-np-void/95 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+          {navItems.map(({ href, icon: Icon, label, labelNe, isMe, hasPulse }) => {
             const isActive = isMe
               ? showMeSheet
               : href === '/'
                 ? pathname === '/'
                 : pathname.startsWith(href);
+            const navLabel = locale === 'ne' ? labelNe : label;
 
             if (isMe) {
               return (
@@ -217,6 +218,8 @@ export function BottomNav() {
                   className={`relative flex h-full flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-200 ${
                     isActive ? '' : 'opacity-50 hover:opacity-75'
                   }`}
+                  aria-label={navLabel}
+                  title={navLabel}
                 >
                   <div className={`rounded-xl p-1 transition-colors ${
                     isActive ? 'bg-primary-500/15' : ''
@@ -225,6 +228,13 @@ export function BottomNav() {
                       isActive ? 'text-primary-400' : 'text-gray-400'
                     }`} />
                   </div>
+                  <span
+                    className={`text-[9px] font-medium leading-none transition-colors ${
+                      isActive ? 'text-primary-300' : 'text-gray-500'
+                    }`}
+                  >
+                    {navLabel}
+                  </span>
                   {isActive && (
                     <span
                       className="absolute -top-px left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-primary-400"
@@ -243,6 +253,8 @@ export function BottomNav() {
                 className={`relative flex h-full flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-200 ${
                   isActive ? '' : 'opacity-50 hover:opacity-75'
                 }`}
+                aria-label={navLabel}
+                title={navLabel}
               >
                 <div className={`relative rounded-xl p-1 transition-colors ${
                   isActive ? 'bg-primary-500/15' : ''
@@ -254,6 +266,13 @@ export function BottomNav() {
                     <span className={`absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ${pulseDotColor}`} />
                   )}
                 </div>
+                <span
+                  className={`text-[9px] font-medium leading-none transition-colors ${
+                    isActive ? 'text-primary-300' : 'text-gray-500'
+                  }`}
+                >
+                  {navLabel}
+                </span>
                 {isActive && (
                   <span
                     className="absolute -top-px left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-primary-400"

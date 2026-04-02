@@ -816,11 +816,14 @@ export async function collectAllRSS(): Promise<{
         totalItems += items.length;
 
         if (items.length > 0) {
+          const isNepaliSource = source.language === 'ne';
           const payload = items.map((item) => ({
             source_id: source.id,
             signal_type: 'article',
             external_id: item.link,
-            title: item.title,
+            // When source is Nepali, store title in title_ne and leave title for English
+            title: isNepaliSource ? (item.title || '').slice(0, 200) : item.title,
+            title_ne: isNepaliSource ? item.title : null,
             content: item.description || null,
             url: item.link,
             author: item.author || null,

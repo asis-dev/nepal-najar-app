@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { RepublicMark } from '@/components/ui/ghanti-card-mark';
-import { ExternalLink } from 'lucide-react';
 
 export function Footer() {
   const { locale, setLocale, t } = useI18n();
@@ -19,6 +18,9 @@ export function Footer() {
     { href: '/about', label: t('footer.about') },
     { href: '/how-it-works', label: locale === 'ne' ? 'कसरी काम गर्छ' : 'How It Works' },
     { href: '/feedback', label: locale === 'ne' ? 'प्रतिक्रिया' : 'Feedback' },
+    { href: '/privacy', label: locale === 'ne' ? 'गोपनीयता' : 'Privacy' },
+    { href: '/terms', label: locale === 'ne' ? 'सर्तहरू' : 'Terms' },
+    { href: '/moderation-policy', label: locale === 'ne' ? 'समुदाय नीति' : 'Moderation Policy' },
   ];
 
   const social = [
