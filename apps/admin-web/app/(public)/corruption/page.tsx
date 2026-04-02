@@ -420,6 +420,10 @@ function CaseCard({ caseData }: { caseData: CorruptionCase }) {
           shareText={caseData.summary || caseData.title}
           detailUrl={`/corruption/${caseData.slug}`}
           size="sm"
+          ogTitle={caseData.title}
+          ogSubtitle={caseData.estimated_amount_npr ? `রू ${formatAmountNpr(caseData.estimated_amount_npr)} · ${STATUS_LABELS[caseData.status].en}` : STATUS_LABELS[caseData.status].en}
+          ogSection="corruption"
+          ogStatus={caseData.status}
         />
       </div>
     </Link>

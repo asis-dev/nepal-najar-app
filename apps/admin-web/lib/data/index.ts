@@ -73,7 +73,7 @@ export async function getPromises(): Promise<GovernmentPromise[]> {
 
     // Map Supabase snake_case to GovernmentPromise camelCase
     const mapped = enrichActors(data.map((p: Record<string, unknown>) => ({
-      id: p.id as string,
+      id: String(p.id),
       slug: p.slug as string,
       title: p.title as string,
       title_ne: p.title_ne as string,

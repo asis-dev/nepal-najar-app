@@ -183,19 +183,18 @@ export function shareIntentUrl(platform: Exclude<SharePlatform, 'copy' | 'native
 
 /**
  * Fetch the OG image for a page and return it as a shareable File.
+ * The image is dynamically generated with the page's actual title, stats, etc.
  * Falls back to null if anything fails (CORS, timeout, etc.).
  */
 async function fetchShareImage(opts: {
   title?: string;
   subtitle?: string;
   section?: string;
+  progress?: number;
+  status?: string;
 }): Promise<File | null> {
   try {
-    const imgUrl = ogImageUrl({
-      title: opts.title,
-      subtitle: opts.subtitle,
-      section: opts.section,
-    });
+    const imgUrl = ogImageUrl(opts);
     const origin = typeof window !== 'undefined' ? window.location.origin : DEFAULT_SITE_URL;
     const fullUrl = imgUrl.startsWith('/') ? `${origin}${imgUrl}` : imgUrl;
 
@@ -209,17 +208,22 @@ async function fetchShareImage(opts: {
   }
 }
 
+/** OG image params that make the share image show page-specific content */
+export interface ShareImageParams {
+  ogTitle?: string;
+  ogSubtitle?: string;
+  ogSection?: string;
+  ogProgress?: number;
+  ogStatus?: string;
+}
+
 /** Universal share helper — handles native share + clipboard fallback */
 export async function shareOrCopy(opts: {
   title: string;
   text?: string;
   comment?: string;
   url: string;
-  /** Optional OG image params — when provided, generates an image for IG Stories / visual shares */
-  ogTitle?: string;
-  ogSubtitle?: string;
-  ogSection?: string;
-}): Promise<'shared' | 'copied' | 'failed'> {
+} & ShareImageParams): Promise<'shared' | 'copied' | 'failed'> {
   const normalizedUrl = normalizeShareUrl(opts.url);
   const trackedNativeUrl = withShareUtm(normalizedUrl, 'native');
   const trackedCopyUrl = withShareUtm(normalizedUrl, 'copy');
@@ -227,12 +231,14 @@ export async function shareOrCopy(opts: {
 
   if (typeof navigator !== 'undefined' && navigator.share) {
     try {
-      // Try to attach an image so Instagram Stories, Snapchat, etc. can accept the share
+      // Generate a page-specific image so Instagram, Snapchat, etc. show rich content
       let files: File[] | undefined;
       const imageFile = await fetchShareImage({
         title: opts.ogTitle || opts.title,
-        subtitle: opts.ogSubtitle,
+        subtitle: opts.ogSubtitle || opts.text,
         section: opts.ogSection,
+        progress: opts.ogProgress,
+        status: opts.ogStatus,
       });
 
       if (imageFile && navigator.canShare?.({ files: [imageFile] })) {

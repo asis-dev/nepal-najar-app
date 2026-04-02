@@ -138,6 +138,9 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
                 shareTitle={isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
                 shareUrl={`/proposals/${proposal.id}`}
                 size="sm"
+                ogTitle={isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
+                ogSubtitle={`${proposal.province}${proposal.district ? ` · ${proposal.district}` : ''} · ${t(`proposals.categories.${proposal.category}`)} · ${t(`proposals.statuses.${proposal.status}`)}`}
+                ogSection="proposals"
               />
             </div>
           </div>

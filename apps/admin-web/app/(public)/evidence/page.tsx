@@ -29,8 +29,6 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { shareOrCopy } from '@/lib/utils/share';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { buildOrIlikeClause } from '@/lib/supabase/filter-utils';
 import { PublicPageHero } from '@/components/public/page-hero';
 import { EvidenceSourceBadge, deriveSourceType } from '@/components/public/evidence-source-badge';
 
@@ -187,65 +185,37 @@ export default function EvidenceVaultPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Fetch evidence
+  // Fetch evidence via API route (uses server-side Supabase client)
   const fetchEvidence = useCallback(async () => {
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
 
-    let query = supabase
-      .from('evidence_vault')
-      .select('*', { count: 'exact' })
-      .limit(100);
+    try {
+      const params = new URLSearchParams();
+      params.set('sort', sortBy);
+      if (selectedSource) params.set('source_type', selectedSource);
+      if (selectedStatement) params.set('statement_type', selectedStatement);
+      if (selectedPromise !== null) params.set('promise_id', String(selectedPromise));
+      if (searchQuery.trim()) params.set('search', searchQuery.trim());
 
-    // Apply sorting
-    if (sortBy === 'newest') {
-      query = query.order('spoken_date', { ascending: false, nullsFirst: false });
-    } else if (sortBy === 'importance') {
-      query = query.order('importance_score', { ascending: false });
-    } else {
-      query = query.order('official_name', { ascending: true });
-    }
-
-    // Apply source filter
-    if (selectedSource) {
-      query = query.eq('source_type', selectedSource);
-    }
-
-    // Apply statement type filter
-    if (selectedStatement) {
-      query = query.eq('statement_type', selectedStatement);
-    }
-
-    // Apply promise filter
-    if (selectedPromise !== null) {
-      query = query.contains('promise_ids', [selectedPromise]);
-    }
-
-    // Apply search
-    if (searchQuery.trim()) {
-      const searchClause = buildOrIlikeClause(
-        ['official_name', 'quote_text', 'source_title'],
-        searchQuery,
-      );
-      if (searchClause) {
-        query = query.or(searchClause);
+      const res = await fetch(`/api/evidence-vault?${params.toString()}`);
+      if (!res.ok) {
+        console.error('Evidence fetch error:', res.status, res.statusText);
+        setEvidence([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
       }
+
+      const json = await res.json();
+      setEvidence((json.evidence as EvidenceRow[]) || []);
+      setTotalCount(json.total || 0);
+    } catch (err) {
+      console.error('Evidence fetch error:', err);
+      setEvidence([]);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
     }
-
-    const { data, count, error } = await query;
-
-    if (error) {
-      console.error('Evidence fetch error:', error.message);
-    }
-
-    setEvidence((data as EvidenceRow[]) || []);
-    setTotalCount(count || 0);
-    setLoading(false);
   }, [searchQuery, selectedSource, selectedStatement, selectedPromise, sortBy]);
 
   useEffect(() => {

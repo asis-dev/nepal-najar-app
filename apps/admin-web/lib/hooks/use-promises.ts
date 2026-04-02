@@ -23,7 +23,7 @@ interface UseAllPromisesOptions {
 /* ───────── Map Supabase row → GovernmentPromise ───────── */
 function mapPromise(p: Record<string, unknown>): GovernmentPromise {
   return {
-    id: p.id as string,
+    id: String(p.id),
     slug: p.slug as string,
     title: p.title as string,
     title_ne: p.title_ne as string,

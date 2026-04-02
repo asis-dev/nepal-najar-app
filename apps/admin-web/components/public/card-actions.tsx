@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { Check, Heart, MessageCircle, Share } from 'lucide-react';
 import { useWatchlistStore } from '@/lib/stores/preferences';
 import { shareOrCopy } from '@/lib/utils/share';
+import type { ShareImageParams } from '@/lib/utils/share';
 
-interface CardActionsProps {
+interface CardActionsProps extends ShareImageParams {
   /** Commitment ID for watchlist */
   commitmentId?: string;
   /** Minister slug for watchlist (reuses same watchlist store) */
@@ -37,6 +38,11 @@ export function CardActions({
   commentCount,
   followCount,
   detailUrl,
+  ogTitle,
+  ogSubtitle,
+  ogSection,
+  ogProgress,
+  ogStatus,
 }: CardActionsProps) {
   const { watchedProjectIds, toggleWatch } = useWatchlistStore();
   const [shareCopied, setShareCopied] = useState(false);
@@ -97,6 +103,11 @@ export function CardActions({
             title: shareTitle,
             text: shareText || shareTitle,
             url: shareUrl,
+            ogTitle,
+            ogSubtitle,
+            ogSection,
+            ogProgress,
+            ogStatus,
           });
           if (result === 'copied') {
             setShareCopied(true);

@@ -50,6 +50,7 @@ const PUBLIC_PREFIXES = [
   '/api/intelligence',
   '/api/proposals',
   '/api/evidence',
+  '/api/evidence-vault',
   '/api/verify',
   '/api/ward-reports',
   '/api/leaderboard',
@@ -70,6 +71,7 @@ const PUBLIC_PREFIXES = [
   '/api/report-card',
   '/api/social-post',
   '/complaints',
+  '/moderation-policy',
 ];
 
 // Dashboard routes that require admin auth

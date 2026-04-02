@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const scope = searchParams.get('scope');
   const format = searchParams.get('format');
-  const parsedLimit = parseInt(searchParams.get('limit') ?? '100', 10);
-  const limit = Math.min(Number.isFinite(parsedLimit) ? parsedLimit : 100, 250);
+  const parsedLimit = parseInt(searchParams.get('limit') ?? '250', 10);
+  const limit = Math.min(Number.isFinite(parsedLimit) ? parsedLimit : 250, 500);
 
   const filteredCommitments = (await getPromises())
     .filter((commitment) => isPublicCommitment(commitment))

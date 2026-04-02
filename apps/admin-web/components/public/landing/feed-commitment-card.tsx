@@ -108,6 +108,11 @@ export function FeedCommitmentCard({
           detailUrl={`/explore/first-100-days/${commitment.slug}`}
           commentCount={commentCount}
           size="sm"
+          ogTitle={title}
+          ogSubtitle={`${commitment.progress}% progress · ${commitment.status.replace(/_/g, ' ')}`}
+          ogSection="commitments"
+          ogProgress={commitment.progress}
+          ogStatus={commitment.status}
         />
       </div>
     </Link>

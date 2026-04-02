@@ -53,6 +53,10 @@ export function BodyCard({ body }: { body: GovernmentBody }) {
             shareTitle={`${isNe ? body.nameNe : body.name} — ${body.avgProgress}% avg progress`}
             shareUrl={`/scorecard/${body.slug}`}
             size="sm"
+            ogTitle={isNe ? body.nameNe : body.name}
+            ogSubtitle={`${typeLabel} · Grade ${grade} · ${body.avgProgress}% avg progress`}
+            ogSection="report"
+            ogProgress={body.avgProgress}
           />
           <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
         </div>

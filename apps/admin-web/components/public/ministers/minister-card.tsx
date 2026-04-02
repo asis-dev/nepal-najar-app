@@ -94,6 +94,8 @@ export function MinisterCard({ minister, locale }: MinisterCardProps) {
             shareUrl={`/ministers/${minister.slug}`}
             detailUrl={`/ministers/${minister.slug}`}
             size="sm"
+            ogTitle={minister.name}
+            ogSubtitle={`${minister.title} · ${minister.ownedCommitmentIds.length} commitments · ${weeklyActivity.totalSignals} signals this week`}
           />
           <ChevronRight className="h-3.5 w-3.5 text-gray-600 transition-colors group-hover:text-gray-400" />
         </div>

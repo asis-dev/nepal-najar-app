@@ -115,6 +115,9 @@ export function StoryCards({
                   shareTitle={locale === 'ne' && story.titleNe ? story.titleNe : story.title}
                   shareUrl={firstCommitmentIdStr ? `/explore/first-100-days/${allPromises.find((p) => p.id === firstCommitmentIdStr)?.slug ?? firstCommitmentIdStr}` : '/'}
                   size="sm"
+                  ogTitle={locale === 'ne' && story.titleNe ? story.titleNe : story.title}
+                  ogSubtitle={`${story.sentiment} · ${story.signalCount} signals`}
+                  ogSection="commitments"
                 />
               </div>
             </div>

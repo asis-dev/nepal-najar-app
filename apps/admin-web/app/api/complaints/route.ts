@@ -80,7 +80,8 @@ export async function GET(request: NextRequest) {
   if (mine && user) {
     query = query.eq('user_id', user.id);
   } else if (!isElevated) {
-    query = query.eq('is_public', true);
+    // Show complaints where is_public is true OR null (default)
+    query = query.or('is_public.eq.true,is_public.is.null');
   }
 
   if (followedIds) {

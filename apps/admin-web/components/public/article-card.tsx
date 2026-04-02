@@ -130,6 +130,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
             shareUrl={article.source_url}
             shareText={excerpt || article.excerpt}
             size="sm"
+            ogTitle={headline || article.headline}
+            ogSubtitle={`${article.source_name} · ${locale === 'ne' ? classification.label_ne : classification.label} · ${Math.round(article.confidence * 100)}%`}
+            ogSection="articles"
           />
           <span className="text-[10px] text-primary-400 flex items-center gap-1">
             {locale === 'ne' ? 'पूरा पढ्नुहोस्' : 'Read full article'}
