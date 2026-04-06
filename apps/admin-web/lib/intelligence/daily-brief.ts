@@ -206,7 +206,7 @@ function cleanSummaryBullet(text: string): string {
 // ── Core: fetch recent signals ───────────────────────────────────────────────
 
 /** Which time window was actually used — affects brief wording */
-type TimeWindowUsed = '24h' | '48h' | '72h' | 'recent';
+type TimeWindowUsed = '24h' | '48h' | '72h' | 'recent' | 'none';
 
 interface FetchResult {
   signals: RawSignal[];
@@ -246,21 +246,9 @@ async function fetchRecentSignals(): Promise<FetchResult> {
     }
   }
 
-  // Final fallback: most recent 50 classified signals regardless of date
-  const { data: fallbackData, error: fallbackError } = await supabase
-    .from('intelligence_signals')
-    .select(selectCols)
-    .not('classification', 'eq', 'neutral')
-    .not('classification', 'is', null)
-    .order('discovered_at', { ascending: false })
-    .limit(50);
-
-  if (fallbackError) {
-    console.error('[DailyBrief] Fallback fetch failed:', fallbackError.message);
-    return { signals: [], windowUsed: 'recent' };
-  }
-
-  return { signals: deduplicateSignals((fallbackData || []) as unknown as RawSignal[]), windowUsed: 'recent' };
+  // No signals in any time window — return empty instead of dangerous undated fallback
+  console.warn('[DailyBrief] No classified signals found in 24h/48h/72h windows');
+  return { signals: [], windowUsed: 'none' as TimeWindowUsed };
 }
 
 /**
@@ -880,6 +868,43 @@ function isSpamTitle(title: string): boolean {
   return SPAM_TITLE_PATTERNS.some((p) => p.test(title));
 }
 
+/** Detect YouTube shorts / reaction / fan videos that aren't real news */
+function isYouTubeJunk(signal: RawSignal): boolean {
+  const title = (signal.title || '');
+  const titleLower = title.toLowerCase();
+  const source = signal.source_id || '';
+
+  // Count emoji ratio — titles that are 50%+ emoji are fan content, not news
+  const emojiCount = (title.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) || []).length;
+  const charCount = title.length;
+  if (charCount > 0 && emojiCount / charCount > 0.15) return true;
+
+  // #shorts anywhere in title (any source)
+  if (/#shorts/i.test(titleLower)) return true;
+
+  // YouTube search results are lowest quality — mostly shorts, reactions, fan edits
+  if (source.startsWith('yt-search-')) {
+    // Very short titles are almost always clips
+    if (titleLower.length < 25) return true;
+    // Reaction/fan patterns
+    if (/salute|attitude|handsome|family|favourite|reality of|our.*prime\s*minister/i.test(titleLower)) return true;
+    // Generic recap — not new news
+    if (/new.*prime\s*minister|becomes\s*prime\s*minister|new\s*leader|going\s*prime\s*minister/i.test(titleLower)
+      && !/announce|law|policy|budget|reform|order|ban|launch/i.test(titleLower)) return true;
+    // "PM became" / "PM sworn in" recaps
+    if (/sworn\s*in|शपथ|बनेपछी|बने.*प्रधानमन्त्री/i.test(titleLower)
+      && !/today|आज|new.*decision|नयाँ.*निर्णय/i.test(titleLower)) return true;
+  }
+
+  // Any YouTube source: filter out fan shorts without substance
+  if (source.startsWith('yt-')) {
+    // Generic fan content patterns
+    if (/without any attitude|our.*nepal|🫡.*balen|rapper.*engineer/i.test(titleLower)) return true;
+  }
+
+  return false;
+}
+
 /** Filter out junk/spam signals — used globally before any processing */
 function filterSpamSignals(signals: RawSignal[]): RawSignal[] {
   return signals.filter((s) => {
@@ -888,6 +913,7 @@ function filterSpamSignals(signals: RawSignal[]): RawSignal[] {
     if (isJunkSummary(summary)) return false;
     if (isSpamTitle(title)) return false;
     if (isJunkSummary(title)) return false;
+    if (isYouTubeJunk(s)) return false;
     return true;
   });
 }
@@ -977,15 +1003,16 @@ async function generateAISummary(
     else if (hoursOld < 24) score += 40;
     else if (hoursOld < 36) score += 15;
     else score += 0; // old news gets ZERO score — effectively excluded from top 25
-    // Source quality: RSS has better text, YouTube channels are ok, YouTube search results are low quality
-    if (s.source_id.startsWith('rss-')) score += 25;
-    else if (s.source_id.startsWith('yt-search-')) score += 5; // search results are often spam/engagement-bait
-    else if (s.source_id.startsWith('yt-')) score += 15;
+    // Source quality: RSS news articles >> YouTube channels >> YouTube search results
+    if (s.source_id.startsWith('rss-')) score += 35;
+    else if (s.source_id.startsWith('yt-search-')) score -= 20; // search results are spam/shorts — heavy penalty
+    else if (s.source_id.startsWith('yt-')) score += 10;
     else score += 20;
     // Has real content summary (not junk)
     if (s.content_summary && s.content_summary.length > 50 && !isJunkSummary(s.content_summary)) score += 20;
-    // Has published_at date
-    if (s.published_at) score += 10;
+    // Has published_at date — critical for date awareness
+    if (s.published_at) score += 15;
+    else score -= 15; // no pub date = can't verify freshness, heavy penalize
     // Relevance score
     score += (s.relevance_score || 0) * 10;
     // Editorial priority: boost corruption/law/reform, demote forex/ads/festivals
@@ -1002,8 +1029,12 @@ async function generateAISummary(
     const effectiveDate = pubDate || discDate;
     return (now - effectiveDate) < STALE_CUTOFF_MS;
   });
-  // Fall back to all signals only if we have NO fresh signals at all
-  const candidateSignals = freshScoredSignals.length >= 3 ? freshScoredSignals : scoredSignals;
+  // NEVER fall back to stale signals — better to have fewer signals than stale ones
+  // If we have <3 fresh signals, use what we have (even 1-2 is better than stale data)
+  const candidateSignals = freshScoredSignals.length > 0 ? freshScoredSignals : [];
+  if (candidateSignals.length === 0) {
+    console.warn('[DailyBrief AI] Zero fresh signals for AI context — all signals are >36h old');
+  }
   const topSignals = candidateSignals.slice(0, 40).map((s) => s.signal);
 
   const signalContext = topSignals.map((s, i) => {
@@ -1012,8 +1043,9 @@ async function generateAISummary(
       ? s.content_summary
       : (s.content || '').slice(0, 200);
     const pubInfo = s.published_at ? ` [Published: ${s.published_at.slice(0, 10)}]` : '';
+    const discInfo = ` [Discovered: ${s.discovered_at.slice(0, 10)}]`;
     const sourceType = s.source_id.startsWith('rss-') ? 'News' : s.source_id.startsWith('yt-') ? 'YouTube' : 'Other';
-    return `${i + 1}. "${title}" (${sourceType}${pubInfo})\n   ${summary}`;
+    return `${i + 1}. "${title}" (${sourceType}${pubInfo}${discInfo})\n   ${summary}`;
   }).join('\n\n');
 
   const commitmentContext = commitmentGroups.slice(0, 10).map((g) => {
@@ -1064,10 +1096,13 @@ SKIP THESE (they are NOT news):
    ❌ Old news rehashed — if it happened 3+ days ago, SKIP IT
    ❌ Vague statements like "PM emphasized development" (give SPECIFICS or skip)
 
-═══ FRESHNESS ═══
-- Today is ${todayStr}. ONLY include developments from TODAY or yesterday.
-- "Balen became PM" is OLD. "Balen announced 11 new laws today" is NEW.
-- If a report is clearly about an old event re-shared, SKIP IT.
+═══ FRESHNESS (MOST CRITICAL RULE) ═══
+- Today is ${todayStr}. ONLY include events that ACTUALLY HAPPENED today or yesterday.
+- "Balen became PM" is OLD NEWS from March 26. "Parliament inaugurated" is OLD from March 26. SKIP THESE.
+- YouTube videos posted today often describe events from DAYS AGO. Check the [Published] and [Discovered] dates.
+- If a video/article is ABOUT an old event (inauguration, swearing-in, first cabinet), it is NOT today's news — SKIP IT.
+- Only report ACTIONS or DECISIONS that occurred in the last 48 hours.
+- When in doubt, ASK: "Did this EVENT happen today?" If no → SKIP.
 
 ═══ WRITING STYLE ═══
 - Simple everyday Nepali — a taxi driver or shopkeeper should understand
@@ -1244,6 +1279,46 @@ Rules:
   );
 }
 
+function isValidNepaliText(text: string | null | undefined): boolean {
+  const normalized = normalizeNepaliRegister((text || '').trim());
+  return !!normalized && looksLikeNepali(normalized) && !isHindiLeaning(normalized);
+}
+
+async function translateToNepaliStrict(
+  text: string | null | undefined,
+  fallback: string,
+): Promise<string> {
+  const normalized = normalizeNepaliRegister((text || '').trim());
+  if (isValidNepaliText(normalized)) {
+    return normalized;
+  }
+
+  if (!normalized) return fallback;
+
+  const translated = normalizeNepaliRegister(await translateToNepali(normalized));
+  if (isValidNepaliText(translated)) {
+    return translated;
+  }
+
+  return fallback;
+}
+
+async function ensureTopStoriesNepali(
+  stories: DailyBrief['topStories'],
+): Promise<void> {
+  for (const story of stories) {
+    story.titleNe = await translateToNepaliStrict(
+      story.titleNe || story.title,
+      'मुख्य अद्यावधिक',
+    );
+
+    story.summaryNe = await translateToNepaliStrict(
+      story.summaryNe || story.summary,
+      'यस विषयमा थप प्रमाण र अद्यावधिक सङ्कलन भइरहेको छ।',
+    );
+  }
+}
+
 // ── Story importance scoring ─────────────────────────────────────────────────
 
 /**
@@ -1286,6 +1361,25 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
   // Filter out spam/junk BEFORE any grouping — this ensures topStories fallback is clean too
   const signals = filterSpamSignals(rawSignals);
   console.log(`[DailyBrief] Spam filter: ${rawSignals.length} → ${signals.length} clean signals`);
+
+  // If no usable signals at all, return an explicit "no data" brief — never ask AI to summarize nothing
+  if (signals.length === 0) {
+    console.warn('[DailyBrief] Zero usable signals — generating empty brief');
+    const date = todayDateString();
+    const emptyBrief: DailyBrief = {
+      date,
+      pulse: 0,
+      pulseLabel: 'calm',
+      summaryEn: 'No new government-related signals were collected in the last 72 hours. The intelligence sweep may need attention.',
+      summaryNe: 'पछिल्लो ७२ घण्टामा सरकार सम्बन्धी कुनै नयाँ संकेत संकलन भएन। बुद्धिमत्ता स्वीपलाई ध्यान दिनुपर्छ।',
+      topStories: [],
+      commitmentsMoved: [],
+      stats: { totalSignals24h: 0, newSignals: 0, sourcesActive: 0, topSource: '' },
+      generatedAt: new Date().toISOString(),
+    };
+    await storeDailyBrief(emptyBrief);
+    return emptyBrief;
+  }
   const commitmentGroups = groupByCommitment(signals);
   const topicGroups = groupByTopic(signals);
   const stats = computeStats(signals);
@@ -1368,8 +1462,12 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
     const cleanedNe = aiSummary.summaryBullets
       .map(cleanSummaryBullet)
       .filter((line) => line.length > 0);
-    const neFromBullets = cleanedNe.join('\n');
-    if (neFromBullets.trim()) {
+    const neFromBullets = normalizeNepaliRegister(cleanedNe.join('\n'));
+    if (
+      neFromBullets.trim() &&
+      looksLikeNepali(neFromBullets) &&
+      !isHindiLeaning(neFromBullets)
+    ) {
       summaryNe = neFromBullets;
     } else {
       summaryNe = await generateNepaliSummary(aiSummary, summaryEn, windowUsed);
@@ -1377,6 +1475,14 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
   } else {
     summaryNe = await generateNepaliSummary(aiSummary, summaryEn, windowUsed);
   }
+
+  // Final safety net: guarantee summaryNe is valid Nepali before persistence/audio.
+  summaryNe = await translateToNepaliStrict(
+    summaryNe || summaryEn,
+    normalizeNepaliRegister(
+      'आजका मुख्य सार्वजनिक अद्यावधिकहरू संकलन भइरहेका छन्। थप प्रमाण आउँदै जाँदा अद्यावधिक गरिनेछ।',
+    ),
+  );
 
   // Build topStories with importance scoring
   const topStories: DailyBrief['topStories'] = [];
@@ -1413,12 +1519,22 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
       const neTitle = titleSwapped ? rawTitleEn : rawTitle;
       const enSummary = summarySwapped ? rawSummary : (rawSummaryEn || rawSummary);
       const neSummary = summarySwapped ? rawSummaryEn : rawSummary;
+      const normalizedNeTitle = normalizeNepaliRegister(neTitle || '');
+      const normalizedNeSummary = normalizeNepaliRegister(neSummary || '');
+      const safeNeTitle =
+        normalizedNeTitle && looksLikeNepali(normalizedNeTitle) && !isHindiLeaning(normalizedNeTitle)
+          ? normalizedNeTitle
+          : undefined;
+      const safeNeSummary =
+        normalizedNeSummary && looksLikeNepali(normalizedNeSummary) && !isHindiLeaning(normalizedNeSummary)
+          ? normalizedNeSummary
+          : undefined;
 
       topStories.push({
         title: enTitle,
-        titleNe: neTitle,
+        titleNe: safeNeTitle,
         summary: enSummary,
-        summaryNe: neSummary,
+        summaryNe: safeNeSummary,
         signalCount: story.signalIds?.length || 0,
         sources: [...sources],
         relatedCommitments: [...relatedCommitments],
@@ -1492,6 +1608,9 @@ export async function generateDailyBrief(): Promise<DailyBrief> {
   });
   topStories.length = 0;
   topStories.push(...dedupedStories);
+
+  // Ensure Nepali fields are truly Nepali before saving/voice generation.
+  await ensureTopStoriesNepali(topStories);
 
   // Build commitmentsMoved
   const commitmentsMoved: DailyBrief['commitmentsMoved'] = [];
@@ -1571,10 +1690,12 @@ async function storeDailyBrief(brief: DailyBrief): Promise<void> {
       const newSummaryLen = (brief.summaryEn || '').length;
       const newHasStories = (brief.topStories?.length ?? 0) > 0;
 
-      // Detect garbage: generic "Our sources were scanned" or very short summaries
+      // Detect garbage: generic fallback text, "nothing happened" nonsense, or very short summaries
       const isGarbage = newSummaryLen < 200 ||
         /sources were scanned/i.test(brief.summaryEn || '') ||
-        /Key areas: \w+\.$/i.test(brief.summaryEn || '');
+        /Key areas: \w+\.$/i.test(brief.summaryEn || '') ||
+        /no new.*reported|nothing.*happened|no.*signals.*collected|no new.*decisions/i.test(brief.summaryEn || '') ||
+        /sweep may need attention/i.test(brief.summaryEn || '');
 
       // Block if new brief is garbage and existing one is better
       if (isGarbage && existingSummaryLen > newSummaryLen) {
@@ -1615,11 +1736,12 @@ async function storeDailyBrief(brief: DailyBrief): Promise<void> {
       );
 
     if (error) {
-      // Table may not exist yet — log and continue
-      console.warn('[DailyBrief] Failed to store brief:', error.message);
+      console.error('[DailyBrief] Failed to store brief:', error.message);
+      throw new Error(`Brief storage failed: ${error.message}`);
     }
   } catch (err) {
-    console.warn('[DailyBrief] Storage error:', err instanceof Error ? err.message : err);
+    console.error('[DailyBrief] Storage error:', err instanceof Error ? err.message : err);
+    throw err;
   }
 }
 

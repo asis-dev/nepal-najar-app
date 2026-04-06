@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware';
+import { isOwnerUser } from '@/lib/auth/owner';
 
 /**
  * Edge-compatible constant-time string comparison.
@@ -67,6 +68,7 @@ const PUBLIC_PREFIXES = [
   '/api/reputation',
   '/api/verifier-applications',
   '/api/complaints',
+  '/api/me',
   '/api/daily-brief',
   '/api/report-card',
   '/api/social-post',
@@ -157,13 +159,19 @@ export async function middleware(request: NextRequest) {
       // Check admin role
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, email')
         .eq('id', user.id)
         .single();
 
       if (!profile || profile.role !== 'admin') {
         const loginUrl = new URL('/admin-login', request.url);
         loginUrl.searchParams.set('error', 'not-admin');
+        return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
+      }
+
+      if (!isOwnerUser({ id: user.id, email: user.email || profile.email })) {
+        const loginUrl = new URL('/admin-login', request.url);
+        loginUrl.searchParams.set('error', 'owner-only');
         return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
       }
 
