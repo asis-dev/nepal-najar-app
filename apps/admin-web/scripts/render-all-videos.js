@@ -114,31 +114,118 @@ function mergeAudio(videoPath, audioPath, outputPath) {
   console.log(`  Audio verified: mean ${meanVol.toFixed(1)} dB`);
 }
 
-// ── AI Image Generation (Pollinations.ai — free, no API key) ────────────
+// ── Image fetching with multi-source fallback ──────────────────────────
+// Source 1: Scrape OG image from matching news article
+// Source 2: Pollinations.ai AI generation
+// Source 3: Download from related signal URLs
+async function fetchImageFromUrl(url, outputPath, timeoutMs = 15000) {
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NepalRepublic/1.0)' },
+      redirect: 'follow',
+    });
+    if (!res.ok) return false;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) return false;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 5000) return false;
+    writeFileSync(outputPath, buf);
+    return true;
+  } catch { return false; }
+}
+
+async function scrapeOgImage(articleUrl, outputPath) {
+  try {
+    const res = await fetch(articleUrl, {
+      signal: AbortSignal.timeout(10000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NepalRepublic/1.0)' },
+      redirect: 'follow',
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    // Extract og:image content
+    const match = html.match(/og:image["']\s+content=["']([^"']+)["']/i)
+      || html.match(/property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+      || html.match(/content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
+    if (!match) return null;
+    const imgUrl = match[1];
+    if (!imgUrl.startsWith('http')) return null;
+    const ok = await fetchImageFromUrl(imgUrl, outputPath);
+    return ok ? outputPath : null;
+  } catch { return null; }
+}
+
+async function findMatchingSignalUrls(storyTitle) {
+  // Search signals for URLs matching this story title (fuzzy keyword match)
+  const keywords = storyTitle.split(/\s+/).filter(w => w.length > 4).slice(0, 3);
+  if (!keywords.length) return [];
+  const urls = [];
+  for (const kw of keywords) {
+    try {
+      const signals = await supabaseGet('intelligence_signals',
+        `url=not.like.*youtube*&url=not.like.*facebook*&title=ilike.*${encodeURIComponent(kw)}*&select=url&order=discovered_at.desc&limit=3`
+      );
+      for (const s of signals) if (s.url && !urls.includes(s.url)) urls.push(s.url);
+    } catch {}
+  }
+  return urls.slice(0, 5);
+}
+
 async function generateStoryImage(title, outputPath, index) {
-  // Shorter prompt = faster generation
+  const label = `Story ${index + 1}`;
+
+  // Source 1: Find matching news articles and scrape their OG images
+  console.log(`  ${label}: Searching for news article images...`);
+  const articleUrls = await findMatchingSignalUrls(title);
+  for (const articleUrl of articleUrls) {
+    const result = await scrapeOgImage(articleUrl, outputPath);
+    if (result) {
+      console.log(`  ${label}: ✅ OG image from ${new URL(articleUrl).hostname} (${(statSync(outputPath).size / 1024).toFixed(0)} KB)`);
+      return outputPath;
+    }
+  }
+
+  // Source 2: AI generation via Pollinations.ai
+  console.log(`  ${label}: Trying AI image generation...`);
   const shortTitle = title.slice(0, 80);
   const prompt = encodeURIComponent(
     `${shortTitle}, Nepal, photojournalism, dramatic, cinematic, no text`
   );
-  // Retry up to 2 times with 60s timeout each
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const seed = Date.now() + index + attempt * 1000;
       const url = `https://image.pollinations.ai/prompt/${prompt}?width=1080&height=700&nologo=true&model=flux&seed=${seed}`;
-      if (attempt > 0) console.log(`  Story ${index + 1}: Retry ${attempt}...`);
-      const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+      if (attempt > 0) console.log(`  ${label}: AI retry ${attempt}...`);
+      const res = await fetch(url, { signal: AbortSignal.timeout(45000) });
       if (!res.ok) continue;
       const buf = Buffer.from(await res.arrayBuffer());
       if (buf.length < 5000) continue;
       writeFileSync(outputPath, buf);
-      console.log(`  Story ${index + 1}: ${(buf.length / 1024).toFixed(0)} KB`);
+      console.log(`  ${label}: ✅ AI-generated (${(buf.length / 1024).toFixed(0)} KB)`);
       return outputPath;
-    } catch {
-      // Try again
-    }
+    } catch {}
   }
-  console.log(`  Story ${index + 1}: Failed after retries, no image`);
+
+  // Source 3: Scrape OG image from top RSS signals (broader search)
+  console.log(`  ${label}: Trying recent RSS article images...`);
+  try {
+    const recentRSS = await supabaseGet('intelligence_signals',
+      `url=not.like.*youtube*&url=not.like.*facebook*&source_id=like.rss-*&select=url&order=discovered_at.desc&limit=10`
+    );
+    // Skip ones we already tried
+    const tried = new Set(articleUrls);
+    for (const s of recentRSS) {
+      if (tried.has(s.url)) continue;
+      const result = await scrapeOgImage(s.url, outputPath);
+      if (result) {
+        console.log(`  ${label}: ✅ RSS fallback from ${new URL(s.url).hostname} (${(statSync(outputPath).size / 1024).toFixed(0)} KB)`);
+        return outputPath;
+      }
+    }
+  } catch {}
+
+  console.log(`  ${label}: ❌ No image found`);
   return null;
 }
 
