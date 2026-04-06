@@ -41,6 +41,7 @@ export interface DailyReelData {
     summaryNe?: string;
     sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
     signalCount: number;
+    imageUrl?: string; // AI-generated or scraped image
   }[];
   stats: {
     totalSignals: number;

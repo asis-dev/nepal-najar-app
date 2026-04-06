@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 /**
- * Render Daily Reels — generates 2 unified 60s vertical reels from live data
+ * Render Daily Reels — generates 2 unified 60s vertical reels with AI images
  *
  * Output: ~/Desktop/nepal-republic-videos/YYYY-MM-DD/
  *   1-daily-reel.mp4       (Nepali)
  *   2-daily-reel-en.mp4    (English)
  *
  * Usage: node scripts/render-all-videos.js [YYYY-MM-DD]
- *   If date is omitted, uses today's date in Nepal time.
  */
 
 const { execSync } = require('child_process');
@@ -64,7 +63,7 @@ async function supabaseCount(table, filter = '') {
   return parseInt(range.split('/')[1]) || 0;
 }
 
-// ── Edge TTS — MUST succeed or we abort ─────────────────────────────────
+// ── TTS — MUST succeed ──────────────────────────────────────────────────
 async function generateVoiceover(script, outputPath, voice) {
   console.log(`  Generating voiceover (${voice})...`);
   const { MsEdgeTTS } = require('msedge-tts');
@@ -78,9 +77,7 @@ async function generateVoiceover(script, outputPath, voice) {
     audioStream.on('error', reject);
   });
   const buf = Buffer.concat(chunks);
-  if (buf.length < 1000) {
-    throw new Error(`TTS output too small (${buf.length} bytes) — voice likely failed`);
-  }
+  if (buf.length < 1000) throw new Error(`TTS too small (${buf.length}B)`);
   writeFileSync(outputPath, buf);
   console.log(`  Voiceover: ${(buf.length / 1024).toFixed(0)} KB`);
 }
@@ -96,11 +93,10 @@ function renderVideo(compositionId, propsPath, outputPath) {
   console.log(`  Rendered: ${(statSync(outputPath).size / 1024 / 1024).toFixed(1)} MB`);
 }
 
-// ── Audio merge — MUST succeed or we abort ──────────────────────────────
+// ── Audio merge — MUST succeed with verified volume ─────────────────────
 function mergeAudio(videoPath, audioPath, outputPath) {
-  if (!existsSync(audioPath)) throw new Error(`Audio file missing: ${audioPath}`);
-  if (!existsSync(videoPath)) throw new Error(`Video file missing: ${videoPath}`);
-
+  if (!existsSync(audioPath)) throw new Error(`Audio missing: ${audioPath}`);
+  if (!existsSync(videoPath)) throw new Error(`Video missing: ${videoPath}`);
   console.log(`  Merging audio...`);
   execSync(
     `"${FFMPEG}" -y -i "${videoPath}" -i "${audioPath}" ` +
@@ -109,43 +105,58 @@ function mergeAudio(videoPath, audioPath, outputPath) {
     `-t 60 -movflags +faststart "${outputPath}"`,
     { cwd: ROOT, stdio: 'pipe', timeout: 120_000 }
   );
-
-  if (!existsSync(outputPath)) throw new Error(`Merge failed: ${outputPath} not found`);
-
-  // ── VERIFY audio is real, not silence ──
-  const probe = execSync(
-    `"${FFMPEG}" -i "${outputPath}" -af "volumedetect" -f null /dev/null 2>&1 || true`,
-    { encoding: 'utf8', timeout: 30_000 }
-  );
+  if (!existsSync(outputPath)) throw new Error(`Merge failed`);
+  // Verify audio is real
+  const probe = execSync(`"${FFMPEG}" -i "${outputPath}" -af "volumedetect" -f null /dev/null 2>&1 || true`, { encoding: 'utf8', timeout: 30_000 });
   const meanMatch = probe.match(/mean_volume:\s*(-[\d.]+)\s*dB/);
   const meanVol = meanMatch ? parseFloat(meanMatch[1]) : -91;
+  if (meanVol < -60) throw new Error(`SILENT output (${meanVol} dB)`);
+  console.log(`  Audio verified: mean ${meanVol.toFixed(1)} dB`);
+}
 
-  if (meanVol < -60) {
-    // Audio is effectively silent — something went wrong
-    throw new Error(`Audio merge produced SILENT output (mean_volume: ${meanVol} dB). TTS audio was not properly merged.`);
+// ── AI Image Generation (Pollinations.ai — free, no API key) ────────────
+async function generateStoryImage(title, outputPath, index) {
+  // Shorter prompt = faster generation
+  const shortTitle = title.slice(0, 80);
+  const prompt = encodeURIComponent(
+    `${shortTitle}, Nepal, photojournalism, dramatic, cinematic, no text`
+  );
+  // Retry up to 2 times with 60s timeout each
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const seed = Date.now() + index + attempt * 1000;
+      const url = `https://image.pollinations.ai/prompt/${prompt}?width=1080&height=700&nologo=true&model=flux&seed=${seed}`;
+      if (attempt > 0) console.log(`  Story ${index + 1}: Retry ${attempt}...`);
+      const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+      if (!res.ok) continue;
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length < 5000) continue;
+      writeFileSync(outputPath, buf);
+      console.log(`  Story ${index + 1}: ${(buf.length / 1024).toFixed(0)} KB`);
+      return outputPath;
+    } catch {
+      // Try again
+    }
   }
-
-  console.log(`  ✅ Audio verified: mean ${meanVol.toFixed(1)} dB`);
-  return outputPath;
+  console.log(`  Story ${index + 1}: Failed after retries, no image`);
+  return null;
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────
 async function main() {
-  // Accept date argument: node render-all-videos.js 2026-04-06
   const date = process.argv[2] || todayDate();
   const day = dayForDate(date);
   const outDir = join(OUTPUT_BASE, date);
   mkdirSync(outDir, { recursive: true });
-  console.log(`\n🎬 Rendering 2 daily reels for ${date} (Day ${day})...\n`);
+  console.log(`\n🎬 Rendering daily reels for ${date} (Day ${day})...\n`);
 
   // ── Fetch data ──
   const briefs = await supabaseGet('daily_briefs', `date=eq.${date}&select=*`);
   if (!briefs.length) {
-    // Try yesterday
     const yesterday = new Date(new Date(date).getTime() - 86400000).toISOString().slice(0, 10);
     const yBriefs = await supabaseGet('daily_briefs', `date=eq.${yesterday}&select=*`);
     if (yBriefs.length) {
-      console.log(`  No brief for ${date}, using ${yesterday}`);
+      console.log(`  Using brief from ${yesterday}`);
       briefs.push(yBriefs[0]);
     } else {
       console.error(`No brief for ${date} or ${yesterday}`);
@@ -158,66 +169,112 @@ async function main() {
   const todaySignals = await supabaseCount('intelligence_signals', `discovered_at=gte.${date}T00:00:00Z`);
   const promises = await supabaseGet('promises', 'select=id,title,title_ne,status,progress&order=id.asc&limit=109');
 
-  const statusBreakdown = { notStarted: 0, inProgress: 0, stalled: 0, delivered: 0 };
+  const sb = { notStarted: 0, inProgress: 0, stalled: 0, delivered: 0 };
   for (const p of promises) {
-    if (p.status === 'not_started') statusBreakdown.notStarted++;
-    else if (p.status === 'in_progress') statusBreakdown.inProgress++;
-    else if (p.status === 'stalled') statusBreakdown.stalled++;
-    else if (p.status === 'delivered') statusBreakdown.delivered++;
+    if (p.status === 'not_started') sb.notStarted++;
+    else if (p.status === 'in_progress') sb.inProgress++;
+    else if (p.status === 'stalled') sb.stalled++;
+    else if (p.status === 'delivered') sb.delivered++;
   }
 
-  const topMovers = promises
-    .filter(p => p.progress > 0)
-    .sort((a, b) => b.progress - a.progress)
-    .slice(0, 4)
+  const topMovers = promises.filter(p => p.progress > 0).sort((a, b) => b.progress - a.progress).slice(0, 4)
     .map(p => ({ titleNe: p.title_ne || p.title, title: p.title, progress: p.progress || 0, status: p.status }));
 
+  const confirms = moved.filter(c => c.direction === 'confirms').length;
+  const contradicts = moved.filter(c => c.direction === 'contradicts').length;
+  const pulse = brief.pulse || 0;
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STEP 0: Generate AI images for top 3 stories
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('🖼️  Step 0: Generating story images...\n');
+  const storyImages = [];
+  for (let i = 0; i < Math.min(3, stories.length); i++) {
+    const title = stories[i].title || stories[i].titleNe || '';
+    const imgPath = join(outDir, `story-${i + 1}.jpg`);
+    const result = await generateStoryImage(title, imgPath, i);
+    storyImages.push(result);
+    // Small delay between requests to avoid rate limiting
+    if (i < 2) await new Promise(r => setTimeout(r, 2000));
+  }
+  console.log('');
+
+  // Copy generated images to public/ so Remotion can serve them via staticFile()
+  const publicImgDir = join(ROOT, 'public', 'images', 'stories');
+  mkdirSync(publicImgDir, { recursive: true });
+  const imageStaticPaths = [];
+  for (let i = 0; i < storyImages.length; i++) {
+    if (storyImages[i] && existsSync(storyImages[i])) {
+      const dest = join(publicImgDir, `story-${i + 1}.jpg`);
+      require('fs').copyFileSync(storyImages[i], dest);
+      imageStaticPaths.push(`images/stories/story-${i + 1}.jpg`);
+    } else {
+      imageStaticPaths.push(null);
+    }
+  }
+
+  // Build reel data
   const reelData = {
-    date, dayNumber: day,
-    pulse: brief.pulse || 0, pulseLabel: brief.pulse_label || '',
+    date, dayNumber: day, pulse, pulseLabel: brief.pulse_label || '',
     phase: day <= 30 ? 'early' : day <= 100 ? 'ramp' : 'delivery',
-    topStories: stories.slice(0, 5).map(s => ({
+    topStories: stories.slice(0, 6).map((s, i) => ({
       title: s.title || '', titleNe: s.titleNe || '',
       summary: s.summary || '', summaryNe: s.summaryNe || '',
       sentiment: s.sentiment || 'neutral', signalCount: s.signalCount || 0,
+      imageUrl: i < 3 && imageStaticPaths[i] ? imageStaticPaths[i] : undefined,
     })),
     stats: { totalSignals: 38200 + todaySignals, newSignals: todaySignals, sourcesActive: 80, commitmentsTracked: 109 },
-    commitmentsMoved: {
-      confirms: moved.filter(c => c.direction === 'confirms').length,
-      contradicts: moved.filter(c => c.direction === 'contradicts').length,
-    },
-    statusBreakdown, topMovers,
-    minister: { name: 'Balen Shah', nameNe: 'बालेन शाह', role: 'Prime Minister', roleNe: 'प्रधानमन्त्री' },
+    commitmentsMoved: { confirms, contradicts },
+    statusBreakdown: sb, topMovers,
+    minister: { name: 'Balen Shah', nameNe: '\u092C\u093E\u0932\u0947\u0928 \u0936\u093E\u0939', role: 'Prime Minister', roleNe: '\u092A\u094D\u0930\u0927\u093E\u0928\u092E\u0928\u094D\u0924\u094D\u0930\u0940' },
   };
-
   const propsPath = join(outDir, 'reel-props.json');
   writeFileSync(propsPath, JSON.stringify({ data: reelData }));
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 1: Generate ALL voiceovers FIRST (fail fast if TTS broken)
+  // STEP 1: Generate voiceovers — FULL 60s scripts covering every section
   // ═══════════════════════════════════════════════════════════════════════
   console.log('🎙️  Step 1: Generating voiceovers...\n');
 
+  const ne = stories.slice(0, 5).map(s => s.titleNe || s.title || '');
+  const en = stories.slice(0, 5).map(s => s.title || '');
+
   const vo1Path = join(outDir, '1-vo.mp3');
-  const storyHeadlinesNe = stories.slice(0, 3).map(s => s.titleNe || s.title).filter(Boolean).join('। ');
-  const vo1Script = `नमस्कार। आज सरकारको ${day} औं दिन हो। ` +
-    `${todaySignals} नयाँ संकेत भेटियो। ` +
-    `${storyHeadlinesNe}। ` +
-    `१०९ वचनबद्धतामध्ये ${statusBreakdown.inProgress} प्रगतिमा, ${statusBreakdown.stalled} रोकिएको, ${statusBreakdown.delivered} पूरा भएको छ। ` +
-    `प्रधानमन्त्री बालेन शाहले ${day} दिनमा कति प्रगति गरे? ` +
-    `सरकारलाई कति अंक दिनुहुन्छ? कमेन्टमा भन्नुहोस्। ` +
-    `थप विवरण नेपाल रिपब्लिक डट ओआरजीमा।`;
+  const vo1Script = [
+    `\u0928\u092E\u0938\u094D\u0915\u093E\u0930\u0964 \u0906\u091C \u0938\u0930\u0915\u093E\u0930\u0915\u094B ${day} \u0914\u0902 \u0926\u093F\u0928 \u0939\u094B\u0964`,
+    `${todaySignals} \u0928\u092F\u093E\u0901 \u0938\u0902\u0915\u0947\u0924 \u092D\u0947\u091F\u093F\u092F\u094B\u0964`,
+    ne[0] ? `\u092A\u0939\u093F\u0932\u094B \u0915\u0925\u093E\u0964 ${ne[0]}\u0964` : '',
+    ne[1] ? `\u0926\u094B\u0938\u094D\u0930\u094B \u0915\u0925\u093E\u0964 ${ne[1]}\u0964` : '',
+    ne[2] ? `\u0924\u0947\u0938\u094D\u0930\u094B \u0915\u0925\u093E\u0964 ${ne[2]}\u0964` : '',
+    ne[3] ? `${ne[3]}\u0964` : '',
+    ne[4] ? `${ne[4]}\u0964` : '',
+    `\u0967\u0966\u096F \u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E\u092E\u0927\u094D\u092F\u0947 ${sb.inProgress} \u092A\u094D\u0930\u0917\u0924\u093F\u092E\u093E, ${sb.stalled} \u0930\u094B\u0915\u093F\u090F\u0915\u094B, \u0930 ${sb.delivered} \u092A\u0942\u0930\u093E \u092D\u090F\u0915\u094B \u091B\u0964`,
+    `\u092A\u094D\u0930\u0927\u093E\u0928\u092E\u0928\u094D\u0924\u094D\u0930\u0940 \u092C\u093E\u0932\u0947\u0928 \u0936\u093E\u0939\u0915\u094B ${day} \u0926\u093F\u0928\u0915\u094B \u0915\u093E\u0930\u094D\u092F\u0938\u092E\u094D\u092A\u093E\u0926\u0928 \u0915\u0938\u094D\u0924\u094B \u091B? \u091C\u0928\u0924\u093E\u0932\u0947 \u0928\u093F\u0917\u0930\u093E\u0928\u0940 \u0917\u0930\u093F\u0930\u0939\u0947\u0915\u093E \u091B\u0928\u094D\u0964`,
+    `\u0930\u093F\u092A\u092C\u094D\u0932\u093F\u0915 \u0938\u094D\u0915\u094B\u0930 ${pulse} \u0905\u0902\u0915\u0964`,
+    confirms > 0 ? `${confirms} \u0935\u091A\u0928\u092C\u0926\u094D\u0927\u0924\u093E\u092E\u093E \u092A\u094D\u0930\u0917\u0924\u093F \u0926\u0947\u0916\u093F\u092F\u094B\u0964` : '',
+    contradicts > 0 ? `${contradicts} \u092E\u093E \u091A\u093F\u0928\u094D\u0924\u093E \u092C\u0922\u094D\u092F\u094B\u0964` : '',
+    `\u0924\u092A\u093E\u0908\u0902\u0932\u0947 \u0938\u0930\u0915\u093E\u0930\u0932\u093E\u0908 \u0915\u0924\u093F \u0905\u0902\u0915 \u0926\u093F\u0928\u0941\u0939\u0941\u0928\u094D\u091B? \u0915\u092E\u0947\u0928\u094D\u091F\u092E\u093E \u092D\u0928\u094D\u0928\u0941\u0939\u094B\u0938\u094D\u0964`,
+    `\u0925\u092A \u0935\u093F\u0935\u0930\u0923 \u0928\u0947\u092A\u093E\u0932 \u0930\u093F\u092A\u092C\u094D\u0932\u093F\u0915 \u0921\u091F \u0913\u0906\u0930\u091C\u0940\u092E\u093E\u0964 \u092B\u0932\u094B \u0917\u0930\u094D\u0928\u0941\u0939\u094B\u0938\u094D\u0964`,
+  ].filter(Boolean).join(' ');
   await generateVoiceover(vo1Script, vo1Path, 'ne-NP-SagarNeural');
 
   const vo2Path = join(outDir, '2-vo.mp3');
-  const storyHeadlinesEn = stories.slice(0, 3).map(s => s.title).filter(Boolean).join('. ');
-  const vo2Script = `Day ${day} of the new government. ` +
-    `${todaySignals} new signals tracked today. ` +
-    `${storyHeadlinesEn}. ` +
-    `Of 109 government promises, ${statusBreakdown.inProgress} are in progress, ${statusBreakdown.stalled} stalled, and ${statusBreakdown.delivered} delivered. ` +
-    `How is Prime Minister Balen Shah performing after ${day} days? ` +
-    `How would you grade this government? Drop your score in the comments. ` +
-    `Track all 109 promises at nepal republic dot org.`;
+  const vo2Script = [
+    `Day ${day} of Nepal's new government.`,
+    `${todaySignals} new signals tracked today across 80 sources.`,
+    en[0] ? `Story one. ${en[0]}.` : '',
+    en[1] ? `Story two. ${en[1]}.` : '',
+    en[2] ? `Story three. ${en[2]}.` : '',
+    en[3] ? `${en[3]}.` : '',
+    en[4] ? `${en[4]}.` : '',
+    `Of 109 government promises, ${sb.inProgress} are in progress, ${sb.stalled} are stalled, and ${sb.delivered} have been delivered.`,
+    `How is Prime Minister Balen Shah performing after ${day} days? The people are watching closely.`,
+    `The Republic Score stands at ${pulse}.`,
+    confirms > 0 ? `${confirms} promises showed progress.` : '',
+    contradicts > 0 ? `${contradicts} raised concerns.` : '',
+    `How would you grade this government? Drop your score in the comments below.`,
+    `Follow Nepal Republic for daily AI-powered government accountability tracking.`,
+  ].filter(Boolean).join(' ');
   await generateVoiceover(vo2Script, vo2Path, 'en-US-AndrewNeural');
 
   console.log('  ✅ Both voiceovers ready\n');
@@ -234,11 +291,10 @@ async function main() {
   const v2raw = join(outDir, '2-raw.mp4');
   console.log('🌍 English reel:');
   renderVideo('DailyReelEN', propsPath, v2raw);
-
-  console.log('  ✅ Both videos rendered\n');
+  console.log('');
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 3: Merge audio + verify (fail if silent)
+  // STEP 3: Merge audio + verify
   // ═══════════════════════════════════════════════════════════════════════
   console.log('🔊 Step 3: Merging audio & verifying...\n');
 
@@ -251,12 +307,15 @@ async function main() {
   mergeAudio(v2raw, vo2Path, v2final);
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 4: Cleanup temp files
+  // STEP 4: Cleanup
   // ═══════════════════════════════════════════════════════════════════════
   console.log('\n🧹 Cleaning up...');
-  for (const f of [propsPath, v1raw, v2raw, vo1Path, vo2Path]) {
-    try { unlinkSync(f); } catch {}
+  const tempFiles = [propsPath, v1raw, v2raw, vo1Path, vo2Path];
+  for (let i = 0; i < 3; i++) {
+    tempFiles.push(join(outDir, `story-${i + 1}.jpg`));
+    tempFiles.push(join(ROOT, 'public', 'images', 'stories', `story-${i + 1}.jpg`));
   }
+  for (const f of tempFiles) { try { unlinkSync(f); } catch {} }
 
   const v1size = (statSync(v1final).size / 1024 / 1024).toFixed(1);
   const v2size = (statSync(v2final).size / 1024 / 1024).toFixed(1);
@@ -266,6 +325,7 @@ async function main() {
   console.log(`   1-daily-reel.mp4       — 60s Nepali (${v1size} MB)`);
   console.log(`   2-daily-reel-en.mp4    — 60s English (${v2size} MB)`);
   console.log(`\n🔊 Audio VERIFIED on both videos`);
+  console.log(`🖼️  AI-generated images for top stories`);
   console.log(`🚀 Ready for Facebook / TikTok / Instagram / YouTube!\n`);
 }
 
