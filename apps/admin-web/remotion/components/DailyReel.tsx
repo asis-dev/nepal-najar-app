@@ -76,42 +76,95 @@ function BottomBar() {
   );
 }
 
-/* ── HOOK (0-3s) ── */
+/* ── HOOK (0-3s) — EPIC FRAME 0 ── */
 function Hook({ data }: { data: DailyReelData }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const pmPhoto = staticFile('images/politicians/balen-shah.jpg');
-  const textScale = spring({ frame: Math.max(0, frame - 5), fps, from: 1.4, to: 1, config: { damping: 9, mass: 0.3 } });
-  const textOpacity = interpolate(frame, [5, 10], [0, 1], { extrapolateRight: 'clamp' });
-  const dayProgress = interpolate(frame, [10, 30], [0, 1], { extrapolateRight: 'clamp' });
+  // Dramatic slow zoom on PM photo
+  const photoScale = interpolate(frame, [0, 90], [1.0, 1.15], { extrapolateRight: 'clamp' });
+  const textScale = spring({ frame: Math.max(0, frame - 3), fps, from: 2.0, to: 1, config: { damping: 7, mass: 0.25 } });
+  const textOpacity = interpolate(frame, [3, 8], [0, 1], { extrapolateRight: 'clamp' });
+  const dayProgress = interpolate(frame, [8, 25], [0, 1], { extrapolateRight: 'clamp' });
   const displayDay = Math.round(dayProgress * data.dayNumber);
+  // Red flash on entry
+  const flashOpacity = interpolate(frame, [0, 3, 8], [0.6, 0.3, 0], { extrapolateRight: 'clamp' });
+  // Headline text from top story
+  const topHeadline = data.topStories[0]?.titleNe || data.topStories[0]?.title || '';
 
   return (
     <AbsoluteFill>
-      <div style={{ position: 'absolute', top: 50, left: 0, right: 0, height: 750, overflow: 'hidden' }}>
-        <Img src={pmPhoto} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%', filter: 'brightness(0.7) contrast(1.2)' }} />
-        <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 40%, ${DARK} 95%)` }} />
-        <div style={{ position: 'absolute', bottom: 120, left: 40, right: 40 }}>
-          <div style={{ background: 'rgba(0,0,0,0.7)', borderLeft: `4px solid ${RED}`, borderRadius: 8, padding: '12px 20px', display: 'inline-flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 28, fontWeight: 900, color: WHITE }}>PM बालेन शाह</span>
-            <span style={{ fontSize: 18, color: GOLD, fontWeight: 600 }}>प्रधानमन्त्री • RSP</span>
+      {/* Full-screen PM photo with dramatic zoom */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <Img src={pmPhoto} style={{
+          width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%',
+          filter: 'brightness(0.55) contrast(1.3) saturate(1.2)',
+          transform: `scale(${photoScale})`,
+        }} />
+        {/* Dramatic gradient overlays */}
+        <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.3) 60%, ${DARK} 92%)` }} />
+        <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${RED}30 0%, transparent 50%)` }} />
+        {/* Red flash on entry */}
+        <div style={{ position: 'absolute', inset: 0, background: RED, opacity: flashOpacity }} />
+      </div>
+
+      {/* PM name badge - top left */}
+      <div style={{
+        position: 'absolute', top: 80, left: 30,
+        opacity: interpolate(frame, [5, 12], [0, 1], { extrapolateRight: 'clamp' }),
+        transform: `translateX(${interpolate(frame, [5, 12], [-30, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+      }}>
+        <div style={{ background: 'rgba(0,0,0,0.8)', borderLeft: `5px solid ${RED}`, borderRadius: 10, padding: '14px 24px', display: 'flex', flexDirection: 'column', gap: 4, backdropFilter: 'blur(8px)' }}>
+          <span style={{ fontSize: 32, fontWeight: 900, color: WHITE, letterSpacing: 1 }}>PM बालेन शाह</span>
+          <span style={{ fontSize: 20, color: GOLD, fontWeight: 700 }}>प्रधानमन्त्री • RSP सरकार</span>
+        </div>
+      </div>
+
+      {/* Day counter - massive, center */}
+      <div style={{ position: 'absolute', top: '38%', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{
+          opacity: interpolate(frame, [0, 5], [0, 1], { extrapolateRight: 'clamp' }),
+          transform: `scale(${textScale})`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 8 }}>
+            <span style={{ fontSize: 200, fontWeight: 900, color: WHITE, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 60px ${RED}80, 0 4px 30px rgba(0,0,0,0.9)` }}>{displayDay}</span>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: -10 }}>
+            <span style={{ fontSize: 60, fontWeight: 900, color: RED, textShadow: '0 2px 10px rgba(0,0,0,0.8)', letterSpacing: 8 }}>दिन</span>
           </div>
         </div>
       </div>
-      <div style={{ position: 'absolute', bottom: 80, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '0 40px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, opacity: interpolate(frame, [3, 8], [0, 1], { extrapolateRight: 'clamp' }) }}>
-          <span style={{ fontSize: 160, fontWeight: 900, color: WHITE, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 40px ${RED}60` }}>{displayDay}</span>
-          <span style={{ fontSize: 56, fontWeight: 800, color: RED }}>दिन</span>
-        </div>
-        <div style={{ opacity: textOpacity, transform: `scale(${textScale})`, fontSize: 52, fontWeight: 900, color: WHITE, textAlign: 'center', lineHeight: 1.25, textShadow: '0 4px 20px rgba(0,0,0,0.8)' }}>
+
+      {/* Question text */}
+      <div style={{
+        position: 'absolute', bottom: 160, left: 0, right: 0,
+        opacity: textOpacity, transform: `scale(${spring({ frame: Math.max(0, frame - 5), fps, from: 1.3, to: 1, config: { damping: 8, mass: 0.3 } })})`,
+      }}>
+        <div style={{ fontSize: 56, fontWeight: 900, color: WHITE, textAlign: 'center', lineHeight: 1.2, textShadow: '0 4px 30px rgba(0,0,0,0.9)', padding: '0 30px' }}>
           सरकारले आज{'\n'}के गर्यो? 🤔
         </div>
       </div>
+
+      {/* Scrolling headline ticker at bottom */}
+      {topHeadline && (
+        <div style={{
+          position: 'absolute', bottom: 70, left: 0, right: 0, padding: '10px 0',
+          background: 'rgba(0,0,0,0.7)', borderTop: `2px solid ${RED}`,
+          opacity: interpolate(frame, [20, 30], [0, 1], { extrapolateRight: 'clamp' }),
+        }}>
+          <div style={{
+            fontSize: 22, fontWeight: 700, color: GOLD, whiteSpace: 'nowrap',
+            transform: `translateX(${interpolate(frame, [20, 90], [1080, -600], { extrapolateRight: 'clamp' })}px)`,
+          }}>
+            🔴 {topHeadline} • {data.stats.newSignals} नयाँ संकेत • nepalrepublic.org
+          </div>
+        </div>
+      )}
     </AbsoluteFill>
   );
 }
 
-/* ── STATS (3-5.5s) — compressed ── */
+/* ── STATS (3-5.5s) — with rotating story image backgrounds ── */
 function StatsFlash({ data }: { data: DailyReelData }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -120,7 +173,9 @@ function StatsFlash({ data }: { data: DailyReelData }) {
     { value: data.stats.sourcesActive, label: 'स्रोत स्क्यान', color: GOLD },
     { value: data.stats.commitmentsTracked, label: 'वचनबद्धता', color: RED },
   ];
-  const STAT_DUR = 25; // faster: 0.83s each
+  const STAT_DUR = 25;
+  // Get story images for backgrounds
+  const storyImages = data.topStories.filter(s => s.imageUrl).map(s => s.imageUrl!);
 
   return (
     <AbsoluteFill>
@@ -133,15 +188,25 @@ function StatsFlash({ data }: { data: DailyReelData }) {
         const numScale = spring({ frame: Math.max(0, f), fps, from: 2.5, to: 1, config: { damping: 8, mass: 0.3 } });
         const countProgress = interpolate(f, [2, 18], [0, 1], { extrapolateRight: 'clamp' });
         const displayVal = Math.round(countProgress * stat.value);
+        const bgImg = storyImages[i % storyImages.length];
 
         return (
-          <AbsoluteFill key={i} style={{ opacity: enter * exit, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: DARK }}>
-            <div style={{ width: interpolate(f, [0, 8], [0, 800], { extrapolateRight: 'clamp' }), height: 6, background: stat.color, borderRadius: 3, marginBottom: 40, boxShadow: `0 0 20px ${stat.color}60` }} />
-            <div style={{ transform: `scale(${numScale})`, fontSize: 180, fontWeight: 900, color: WHITE, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 60px ${stat.color}40` }}>
-              {displayVal.toLocaleString()}
-            </div>
-            <div style={{ marginTop: 20, fontSize: 44, fontWeight: 800, color: stat.color, textAlign: 'center', lineHeight: 1.2 }}>
-              {stat.label}
+          <AbsoluteFill key={i} style={{ opacity: enter * exit, background: DARK }}>
+            {/* Background image — heavily darkened */}
+            {bgImg && (
+              <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                <Img src={staticFile(bgImg)} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.18) blur(4px) saturate(0.6)', transform: 'scale(1.1)' }} />
+                <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at center, transparent 30%, ${DARK} 80%)` }} />
+              </div>
+            )}
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <div style={{ width: interpolate(f, [0, 8], [0, 800], { extrapolateRight: 'clamp' }), height: 6, background: stat.color, borderRadius: 3, marginBottom: 40, boxShadow: `0 0 20px ${stat.color}60` }} />
+              <div style={{ transform: `scale(${numScale})`, fontSize: 180, fontWeight: 900, color: WHITE, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 60px ${stat.color}40, 0 4px 20px rgba(0,0,0,0.8)` }}>
+                {displayVal.toLocaleString()}
+              </div>
+              <div style={{ marginTop: 20, fontSize: 44, fontWeight: 800, color: stat.color, textAlign: 'center', lineHeight: 1.2, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+                {stat.label}
+              </div>
             </div>
           </AbsoluteFill>
         );
@@ -246,7 +311,7 @@ function ImageStories({ data }: { data: DailyReelData }) {
   );
 }
 
-/* ── QUICK HEADLINES (20-26s) — stories 4-5 text only, rapid ── */
+/* ── QUICK HEADLINES (20-26s) — stories 4-5 WITH images ── */
 function QuickHeadlines({ data }: { data: DailyReelData }) {
   const frame = useCurrentFrame();
   const stories = data.topStories.slice(3, 6);
@@ -263,24 +328,39 @@ function QuickHeadlines({ data }: { data: DailyReelData }) {
         const exit = interpolate(f, [STORY_DUR - 6, STORY_DUR], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
         const title = story.titleNe || story.title;
         const color = sentimentColor(story.sentiment);
+        const imgScale = interpolate(f, [0, STORY_DUR], [1.0, 1.12], { extrapolateRight: 'clamp' });
 
         return (
-          <AbsoluteFill key={i} style={{
-            opacity: enter * exit, background: DARK,
-            display: 'flex', flexDirection: 'column', justifyContent: 'center',
-            padding: '100px 50px 120px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-              <div style={{ background: color, borderRadius: 10, padding: '6px 16px', fontSize: 20, fontWeight: 900, color: DARK }}>#{i + 4}</div>
-              <div style={{ flex: 1, height: 3, background: `${color}40`, borderRadius: 2 }} />
-            </div>
+          <AbsoluteFill key={i} style={{ opacity: enter * exit, background: DARK }}>
+            {/* Background image with heavy overlay */}
+            {story.imageUrl && typeof story.imageUrl === 'string' && (
+              <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                <Img src={staticFile(story.imageUrl)} style={{
+                  width: '100%', height: '100%', objectFit: 'cover',
+                  transform: `scale(${imgScale})`,
+                  filter: 'brightness(0.35) contrast(1.3) saturate(1.2)',
+                }} />
+                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${DARK}cc 0%, transparent 30%, transparent 60%, ${DARK}ee 100%)` }} />
+              </div>
+            )}
             <div style={{
-              fontSize: 48, fontWeight: 900, color: WHITE, lineHeight: 1.25,
-              transform: `translateX(${interpolate(f, [0, 8], [-40, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+              position: 'absolute', inset: 0,
+              display: 'flex', flexDirection: 'column', justifyContent: 'center',
+              padding: '100px 50px 120px',
             }}>
-              {title}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                <div style={{ background: color, borderRadius: 10, padding: '6px 16px', fontSize: 22, fontWeight: 900, color: DARK }}>#{i + 4}</div>
+                <div style={{ flex: 1, height: 3, background: `${color}60`, borderRadius: 2 }} />
+              </div>
+              <div style={{
+                fontSize: 48, fontWeight: 900, color: WHITE, lineHeight: 1.25,
+                textShadow: '0 2px 15px rgba(0,0,0,0.9)',
+                transform: `translateX(${interpolate(f, [0, 8], [-40, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+              }}>
+                {title}
+              </div>
             </div>
-            <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: 6, background: color, borderRadius: '0 3px 3px 0' }} />
+            <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: 6, background: color, borderRadius: '0 3px 3px 0', boxShadow: `0 0 15px ${color}60` }} />
           </AbsoluteFill>
         );
       })}
@@ -288,12 +368,14 @@ function QuickHeadlines({ data }: { data: DailyReelData }) {
   );
 }
 
-/* ── COMMITMENT TRACKER (26-34s) ── */
+/* ── COMMITMENT TRACKER (26-34s) — with background image ── */
 function CommitmentTracker({ data }: { data: DailyReelData }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { statusBreakdown: sb, topMovers } = data;
   const total = 109;
+  // Use first available story image as blurred background
+  const bgImage = data.topStories.find(s => s.imageUrl)?.imageUrl;
 
   const statusItems = [
     { label: 'प्रगतिमा', count: sb.inProgress, color: '#06b6d4', icon: '🔄' },
@@ -304,6 +386,12 @@ function CommitmentTracker({ data }: { data: DailyReelData }) {
 
   return (
     <AbsoluteFill style={{ background: DARK }}>
+      {/* Blurred background image */}
+      {bgImage && (
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          <Img src={staticFile(bgImage)} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.15) blur(8px) saturate(0.5)', transform: 'scale(1.1)' }} />
+        </div>
+      )}
       {/* Phase 1 (0-120): Status grid */}
       <Sequence from={0} durationInFrames={120}>
         <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 40px', gap: 20 }}>
@@ -426,7 +514,7 @@ function MinisterSpotlight({ data }: { data: DailyReelData }) {
   );
 }
 
-/* ── SCORE REVEAL (42-52s) ── */
+/* ── SCORE REVEAL (42-52s) — with PM background ── */
 function ScoreReveal({ data }: { data: DailyReelData }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -438,9 +526,14 @@ function ScoreReveal({ data }: { data: DailyReelData }) {
   const strokeDashoffset = circumference * (1 - gaugeProgress);
   const scoreScale = spring({ frame: Math.max(0, frame - 60), fps, from: 4, to: 1, config: { damping: 7, mass: 0.3 } });
   const scoreOpacity = interpolate(frame, [60, 66], [0, 1], { extrapolateRight: 'clamp' });
+  const pmPhoto = staticFile('images/politicians/balen-shah.jpg');
 
   return (
     <AbsoluteFill style={{ background: DARK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      {/* Subtle PM background */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <Img src={pmPhoto} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.12) blur(6px) grayscale(0.8)', transform: 'scale(1.1)' }} />
+      </div>
       <div style={{ fontSize: 28, fontWeight: 800, color: GOLD, letterSpacing: 6, opacity: interpolate(frame, [0, 8], [0, 1], { extrapolateRight: 'clamp' }) }}>REPUBLIC SCORE</div>
       <div style={{ position: 'relative', width: 360, height: 360, marginTop: 6 }}>
         <svg width="360" height="360" style={{ transform: 'rotate(-90deg)' }}>

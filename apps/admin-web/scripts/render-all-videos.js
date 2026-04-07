@@ -272,21 +272,20 @@ async function main() {
   const pulse = brief.pulse || 0;
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 0: Generate AI images for top 3 stories
+  // STEP 0: Generate images for ALL stories (not just 3!)
   // ═══════════════════════════════════════════════════════════════════════
-  console.log('🖼️  Step 0: Generating story images...\n');
+  console.log('🖼️  Step 0: Generating story images for ALL stories...\n');
   const storyImages = [];
-  for (let i = 0; i < Math.min(3, stories.length); i++) {
+  const storyCount = Math.min(6, stories.length);
+  for (let i = 0; i < storyCount; i++) {
     const title = stories[i].title || stories[i].titleNe || '';
     const imgPath = join(outDir, `story-${i + 1}.jpg`);
     const result = await generateStoryImage(title, imgPath, i);
     storyImages.push(result);
-    // Small delay between requests to avoid rate limiting
-    if (i < 2) await new Promise(r => setTimeout(r, 2000));
   }
   console.log('');
 
-  // Copy generated images to public/ so Remotion can serve them via staticFile()
+  // Copy ALL generated images to public/ so Remotion can serve them via staticFile()
   const publicImgDir = join(ROOT, 'public', 'images', 'stories');
   mkdirSync(publicImgDir, { recursive: true });
   const imageStaticPaths = [];
@@ -300,7 +299,7 @@ async function main() {
     }
   }
 
-  // Build reel data
+  // Build reel data — ALL stories get images now
   const reelData = {
     date, dayNumber: day, pulse, pulseLabel: brief.pulse_label || '',
     phase: day <= 30 ? 'early' : day <= 100 ? 'ramp' : 'delivery',
@@ -308,7 +307,7 @@ async function main() {
       title: s.title || '', titleNe: s.titleNe || '',
       summary: s.summary || '', summaryNe: s.summaryNe || '',
       sentiment: s.sentiment || 'neutral', signalCount: s.signalCount || 0,
-      imageUrl: i < 3 && imageStaticPaths[i] ? imageStaticPaths[i] : undefined,
+      imageUrl: imageStaticPaths[i] || undefined,
     })),
     stats: { totalSignals: 38200 + todaySignals, newSignals: todaySignals, sourcesActive: 80, commitmentsTracked: 109 },
     commitmentsMoved: { confirms, contradicts },
@@ -398,7 +397,7 @@ async function main() {
   // ═══════════════════════════════════════════════════════════════════════
   console.log('\n🧹 Cleaning up...');
   const tempFiles = [propsPath, v1raw, v2raw, vo1Path, vo2Path];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 6; i++) {
     tempFiles.push(join(outDir, `story-${i + 1}.jpg`));
     tempFiles.push(join(ROOT, 'public', 'images', 'stories', `story-${i + 1}.jpg`));
   }
