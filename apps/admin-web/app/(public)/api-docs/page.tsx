@@ -64,6 +64,24 @@ export default function ApiDocsPage() {
         <pre className="text-xs text-zinc-400 overflow-x-auto"><code>{`curl https://nepalrepublic.org/api/public/v1/commitments?status=stalled`}</code></pre>
       </div>
 
+      <div className="mt-6 rounded-2xl bg-zinc-900 border border-zinc-800 p-5">
+        <h2 className="text-sm font-bold text-zinc-200 mb-2">Embed the live scorecard</h2>
+        <p className="text-xs text-zinc-400 mb-3">
+          Drop this into your article or blog post. Updates every 10 minutes.
+        </p>
+        <pre className="text-xs text-zinc-400 overflow-x-auto bg-zinc-950 p-3 rounded-lg"><code>{`<iframe src="https://nepalrepublic.org/embed/scorecard"
+  width="500" height="260" frameborder="0"
+  style="border:0;max-width:100%"></iframe>`}</code></pre>
+      </div>
+
+      <div className="mt-6 rounded-2xl bg-zinc-900 border border-zinc-800 p-5">
+        <h2 className="text-sm font-bold text-zinc-200 mb-2">RSS feed</h2>
+        <p className="text-xs text-zinc-400">
+          Subscribe to the live action inbox in any RSS reader:{' '}
+          <a href="/inbox.rss" className="text-red-400 hover:underline">nepalrepublic.org/inbox.rss</a>
+        </p>
+      </div>
+
       <div className="mt-6 text-xs text-zinc-500">
         License: data is public-interest journalism. Attribution to Nepal Republic appreciated.
       </div>

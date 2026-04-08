@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
 import type { ServiceTaskRecord, ServiceTaskStatus } from '@/lib/services/task-types';
+import { TaskHistory } from '@/components/public/services/task-history';
 
 const STATUS_LABELS: Record<ServiceTaskStatus, string> = {
   intake: 'Intake',
@@ -206,6 +207,10 @@ export default function MyServiceTasksPage() {
                       ))}
                     </ul>
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <TaskHistory taskId={task.id} />
                 </div>
 
                 {task.actions.length > 0 && (

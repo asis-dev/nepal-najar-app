@@ -34,6 +34,7 @@ import {
   BarChart3,
   Grid3x3,
   FolderLock,
+  ListTodo,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -72,7 +73,7 @@ const PULSE_COLORS = {
 const desktopPrimaryLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
   { href: '/services', labelKey: 'nav.services', icon: Grid3x3 },
-  { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
+  { href: '/me/tasks', labelKey: 'nav.tasks', icon: ListTodo },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
   { href: '/complaints', labelKey: 'nav.complaints', icon: MessageSquareWarning },
 ];
@@ -82,6 +83,7 @@ const desktopMoreLinks = [
   { href: '/inbox', labelKey: 'nav.inbox', icon: MessageSquareWarning },
   { href: '/petitions', labelKey: 'nav.petitions', icon: Megaphone },
   { href: '/me/vault', labelKey: 'nav.vault', icon: FolderLock },
+  { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
   { href: '/corruption', labelKey: 'nav.corruption', icon: Shield },
   { href: '/ministers', labelKey: 'nav.ministers', icon: Users },
   { href: '/scorecard', labelKey: 'nav.ministries', icon: Award },
@@ -97,6 +99,7 @@ const desktopMoreLinks = [
 const allNavLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
   { href: '/services', labelKey: 'nav.services', icon: Grid3x3 },
+  { href: '/me/tasks', labelKey: 'nav.tasks', icon: ListTodo },
   { href: '/me/vault', labelKey: 'nav.vault', icon: FolderLock },
   { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },

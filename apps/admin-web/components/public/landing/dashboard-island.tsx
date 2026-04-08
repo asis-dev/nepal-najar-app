@@ -22,6 +22,7 @@ import { useDailyBrief } from '@/lib/hooks/use-daily-brief';
 import { useContradictions } from '@/lib/hooks/use-contradictions';
 import { UnifiedDailyBrief } from '@/components/public/landing/unified-daily-brief';
 import { PulseBar } from '@/components/public/landing/pulse-bar';
+import { ActiveTasksOverview } from '@/components/public/services/active-tasks-overview';
 
 /* ═══════════════════════════════════════════
    Constants
@@ -296,6 +297,10 @@ export function DashboardIsland() {
         </div>
 
         {/* ── Listen about app + Report Civic Issue — single row ── */}
+        <div className="mb-3 md:mb-5">
+          <ActiveTasksOverview variant="compact" />
+        </div>
+
         <div className="mb-3 md:mb-5 flex items-center gap-2">
           <button
             className="flex flex-1 basis-1/2 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-600/15 px-2.5 py-2.5 text-[12px] font-bold text-red-100 transition-colors hover:bg-red-600/25"

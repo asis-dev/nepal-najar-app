@@ -55,7 +55,27 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json({ ok: true, count: (pet.signature_count || 0) + 1, goal: pet.goal });
+    const newCount = (pet.signature_count || 0) + 1;
+    // Push at milestone thresholds
+    const milestones = [100, 500, 1000, 5000, 10000, 25000, 50000, 100000];
+    if (milestones.includes(newCount)) {
+      try {
+        const { sendPushToAll } = await import('@/lib/push/send');
+        const { data: petFull } = await supabase
+          .from('petitions')
+          .select('title')
+          .eq('slug', params.slug)
+          .single();
+        await sendPushToAll({
+          title: `🎯 ${newCount.toLocaleString()} signatures!`,
+          body: (petFull?.title as string) || 'A petition you follow hit a milestone',
+          url: `/petitions/${params.slug}`,
+        });
+      } catch {
+        /* noop */
+      }
+    }
+    return NextResponse.json({ ok: true, count: newCount, goal: pet.goal });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message }, { status: 400 });
   }

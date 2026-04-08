@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Award, Users, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut, Swords, Scale, AlertCircle, Shield, ClipboardCheck, MessageSquareWarning, Target, Home, Grid3x3, FolderLock } from 'lucide-react';
+import { Award, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut, Swords, Scale, AlertCircle, Shield, MessageSquareWarning, Home, Grid3x3, FolderLock, ListTodo } from 'lucide-react';
 import { useTrending } from '@/lib/hooks/use-trending';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
@@ -17,9 +17,8 @@ const PULSE_COLORS = {
 
 const navItems = [
   { href: '/', icon: Home, label: 'Home', labelNe: 'गृह', hasPulse: true },
-  { href: '/explore/first-100-days', icon: Target, label: 'Tracker', labelNe: 'ट्र्याकर' },
-  { href: '/report-card', icon: ClipboardCheck, label: 'Report', labelNe: 'रिपोर्ट' },
-  { href: '/ministers', icon: Users, label: 'Cabinet', labelNe: 'क्याबिनेट' },
+  { href: '/services', icon: Grid3x3, label: 'Services', labelNe: 'सेवाहरू' },
+  { href: '/me/tasks', icon: ListTodo, label: 'Tasks', labelNe: 'कार्यहरू' },
   { href: '/complaints', icon: MessageSquareWarning, label: 'Issues', labelNe: 'समस्या' },
   { href: '/me', icon: User, label: 'Me', labelNe: 'म', isMe: true },
 ];
@@ -94,6 +93,13 @@ export function BottomNav() {
 
             {/* Menu items */}
             <div className="space-y-1">
+              <MeSheetLink
+                href="/me/tasks"
+                icon={ListTodo}
+                label={locale === 'ne' ? 'मेरो कार्यहरू' : 'My Tasks'}
+                onClick={() => setShowMeSheet(false)}
+                isActive={pathname.startsWith('/me/tasks')}
+              />
               <MeSheetLink
                 href="/services"
                 icon={Grid3x3}
