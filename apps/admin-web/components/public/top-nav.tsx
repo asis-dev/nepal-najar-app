@@ -80,6 +80,7 @@ const desktopPrimaryLinks = [
 // Desktop: overflow into "More" dropdown
 const desktopMoreLinks = [
   { href: '/inbox', labelKey: 'nav.inbox', icon: MessageSquareWarning },
+  { href: '/petitions', labelKey: 'nav.petitions', icon: Megaphone },
   { href: '/me/vault', labelKey: 'nav.vault', icon: FolderLock },
   { href: '/corruption', labelKey: 'nav.corruption', icon: Shield },
   { href: '/ministers', labelKey: 'nav.ministers', icon: Users },

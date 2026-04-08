@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase/server';
 import { UpvoteButton } from '@/components/public/inbox/upvote-button';
 import { DigestSubscribe } from '@/components/public/digest-subscribe';
+import { PushOptIn } from '@/components/public/push-opt-in';
 
 export const revalidate = 60;
 export const metadata = {
@@ -47,6 +48,7 @@ export default async function InboxPage() {
           PUBLIC PRESSURE TOOL · जनदबाब
         </div>
         <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">Party Action Inbox</h1>
+        <div className="flex items-center justify-center mb-2"><PushOptIn /></div>
         <p className="text-zinc-400 max-w-2xl mx-auto">
           Auto-generated todo list for the government — built from stalled commitments, citizen complaints, and broken services. Upvote what matters.
         </p>
