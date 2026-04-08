@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
-import { getComplaintAuthContext } from '@/lib/complaints/access';
+import { canViewComplaint, getComplaintAuthContext } from '@/lib/complaints/access';
 import { addToCluster, removeFromCluster } from '@/lib/complaints/clusters';
 import type { ComplaintCase } from '@/lib/complaints/types';
 import { getComplaintSlaState } from '@/lib/complaints/sla';
+import { sanitizeComplaintForViewer, sanitizeEvidenceSubmitterForViewer } from '@/lib/complaints/privacy';
 
 /**
  * GET /api/complaints/clusters/[id]
@@ -14,6 +15,7 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   const db = getSupabase();
+  const auth = await getComplaintAuthContext();
   const clusterId = params.id;
 
   // Fetch cluster
@@ -27,23 +29,35 @@ export async function GET(
     return NextResponse.json({ error: 'Cluster not found' }, { status: 404 });
   }
 
-  // Fetch all complaints in this cluster
+  // Fetch all complaints in this cluster, then apply visibility filtering.
   const { data: complaints } = await db
     .from('civic_complaints')
     .select('*')
     .eq('cluster_id', clusterId)
     .order('created_at', { ascending: false });
 
-  // Fetch cluster events
-  const { data: events } = await db
+  const allComplaints = (complaints || []) as ComplaintCase[];
+  const visibleComplaints = auth.isElevated
+    ? allComplaints
+    : allComplaints.filter((row) => canViewComplaint(row, auth));
+
+  if (!auth.isElevated && visibleComplaints.length === 0) {
+    return NextResponse.json({ error: 'Cluster not found' }, { status: 404 });
+  }
+
+  let eventQuery = db
     .from('complaint_cluster_events')
     .select('*')
     .eq('cluster_id', clusterId)
     .order('created_at', { ascending: false })
     .limit(50);
+  if (!auth.isElevated) {
+    eventQuery = eventQuery.eq('visibility', 'public');
+  }
+  const { data: events } = await eventQuery;
 
   // Collect all evidence from cluster complaints
-  const complaintIds = (complaints || []).map((c) => (c as ComplaintCase).id);
+  const complaintIds = visibleComplaints.map((c) => c.id);
   let evidence: unknown[] = [];
   if (complaintIds.length > 0) {
     const { data: evidenceRows } = await db
@@ -56,19 +70,38 @@ export async function GET(
   }
 
   // Enrich complaints with SLA state
-  const enrichedComplaints = (complaints || []).map((row) => {
-    const c = row as ComplaintCase;
+  const complaintMap = new Map<string, ComplaintCase>();
+  for (const complaint of visibleComplaints) {
+    complaintMap.set(complaint.id, complaint);
+  }
+
+  const enrichedComplaints = visibleComplaints.map((c) => {
     const sla = getComplaintSlaState(c);
-    return { ...c, sla_state: sla.state, minutes_to_due: sla.minutesToDue };
+    return {
+      ...sanitizeComplaintForViewer(c, auth),
+      sla_state: sla.state,
+      minutes_to_due: sla.minutesToDue,
+    };
+  });
+
+  const safeEvidence = evidence.map((item) => {
+    const row = item as { complaint_id?: string; user_id?: string; submitter_name?: string };
+    const sourceComplaint = row.complaint_id ? complaintMap.get(row.complaint_id) : null;
+    if (!sourceComplaint || !row.user_id) return item;
+    return sanitizeEvidenceSubmitterForViewer(
+      row as { user_id: string; submitter_name?: string },
+      sourceComplaint,
+      auth,
+    );
   });
 
   return NextResponse.json({
     cluster,
     complaints: enrichedComplaints,
     events: events || [],
-    evidence,
+    evidence: safeEvidence,
     report_count: enrichedComplaints.length,
-    total_evidence: evidence.length,
+    total_evidence: safeEvidence.length,
   });
 }
 

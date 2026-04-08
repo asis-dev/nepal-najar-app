@@ -110,6 +110,12 @@ export default function ReportCardPage() {
                   shareUrl="/report-card"
                   shareText={reportCardShareText({ locale })}
                   shareTitle={t('accountability.pageTitle')}
+                  ogParams={{
+                    ogType: 'report-card',
+                    ogTitle: t('accountability.pageTitle'),
+                    ogSection: 'report',
+                    ogLocale: locale,
+                  }}
                   size="sm"
                 />
               </div>
@@ -135,6 +141,12 @@ export default function ReportCardPage() {
                   shareUrl="/report-card"
                   shareText={reportCardShareText({ locale })}
                   shareTitle={t('accountability.pageTitle')}
+                  ogParams={{
+                    ogType: 'report-card',
+                    ogTitle: t('accountability.pageTitle'),
+                    ogSection: 'report',
+                    ogLocale: locale,
+                  }}
                   size="sm"
                 />
               </div>

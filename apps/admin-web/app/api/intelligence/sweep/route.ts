@@ -128,8 +128,7 @@ export async function GET(request: NextRequest) {
 
     const mode = request.nextUrl.searchParams.get('mode') || 'full';
     const isRssOnly = mode === 'rss-only';
-    // Scheduled sweeps on Vercel have 300s timeout — ALWAYS skip heavy AI analysis
-    // and let the worker cron (runs 15 min later) handle classification.
+    // Scheduled sweeps skip heavy AI analysis — let the worker cron handle classification.
     // Only manual sweeps (POST) run analysis inline.
     const skipAnalysisByDefault = true;
 
@@ -161,4 +160,4 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export const maxDuration = 300; // 5 minutes for Vercel
+export const maxDuration = 800; // ~13 minutes — handles 1000+ article sweeps

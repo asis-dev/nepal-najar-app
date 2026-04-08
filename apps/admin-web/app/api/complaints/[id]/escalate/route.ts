@@ -4,6 +4,7 @@ import { getComplaintAuthContext } from '@/lib/complaints/access';
 import type { ComplaintCase } from '@/lib/complaints/types';
 import { notifyComplaintUsers } from '@/lib/complaints/notifications';
 import { refreshComplaintSla } from '@/lib/complaints/sla';
+import { rebuildComplaintAuthorityChain } from '@/lib/complaints/authority-chain';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -124,6 +125,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const updatedComplaint = await refreshComplaintSla(db, updatedComplaintRaw as ComplaintCase);
+  let authorityChain: unknown[] = [];
+  try {
+    authorityChain = await rebuildComplaintAuthorityChain(db, updatedComplaint as ComplaintCase);
+  } catch (chainError) {
+    console.warn(
+      '[complaints] authority chain rebuild failed on escalate:',
+      chainError instanceof Error ? chainError.message : 'unknown',
+    );
+  }
 
   await db.from('complaint_events').insert({
     complaint_id: id,
@@ -158,5 +168,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     success: true,
     escalation,
     complaint: updatedComplaint,
+    authority_chain: authorityChain,
   });
 }

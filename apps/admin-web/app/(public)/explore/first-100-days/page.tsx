@@ -244,6 +244,7 @@ function BachanTrackerContent() {
   const [copied, setCopied] = useState(false);
   const [sortBy, setSortBy] = useState<'default' | 'activity'>('activity');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showOverview, setShowOverview] = useState(false);
   const [mobileVisibleCount, setMobileVisibleCount] = useState(MOBILE_INITIAL_COUNT);
   const { locale, t } = useI18n();
   const isMobile = useIsMobile();
@@ -498,9 +499,37 @@ function BachanTrackerContent() {
         ) : (
           <>
             {/* ═══════════════════════════════════════
+               DESKTOP: COMPACT REFERENCE HEADER
+               (Tracker = reference database, not newspaper)
+               ═══════════════════════════════════════ */}
+            <section className="px-4 sm:px-6 lg:px-8 pt-6 pb-2">
+              <div className="max-w-6xl mx-auto">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                      <Target className="w-5 h-5 text-primary-400" />
+                      {t('commitment.promiseList')}
+                    </h1>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {promises.length} commitments · {stats.avgProgress}% avg progress · {activeTodayCount} active today
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowOverview((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/[0.08] hover:text-gray-200"
+                  >
+                    {showOverview ? 'Hide overview' : 'Show overview'}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {showOverview && (
+            <>
+            {/* ═══════════════════════════════════════
                DESKTOP: SECTION 0: COUNTDOWN STRIP
                ═══════════════════════════════════════ */}
-            <section className="px-4 sm:px-6 lg:px-8 pt-8">
+            <section className="px-4 sm:px-6 lg:px-8 pt-4">
               <div className="max-w-6xl mx-auto">
                 <CountdownStrip deadlines={deadlines} />
               </div>
@@ -971,6 +1000,8 @@ function BachanTrackerContent() {
                 </Link>
               </div>
             </section>
+            </>
+            )}
           </>
         )}
 
@@ -1048,51 +1079,82 @@ function BachanTrackerContent() {
             </div>
           </div>
         ) : (
-          <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <section className="px-4 sm:px-6 lg:px-8 pb-6">
             <div className="max-w-6xl mx-auto">
-              <div className="glass-card p-4 sm:p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Filter className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-300">{t('commitment.filterPromises')}</span>
-                </div>
+              {/* Compact single-row filter bar — reference database feel */}
+              <div className="sticky top-0 z-30 -mx-4 border-b border-white/[0.06] bg-np-base/90 px-4 py-2 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Filter className="h-3.5 w-3.5 shrink-0 text-gray-500" />
 
-                {/* Category pills */}
-                <div className="mb-3">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">{t('commitment.category')}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {allCategories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setCategoryFilter(cat)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                          categoryFilter === cat
-                            ? 'bg-primary-500/20 text-primary-300 border border-primary-500/40 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
-                            : 'bg-white/[0.04] text-gray-400 border border-transparent hover:bg-white/[0.08] hover:text-gray-300'
-                        }`}
-                      >
-                        {t(`categoryName.${cat}`)}
-                      </button>
-                    ))}
+                  {/* Search */}
+                  <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={t('commitment.filterPromises')}
+                      className="h-8 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pl-8 pr-2 text-xs text-gray-200 placeholder:text-gray-500 outline-none focus:border-primary-500/40"
+                    />
                   </div>
-                </div>
 
-                {/* Status pills */}
-                <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">{t('province.status')}</div>
-                  <div className="flex flex-wrap gap-2">
+                  {/* Status dropdown */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="h-8 cursor-pointer rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-xs text-gray-200 outline-none focus:border-primary-500/40"
+                  >
                     {statusFilterEntries.map((s) => (
-                      <button
-                        key={s.key}
-                        onClick={() => setStatusFilter(s.key)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                          statusFilter === s.key
-                            ? 'bg-primary-500/20 text-primary-300 border border-primary-500/40 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
-                            : 'bg-white/[0.04] text-gray-400 border border-transparent hover:bg-white/[0.08] hover:text-gray-300'
-                        }`}
-                      >
+                      <option key={s.key} value={s.key} className="bg-np-base">
                         {t(s.labelKey)}
-                      </button>
+                      </option>
                     ))}
+                  </select>
+
+                  {/* Category dropdown */}
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="h-8 cursor-pointer rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-xs text-gray-200 outline-none focus:border-primary-500/40"
+                  >
+                    {allCategories.map((cat) => (
+                      <option key={cat} value={cat} className="bg-np-base">
+                        {t(`categoryName.${cat}`)}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Sort toggle */}
+                  <button
+                    onClick={() => setSortBy(sortBy === 'activity' ? 'default' : 'activity')}
+                    className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2.5 text-xs font-medium transition-colors ${
+                      sortBy === 'activity'
+                        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                        : 'border-white/[0.08] bg-white/[0.03] text-gray-400 hover:text-gray-200'
+                    }`}
+                    title={t('daily.recentActivity')}
+                  >
+                    <ArrowUpDown className="h-3 w-3" />
+                    {sortBy === 'activity' ? t('daily.recentActivity') : 'Default'}
+                  </button>
+
+                  {/* Result count + clear */}
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="whitespace-nowrap text-[11px] text-gray-500">
+                      {filteredPromises.length} / {promises.length}
+                    </span>
+                    {(categoryFilter !== 'All' || statusFilter !== 'All' || searchQuery.trim()) && (
+                      <button
+                        onClick={() => {
+                          setCategoryFilter('All');
+                          setStatusFilter('All');
+                          setSearchQuery('');
+                        }}
+                        className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[10px] font-medium text-gray-400 hover:text-gray-200"
+                      >
+                        Clear
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1504,6 +1566,26 @@ function BachanTrackerContent() {
                             shareUrl={`/explore/first-100-days/${promise.slug || promise.id}`}
                             shareText={commitmentShareText({ title: locale === 'ne' ? (promise.title_ne || promise.title) : promise.title, progress: promise.progress, status: promise.status, locale })}
                             shareTitle={locale === 'ne' ? (promise.title_ne || promise.title) : promise.title}
+                            ogParams={{
+                              ogType: 'commitment',
+                              ogSlug: promise.slug || promise.id,
+                              ogTitle: locale === 'ne' ? (promise.title_ne || promise.title) : promise.title,
+                              ogSection: 'commitments',
+                              ogProgress: promise.progress,
+                              ogStatus: promise.status,
+                              ogLocale: locale,
+                              ogFacts: locale === 'ne'
+                                ? [
+                                    `${promise.progress}% प्रगति`,
+                                    `${promise.evidenceCount} प्रमाण`,
+                                    `${promise.linkedProjects} परियोजना`,
+                                  ].join('|')
+                                : [
+                                    `${promise.progress}% progress`,
+                                    `${promise.evidenceCount} evidence`,
+                                    `${promise.linkedProjects} linked projects`,
+                                  ].join('|'),
+                            }}
                             size="sm"
                           />
                         </div>

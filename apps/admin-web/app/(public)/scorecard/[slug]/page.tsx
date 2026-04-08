@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Users, Building2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { ShareMenu } from '@/components/public/share-menu';
 import { useGovernmentBody } from '@/lib/hooks/use-government-bodies';
 import {
   GRADE_COLORS,
@@ -125,13 +126,41 @@ export default function BodyDetailPage() {
       {/* ── Header ── */}
       <section className="public-section pt-6 sm:pt-8 pb-0">
         <div className="public-shell">
-          <Link
-            href="/scorecard"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors mb-4"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            {t('scorecard.backToScorecard')}
-          </Link>
+          <div className="flex items-center justify-between mb-4">
+            <Link
+              href="/scorecard"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              {t('scorecard.backToScorecard')}
+            </Link>
+            <ShareMenu
+              shareUrl={`/scorecard/${slug}`}
+              shareTitle={isNe ? body.nameNe : body.name}
+              shareText={isNe
+                ? `${body.nameNe} — ग्रेड ${grade} · ${body.avgProgress}% प्रगति`
+                : `${body.name} — Grade ${grade} · ${body.avgProgress}% avg progress`}
+              ogParams={{
+                ogTitle: isNe ? body.nameNe : body.name,
+                ogSubtitle: isNe
+                  ? `${typeLabel} · ग्रेड ${grade} · ${body.avgProgress}% औसत प्रगति`
+                  : `${typeLabel} · Grade ${grade} · ${body.avgProgress}% avg progress`,
+                ogSection: 'scorecard',
+                ogProgress: body.avgProgress,
+                ogLocale: locale,
+                ogFacts: isNe ? [
+                  `ग्रेड ${grade}`,
+                  `${body.commitmentCount} प्रतिबद्धता ट्र्याक`,
+                  `${body.avgProgress}% औसत प्रगति`,
+                ].join('|') : [
+                  `Grade ${grade}`,
+                  `${body.commitmentCount} commitments tracked`,
+                  `${body.avgProgress}% average progress`,
+                ].join('|'),
+              }}
+              size="sm"
+            />
+          </div>
 
           <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-6">
             {/* Name + meta */}

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
-import { CardActions } from '@/components/public/card-actions';
+import { ShareMenu } from '@/components/public/share-menu';
 import type { DailyBriefStory } from '@/lib/data/landing-types';
 import type { GovernmentPromise } from '@/lib/data/promises';
 
@@ -108,16 +108,27 @@ export function StoryCards({
                 );
               })}
 
-              {/* Follow + Share for first related commitment */}
+              {/* Share for first related commitment */}
               <div className="ml-auto">
-                <CardActions
-                  commitmentId={firstCommitmentIdStr ?? undefined}
-                  shareTitle={locale === 'ne' && story.titleNe ? story.titleNe : story.title}
+                <ShareMenu
                   shareUrl={firstCommitmentIdStr ? `/explore/first-100-days/${allPromises.find((p) => p.id === firstCommitmentIdStr)?.slug ?? firstCommitmentIdStr}` : '/'}
+                  shareTitle={locale === 'ne' && story.titleNe ? story.titleNe : story.title}
+                  shareText={locale === 'ne'
+                    ? `${story.titleNe || story.title} — ${story.signalCount} संकेत · ${story.sentiment}\n\nnepalrepublic.org`
+                    : `${story.title} — ${story.signalCount} signals · ${story.sentiment}\n\nnepalrepublic.org`}
+                  ogParams={firstCommitmentIdStr ? {
+                    ogType: 'commitment',
+                    ogSlug: allPromises.find((p) => p.id === firstCommitmentIdStr)?.slug ?? firstCommitmentIdStr,
+                    ogTitle: locale === 'ne' && story.titleNe ? story.titleNe : story.title,
+                    ogSection: 'commitments',
+                    ogLocale: locale,
+                  } : {
+                    ogTitle: locale === 'ne' && story.titleNe ? story.titleNe : story.title,
+                    ogSubtitle: `${story.sentiment} · ${story.signalCount} signals`,
+                    ogSection: 'stories',
+                    ogLocale: locale,
+                  }}
                   size="sm"
-                  ogTitle={locale === 'ne' && story.titleNe ? story.titleNe : story.title}
-                  ogSubtitle={`${story.sentiment} · ${story.signalCount} signals`}
-                  ogSection="commitments"
                 />
               </div>
             </div>

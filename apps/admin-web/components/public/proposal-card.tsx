@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ChevronUp, MessageSquare, MapPin, TrendingUp } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { CardActions } from '@/components/public/card-actions';
+import { ShareMenu } from '@/components/public/share-menu';
 import type { Proposal, ProposalStatus, ProposalCategory } from '@/lib/hooks/use-proposals';
 
 /* ═══════════════════════════════════════════
@@ -134,13 +134,17 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
                 </span>
                 <span>{relativeTime(proposal.created_at)}</span>
               </div>
-              <CardActions
-                shareTitle={isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
+              <ShareMenu
                 shareUrl={`/proposals/${proposal.id}`}
+                shareTitle={isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
+                shareText={`${isNe && proposal.title_ne ? proposal.title_ne : proposal.title} — ${proposal.province}${proposal.district ? ` · ${proposal.district}` : ''}`}
+                ogParams={{
+                  ogTitle: isNe && proposal.title_ne ? proposal.title_ne : proposal.title,
+                  ogSubtitle: `${proposal.province}${proposal.district ? ` · ${proposal.district}` : ''} · ${t(`proposals.categories.${proposal.category}`)}`,
+                  ogSection: 'proposals',
+                  ogLocale: locale,
+                }}
                 size="sm"
-                ogTitle={isNe && proposal.title_ne ? proposal.title_ne : proposal.title}
-                ogSubtitle={`${proposal.province}${proposal.district ? ` · ${proposal.district}` : ''} · ${t(`proposals.categories.${proposal.category}`)} · ${t(`proposals.statuses.${proposal.status}`)}`}
-                ogSection="proposals"
               />
             </div>
           </div>

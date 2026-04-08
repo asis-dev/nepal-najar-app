@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getBearerToken, secretsEqual } from '@/lib/security/request-auth';
+import { isOwnerUser } from '@/lib/auth/owner';
 
 const ADMIN_COOKIE_NAMES = ['admin_session', 'np-admin-token'] as const;
 
@@ -31,7 +32,7 @@ async function hasAdminSupabaseSession(): Promise<boolean> {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, email')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -39,7 +40,11 @@ async function hasAdminSupabaseSession(): Promise<boolean> {
       return false;
     }
 
-    return profile?.role === 'admin';
+    if (profile?.role !== 'admin') {
+      return false;
+    }
+
+    return isOwnerUser({ id: user.id, email: user.email || profile.email });
   } catch {
     return false;
   }

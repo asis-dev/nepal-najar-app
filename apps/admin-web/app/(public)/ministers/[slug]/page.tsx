@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { ShareMenu } from '@/components/public/share-menu';
 import { ReactionBar } from '@/components/public/reaction-bar';
-import { useMinistersWeekly } from '@/lib/hooks/use-ministers';
+import { useMinisterComplaints, useMinistersWeekly } from '@/lib/hooks/use-ministers';
 import { useI18n } from '@/lib/i18n';
 import { promises } from '@/lib/data/promises';
 
@@ -80,6 +80,11 @@ export default function MinisterDetailPage() {
   const isNe = locale === 'ne';
 
   const { ministers, isLoading } = useMinistersWeekly();
+  const {
+    complaints: ministerComplaints,
+    total: ministerComplaintTotal,
+    isLoading: isComplaintsLoading,
+  } = useMinisterComplaints(slug);
 
   const minister = useMemo(() => {
     return ministers.find((m) => m.slug === slug) ?? null;
@@ -141,6 +146,20 @@ export default function MinisterDetailPage() {
 
   const { weeklyActivity } = minister;
 
+  // Activity Pulse
+  const pulseRaw = Math.min(100,
+    weeklyActivity.confirming * 3 +
+    weeklyActivity.contradicting * 2 +
+    weeklyActivity.directMentions * 1.5 +
+    Math.max(0, weeklyActivity.totalSignals - weeklyActivity.confirming - weeklyActivity.contradicting) * 1
+  );
+  const pulseValue = Math.round(pulseRaw);
+  const pulseLevel = pulseRaw >= 25 ? { emoji: '🔥', label: 'On Fire', labelNe: 'कर्मठ', textClass: 'text-orange-400', bgClass: 'bg-orange-400/10', borderClass: 'border-orange-400/30' }
+    : pulseRaw >= 12 ? { emoji: '⚡', label: 'Active', labelNe: 'सक्रिय', textClass: 'text-emerald-400', bgClass: 'bg-emerald-400/10', borderClass: 'border-emerald-400/30' }
+    : pulseRaw >= 4 ? { emoji: '📡', label: 'Moderate', labelNe: 'सामान्य', textClass: 'text-yellow-400', bgClass: 'bg-yellow-400/10', borderClass: 'border-yellow-400/30' }
+    : pulseRaw >= 1 ? { emoji: '💤', label: 'Quiet', labelNe: 'शान्त', textClass: 'text-gray-400', bgClass: 'bg-gray-400/10', borderClass: 'border-gray-500/30' }
+    : { emoji: '👻', label: 'Ghost', labelNe: 'लापता', textClass: 'text-gray-500', bgClass: 'bg-gray-500/10', borderClass: 'border-gray-600/30' };
+
   return (
     <div className="min-h-screen bg-np-void pb-24">
       <div className="mx-auto max-w-2xl px-4 pt-8">
@@ -156,7 +175,7 @@ export default function MinisterDetailPage() {
         {/* Minister header */}
         <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-5">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold text-gray-100">
                 {localizeField(minister.name, minister.nameNe)}
               </h1>
@@ -165,11 +184,42 @@ export default function MinisterDetailPage() {
               </p>
               <p className="mt-0.5 text-xs text-gray-500">{minister.ministry}</p>
             </div>
+            <div className="flex flex-col items-center gap-2">
+              {/* Activity Pulse badge */}
+              <div className={`flex flex-col items-center rounded-xl px-4 py-2.5 ${pulseLevel.bgClass} border ${pulseLevel.borderClass}`}>
+                <span className="text-xl">{pulseLevel.emoji}</span>
+                <span className={`text-lg font-extrabold ${pulseLevel.textClass}`}>{pulseValue}</span>
+                <span className={`text-[10px] font-semibold uppercase tracking-wider ${pulseLevel.textClass}`}>
+                  {isNe ? pulseLevel.labelNe : pulseLevel.label}
+                </span>
+                <span className="text-[9px] text-gray-500 mt-0.5">
+                  {isNe ? 'गतिविधि पल्स' : 'Activity Pulse'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
             <ShareMenu
               shareUrl={`/ministers/${slug}`}
-              shareTitle={minister.name}
-              shareText={`${minister.name} — ${minister.title}. Track their commitments on Nepal Republic. nepalrepublic.org`}
-              ogParams={{ ogTitle: minister.name, ogSubtitle: minister.title, ogSection: 'ministers' }}
+              shareTitle={localizeField(minister.name, minister.nameNe)}
+              shareText={`${localizeField(minister.name, minister.nameNe)} — ${localizeField(minister.title, minister.titleNe)}. ${locale === 'ne' ? 'nepalrepublic.org मा ट्र्याक गर्नुहोस्' : 'Track their commitments on Nepal Republic.'}`}
+              ogParams={{
+                ogType: 'minister',
+                ogSlug: slug,
+                ogTitle: localizeField(minister.name, minister.nameNe),
+                ogSubtitle: localizeField(minister.title, minister.titleNe),
+                ogSection: 'ministers',
+                ogLocale: locale,
+                ogFacts: locale === 'ne' ? [
+                  `${minister.ownedCommitmentIds.length} प्रतिबद्धता`,
+                  `${minister.weeklyActivity.totalSignals} यो हप्ता संकेत`,
+                  minister.ministry,
+                ].filter(Boolean).join('|') : [
+                  `${minister.ownedCommitmentIds.length} commitments assigned`,
+                  `${minister.weeklyActivity.totalSignals} signals this week`,
+                  minister.ministry,
+                ].filter(Boolean).join('|'),
+              }}
               size="sm"
             />
           </div>
@@ -221,6 +271,48 @@ export default function MinisterDetailPage() {
             color="text-blue-400"
           />
         </div>
+
+        <section className="mt-4 rounded-xl border border-gray-800 bg-gray-900/80 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-gray-200">
+              {isNe ? 'यस मन्त्रीसँग जोडिएका नागरिक केसहरू' : 'Civic Cases Linked to This Minister'}
+            </h2>
+            <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-200">
+              {ministerComplaintTotal} {isNe ? 'केस' : 'cases'}
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {isComplaintsLoading ? (
+              <p className="text-xs text-gray-400">{isNe ? 'केसहरू लोड हुँदैछन्...' : 'Loading linked cases...'}</p>
+            ) : ministerComplaints.length === 0 ? (
+              <p className="text-xs text-gray-400">
+                {isNe
+                  ? 'यस मन्त्रीसँग हाल सार्वजनिक नागरिक केस जोडिएको छैन।'
+                  : 'No public civic cases are currently linked to this minister.'}
+              </p>
+            ) : (
+              ministerComplaints.slice(0, 8).map((caseItem) => (
+                <Link
+                  key={caseItem.id}
+                  href={`/complaints/${caseItem.id}`}
+                  className="block rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.06]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="line-clamp-2 text-xs font-medium text-gray-100">
+                      {isNe && caseItem.title_ne ? caseItem.title_ne : caseItem.title}
+                    </p>
+                    <span className="shrink-0 rounded-full border border-white/[0.12] bg-white/[0.04] px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
+                      {caseItem.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    {[caseItem.issue_type, caseItem.municipality].filter(Boolean).join(' · ')}
+                  </p>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
 
         {/* This Week's Signals */}
         {weeklyActivity.topSignals.length > 0 && (

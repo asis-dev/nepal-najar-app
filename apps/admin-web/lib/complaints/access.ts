@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 import { createSupabaseServerClient, getSupabase } from '@/lib/supabase/server';
 import type { ComplaintCase, ComplaintStatus } from '@/lib/complaints/types';
+import { isElevatedRole } from '@/lib/auth/roles';
 
 export interface ComplaintAuthContext {
   user: User | null;
@@ -35,7 +36,7 @@ export async function getComplaintAuthContext(): Promise<ComplaintAuthContext> {
     }
   }
 
-  const isElevated = role === 'admin' || role === 'verifier';
+  const isElevated = isElevatedRole(role);
   return { user, role, isElevated };
 }
 

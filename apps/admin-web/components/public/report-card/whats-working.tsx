@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Newspaper, TrendingUp, ArrowRight } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { ShareMenu } from '@/components/public/share-menu';
+import { commitmentShareText } from '@/lib/utils/share';
 import type { WorkingPromise } from '@/lib/hooks/use-accountability';
 
 interface WhatsWorkingProps {
@@ -69,24 +71,41 @@ export function WhatsWorkingSection({ promises }: WhatsWorkingProps) {
         </span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 overflow-hidden max-w-full">
+      <div className="grid w-full min-w-0 max-w-full gap-3 overflow-hidden sm:grid-cols-2">
         {promises.map((p) => (
           <Link
             key={p.id}
             href={`/explore/first-100-days/${p.id}`}
-            className="glass-card group p-3 sm:p-4 border-l-2 border-emerald-500/50 hover:border-emerald-400 transition-all duration-200 hover:bg-white/[0.03] overflow-hidden min-w-0 max-w-full"
+            className="glass-card group block w-full min-w-0 max-w-full overflow-hidden border-l-2 border-emerald-500/50 p-3 transition-all duration-200 hover:border-emerald-400 hover:bg-white/[0.03] sm:p-4"
           >
             {/* Header */}
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <h4 className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">
+            <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
+              <h4 className="min-w-0 flex-1 break-words text-sm font-medium text-gray-200 line-clamp-2 transition-colors group-hover:text-white">
                 {isNe && p.title_ne ? p.title_ne : p.title}
               </h4>
-              <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-primary-400 transition-colors flex-shrink-0 mt-0.5" />
+              <div className="flex items-center gap-0.5 flex-shrink-0 mt-0.5">
+                <ShareMenu
+                  shareUrl={`/explore/first-100-days/${p.id}`}
+                  shareText={commitmentShareText({ title: isNe && p.title_ne ? p.title_ne : p.title, progress: p.progress, status: 'in_progress', locale })}
+                  shareTitle={isNe && p.title_ne ? p.title_ne : p.title}
+                  size="sm"
+                  ogParams={{
+                    ogType: 'commitment',
+                    ogSlug: p.id,
+                    ogTitle: isNe && p.title_ne ? p.title_ne : p.title,
+                    ogSection: 'commitments',
+                    ogProgress: p.progress,
+                    ogStatus: 'in_progress',
+                    ogLocale: locale,
+                  }}
+                />
+                <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-primary-400 transition-colors" />
+              </div>
             </div>
 
             {/* Category + Progress */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[10px] uppercase tracking-wider text-gray-500">
+            <div className="mb-3 flex min-w-0 items-center gap-2">
+              <span className="shrink-0 truncate text-[10px] uppercase tracking-wider text-gray-500">
                 {t(`categoryName.${p.category}`)}
               </span>
               <div className="flex-1 h-1 rounded-full bg-white/[0.06] overflow-hidden">

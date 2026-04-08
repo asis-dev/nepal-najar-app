@@ -7,6 +7,8 @@ import { checkForDuplicateOnCreate } from '@/lib/intelligence/complaint-dedup';
 import type { ComplaintCase, ComplaintEvidence, ComplaintIssueType, ComplaintSeverity, ComplaintStatus } from '@/lib/complaints/types';
 import { getComplaintSlaState, refreshComplaintSla } from '@/lib/complaints/sla';
 import { autoClusterDuplicate } from '@/lib/complaints/clusters';
+import { sanitizeComplaintForViewer, sanitizeReporterNameForViewer } from '@/lib/complaints/privacy';
+import { rebuildComplaintAuthorityChain } from '@/lib/complaints/authority-chain';
 
 function parseBooleanParam(value: string | null): boolean {
   if (!value) return false;
@@ -53,8 +55,13 @@ export async function GET(request: NextRequest) {
   const district = searchParams.get('district');
   const municipality = searchParams.get('municipality');
   const q = searchParams.get('q');
+  const sortBy = searchParams.get('sort_by') || 'last_activity_at';
+  const sortOrder = searchParams.get('sort_order') === 'asc' ? 'asc' : 'desc';
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '30', 10)));
   const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10));
+
+  const ALLOWED_SORT_COLUMNS = ['last_activity_at', 'created_at', 'severity', 'follower_count'];
+  const safeSortBy = ALLOWED_SORT_COLUMNS.includes(sortBy) ? sortBy : 'last_activity_at';
 
   let followedIds: string[] | null = null;
   if (followed && user) {
@@ -74,7 +81,7 @@ export async function GET(request: NextRequest) {
   let query = db
     .from('civic_complaints')
     .select('*', { count: 'exact' })
-    .order('last_activity_at', { ascending: false })
+    .order(safeSortBy, { ascending: sortOrder === 'asc' })
     .range(offset, offset + limit - 1);
 
   if (mine && user) {
@@ -130,25 +137,34 @@ export async function GET(request: NextRequest) {
     followingSet = new Set((follows || []).map((item) => item.complaint_id as string));
   }
 
-  const complaints = rows.map((row) => ({
-    ...(() => {
-      const sla = getComplaintSlaState(row);
-      return {
-        sla_state: sla.state,
-        minutes_to_due: sla.minutesToDue,
-      };
-    })(),
-    ...row,
-    reporter_name: row.is_anonymous ? 'Anonymous' : profileMap.get(row.user_id) || 'Citizen',
-    is_following: followingSet.has(row.id),
-  }));
-
-  return NextResponse.json({
-    complaints,
-    total: count ?? complaints.length,
-    limit,
-    offset,
+  const complaints = rows.map((row) => {
+    const sla = getComplaintSlaState(row);
+    const reporterName = row.is_anonymous ? 'Anonymous' : profileMap.get(row.user_id) || 'Citizen';
+    const safeComplaint = sanitizeComplaintForViewer(row, { user, role, isElevated });
+    return {
+      sla_state: sla.state,
+      minutes_to_due: sla.minutesToDue,
+      ...safeComplaint,
+      reporter_name: sanitizeReporterNameForViewer(row, { user, role, isElevated }, reporterName),
+      is_following: followingSet.has(row.id),
+    };
   });
+
+  return NextResponse.json(
+    {
+      complaints,
+      total: count ?? complaints.length,
+      limit,
+      offset,
+    },
+    {
+      headers: {
+        'Cache-Control': 'public, max-age=30, stale-while-revalidate=300',
+        'CDN-Cache-Control': 'public, max-age=30, stale-while-revalidate=300',
+        'Vercel-CDN-Cache-Control': 'public, max-age=30, stale-while-revalidate=300',
+      },
+    },
+  );
 }
 
 interface CreateComplaintBody {
@@ -225,12 +241,9 @@ export async function POST(request: NextRequest) {
     province: body.province || null,
   });
 
-  const initialStatus: ComplaintStatus =
-    dedupResult.isDuplicate && dedupResult.confidence >= 0.8
-      ? 'duplicate'
-      : triage.confidence >= 0.7
-        ? 'routed'
-        : 'triaged';
+  // Review-safe default: AI can suggest routing/duplicates but should not directly
+  // change the public lifecycle state before reviewer action.
+  const initialStatus: ComplaintStatus = 'triaged';
 
   const normalizedTitle = body.title?.trim() || triage.title;
 
@@ -254,7 +267,10 @@ export async function POST(request: NextRequest) {
     latitude: typeof body.latitude === 'number' ? body.latitude : null,
     longitude: typeof body.longitude === 'number' ? body.longitude : null,
     department_key: triage.departmentKey,
-    duplicate_of: dedupResult.duplicateOf || null,
+    duplicate_of:
+      dedupResult.isDuplicate && dedupResult.confidence >= 0.8
+        ? (dedupResult.duplicateOf || null)
+        : null,
     ai_route_confidence: triage.confidence,
     ai_triage: {
       summary: triage.summary,
@@ -325,7 +341,7 @@ export async function POST(request: NextRequest) {
     },
   ];
 
-  if (initialStatus === 'routed') {
+  if (triage.confidence >= 0.7) {
     const route = triage.authorityRoute;
     events.push({
       complaint_id: complaintId,
@@ -346,14 +362,14 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (initialStatus === 'duplicate' && dedupResult.duplicateOf) {
+  if (dedupResult.isDuplicate && dedupResult.duplicateOf) {
     events.push({
       complaint_id: complaintId,
       actor_id: null,
       actor_type: 'ai',
       event_type: 'duplicate_marked',
-      visibility: 'public',
-      message: `Marked as duplicate of complaint ${dedupResult.duplicateOf}. ${dedupResult.reasoning}`,
+      visibility: 'internal',
+      message: `Potential duplicate detected for complaint ${dedupResult.duplicateOf}. ${dedupResult.reasoning}`,
       metadata: {
         duplicate_of: dedupResult.duplicateOf,
         confidence: dedupResult.confidence,
@@ -406,16 +422,26 @@ export async function POST(request: NextRequest) {
 
   // Auto-cluster duplicates
   let clusterId: string | null = null;
-  if (initialStatus === 'duplicate' && dedupResult.duplicateOf) {
+  if (dedupResult.isDuplicate && dedupResult.confidence >= 0.8 && dedupResult.duplicateOf) {
     clusterId = await autoClusterDuplicate(db, complaintId, dedupResult.duplicateOf);
   }
 
   const complaintWithSla = await refreshComplaintSla(db, complaint as ComplaintCase);
+  let authorityChain: unknown[] = [];
+  try {
+    authorityChain = await rebuildComplaintAuthorityChain(db, complaintWithSla as ComplaintCase);
+  } catch (chainError) {
+    console.warn(
+      '[complaints] authority chain rebuild failed on create:',
+      chainError instanceof Error ? chainError.message : 'unknown',
+    );
+  }
 
   return NextResponse.json(
     {
       success: true,
       complaint: complaintWithSla,
+      authority_chain: authorityChain,
       triage,
       evidence,
       duplicate_check: {

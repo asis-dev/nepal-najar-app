@@ -9,6 +9,8 @@ import {
 } from '@/lib/complaints/access';
 import { refreshComplaintSla } from '@/lib/complaints/sla';
 import { notifyComplaintUsers } from '@/lib/complaints/notifications';
+import { sanitizeComplaintForViewer, sanitizeReporterNameForViewer } from '@/lib/complaints/privacy';
+import { rebuildComplaintAuthorityChain } from '@/lib/complaints/authority-chain';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -54,6 +56,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   if (!canViewComplaint(complaint, auth)) {
     return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
   }
+  const isOwner = isComplaintOwner(complaint, auth.user?.id ?? null);
 
   const db = getSupabase();
   let reporterName = 'Citizen';
@@ -87,14 +90,58 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         .maybeSingle()
     : { data: null };
 
+  const { data: authorityChain } = await db
+    .from('complaint_authority_chain')
+    .select('*')
+    .eq('complaint_id', complaint.id)
+    .eq('is_active', true)
+    .order('node_order', { ascending: true });
+
   return NextResponse.json({
     complaint: {
-      ...complaint,
-      reporter_name: reporterName,
+      ...sanitizeComplaintForViewer(complaint, auth),
+      reporter_name: sanitizeReporterNameForViewer(complaint, auth, reporterName),
       is_following: isFollowing,
       department: department || null,
+      authority_chain: authorityChain || [],
+      viewer_is_owner: isOwner,
     },
   });
+}
+
+export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const { id } = await context.params;
+  const auth = await getComplaintAuthContext();
+  if (!auth.user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  const complaint = await loadComplaintOr404(id);
+  if (!complaint) {
+    return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
+  }
+
+  const isOwner = isComplaintOwner(complaint, auth.user.id);
+  if (!isOwner && !auth.isElevated) {
+    return NextResponse.json({ error: 'Not authorized. Only the case creator or admin can delete.' }, { status: 403 });
+  }
+
+  const db = getSupabase();
+
+  // Delete related records first (cascade), then the complaint
+  await db.from('complaint_authority_chain').delete().eq('complaint_id', id);
+  await db.from('complaint_escalations').delete().eq('complaint_id', id);
+  await db.from('complaint_assignments').delete().eq('complaint_id', id);
+  await db.from('complaint_followers').delete().eq('complaint_id', id);
+  await db.from('complaint_evidence').delete().eq('complaint_id', id);
+  await db.from('complaint_events').delete().eq('complaint_id', id);
+
+  const { error } = await db.from('civic_complaints').delete().eq('id', id);
+  if (error) {
+    return NextResponse.json({ error: error.message || 'Failed to delete complaint' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, deleted: id });
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
@@ -158,8 +205,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     updates.description = description;
   }
 
+  // Owner can mark their own case as "resolved" or "reopened"; all other status/trust/routing changes require elevated role
+  const ownerResolvingOwnCase =
+    isOwner && body.status === 'resolved' && !body.trust_level && !body.department_key && !body.duplicate_of;
+  const ownerReopeningOwnCase =
+    isOwner && body.status === 'reopened' && !body.trust_level && !body.department_key && !body.duplicate_of &&
+    ['resolved', 'closed', 'rejected'].includes(complaint.status);
+
   if (body.status !== undefined || body.trust_level !== undefined || body.department_key !== undefined || body.duplicate_of !== undefined) {
-    if (!auth.isElevated) {
+    if (!auth.isElevated && !ownerResolvingOwnCase && !ownerReopeningOwnCase) {
       return NextResponse.json(
         { error: 'Only reviewers can change status, trust, routing, or duplicates' },
         { status: 403 },
@@ -285,6 +339,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const statusChanged = body.status && body.status !== complaint.status;
   const finalComplaint = await refreshComplaintSla(db, updatedComplaint);
+  let authorityChain: unknown[] = [];
+  try {
+    authorityChain = await rebuildComplaintAuthorityChain(db, finalComplaint as ComplaintCase);
+  } catch (chainError) {
+    console.warn(
+      '[complaints] authority chain rebuild failed on patch:',
+      chainError instanceof Error ? chainError.message : 'unknown',
+    );
+  }
 
   if (statusChanged) {
     await notifyComplaintUsers({
@@ -320,5 +383,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return NextResponse.json({
     success: true,
     complaint: finalComplaint,
+    authority_chain: authorityChain,
   });
 }

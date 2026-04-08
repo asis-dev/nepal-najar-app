@@ -155,7 +155,7 @@ export default function AboutPage() {
     alternateName: 'नेपाल रिपब्लिक',
     url: 'https://www.nepalrepublic.org',
     description:
-      'AI-powered civic intelligence platform. Scans 80+ sources daily to track 109 government commitments, verify evidence, and score accountability.',
+      'From street problems to national promises, one AI-powered, evidence-backed accountability platform.',
     inLanguage: ['en', 'ne'],
     publisher: {
       '@type': 'Organization',
@@ -184,22 +184,20 @@ export default function AboutPage() {
             </div>
 
             <h1 className="mx-auto mt-6 max-w-3xl text-balance font-sans text-[2.5rem] font-semibold leading-[0.94] tracking-[-0.04em] text-white sm:text-[3.4rem] lg:text-[4.2rem]">
+              Report civic issues.
+              <br />
               Track promises.
               <br />
-              Report reality.
-              <br />
-              <span className="text-primary-400">Verify the truth.</span>
+              <span className="text-primary-400">Verify truth.</span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-gray-300 sm:text-lg">
-              Nepal Republic uses AI to track government commitments, surface
-              real-world issues, and analyze evidence so you can see how the
-              system actually performs.
+              From street problems to national promises, this is one
+              AI-powered, evidence-backed accountability platform.
             </p>
             <p className="mx-auto mt-2 max-w-2xl text-sm leading-7 text-gray-500">
-              Nepal Republic ले AI प्रयोग गरी सरकारी वचनबद्धता ट्र्याक गर्छ,
-              वास्तविक समस्याहरू सतहमा ल्याउँछ, र प्रमाणहरू विश्लेषण गर्छ —
-              ताकि तपाईं प्रणाली कसरी काम गर्दैछ भन्ने देख्न सक्नुहोस्।
+              सडकका समस्या देखि राष्ट्रिय वाचासम्म, यो एउटै
+              AI-संचालित, प्रमाण-आधारित जवाफदेहिता प्लेटफर्म हो।
             </p>
           </div>
         </section>

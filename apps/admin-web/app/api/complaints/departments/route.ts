@@ -5,7 +5,7 @@ export async function GET() {
   const db = getSupabase();
   const { data, error } = await db
     .from('complaint_departments')
-    .select('key, name, name_ne, description, level, is_active')
+    .select('key, name, name_ne, description, level, is_active, ministry_slug, ministry_name, ministry_name_ne, department_head_title, department_head_title_ne, facebook_page_url')
     .eq('is_active', true)
     .order('name', { ascending: true });
 

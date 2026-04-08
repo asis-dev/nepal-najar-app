@@ -32,6 +32,8 @@ import {
   Info,
   RefreshCw,
   BarChart3,
+  Grid3x3,
+  FolderLock,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -69,14 +71,16 @@ const PULSE_COLORS = {
 // Desktop: 5 primary tabs always visible
 const desktopPrimaryLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
+  { href: '/services', labelKey: 'nav.services', icon: Grid3x3 },
   { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
-  { href: '/corruption', labelKey: 'nav.corruption', icon: Shield },
   { href: '/complaints', labelKey: 'nav.complaints', icon: MessageSquareWarning },
 ];
 
 // Desktop: overflow into "More" dropdown
 const desktopMoreLinks = [
+  { href: '/me/vault', labelKey: 'nav.vault', icon: FolderLock },
+  { href: '/corruption', labelKey: 'nav.corruption', icon: Shield },
   { href: '/ministers', labelKey: 'nav.ministers', icon: Users },
   { href: '/scorecard', labelKey: 'nav.ministries', icon: Award },
   { href: '/disputed', labelKey: 'nav.disputed', icon: Swords },
@@ -90,6 +94,8 @@ const desktopMoreLinks = [
 // All links for mobile menu
 const allNavLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
+  { href: '/services', labelKey: 'nav.services', icon: Grid3x3 },
+  { href: '/me/vault', labelKey: 'nav.vault', icon: FolderLock },
   { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
   { href: '/ministers', labelKey: 'nav.ministers', icon: Users },

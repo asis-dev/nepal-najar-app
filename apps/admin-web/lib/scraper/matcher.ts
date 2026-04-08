@@ -131,7 +131,12 @@ const PROMISE_KEYWORDS: Record<string, string[]> = {
     'nagarik app', 'e-service', 'government digitization', 'nitc',
     'digital transformation', 'citizen portal', 'online government',
     'smart governance', 'digital public service', 'mocit',
+    'online service', 'digital id', 'paperless', 'queue', 'service delivery',
+    'one stop service', 'sewa', 'app launch', 'digital signature', 'biometric',
+    'national id', 'digital nepal', 'govtech', 'digital portal', 'mobile app government',
     'अनलाइन लाइन होइन', 'डिजिटल सरकार', 'ई-सरकार', 'नागरिक एप',
+    'अनलाइन सेवा', 'डिजिटल नेपाल', 'सरकारी सेवा', 'लाइन', 'झन्झट', 'डिजिटल आईडी',
+    'राष्ट्रिय परिचयपत्र', 'डिजिटल हस्ताक्षर', 'सेवा प्रवाह',
   ],
   '19': [
     'digital park', 'tech park', 'technology park', 'it park',
@@ -564,8 +569,13 @@ const PROMISE_KEYWORDS: Record<string, string[]> = {
     'pokhara airport operation', 'bhairahawa airport operation', 'pokhara international flights',
     'gautam buddha airport flights', 'gbia operation', 'airport full operation',
     'international flights pokhara', 'airport revival', 'caan airport', 'airport terminal',
-    'पोखरा विमानस्थल सञ्चालन', 'भैरहवा विमानस्थल सञ्चालन', 'पोखरा अन्तर्राष्ट्रिय उडान',
-    'गौतम बुद्ध विमानस्थल उडान', 'विमानस्थल पूर्ण सञ्चालन', 'अन्तर्राष्ट्रिय उडान',
+    'pokhara airport', 'bhairahawa airport', 'gautam buddha airport', 'gbia',
+    'pia pokhara', 'second international airport', 'regional international airport',
+    'caan', 'civil aviation authority', 'airport', 'flights nepal', 'aviation nepal',
+    'tourist arrival', 'international airline', 'wide body', 'airline route',
+    'पोखरा विमानस्थल', 'भैरहवा विमानस्थल', 'पोखरा अन्तर्राष्ट्रिय उडान',
+    'गौतम बुद्ध विमानस्थल', 'विमानस्थल', 'अन्तर्राष्ट्रिय उडान',
+    'क्षेत्रीय अन्तर्राष्ट्रिय विमानस्थल', 'नागरिक उड्डयन', 'विमान कम्पनी',
   ],
   '81': [
     'hill station', 'hill station india border', 'hill tourism', 'wellness tourism',
@@ -676,8 +686,13 @@ const PROMISE_KEYWORDS: Record<string, string[]> = {
     'pandemic management', 'pandemic preparedness', 'pandemic infrastructure',
     'epidemic response', 'disease outbreak', 'health emergency', 'stockpile medical',
     'lab infrastructure', 'response protocol', 'disease surveillance',
-    'महामारी व्यवस्थापन', 'महामारी तयारी', 'महामारी पूर्वाधार',
-    'रोग प्रकोप', 'स्वास्थ्य आपतकाल', 'रोग निगरानी', 'प्रयोगशाला पूर्वाधार',
+    'pandemic', 'epidemic', 'outbreak', 'covid', 'covid-19', 'dengue', 'cholera',
+    'influenza', 'h5n1', 'bird flu', 'who nepal', 'public health emergency',
+    'quarantine', 'isolation ward', 'oxygen plant', 'icu beds', 'pcr lab',
+    'national public health', 'edcd', 'department of health',
+    'महामारी', 'सङ्क्रमण', 'डेङ्गु', 'कोभिड', 'कोरोना', 'फैलावट',
+    'स्वास्थ्य आपतकाल', 'रोग निगरानी', 'प्रयोगशाला', 'क्वारेन्टाइन',
+    'अक्सिजन प्लान्ट', 'जनस्वास्थ्य',
   ],
   '97': [
     'merit-based judge', 'judge appointment', 'judicial appointment reform',
@@ -768,8 +783,13 @@ const PROMISE_KEYWORDS: Record<string, string[]> = {
     'athlete pension', 'athlete insurance', 'sports pension', 'national athlete welfare',
     'player pension', 'sports health insurance', 'athlete fund', 'nsc pension',
     'national sports council', 'sports welfare', 'retired athlete', 'player health',
-    'खेलाडी पेन्सन', 'खेलाडी बीमा', 'खेलकुद पेन्सन',
-    'राष्ट्रिय खेलाडी कल्याण', 'खेलाडी कोष', 'खेलकुद स्वास्थ्य बीमा',
+    'athlete', 'sportsperson', 'national player', 'cricket nepal', 'football nepal',
+    'paragliding athlete', 'taekwondo nepal', 'sports ministry', 'sports board',
+    'anfa', 'can cricket', 'olympic committee nepal', 'noc nepal', 'sports policy',
+    'sag games', 'asian games nepal', 'commonwealth games nepal',
+    'खेलाडी', 'खेलकुद', 'राष्ट्रिय खेलाडी', 'क्रिकेट', 'फुटबल',
+    'राष्ट्रिय खेलकुद परिषद्', 'खेलकुद मन्त्रालय', 'खेलाडी पेन्सन',
+    'खेलाडी बीमा', 'खेलकुद नीति', 'दक्षिण एसियाली खेल',
   ],
 };
 
@@ -789,35 +809,78 @@ interface MatchResult {
  * Match an article to relevant promises using keyword overlap.
  * Returns matched promise IDs, confidence score, and classification.
  */
+// Stop-words (English + romanized Nepali) excluded from word-level matching
+const STOP_WORDS = new Set([
+  'the','a','an','of','to','in','on','at','for','and','or','by','with','from','is','are','be','as','it','its','this','that','these','those','will','was','were','has','have','had','not','no','do','does','did','but','if','then','than','so','can','could','should','would','i','you','we','they','he','she','his','her','their','our','your','my','me','us','them','him','one','two','three','new','more','also','about','into','over','under','out','up','down','only','just','very','any','all','some','most','many','much','make','made','make','said','says','say','get','got','go','goes','went','now','today','yesterday','tomorrow','here','there','what','which','who','whom','when','where','why','how','नेपाल','नेपाली','छ','छन्','हो','हुन्','भयो','गर्न','गर्दै','गरेको','गरेका','देखि','सम्म','मात्र','पनि','तर','र','वा','यो','यी','त्यो','ती','हाम्रो','हाम्रा','तपाईं','उनी','उहाँ','सबै','धेरै','केही','गत','आज','हिजो','भोलि','कि','के','कसले','कसरी','किन','कहाँ','कहिले','भने','भन्ने','भन्छ','भन्छन्','साथै','नयाँ','भन्दा','गर्ने','गरिएको','गरेको','भएको','हुन्छ','हुने','छैन','छैनन्','थियो','थिए',
+]);
+
+function tokenize(s: string): Set<string> {
+  if (!s) return new Set();
+  // Split on non-letters/digits, including Devanagari range, then drop stop-words and very short tokens
+  const tokens = s
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t && t.length >= 3 && !STOP_WORDS.has(t));
+  return new Set(tokens);
+}
+
+function tokenizeKeyword(kw: string): string[] {
+  return Array.from(tokenize(kw));
+}
+
 export function matchArticleToPromises(article: MatchInput): MatchResult {
-  const text = [
+  const rawText = [
     article.headline || '',
     article.headline_ne || '',
     article.content_excerpt || '',
-  ]
-    .join(' ')
-    .toLowerCase();
+  ].join(' ');
+  const lower = rawText.toLowerCase();
+  const textTokens = tokenize(rawText);
 
-  const matches: Array<{ id: string; matchCount: number }> = [];
+  const matches: Array<{ id: string; matchCount: number; score: number }> = [];
 
   for (const [id, keywords] of Object.entries(PROMISE_KEYWORDS)) {
-    const matchCount = keywords.filter((kw) => text.includes(kw.toLowerCase())).length;
-    if (matchCount > 0) {
-      matches.push({ id, matchCount });
+    let matchCount = 0;
+    let score = 0;
+    for (const kw of keywords) {
+      const kwLower = kw.toLowerCase();
+      // Tier 1: exact phrase substring (strongest)
+      if (lower.includes(kwLower)) {
+        matchCount += 1;
+        score += 3;
+        continue;
+      }
+      // Tier 2: word-level overlap — for multi-word keywords
+      const kwTokens = tokenizeKeyword(kw);
+      if (kwTokens.length === 0) continue;
+      let overlap = 0;
+      for (const t of kwTokens) if (textTokens.has(t)) overlap += 1;
+      if (kwTokens.length === 1) {
+        // Single distinctive word — count it
+        if (overlap === 1) {
+          matchCount += 1;
+          score += 1;
+        }
+      } else {
+        // Multi-word keyword: need ≥60% of words present (and ≥2)
+        const ratio = overlap / kwTokens.length;
+        if (overlap >= 2 && ratio >= 0.6) {
+          matchCount += 1;
+          score += 1 + ratio; // 1.6 – 2.0
+        }
+      }
     }
+    if (matchCount > 0) matches.push({ id, matchCount, score });
   }
 
-  // Sort by match count (strongest match first)
-  matches.sort((a, b) => b.matchCount - a.matchCount);
-
-  // Cap at top 5 matches to avoid noise
+  // Rank by score (which weights exact phrase matches highest)
+  matches.sort((a, b) => b.score - a.score || b.matchCount - a.matchCount);
   const topMatches = matches.slice(0, 5);
 
-  // Confidence: based on how many keywords matched
-  const maxMatchCount = topMatches.length > 0 ? topMatches[0].matchCount : 0;
+  const maxScore = topMatches.length > 0 ? topMatches[0].score : 0;
   const confidence =
     topMatches.length > 0
-      ? Math.min(0.3 + maxMatchCount * 0.15, 0.9)
+      ? Math.min(0.3 + maxScore * 0.08, 0.9)
       : 0.1;
 
   return {

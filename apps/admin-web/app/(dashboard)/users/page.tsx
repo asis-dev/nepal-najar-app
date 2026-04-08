@@ -4,8 +4,45 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users, Search, Plus, Shield, X,
-  Mail, Phone, MapPin, Clock, Trash2, ShieldCheck, ShieldOff, Loader2,
+  Mail, Phone, MapPin, Clock, Trash2, Loader2,
 } from 'lucide-react';
+import {
+  getAssignableRoles,
+  getRoleLabel,
+  normalizeAppRole,
+  type AppRole,
+} from '@/lib/auth/roles';
+
+type UserRole = AppRole;
+
+const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = getAssignableRoles().map(
+  (value) => ({ value, label: getRoleLabel(value) }),
+);
+
+function roleBadge(role: UserRole) {
+  if (role === 'admin') {
+    return {
+      label: 'Admin',
+      className: 'inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700',
+    };
+  }
+  if (role === 'verifier') {
+    return {
+      label: 'Verifier',
+      className: 'inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700',
+    };
+  }
+  if (role === 'observer') {
+    return {
+      label: 'Observer',
+      className: 'inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700',
+    };
+  }
+  return {
+    label: 'Citizen',
+    className: 'inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700',
+  };
+}
 
 // --- Types ---
 interface UserProfile {
@@ -13,7 +50,7 @@ interface UserProfile {
   display_name: string;
   email: string | null;
   phone: string | null;
-  role: 'citizen' | 'admin';
+  role: UserRole;
   province: string | null;
   district: string | null;
   created_at: string;
@@ -26,7 +63,11 @@ async function fetchUsers(): Promise<UserProfile[]> {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || 'Failed to fetch users');
   }
-  return res.json();
+  const raw = (await res.json()) as Array<Omit<UserProfile, 'role'> & { role: string }>;
+  return raw.map((row) => ({
+    ...row,
+    role: normalizeAppRole(row.role),
+  }));
 }
 
 async function inviteUser(payload: { email: string; display_name: string }) {
@@ -42,7 +83,7 @@ async function inviteUser(payload: { email: string; display_name: string }) {
   return res.json();
 }
 
-async function updateUserRole(id: string, role: 'citizen' | 'admin') {
+async function updateUserRole(id: string, role: UserRole) {
   const res = await fetch(`/api/users/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -68,7 +109,8 @@ async function deleteUser(id: string) {
 export default function UsersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'citizen'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  const [pendingRoles, setPendingRoles] = useState<Record<string, UserRole>>({});
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
@@ -92,10 +134,15 @@ export default function UsersPage() {
   });
 
   const roleMutation = useMutation({
-    mutationFn: ({ id, role }: { id: string; role: 'citizen' | 'admin' }) =>
+    mutationFn: ({ id, role }: { id: string; role: UserRole }) =>
       updateUserRole(id, role),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setPendingRoles((prev) => {
+        const next = { ...prev };
+        delete next[variables.id];
+        return next;
+      });
     },
   });
 
@@ -166,11 +213,14 @@ export default function UsersPage() {
         <select
           className="input w-auto text-sm"
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as 'all' | 'admin' | 'citizen')}
+          onChange={(e) => setRoleFilter(e.target.value as 'all' | UserRole)}
         >
           <option value="all">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="citizen">Citizen</option>
+          {ROLE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -251,14 +301,10 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-3">
-                        {user.role === 'admin' ? (
-                          <span className="badge-blue flex items-center gap-1 w-fit">
-                            <Shield className="w-3 h-3" />
-                            Admin
-                          </span>
-                        ) : (
-                          <span className="badge-green w-fit">Citizen</span>
-                        )}
+                        <span className={`${roleBadge(user.role).className} flex items-center gap-1 w-fit`}>
+                          {user.role === 'admin' ? <Shield className="w-3 h-3" /> : null}
+                          {roleBadge(user.role).label}
+                        </span>
                       </td>
                       <td className="px-6 py-3">
                         {user.province ? (
@@ -281,26 +327,34 @@ export default function UsersPage() {
                       </td>
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2">
-                          {/* Toggle role */}
-                          {user.role === 'citizen' ? (
+                          <select
+                            className="input w-auto min-w-[110px] text-xs"
+                            value={pendingRoles[user.id] ?? user.role}
+                            onChange={(e) =>
+                              setPendingRoles((prev) => ({
+                                ...prev,
+                                [user.id]: e.target.value as UserRole,
+                              }))
+                            }
+                          >
+                            {ROLE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          {(pendingRoles[user.id] ?? user.role) !== user.role && (
                             <button
-                              className="text-xs font-medium text-primary-600 hover:text-primary-800 flex items-center gap-1 disabled:opacity-50"
-                              title="Promote to admin"
+                              className="text-xs font-medium text-primary-600 hover:text-primary-800 disabled:opacity-50"
                               disabled={roleMutation.isPending}
-                              onClick={() => roleMutation.mutate({ id: user.id, role: 'admin' })}
+                              onClick={() =>
+                                roleMutation.mutate({
+                                  id: user.id,
+                                  role: (pendingRoles[user.id] ?? user.role) as UserRole,
+                                })
+                              }
                             >
-                              <ShieldCheck className="w-3.5 h-3.5" />
-                              Promote
-                            </button>
-                          ) : (
-                            <button
-                              className="text-xs font-medium text-amber-600 hover:text-amber-800 flex items-center gap-1 disabled:opacity-50"
-                              title="Demote to citizen"
-                              disabled={roleMutation.isPending}
-                              onClick={() => roleMutation.mutate({ id: user.id, role: 'citizen' })}
-                            >
-                              <ShieldOff className="w-3.5 h-3.5" />
-                              Demote
+                              {roleMutation.isPending ? 'Saving...' : 'Save Role'}
                             </button>
                           )}
 

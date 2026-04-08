@@ -222,12 +222,27 @@ async function callGroqWhisperVerbose(
   const blobBuffer = new ArrayBuffer(audioBuffer.byteLength);
   new Uint8Array(blobBuffer).set(audioBuffer);
 
+  // Nepali civic domain prompt — conditions Whisper's vocabulary for better accuracy
+  const NEPALI_CIVIC_PROMPT =
+    'काठमाडौं ललितपुर भक्तपुर पोखरा बिराटनगर जनकपुर बुटवल धरान इटहरी ' +
+    'सडक खाल्डो पानी बिजुली ढल फोहर स्वास्थ्य शिक्षा विद्यालय अस्पताल ' +
+    'वडा कार्यालय नगरपालिका गाउँपालिका महानगरपालिका उपमहानगरपालिका प्रदेश सरकार ' +
+    'मन्त्रालय मन्त्री सचिव निर्देशक प्रमुख जिल्ला अधिकारी ' +
+    'बजेट विनियोजन भ्रष्टाचार घुस अनियमितता लापरवाही ठेक्का निर्माण ' +
+    'खानेपानी सिंचाई बाटो पुल नाला ट्राफिक प्रहरी सुरक्षा ' +
+    'इन्टरनेट दूरसञ्चार रोजगारी बेरोजगारी वातावरण प्रदूषण फोहरमैला ' +
+    'नागरिक उजुरी गुनासो समस्या समाधान जवाफदेही';
+
   // Build multipart form data
   const formData = new FormData();
   formData.append('file', new Blob([blobBuffer], { type: mimeType }), filename);
   formData.append('model', GROQ_WHISPER_MODEL);
   formData.append('language', language);
   formData.append('response_format', 'verbose_json');
+  // Add domain prompt for Nepali to dramatically improve accuracy
+  if (language === 'ne') {
+    formData.append('prompt', NEPALI_CIVIC_PROMPT);
+  }
 
   try {
     const res = await fetch(GROQ_API_URL, {

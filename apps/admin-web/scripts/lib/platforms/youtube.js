@@ -67,7 +67,7 @@ async function postShort({ videoPath, caption, hashtags = [] }) {
           description,
           tags: ['Nepal', 'NepalRepublic', 'BalenShah', 'Government', 'Accountability', ...hashtags.slice(0, 10)],
           categoryId: '25', // News & Politics
-          defaultLanguage: caption.match(/[ा-ह]/) ? 'ne' : 'en',
+          defaultLanguage: /[\u0900-\u097F]/.test(caption) ? 'ne' : 'en',
         },
         status: {
           privacyStatus: 'public',

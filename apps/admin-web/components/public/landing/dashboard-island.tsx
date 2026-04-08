@@ -15,7 +15,7 @@ import { useTrending } from '@/lib/hooks/use-trending';
 import { useWatchlistStore, usePreferencesStore, useUserPreferencesStore } from '@/lib/stores/preferences';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { isPublicCommitment } from '@/lib/data/commitments';
-import { computeGhantiScore, GRADE_COLORS } from '@/lib/data/ghanti-score';
+import { computeGhantiScore, GRADE_COLORS, shouldShowGrade } from '@/lib/data/ghanti-score';
 import { scorecardShareText } from '@/lib/utils/share';
 import { ShareMenu } from '@/components/public/share-menu';
 import { useDailyBrief } from '@/lib/hooks/use-daily-brief';
@@ -253,12 +253,12 @@ export function DashboardIsland() {
           <h1 className="text-base sm:text-xl md:text-2xl font-bold tracking-tight text-white leading-tight">
             {locale === 'ne'
               ? t('home.heroTitle')
-              : 'Track promises. Report reality. Verify truth.'}
+              : 'Report civic issues. Track promises. Verify truth.'}
           </h1>
           <p className="mt-1.5 text-[13px] text-gray-400 max-w-2xl mx-auto leading-relaxed">
             {locale === 'ne'
               ? t('brand.heroSubheadline')
-              : 'AI-powered civic intelligence on promises, issues & evidence.'}
+              : 'From street problems to national promises, one AI-powered, evidence-backed accountability platform.'}
           </p>
 
           {/* Stats strip */}
@@ -269,7 +269,7 @@ export function DashboardIsland() {
                   ? t('home.preLaunchCountdown').replace('{count}', String(daysUntilInauguration))
                   : `${locale === 'ne' ? 'दिन' : 'Day'} ${dayInTerm}`}
               </span>
-              {showLetterGrade && ghantiScore && (
+              {ghantiScore && shouldShowGrade(ghantiScore.phase) && showLetterGrade && (
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${GRADE_COLORS[ghantiScore.grade].bg} ${GRADE_COLORS[ghantiScore.grade].text}`}>
                   {ghantiScore.grade}
                 </span>
@@ -356,8 +356,14 @@ export function DashboardIsland() {
                 <div className="absolute top-2.5 right-2.5 z-10">
                   <ShareMenu
                     shareUrl="/"
-                    shareText={scorecardShareText({ grade: ghantiScore.grade, score: ghantiScore.score, locale })}
+                    shareText={scorecardShareText({ grade: shouldShowGrade(ghantiScore.phase) ? ghantiScore.grade : undefined, score: ghantiScore.score, locale, dayInTerm: ghantiScore.dayInTerm })}
                     shareTitle="Nepal Republic"
+                    ogParams={{
+                      ogType: 'report-card',
+                      ogTitle: locale === 'ne' ? 'नेपाल रिपब्लिक' : 'Nepal Republic',
+                      ogSection: 'dashboard',
+                      ogLocale: locale,
+                    }}
                     size="sm"
                   />
                 </div>

@@ -106,7 +106,8 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+  const desktopInputRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -122,8 +123,12 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       setQuery('');
       setDebouncedQuery('');
       setActiveIndex(-1);
-      // Small delay to let the overlay render
-      requestAnimationFrame(() => inputRef.current?.focus());
+      // Focus the visible input — mobile or desktop
+      requestAnimationFrame(() => {
+        const isMobile = window.innerWidth < 768;
+        const ref = isMobile ? mobileInputRef : desktopInputRef;
+        ref.current?.focus();
+      });
     }
   }, [isOpen]);
 
@@ -272,7 +277,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
-              ref={inputRef}
+              ref={mobileInputRef}
               type="text"
               value={query}
               onChange={(e) => {
@@ -285,14 +290,14 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                   ? 'वचनबद्धता, विषय, व्यक्ति खोज्नुहोस्...'
                   : 'Search commitments, topics, people...'
               }
-              className="w-full rounded-xl border border-white/[0.1] bg-white/[0.05] py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-gray-500 outline-none transition-colors focus:border-primary-500/40"
+              className="w-full rounded-xl border border-white/[0.1] bg-white/[0.05] py-2.5 pl-10 pr-10 text-base text-white placeholder:text-gray-500 outline-none transition-colors focus:border-primary-500/40"
               autoFocus
             />
             {query && (
               <button
                 onClick={() => {
                   setQuery('');
-                  inputRef.current?.focus();
+                  mobileInputRef.current?.focus();
                 }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
               >
@@ -340,7 +345,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
             <div className="flex items-center gap-3 border-b border-white/[0.08] px-5 py-4">
               <Search className="h-5 w-5 text-gray-400" />
               <input
-                ref={inputRef}
+                ref={desktopInputRef}
                 type="text"
                 value={query}
                 onChange={(e) => {
@@ -360,7 +365,7 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 <button
                   onClick={() => {
                     setQuery('');
-                    inputRef.current?.focus();
+                    desktopInputRef.current?.focus();
                   }}
                   className="text-gray-500 hover:text-gray-300 transition-colors"
                 >

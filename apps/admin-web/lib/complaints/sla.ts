@@ -2,9 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ComplaintCase, ComplaintSlaPolicy, ComplaintStatus } from '@/lib/complaints/types';
 
 const TERMINAL_STATUSES: ComplaintStatus[] = ['resolved', 'closed', 'rejected', 'duplicate'];
-const PRE_ACK_STATUSES: ComplaintStatus[] = ['submitted', 'triaged', 'routed', 'needs_info'];
+const PRE_ACK_STATUSES: ComplaintStatus[] = ['submitted', 'triaged', 'routed', 'reopened'];
 
-export type ComplaintSlaState = 'not_applicable' | 'on_track' | 'due_soon' | 'breached';
+export type ComplaintSlaState = 'not_applicable' | 'on_track' | 'due_soon' | 'breached' | 'paused';
 
 export function isTerminalComplaintStatus(status: ComplaintStatus): boolean {
   return TERMINAL_STATUSES.includes(status);
@@ -19,6 +19,13 @@ function parseIsoToMs(value: string | null | undefined): number | null {
 function addHours(baseIso: string, hours: number): string {
   const base = new Date(baseIso).getTime();
   const dueMs = base + hours * 60 * 60 * 1000;
+  return new Date(dueMs).toISOString();
+}
+
+function addMinutes(baseIso: string, minutes: number): string {
+  if (minutes <= 0) return baseIso;
+  const base = new Date(baseIso).getTime();
+  const dueMs = base + minutes * 60 * 1000;
   return new Date(dueMs).toISOString();
 }
 
@@ -63,7 +70,7 @@ export async function resolveComplaintSlaPolicy(
 export function computeComplaintSlaDueAt(
   complaint: Pick<
     ComplaintCase,
-    'status' | 'created_at' | 'first_acknowledged_at'
+    'status' | 'created_at' | 'first_acknowledged_at' | 'sla_total_paused_minutes' | 'sla_paused_at'
   >,
   policy: Pick<ComplaintSlaPolicy, 'ack_hours' | 'resolve_hours'>,
 ): { dueAt: string | null; targetHours: number | null } {
@@ -71,16 +78,24 @@ export function computeComplaintSlaDueAt(
     return { dueAt: null, targetHours: null };
   }
 
-  if (PRE_ACK_STATUSES.includes(complaint.status)) {
+  const nowMs = Date.now();
+  const pausedNowMs = parseIsoToMs(complaint.sla_paused_at);
+  const totalPausedMinutes =
+    Math.max(0, complaint.sla_total_paused_minutes || 0)
+    + (pausedNowMs ? Math.max(0, Math.floor((nowMs - pausedNowMs) / 60000)) : 0);
+
+  if (PRE_ACK_STATUSES.includes(complaint.status) && !complaint.first_acknowledged_at) {
+    const baseDue = addHours(complaint.created_at, policy.ack_hours);
     return {
-      dueAt: addHours(complaint.created_at, policy.ack_hours),
+      dueAt: addMinutes(baseDue, totalPausedMinutes),
       targetHours: policy.ack_hours,
     };
   }
 
   const base = complaint.first_acknowledged_at || complaint.created_at;
+  const baseDue = addHours(base, policy.resolve_hours);
   return {
-    dueAt: addHours(base, policy.resolve_hours),
+    dueAt: addMinutes(baseDue, totalPausedMinutes),
     targetHours: policy.resolve_hours,
   };
 }
@@ -91,6 +106,9 @@ export function getComplaintSlaState(
 ): { state: ComplaintSlaState; minutesToDue: number | null } {
   if (isTerminalComplaintStatus(complaint.status)) {
     return { state: 'not_applicable', minutesToDue: null };
+  }
+  if (complaint.status === 'needs_info') {
+    return { state: 'paused', minutesToDue: null };
   }
 
   const dueMs = parseIsoToMs(complaint.sla_due_at);

@@ -47,6 +47,7 @@ interface ClassificationResult {
   relevanceScore: number;
   matchedPromiseIds: number[];
   classification: Classification;
+  effortTier?: 'intent' | 'action' | 'delivery';
   reasoning: string;
 }
 
@@ -365,10 +366,16 @@ Respond with a JSON array containing exactly ${needsAI.length} result(s), one pe
     "relevanceScore": 0.0-1.0,
     "matchedPromiseIds": [number],
     "classification": "confirms|contradicts|neutral|budget_allocation|policy_change|statement",
+    "effortTier": "intent|action|delivery",
     "reasoning": "brief explanation"
   },
   ...
-]`;
+]
+
+EFFORT TIER RULES:
+- "intent": Speeches, statements, plans, announcements, promises, committee formations (talk, not action)
+- "action": Budget allocations, policy changes, bills tabled, contracts signed, appointments made (concrete steps)
+- "delivery": Infrastructure completed, services launched, measurable outcomes, laws enacted (tangible results)`;
 
   console.log(`[Brain] Batch tier-1 classifying ${needsAI.length} signals in single AI call (catalog ~${commitmentCatalog.lines.length} lines sent once instead of ${needsAI.length} times)`);
 
@@ -452,6 +459,7 @@ Respond in JSON format ONLY:
   "relevanceScore": 0.0-1.0,
   "matchedPromiseIds": [number],
   "classification": "confirms|contradicts|neutral|budget_allocation|policy_change|statement",
+  "effortTier": "intent|action|delivery",
   "reasoning": "brief explanation"
 }`;
 
@@ -700,6 +708,14 @@ export async function processSignalsBatch(
               );
 
               const existingMetadata = (signal as any).metadata || {};
+              // Determine effort tier — use AI response if valid, fall back to inference from classification
+              const validTiers = ['intent', 'action', 'delivery'];
+              const effortTier = (result.effortTier && validTiers.includes(result.effortTier))
+                ? result.effortTier
+                : (result.classification === 'statement' ? 'intent'
+                  : ['policy_change', 'budget_allocation', 'confirms', 'contradicts'].includes(result.classification) ? 'action'
+                  : 'intent');
+
               await supabase
                 .from('intelligence_signals')
                 .update({
@@ -709,13 +725,14 @@ export async function processSignalsBatch(
                   relevance_score: result.relevanceScore,
                   matched_promise_ids: result.matchedPromiseIds,
                   classification: normalizeClassification(result.classification),
+                  effort_tier: effortTier,
                   reasoning: result.reasoning,
                   review_required: reviewRequired,
                   review_status: reviewStatus,
                   metadata: {
                     ...existingMetadata,
                     tier1_scanned_at: new Date().toISOString(),
-                    tier1_scan_version: '2026-03-30',
+                    tier1_scan_version: '2026-04-03',
                   },
                 })
                 .eq('id', signal.id);

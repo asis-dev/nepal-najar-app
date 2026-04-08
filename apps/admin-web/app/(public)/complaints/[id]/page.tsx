@@ -4,16 +4,25 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowLeft, Bell, BellOff, Building2, Layers, Loader2, MessageCircle, PlusCircle, Shield, Timer } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Bell, BellOff, Building2, CheckCircle2, Layers, Loader2, MessageCircle, PlusCircle, RotateCcw, Share2, Shield, Timer, Trash2 } from 'lucide-react';
 import { useComplaint, useComplaintDepartments, useComplaintEvidence, useComplaintEvents } from '@/lib/hooks/use-complaints';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
+import { ShareMenu } from '@/components/public/share-menu';
+import { buildComplaintShareData } from '@/lib/complaints/share';
+import { shareToPlatform } from '@/lib/utils/share';
 
 function formatTime(value: string | null | undefined): string {
   if (!value) return 'Unknown';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Unknown';
   return date.toLocaleString();
+}
+
+function toText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function AuthorityCard({ route, isNe }: { route: Record<string, string>; isNe: boolean }) {
@@ -41,6 +50,68 @@ function AuthorityCard({ route, isNe }: { route: Record<string, string>; isNe: b
   );
 }
 
+function AuthorityChainCard({
+  nodes,
+  isNe,
+}: {
+  nodes: Array<Record<string, unknown>>;
+  isNe: boolean;
+}) {
+  const typeLabel: Record<string, { en: string; ne: string }> = {
+    primary_authority: { en: 'Primary Authority', ne: 'मुख्य निकाय' },
+    department_head: { en: 'Department Lead', ne: 'विभाग नेतृत्व' },
+    ministry: { en: 'Ministry', ne: 'मन्त्रालय' },
+    minister: { en: 'Minister', ne: 'मन्त्री' },
+    oversight: { en: 'Oversight', ne: 'निगरानी' },
+  };
+
+  return (
+    <div className="glass-card p-4">
+      <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">
+        {isNe ? 'जिम्मेवारी श्रृंखला' : 'Accountability Chain'}
+      </p>
+      <div className="space-y-2">
+        {nodes.map((node, idx) => {
+          const typeKey = toText(node.node_type) || 'primary_authority';
+          const label = typeLabel[typeKey] || typeLabel.primary_authority;
+          const name = isNe
+            ? toText(node.authority_name_ne) || toText(node.authority_name) || 'Authority'
+            : toText(node.authority_name) || toText(node.authority_name_ne) || 'Authority';
+          const office = isNe
+            ? toText(node.office_ne) || toText(node.office)
+            : toText(node.office) || toText(node.office_ne);
+          const official = toText(node.official_name);
+          const title = toText(node.official_title);
+          const facebookUrl = toText(node.facebook_url);
+          return (
+            <div key={`${typeKey}-${idx}`} className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
+              <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                {isNe ? label.ne : label.en}
+              </p>
+              <p className="text-sm font-medium text-white">{name}</p>
+              {(official || title || office) && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                  {[official, title, office].filter(Boolean).join(' · ')}
+                </p>
+              )}
+              {facebookUrl && (
+                <a
+                  href={facebookUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-flex text-[11px] text-cyan-300 hover:text-cyan-200"
+                >
+                  {isNe ? 'फेसबुक पेज' : 'Facebook page'}
+                </a>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function ComplaintDetailPage() {
   const params = useParams<{ id: string }>();
   const complaintId = typeof params?.id === 'string' ? params.id : null;
@@ -58,6 +129,10 @@ export default function ComplaintDetailPage() {
   const events = eventData?.events || [];
   const evidence = evidenceData?.evidence || [];
   const isOwner = Boolean(user?.id && complaint?.user_id === user.id);
+  const shareData = complaint ? buildComplaintShareData(complaint, isNe ? 'ne' : 'en') : null;
+  const authorityChain = complaint && Array.isArray((complaint as unknown as Record<string, unknown>).authority_chain)
+    ? ((complaint as unknown as Record<string, unknown>).authority_chain as Array<Record<string, unknown>>)
+    : [];
 
   const [followBusy, setFollowBusy] = useState(false);
   const [isFollowing, setIsFollowing] = useState<boolean>(Boolean(complaint?.is_following));
@@ -86,6 +161,14 @@ export default function ComplaintDetailPage() {
   const [satisfactionNote, setSatisfactionNote] = useState('');
   const [satisfactionBusy, setSatisfactionBusy] = useState(false);
   const [satisfactionMessage, setSatisfactionMessage] = useState<string | null>(null);
+  const [facebookShareBusy, setFacebookShareBusy] = useState(false);
+  const [facebookShareMessage, setFacebookShareMessage] = useState<string | null>(null);
+
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [resolveBusy, setResolveBusy] = useState(false);
+  const [resolveMessage, setResolveMessage] = useState<string | null>(null);
+  const [reopenBusy, setReopenBusy] = useState(false);
 
   const refreshAll = async () => {
     if (!complaintId) return;
@@ -327,6 +410,110 @@ export default function ComplaintDetailPage() {
     }
   };
 
+  const handleFacebookAccountabilityShare = async () => {
+    if (!shareData) return;
+    setFacebookShareBusy(true);
+    setFacebookShareMessage(null);
+    try {
+      const mentionTargets = authorityChain
+        .filter((node) => {
+          const type = toText(node.node_type);
+          return type === 'department_head' || type === 'ministry' || type === 'minister';
+        })
+        .map((node) => {
+          const name = isNe
+            ? toText(node.authority_name_ne) || toText(node.authority_name)
+            : toText(node.authority_name) || toText(node.authority_name_ne);
+          return name;
+        })
+        .filter((value): value is string => Boolean(value))
+        .slice(0, 4);
+
+      const shareText = mentionTargets.length > 0
+        ? `${shareData.shareText} · ${isNe ? 'जिम्मेवार निकाय' : 'Responsible authorities'}: ${mentionTargets.join(', ')}`
+        : shareData.shareText;
+
+      const result = await shareToPlatform('facebook', {
+        url: shareData.shareUrl,
+        text: shareText,
+        title: shareData.shareTitle,
+        ogParams: shareData.ogParams,
+      });
+
+      if (result === 'copied') {
+        setFacebookShareMessage(
+          isNe
+            ? 'Facebook पोस्ट टेक्स्ट कपी भयो, अब पेस्ट गरेर शेयर गर्नुहोस्।'
+            : 'Facebook post text copied. Paste it after opening Facebook.',
+        );
+      } else {
+        setFacebookShareMessage(
+          isNe ? 'Facebook share खुल्यो।' : 'Facebook share opened.',
+        );
+      }
+    } finally {
+      setFacebookShareBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!complaintId) return;
+    setDeleteBusy(true);
+    try {
+      const response = await fetch(`/api/complaints/${complaintId}`, { method: 'DELETE' });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body?.error || `Failed (${response.status})`);
+      // Redirect back to complaints list
+      window.location.href = '/complaints';
+    } catch (err) {
+      console.warn('[complaints] delete failed', err);
+      setDeleteConfirm(false);
+      setDeleteBusy(false);
+    }
+  };
+
+  const handleOwnerResolve = async () => {
+    if (!complaintId || !isAuthenticated) return;
+    setResolveBusy(true);
+    setResolveMessage(null);
+    try {
+      const response = await fetch(`/api/complaints/${complaintId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'resolved', update_message: 'Marked as resolved by reporter.' }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body?.error || `Failed (${response.status})`);
+      setResolveMessage(isNe ? 'केस समाधान भयो।' : 'Case marked as resolved.');
+      await refreshAll();
+    } catch (err) {
+      setResolveMessage(err instanceof Error ? err.message : 'Failed to resolve.');
+    } finally {
+      setResolveBusy(false);
+    }
+  };
+
+  const handleOwnerReopen = async () => {
+    if (!complaintId || !isAuthenticated) return;
+    setReopenBusy(true);
+    setResolveMessage(null);
+    try {
+      const response = await fetch(`/api/complaints/${complaintId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'reopened', update_message: 'Case reopened by reporter.' }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body?.error || `Failed (${response.status})`);
+      setResolveMessage(isNe ? 'केस पुनः खोलिएको छ।' : 'Case reopened.');
+      await refreshAll();
+    } catch (err) {
+      setResolveMessage(err instanceof Error ? err.message : 'Failed to reopen.');
+    } finally {
+      setReopenBusy(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="public-page">
@@ -399,38 +586,141 @@ export default function ComplaintDetailPage() {
                   {' '}
                   {isNe ? 'SLA due:' : 'SLA due:'} {complaint.sla_due_at ? formatTime(complaint.sla_due_at) : 'not set'}
                 </p>
+                {complaint.status === 'needs_info' && (
+                  <p className="mt-1 text-xs text-amber-200">
+                    {isNe
+                      ? 'यो केस नागरिकबाट थप जानकारी प्रतिक्षामा छ। SLA टाइमर रोकिएको छ।'
+                      : 'This case is waiting on citizen input. SLA timer is paused.'}
+                  </p>
+                )}
               </div>
 
-              <button
-                disabled={!isAuthenticated || followBusy}
-                onClick={handleFollowToggle}
-                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                  isFollowing
-                    ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25'
-                    : 'border-white/[0.15] bg-white/[0.05] text-gray-100 hover:bg-white/[0.1]'
-                } disabled:opacity-60`}
-              >
-                {followBusy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : isFollowing ? (
-                  <BellOff className="h-4 w-4" />
-                ) : (
-                  <Bell className="h-4 w-4" />
+              <div className="flex items-center gap-1">
+                {shareData && (
+                  <ShareMenu
+                    shareUrl={shareData.shareUrl}
+                    shareText={shareData.shareText}
+                    shareTitle={shareData.shareTitle}
+                    ogParams={shareData.ogParams}
+                    size="md"
+                  />
                 )}
-                {isFollowing
-                  ? isNe
-                    ? 'अनफलो'
-                    : 'Unfollow'
-                  : isNe
-                    ? 'फलो'
-                    : 'Follow'}
-              </button>
+                {shareData && (
+                  <button
+                    onClick={handleFacebookAccountabilityShare}
+                    disabled={facebookShareBusy}
+                    className="inline-flex items-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-100 transition-colors hover:bg-blue-500/30 disabled:opacity-60"
+                  >
+                    {facebookShareBusy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Share2 className="h-3.5 w-3.5" />
+                    )}
+                    {isNe ? 'Facebook मा जिम्मेवारी शेयर' : 'Share to Facebook'}
+                  </button>
+                )}
+                <button
+                  disabled={!isAuthenticated || followBusy}
+                  onClick={handleFollowToggle}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+                    isFollowing
+                      ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25'
+                      : 'border-white/[0.15] bg-white/[0.05] text-gray-100 hover:bg-white/[0.1]'
+                  } disabled:opacity-60`}
+                >
+                  {followBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isFollowing ? (
+                    <BellOff className="h-4 w-4" />
+                  ) : (
+                    <Bell className="h-4 w-4" />
+                  )}
+                  {isFollowing
+                    ? isNe
+                      ? 'अनफलो'
+                      : 'Unfollow'
+                    : isNe
+                      ? 'फलो'
+                      : 'Follow'}
+                </button>
+              </div>
             </div>
+            {facebookShareMessage && (
+              <p className="mt-2 text-xs text-blue-200">{facebookShareMessage}</p>
+            )}
           </div>
+
+          {/* Owner / Admin actions: Resolve + Delete */}
+          {(isOwner || isVerifier) && (
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Owner can reopen resolved/closed/rejected case */}
+              {isOwner && ['resolved', 'closed', 'rejected'].includes(complaint.status) && (
+                <button
+                  onClick={handleOwnerReopen}
+                  disabled={reopenBusy}
+                  className="inline-flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/20 px-4 py-2.5 text-sm font-semibold text-amber-100 transition-colors hover:bg-amber-500/30 disabled:opacity-60"
+                >
+                  {reopenBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                  {isNe ? 'केस पुनः खोल्नुहोस्' : 'Reopen Case'}
+                </button>
+              )}
+
+              {/* Owner can mark resolved if case is in active state */}
+              {isOwner && !['resolved', 'closed', 'rejected', 'duplicate'].includes(complaint.status) && (
+                <button
+                  onClick={handleOwnerResolve}
+                  disabled={resolveBusy}
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/30 disabled:opacity-60"
+                >
+                  {resolveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {isNe ? 'समाधान भयो' : 'Mark Resolved'}
+                </button>
+              )}
+
+              {/* Delete: owner can delete own, admin can delete any */}
+              {(isOwner || isVerifier) && !deleteConfirm && (
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/20"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isNe ? 'केस मेटाउनुहोस्' : 'Delete Case'}
+                </button>
+              )}
+              {deleteConfirm && (
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-sm text-red-200">
+                    {isNe ? 'पक्का मेटाउने?' : 'Are you sure? This cannot be undone.'}
+                  </span>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteBusy}
+                    className="rounded-xl border border-red-500/60 bg-red-500/30 px-3 py-2 text-sm font-semibold text-red-100 hover:bg-red-500/40 disabled:opacity-60"
+                  >
+                    {deleteBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : isNe ? 'हो, मेटाउनुहोस्' : 'Yes, Delete'}
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirm(false)}
+                    className="rounded-xl border border-white/[0.15] bg-white/[0.05] px-3 py-2 text-sm text-gray-300 hover:bg-white/[0.1]"
+                  >
+                    {isNe ? 'रद्द' : 'Cancel'}
+                  </button>
+                </div>
+              )}
+
+              {resolveMessage && (
+                <p className="text-xs text-emerald-200">{resolveMessage}</p>
+              )}
+            </div>
+          )}
 
           {/* Authority Routing Card */}
           {complaint.ai_triage && (complaint.ai_triage as Record<string, unknown>).authorityRoute ? (
             <AuthorityCard route={(complaint.ai_triage as Record<string, unknown>).authorityRoute as Record<string, string>} isNe={isNe} />
+          ) : null}
+
+          {authorityChain.length > 0 ? (
+            <AuthorityChainCard nodes={authorityChain} isNe={isNe} />
           ) : null}
 
           {/* Cluster Link */}

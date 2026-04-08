@@ -7,20 +7,45 @@ const NEPAL_RED = '#DC143C';
 const NEPAL_BLUE = '#003893';
 const BELL_GOLD = '#D9A441';
 
-const SECTION_THEMES: Record<string, { accent: string; emoji: string; label: string; tagline: string }> = {
-  commitments: { accent: '#22d3ee', emoji: '📊', label: 'COMMITMENT TRACKER', tagline: 'Tracking government promises with AI-backed evidence' },
-  corruption:  { accent: '#ef4444', emoji: '🔍', label: 'CORRUPTION WATCH',  tagline: 'Follow the money. Expose the truth.' },
-  complaints:  { accent: '#f59e0b', emoji: '📢', label: 'CIVIC COMPLAINTS',  tagline: 'Report it. Route it. Resolve it.' },
-  report:      { accent: '#8b5cf6', emoji: '📋', label: 'REPORT CARD',       tagline: 'AI-scored government accountability' },
-  proposals:   { accent: '#10b981', emoji: '💡', label: 'PROPOSALS',         tagline: 'Propose. Vote. Build.' },
-  ministers:   { accent: '#3b82f6', emoji: '👤', label: 'MINISTER PROFILE',  tagline: 'Tracking ministerial activity & commitments' },
-  articles:    { accent: '#60a5fa', emoji: '📰', label: 'NEWS INTELLIGENCE', tagline: 'AI-verified news coverage of government activity' },
-  stories:     { accent: '#d946ef', emoji: '📡', label: 'DAILY BRIEF',      tagline: 'AI-curated daily intelligence on Nepal' },
-  scorecard:   { accent: '#8b5cf6', emoji: '📊', label: 'SCORECARD',        tagline: 'AI-scored government accountability' },
-  dashboard:   { accent: '#22d3ee', emoji: '🇳🇵', label: 'LIVE DASHBOARD',   tagline: 'AI-powered civic intelligence for Nepal' },
+interface SectionTheme {
+  accent: string;
+  emoji: string;
+  label: string;
+  labelNe: string;
+  tagline: string;
+  taglineNe: string;
+}
+
+const SECTION_THEMES: Record<string, SectionTheme> = {
+  commitments: { accent: '#22d3ee', emoji: '📊', label: 'COMMITMENT TRACKER', labelNe: 'प्रतिबद्धता ट्र्याकर', tagline: 'Tracking government promises with AI-backed evidence', taglineNe: 'AI-प्रमाणित सरकारी वाचा ट्र्याकिङ' },
+  corruption:  { accent: '#ef4444', emoji: '🔍', label: 'CORRUPTION WATCH', labelNe: 'भ्रष्टाचार निगरानी', tagline: 'Follow the money. Expose the truth.', taglineNe: 'पैसा पछ्याउनुहोस्। सत्य उजागर गर्नुहोस्।' },
+  complaints:  { accent: '#f59e0b', emoji: '📢', label: 'CIVIC COMPLAINTS', labelNe: 'नागरिक गुनासो', tagline: 'Report it. Route it. Resolve it.', taglineNe: 'रिपोर्ट गर्नुहोस्। समाधान गर्नुहोस्।' },
+  report:      { accent: '#8b5cf6', emoji: '📋', label: 'REPORT CARD', labelNe: 'रिपोर्ट कार्ड', tagline: 'AI-scored government accountability', taglineNe: 'AI-स्कोर सरकारी जवाफदेहिता' },
+  proposals:   { accent: '#10b981', emoji: '💡', label: 'PROPOSALS', labelNe: 'प्रस्तावहरू', tagline: 'Propose. Vote. Build.', taglineNe: 'प्रस्ताव। मत। निर्माण।' },
+  ministers:   { accent: '#3b82f6', emoji: '👤', label: 'MINISTER PROFILE', labelNe: 'मन्त्री प्रोफाइल', tagline: 'Tracking ministerial activity & commitments', taglineNe: 'मन्त्रीको गतिविधि र प्रतिबद्धता ट्र्याकिङ' },
+  projects:    { accent: '#06b6d4', emoji: '🏗️', label: 'PROJECT TRACKER', labelNe: 'परियोजना ट्र्याकर', tagline: 'Track projects, blockers, and delivery progress', taglineNe: 'परियोजना, अवरोध र प्रगति ट्र्याकिङ' },
+  articles:    { accent: '#60a5fa', emoji: '📰', label: 'NEWS INTELLIGENCE', labelNe: 'समाचार विश्लेषण', tagline: 'AI-verified news coverage of government activity', taglineNe: 'AI-प्रमाणित सरकारी समाचार' },
+  evidence:    { accent: '#38bdf8', emoji: '📁', label: 'EVIDENCE VAULT', labelNe: 'प्रमाण भण्डार', tagline: 'Who said what, when — with sources', taglineNe: 'कसले के कहिले भन्यो — स्रोतसहित' },
+  stories:     { accent: '#d946ef', emoji: '📡', label: 'DAILY BRIEF', labelNe: 'दैनिक ब्रिफ', tagline: 'AI-curated daily intelligence on Nepal', taglineNe: 'AI-संचालित दैनिक जानकारी' },
+  daily:       { accent: '#d946ef', emoji: '📡', label: 'DAILY BRIEF', labelNe: 'दैनिक ब्रिफ', tagline: 'AI-curated daily intelligence on Nepal', taglineNe: 'AI-संचालित दैनिक जानकारी' },
+  'what-changed': { accent: '#a78bfa', emoji: '🧭', label: 'WHAT CHANGED', labelNe: 'के परिवर्तन भयो', tagline: 'Recent verified changes across the tracker', taglineNe: 'ट्र्याकरभरिका पछिल्ला प्रमाणित परिवर्तनहरू' },
+  scorecard:   { accent: '#8b5cf6', emoji: '📊', label: 'SCORECARD', labelNe: 'स्कोरकार्ड', tagline: 'AI-scored government accountability', taglineNe: 'AI-स्कोर सरकारी जवाफदेहिता' },
+  dashboard:   { accent: '#22d3ee', emoji: '🇳🇵', label: 'LIVE DASHBOARD', labelNe: 'लाइभ ड्यासबोर्ड', tagline: 'From street problems to national promises, one AI-powered, evidence-backed accountability platform.', taglineNe: 'सडकका समस्या देखि राष्ट्रिय वाचासम्म, एउटै AI-संचालित, प्रमाण-आधारित जवाफदेहिता प्लेटफर्म।' },
 };
 
-const DEFAULT_THEME = { accent: '#22d3ee', emoji: '🔔', label: '', tagline: 'AI-powered civic intelligence for Nepal' };
+const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', emoji: '🔔', label: '', labelNe: '', tagline: 'From street problems to national promises, one AI-powered, evidence-backed accountability platform.', taglineNe: 'सडकका समस्या देखि राष्ट्रिय वाचासम्म, एउटै AI-संचालित, प्रमाण-आधारित जवाफदेहिता प्लेटफर्म।' };
+
+const STATUS_LABELS: Record<string, { en: string; ne: string }> = {
+  in_progress: { en: 'IN PROGRESS', ne: 'प्रगतिमा' },
+  delivered: { en: 'DELIVERED', ne: 'पूरा भयो' },
+  stalled: { en: 'STALLED', ne: 'रोकिएको' },
+  not_started: { en: 'NOT STARTED', ne: 'सुरु भएको छैन' },
+  alleged: { en: 'ALLEGED', ne: 'आरोपित' },
+  under_investigation: { en: 'UNDER INVESTIGATION', ne: 'अनुसन्धानमा' },
+  charged: { en: 'CHARGED', ne: 'अभियोग' },
+  convicted: { en: 'CONVICTED', ne: 'दोषी ठहर' },
+  acquitted: { en: 'ACQUITTED', ne: 'सफाइ' },
+};
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -29,12 +54,12 @@ export async function GET(request: NextRequest) {
   const progress = searchParams.get('progress');
   const status = searchParams.get('status');
   const section = searchParams.get('section');
-  const stats = searchParams.get('stats'); // e.g. "109 commitments|435 corruption cases|80+ sources"
+  const locale = searchParams.get('locale') || 'en';
+  const stats = searchParams.get('stats');
 
+  const isNe = locale === 'ne';
   const theme = (section && SECTION_THEMES[section]) || DEFAULT_THEME;
-  const isDefault = !searchParams.get('title');
 
-  // Status colors
   const statusColor =
     status === 'in_progress' ? '#22d3ee'
     : status === 'delivered' ? '#10b981'
@@ -47,20 +72,13 @@ export async function GET(request: NextRequest) {
     : status === 'acquitted' ? '#10b981'
     : '#60a5fa';
 
-  const statusLabel =
-    status === 'in_progress' ? 'IN PROGRESS'
-    : status === 'delivered' ? 'DELIVERED'
-    : status === 'stalled' ? 'STALLED'
-    : status === 'not_started' ? 'NOT STARTED'
-    : status === 'alleged' ? 'ALLEGED'
-    : status === 'under_investigation' ? 'UNDER INVESTIGATION'
-    : status === 'charged' ? 'CHARGED'
-    : status === 'convicted' ? 'CONVICTED'
-    : status === 'acquitted' ? 'ACQUITTED'
-    : status ? status.toUpperCase().replace(/_/g, ' ')
+  const statusLabel = status
+    ? (STATUS_LABELS[status]?.[isNe ? 'ne' : 'en'] || status.toUpperCase().replace(/_/g, ' '))
     : null;
 
   const progressNum = progress ? Math.min(100, Number(progress)) : 0;
+  const sectionLabel = isNe ? theme.labelNe : theme.label;
+  const tagline = isNe ? theme.taglineNe : theme.tagline;
 
   const bgGradient = section === 'corruption'
     ? `linear-gradient(160deg, #0c0506 0%, #1c0808 30%, #2a0a0a 60%, #0c0506 100%)`
@@ -71,8 +89,6 @@ export async function GET(request: NextRequest) {
     : `linear-gradient(160deg, #08080f 0%, #0c1020 40%, #100a14 70%, #08080f 100%)`;
 
   const titleSize = title.length > 80 ? 30 : title.length > 50 ? 36 : 44;
-
-  // Parse stats into items
   const statItems = stats ? stats.split('|').slice(0, 4) : [];
 
   return new ImageResponse(
@@ -102,7 +118,7 @@ export async function GET(request: NextRequest) {
           }}
         />
 
-        {/* Subtle glow behind content */}
+        {/* Subtle glow */}
         <div
           style={{
             position: 'absolute',
@@ -116,7 +132,7 @@ export async function GET(request: NextRequest) {
           }}
         />
 
-        {/* Main centered content */}
+        {/* Main content */}
         <div
           style={{
             display: 'flex',
@@ -128,7 +144,7 @@ export async function GET(request: NextRequest) {
             maxWidth: '1100px',
           }}
         >
-          {/* Brand + section label row */}
+          {/* Brand + section */}
           <div
             style={{
               display: 'flex',
@@ -137,7 +153,6 @@ export async function GET(request: NextRequest) {
               marginBottom: '24px',
             }}
           >
-            {/* Bell logo */}
             <div
               style={{
                 width: '36px',
@@ -159,15 +174,14 @@ export async function GET(request: NextRequest) {
                 color: BELL_GOLD,
               }}
             >
-              NEPAL REPUBLIC
+              {isNe ? 'नेपाल रिपब्लिक' : 'NEPAL REPUBLIC'}
             </span>
-            {/* Section pill */}
-            {theme.label ? (
+            {sectionLabel ? (
               <span
                 style={{
                   fontSize: '10px',
                   fontWeight: 700,
-                  letterSpacing: '0.15em',
+                  letterSpacing: isNe ? '0.05em' : '0.15em',
                   color: theme.accent,
                   padding: '3px 12px',
                   borderRadius: '100px',
@@ -176,7 +190,7 @@ export async function GET(request: NextRequest) {
                   marginLeft: '4px',
                 }}
               >
-                {theme.label}
+                {sectionLabel}
               </span>
             ) : null}
           </div>
@@ -209,7 +223,7 @@ export async function GET(request: NextRequest) {
             </div>
           ) : null}
 
-          {/* Progress bar (commitments) */}
+          {/* Progress bar */}
           {progress ? (
             <div
               style={{
@@ -266,13 +280,13 @@ export async function GET(request: NextRequest) {
                     color: statusColor,
                   }}
                 >
-                  {statusLabel || 'PROGRESS'}
+                  {statusLabel || (isNe ? 'प्रगति' : 'PROGRESS')}
                 </div>
               </div>
             </div>
           ) : null}
 
-          {/* Status badge (when no progress) */}
+          {/* Status badge */}
           {statusLabel && !progress ? (
             <div
               style={{
@@ -298,7 +312,7 @@ export async function GET(request: NextRequest) {
             </div>
           ) : null}
 
-          {/* Stats row (for dashboard shares) */}
+          {/* Stats row */}
           {statItems.length > 0 ? (
             <div
               style={{
@@ -350,7 +364,7 @@ export async function GET(request: NextRequest) {
         >
           <span style={{ color: BELL_GOLD }}>nepalrepublic.org</span>
           <span style={{ display: 'flex' }}>·</span>
-          <span style={{ display: 'flex' }}>{theme.tagline}</span>
+          <span style={{ display: 'flex' }}>{tagline}</span>
         </div>
 
         {/* Bottom accent */}

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { GhantiIcon } from '@/components/ui/ghanti-icon';
-import { CardActions } from '@/components/public/card-actions';
+import { ShareMenu } from '@/components/public/share-menu';
 import { commitmentShareText } from '@/lib/utils/share';
 import { STATUS_CONFIG } from '@/lib/data/landing-types';
 import type { GovernmentPromise } from '@/lib/data/promises';
@@ -101,18 +101,20 @@ export function FeedCommitmentCard({
           </div>
         )}
         {!commitment.progress && <div className="flex-1" />}
-        <CardActions
-          commitmentId={commitment.id}
-          shareTitle={commitmentShareText({ title, progress: commitment.progress, status: commitment.status, locale })}
+        <ShareMenu
           shareUrl={`/explore/first-100-days/${commitment.slug}`}
-          detailUrl={`/explore/first-100-days/${commitment.slug}`}
-          commentCount={commentCount}
+          shareTitle={title}
+          shareText={commitmentShareText({ title, progress: commitment.progress, status: commitment.status, locale })}
+          ogParams={{
+            ogType: 'commitment',
+            ogSlug: commitment.slug,
+            ogTitle: title,
+            ogSection: 'commitments',
+            ogProgress: commitment.progress,
+            ogStatus: commitment.status,
+            ogLocale: locale,
+          }}
           size="sm"
-          ogTitle={title}
-          ogSubtitle={`${commitment.progress}% progress · ${commitment.status.replace(/_/g, ' ')}`}
-          ogSection="commitments"
-          ogProgress={commitment.progress}
-          ogStatus={commitment.status}
         />
       </div>
     </Link>

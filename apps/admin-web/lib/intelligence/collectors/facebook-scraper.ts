@@ -366,7 +366,7 @@ export const FACEBOOK_PAGES: FacebookPageConfig[] = [
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '';
 const APIFY_BASE = 'https://api.apify.com/v2';
-const FB_POSTS_ACTOR = 'apify/facebook-posts-scraper';
+const FB_POSTS_ACTOR = 'apify~facebook-posts-scraper';
 
 /**
  * Scrape a single Facebook page using Apify actor.
@@ -425,7 +425,7 @@ async function scrapeViaApify(page: FacebookPageConfig): Promise<ScrapedPost[]> 
   }
 }
 
-async function pollApifyRun(runId: string, maxWaitMs = 300_000): Promise<boolean> {
+async function pollApifyRun(runId: string, maxWaitMs = 90_000): Promise<boolean> {
   const start = Date.now();
 
   while (Date.now() - start < maxWaitMs) {
@@ -442,7 +442,7 @@ async function pollApifyRun(runId: string, maxWaitMs = 300_000): Promise<boolean
       if (status === 'SUCCEEDED') return true;
       if (status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') return false;
 
-      await new Promise((r) => setTimeout(r, 10_000));
+      await new Promise((r) => setTimeout(r, 5_000));
     } catch {
       return false;
     }
@@ -697,13 +697,14 @@ export async function scrapeFacebookPages(): Promise<ScrapeResult> {
       `(mode: ${useApify ? 'Apify' : 'DuckDuckGo fallback'})`,
   );
 
-  for (const page of FACEBOOK_PAGES) {
+  // Process pages in parallel batches so total runtime stays well below the
+  // 300s function timeout. Apify runs are I/O-bound so concurrency is safe.
+  const CONCURRENCY = 4;
+  const processPage = async (page: typeof FACEBOOK_PAGES[number]) => {
     try {
-      // Fetch posts using the available approach
       const posts = useApify
         ? await scrapeViaApify(page)
         : await scrapeViaDuckDuckGo(page);
-
       postsFound += posts.length;
 
       // Upsert each post into intelligence_signals
@@ -779,9 +780,15 @@ export async function scrapeFacebookPages(): Promise<ScrapeResult> {
       errors.push(msg);
       console.error(`[FacebookScraper] ${msg}`);
     }
+  };
 
-    // Rate limit between pages
-    await new Promise((r) => setTimeout(r, useApify ? 5000 : 2000));
+  for (let i = 0; i < FACEBOOK_PAGES.length; i += CONCURRENCY) {
+    const batch = FACEBOOK_PAGES.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(processPage));
+    // Small breathing room between batches
+    if (i + CONCURRENCY < FACEBOOK_PAGES.length) {
+      await new Promise((r) => setTimeout(r, useApify ? 1500 : 500));
+    }
   }
 
   // Run broad searches if using the free fallback

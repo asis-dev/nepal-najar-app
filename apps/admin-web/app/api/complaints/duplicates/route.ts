@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient, getSupabase } from '@/lib/supabase/server';
+import { getSupabase } from '@/lib/supabase/server';
 import { findPotentialDuplicates } from '@/lib/intelligence/complaint-dedup';
+import { canViewComplaint, getComplaintAuthContext } from '@/lib/complaints/access';
 
 export async function GET(request: NextRequest) {
-  // Auth check
-  let user = null;
-  try {
-    const ssr = await createSupabaseServerClient();
-    const { data } = await ssr.auth.getUser();
-    user = data?.user ?? null;
-  } catch {
-    // no session
-  }
-
-  if (!user) {
+  const auth = await getComplaintAuthContext();
+  if (!auth.user) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
@@ -25,11 +17,15 @@ export async function GET(request: NextRequest) {
   const db = getSupabase();
   const { data: complaint, error } = await db
     .from('civic_complaints')
-    .select('id, title, description, issue_type, municipality, ward_number, district, province')
+    .select('id, user_id, is_public, title, description, issue_type, municipality, ward_number, district, province')
     .eq('id', complaintId)
     .single();
 
   if (error || !complaint) {
+    return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
+  }
+
+  if (!canViewComplaint(complaint, auth)) {
     return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
   }
 

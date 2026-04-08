@@ -7,6 +7,7 @@ import {
 } from '@/lib/complaints/access';
 import { notifyComplaintUsers } from '@/lib/complaints/notifications';
 import { refreshComplaintSla } from '@/lib/complaints/sla';
+import { rebuildComplaintAuthorityChain } from '@/lib/complaints/authority-chain';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -15,6 +16,54 @@ interface AssignBody {
   assigned_user_id?: string | null;
   note?: string;
   status?: ComplaintStatus;
+}
+
+interface DepartmentMemberRow {
+  user_id: string;
+  member_role: 'owner' | 'agent' | 'viewer';
+}
+
+async function getDepartmentAssignableMembers(
+  departmentKey: string,
+): Promise<DepartmentMemberRow[]> {
+  const db = getSupabase();
+  const { data } = await db
+    .from('complaint_department_members')
+    .select('user_id, member_role')
+    .eq('department_key', departmentKey)
+    .eq('is_active', true)
+    .in('member_role', ['owner', 'agent']);
+
+  return ((data || []) as DepartmentMemberRow[]).filter((row) => Boolean(row.user_id));
+}
+
+async function chooseLeastLoadedAssignee(candidateUserIds: string[]): Promise<string | null> {
+  if (candidateUserIds.length === 0) return null;
+  const db = getSupabase();
+  const { data } = await db
+    .from('complaint_assignments')
+    .select('assignee_user_id')
+    .eq('is_active', true)
+    .in('assignee_user_id', candidateUserIds);
+
+  const loadMap = new Map<string, number>();
+  for (const userId of candidateUserIds) loadMap.set(userId, 0);
+  for (const row of data || []) {
+    const userId = row.assignee_user_id as string | null;
+    if (!userId || !loadMap.has(userId)) continue;
+    loadMap.set(userId, (loadMap.get(userId) || 0) + 1);
+  }
+
+  let bestUserId: string | null = null;
+  let bestLoad = Number.POSITIVE_INFINITY;
+  for (const userId of candidateUserIds) {
+    const load = loadMap.get(userId) || 0;
+    if (load < bestLoad) {
+      bestLoad = load;
+      bestUserId = userId;
+    }
+  }
+  return bestUserId;
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -63,6 +112,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Department not found or inactive' }, { status: 400 });
   }
 
+  const departmentMembers = await getDepartmentAssignableMembers(departmentKey);
+  const departmentMemberSet = new Set(departmentMembers.map((member) => member.user_id));
+
   if (body.assigned_user_id) {
     const { data: assigneeProfile } = await db
       .from('profiles')
@@ -72,6 +124,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (!assigneeProfile) {
       return NextResponse.json({ error: 'assigned_user_id not found' }, { status: 400 });
     }
+    if (!departmentMemberSet.has(body.assigned_user_id)) {
+      return NextResponse.json(
+        { error: 'assigned_user_id must be an active owner/agent member of the target department' },
+        { status: 400 },
+      );
+    }
+  }
+
+  let assignedUserId = body.assigned_user_id || null;
+  let autoAssigned = false;
+  if (!assignedUserId && departmentMembers.length > 0) {
+    assignedUserId = await chooseLeastLoadedAssignee(Array.from(departmentMemberSet));
+    autoAssigned = Boolean(assignedUserId);
   }
 
   const nextStatus: ComplaintStatus =
@@ -101,7 +166,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     .insert({
       complaint_id: id,
       department_key: departmentKey,
-      assignee_user_id: body.assigned_user_id || null,
+      assignee_user_id: assignedUserId,
       assigned_by: auth.user.id,
       assignment_note: body.note?.trim() || null,
       is_active: true,
@@ -117,7 +182,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     .from('civic_complaints')
     .update({
       assigned_department_key: departmentKey,
-      assigned_user_id: body.assigned_user_id || null,
+      assigned_user_id: assignedUserId,
       department_key: complaint.department_key || departmentKey,
       status: nextStatus,
       last_activity_at: new Date().toISOString(),
@@ -132,6 +197,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const updatedComplaint = await refreshComplaintSla(db, updatedComplaintRaw as ComplaintCase);
+  let authorityChain: unknown[] = [];
+  try {
+    authorityChain = await rebuildComplaintAuthorityChain(db, updatedComplaint as ComplaintCase);
+  } catch (chainError) {
+    console.warn(
+      '[complaints] authority chain rebuild failed on assign:',
+      chainError instanceof Error ? chainError.message : 'unknown',
+    );
+  }
 
   await db.from('complaint_events').insert({
     complaint_id: id,
@@ -140,25 +214,29 @@ export async function POST(request: NextRequest, context: RouteContext) {
     event_type: 'routed',
     visibility: 'public',
     message: body.note?.trim()
-      ? `Assigned to ${departmentKey}. ${body.note.trim()}`
-      : `Assigned to ${departmentKey}.`,
+      ? `Assigned to ${departmentKey}${assignedUserId ? ` (${autoAssigned ? 'auto-assigned' : 'assignee set'})` : ''}. ${body.note.trim()}`
+      : `Assigned to ${departmentKey}${assignedUserId ? ` (${autoAssigned ? 'auto-assigned' : 'assignee set'})` : ''}.`,
     metadata: {
       department_key: departmentKey,
-      assigned_user_id: body.assigned_user_id || null,
+      assigned_user_id: assignedUserId,
+      auto_assigned: autoAssigned,
       status: nextStatus,
     },
   });
 
-  const extraRecipients = body.assigned_user_id ? [body.assigned_user_id] : [];
+  const extraRecipients = assignedUserId ? [assignedUserId] : [];
   await notifyComplaintUsers({
     complaintId: id,
     actorUserId: auth.user.id,
     type: 'complaint_assigned',
     title: 'Complaint assigned',
-    body: `Your complaint has been routed to ${departmentKey}.`,
+    body: assignedUserId
+      ? `Your complaint has been routed to ${departmentKey} and assigned for follow-up.`
+      : `Your complaint has been routed to ${departmentKey}.`,
     metadata: {
       department_key: departmentKey,
-      assigned_user_id: body.assigned_user_id || null,
+      assigned_user_id: assignedUserId,
+      auto_assigned: autoAssigned,
     },
     extraRecipients,
   });
@@ -167,5 +245,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
     success: true,
     assignment,
     complaint: updatedComplaint,
+    authority_chain: authorityChain,
+    auto_assigned: autoAssigned,
+    assigned_user_id: assignedUserId,
   });
 }

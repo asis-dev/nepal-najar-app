@@ -313,6 +313,15 @@ export function CommitmentCard({
               shareText={commitmentShareText({ title: locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title, progress: commitment.progress, status: commitment.status, locale })}
               shareTitle={locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title}
               size="sm"
+              ogParams={{
+                ogType: 'commitment',
+                ogSlug: commitment.slug,
+                ogTitle: locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title,
+                ogSection: 'commitments',
+                ogProgress: commitment.progress,
+                ogStatus: commitment.status,
+                ogLocale: locale,
+              }}
             />
             <button
               onClick={(e) => { e.stopPropagation(); onClick?.(); }}
@@ -497,6 +506,25 @@ export function CommitmentCard({
             shareText={commitmentShareText({ title: locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title, progress: commitment.progress, status: commitment.status, locale })}
             shareTitle={locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title}
             size="sm"
+            ogParams={{
+              ogTitle: locale === 'ne' && commitment.title_ne ? commitment.title_ne : commitment.title,
+              ogSubtitle: locale === 'ne'
+                ? `${t(`categoryName.${commitment.category}`)} · ${commitment.progress}% प्रगति`
+                : `${t(`categoryName.${commitment.category}`)} · ${commitment.progress}% progress`,
+              ogSection: 'commitments',
+              ogProgress: commitment.progress,
+              ogStatus: commitment.status,
+              ogFacts: locale === 'ne' ? [
+                `${commitment.progress}% प्रगति`,
+                commitment.actors?.[0] || '',
+                `दिन ${daysSinceStart()}`,
+              ].filter(Boolean).join('|') : [
+                `${commitment.progress}% progress`,
+                commitment.actors?.[0] || '',
+                `Day ${daysSinceStart()}`,
+              ].filter(Boolean).join('|'),
+              ogLocale: locale,
+            }}
           />
 
           {/* Navigate arrow */}

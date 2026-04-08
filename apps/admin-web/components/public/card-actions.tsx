@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Heart, MessageCircle } from 'lucide-react';
 import { useWatchlistStore } from '@/lib/stores/preferences';
+import { useI18n } from '@/lib/i18n';
 import { ShareMenu } from '@/components/public/share-menu';
 import type { ShareImageParams } from '@/lib/utils/share';
 
@@ -42,7 +43,11 @@ export function CardActions({
   ogSection,
   ogProgress,
   ogStatus,
+  ogFacts,
+  ogType,
+  ogSlug,
 }: CardActionsProps) {
+  const { locale } = useI18n();
   const { watchedProjectIds, toggleWatch } = useWatchlistStore();
   const heartId = commitmentId || (ministerSlug ? `minister:${ministerSlug}` : undefined);
   const isWatched = heartId ? watchedProjectIds.includes(heartId) : false;
@@ -57,9 +62,9 @@ export function CardActions({
     </>
   );
 
-  // Build OG params only if at least ogTitle is provided
+  // Build OG params — prefer data-fetching routes (ogType+ogSlug) for rich images
   const ogParams = ogTitle
-    ? { ogTitle, ogSubtitle, ogSection, ogProgress, ogStatus }
+    ? { ogTitle, ogSubtitle, ogSection, ogProgress, ogStatus, ogFacts, ogLocale: locale, ogType, ogSlug }
     : undefined;
 
   return (

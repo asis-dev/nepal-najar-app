@@ -31,7 +31,7 @@ import { scrapeThreads } from './collectors/threads-scraper';
 import { scrapeParliamentAndGazette } from './collectors/parliament-scraper';
 import { scrapeX } from './collectors/x-scraper';
 import { scrapeGoogleTrends } from './collectors/google-trends';
-import { computePulse, computeTrending } from './trending';
+import { refreshTrendingSnapshot } from './trending';
 import { computeTruthScoreBatch } from './truth-meter';
 import {
   ensureSignalAnalysisJobsQueued,
@@ -79,7 +79,7 @@ async function upsertDailyQualityMetrics() {
   );
 }
 
-async function cleanupStaleSweeps(maxAgeMinutes = 90): Promise<number> {
+async function cleanupStaleSweeps(maxAgeMinutes = 25): Promise<number> {
   const supabase = getSupabase();
   const cutoffIso = new Date(
     Date.now() - maxAgeMinutes * 60_000,
@@ -281,9 +281,9 @@ export async function runFullSweep(
   const enableHeavyScheduledCollectors =
     process.env.INTELLIGENCE_ENABLE_HEAVY_SCHEDULED_COLLECTORS === 'true';
   const staleSweepMinutes = Math.max(
-    20,
-    Number.parseInt(process.env.INTELLIGENCE_STALE_SWEEP_MINUTES || '90', 10) ||
-      90,
+    15,
+    Number.parseInt(process.env.INTELLIGENCE_STALE_SWEEP_MINUTES || '25', 10) ||
+      25,
   );
 
   const staleSweepsClosed = await cleanupStaleSweeps(staleSweepMinutes);
@@ -924,30 +924,30 @@ export async function runFullSweep(
     }
 
     // ===== TRENDING COMPUTATION PHASE =====
-    if (!skipAnalysis && !analysisQueued) {
-      console.log('[Sweep] Computing trending pulse...');
-      try {
-        await computeTrending();
-        const pulseScore = await computePulse();
-        result.trending.pulseScore = pulseScore;
-        console.log(`[Sweep] Trending pulse score: ${pulseScore}`);
-      } catch (err) {
-        result.analysis.errors.push(
-          `Trending computation error: ${err instanceof Error ? err.message : 'unknown'}`,
-        );
-      }
+    // Keep the public pulse fast by refreshing the persisted trending snapshot
+    // during sweeps, even when AI analysis is queued for workers.
+    console.log('[Sweep] Refreshing trending snapshot...');
+    try {
+      const snapshot = await refreshTrendingSnapshot({ force: true });
+      const pulseScore = snapshot?.pulse || 0;
+      result.trending.pulseScore = pulseScore;
+      console.log(`[Sweep] Trending pulse score: ${pulseScore}`);
+    } catch (err) {
+      result.analysis.errors.push(
+        `Trending computation error: ${err instanceof Error ? err.message : 'unknown'}`,
+      );
     }
 
     // ===== DAILY BRIEF REGENERATION PHASE =====
-    // Runs on every full sweep regardless of skipAnalysis — brief generation is
-    // lightweight (~60-90s: one AI summary call + TTS), well within the 300s timeout.
-    // skipAnalysis only skips heavy batch signal classification, not the brief.
-    if (!rssOnly) {
-      console.log('[Sweep] Regenerating daily brief...');
+    // Brief + audio generation is now a SEPARATE cron (/api/daily-brief?generate=1)
+    // that runs 30 min after the sweep (at :45), so it uses freshly collected signals
+    // without competing for the sweep's 300s timeout.
+    // Manual sweeps (sweepType === 'manual') still generate inline for convenience.
+    if (!rssOnly && sweepType === 'manual') {
+      console.log('[Sweep] Regenerating daily brief (manual sweep)...');
       try {
         const { generateDailyBrief } = await import('./daily-brief');
 
-        // Regenerate daily brief + generate audio narration
         const todayBrief = await generateDailyBrief();
         console.log('[Sweep] Daily brief regenerated');
 
@@ -965,6 +965,8 @@ export async function runFullSweep(
       } catch (err) {
         console.warn('[Sweep] Daily brief error:', err instanceof Error ? err.message : 'unknown');
       }
+    } else if (!rssOnly) {
+      console.log('[Sweep] Skipping brief generation — handled by separate /api/daily-brief?generate=1 cron at :45');
     }
 
     // Calculate totals
@@ -1029,6 +1031,20 @@ export async function runFullSweep(
         `Combined scoring error: ${err instanceof Error ? err.message : 'unknown'}`,
       );
     }
+
+    // ===== TIME-ADJUSTED GOVERNMENT SCORE =====
+    try {
+      const { recomputeDailyGovernmentScore } = await import('./time-adjusted-score');
+      const govScore = await recomputeDailyGovernmentScore();
+      console.log(
+        `[Sweep] Time-adjusted score: ${govScore.score}/100 (${govScore.grade}) — ` +
+        `ahead=${govScore.aheadCount} onTrack=${govScore.onTrackCount} behind=${govScore.behindCount}`,
+      );
+    } catch (err) {
+      result.analysis.errors.push(
+        `Time-adjusted scoring error: ${err instanceof Error ? err.message : 'unknown'}`,
+      );
+    }
   } catch (err) {
     result.status = 'failed';
     result.analysis.errors.push(
@@ -1091,16 +1107,45 @@ export async function runFullSweep(
     .gte('relevance_score', 0.3);
 
   // Update sweep record
+  // Per-collector breakdown so silent failures become visible
+  const collectorBreakdown: Record<string, number> = {
+    rss: result.collection.rss.totalItems || 0,
+    youtube: result.collection.youtube.videosFound || 0,
+    search: result.collection.search.queriesRun || 0,
+    social: result.collection.social.postsFound || 0,
+    apify: (result.collection.apify as { profilesProcessed?: number })?.profilesProcessed || 0,
+    facebook_pages: result.collection.social.newPosts || 0,
+    x: result.collection.x?.newPosts || 0,
+    threads: result.collection.threads?.newPosts || 0,
+    tiktok: (result.collection.tiktok as { newVideos?: number })?.newVideos || 0,
+    reddit: result.collection.reddit?.newPosts || 0,
+    telegram: (result.collection.telegram as { newMessages?: number })?.newMessages || 0,
+    parliament: (result.collection.parliament as { newDocuments?: number })?.newDocuments || 0,
+    google_trends: (result.collection.googleTrends as { newTrends?: number })?.newTrends || 0,
+    legacy: result.collection.legacy.newArticles || 0,
+  };
+  const collectorErrors: Record<string, string[]> = {
+    rss: result.collection.rss.errors || [],
+    youtube: result.collection.youtube.errors || [],
+    search: result.collection.search.errors || [],
+    social: result.collection.social.errors || [],
+    x: result.collection.x?.errors || [],
+    threads: result.collection.threads?.errors || [],
+    tiktok: (result.collection.tiktok as { errors?: string[] })?.errors || [],
+    reddit: result.collection.reddit?.errors || [],
+    telegram: (result.collection.telegram as { errors?: string[] })?.errors || [],
+    parliament: (result.collection.parliament as { errors?: string[] })?.errors || [],
+    googleTrends: (result.collection.googleTrends as { errors?: string[] })?.errors || [],
+    legacy: result.collection.legacy.errors || [],
+  };
+  const sourcesActive = Object.values(collectorBreakdown).filter((n) => n > 0).length;
+
   await supabase
     .from('intelligence_sweeps')
     .update({
       status: result.status,
       finished_at: new Date().toISOString(),
-      sources_checked:
-        (result.collection.rss.totalItems > 0 ? 1 : 0) +
-        (result.collection.youtube.videosFound > 0 ? 1 : 0) +
-        (result.collection.search.queriesRun > 0 ? 1 : 0) +
-        (result.collection.social.postsFound > 0 ? 1 : 0),
+      sources_checked: sourcesActive,
       signals_discovered: result.totalSignals,
       signals_relevant: relevantSignalsSinceSweep || 0,
       promises_updated: result.analysis.promisesUpdated,
@@ -1109,12 +1154,17 @@ export async function runFullSweep(
       tier3_analyzed: result.analysis.tier3Processed,
       ai_tokens_used: 0,
       ai_cost_usd: result.analysis.totalCostUsd,
-      summary:
-        result.analysis.tier1Processed === 0 &&
-        result.analysis.tier3Processed === 0 &&
-        !skipAnalysis
-          ? `Sweep ${result.status}: ${result.totalSignals} new signals, downstream analysis queued for the worker.`
-          : `Sweep ${result.status}: ${result.totalSignals} new signals, ${result.analysis.promisesUpdated} promises updated, $${result.analysis.totalCostUsd.toFixed(4)} AI cost`,
+      error_log: Object.entries(collectorErrors).flatMap(([k, errs]) => errs.slice(0, 3).map((e) => `[${k}] ${e}`)).slice(0, 50),
+      summary: {
+        text:
+          result.analysis.tier1Processed === 0 &&
+          result.analysis.tier3Processed === 0 &&
+          !skipAnalysis
+            ? `Sweep ${result.status}: ${result.totalSignals} new signals, downstream analysis queued for the worker.`
+            : `Sweep ${result.status}: ${result.totalSignals} new signals, ${result.analysis.promisesUpdated} promises updated, $${result.analysis.totalCostUsd.toFixed(4)} AI cost`,
+        collectors: collectorBreakdown,
+        sources_active: sourcesActive,
+      },
     })
     .eq('id', sweepId);
 

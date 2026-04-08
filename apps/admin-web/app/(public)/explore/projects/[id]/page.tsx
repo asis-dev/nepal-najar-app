@@ -340,6 +340,27 @@ export default function ProjectDetailPage() {
               shareUrl={`/explore/projects/${id}`}
               shareText={project.title}
               shareTitle={project.title}
+              ogParams={{
+                ogTitle: project.title,
+                ogSubtitle: locale === 'ne'
+                  ? `${Math.round(project.progress ?? 0)}% प्रगति · ${t(`status.${project.status}`)}`
+                  : `${Math.round(project.progress ?? 0)}% progress · ${t(`status.${project.status}`)}`,
+                ogSection: 'projects',
+                ogProgress: Math.round(project.progress ?? 0),
+                ogStatus: project.status,
+                ogLocale: locale,
+                ogFacts: locale === 'ne'
+                  ? [
+                      project.government_unit?.name ? `निकाय: ${project.government_unit.name}` : null,
+                      project.region?.name ? `क्षेत्र: ${project.region.name}` : null,
+                      project.target_end_date ? `लक्ष्य: ${project.target_end_date}` : null,
+                    ].filter(Boolean).join('|')
+                  : [
+                      project.government_unit?.name ? `Unit: ${project.government_unit.name}` : null,
+                      project.region?.name ? `Region: ${project.region.name}` : null,
+                      project.target_end_date ? `Target: ${project.target_end_date}` : null,
+                    ].filter(Boolean).join('|'),
+              }}
               size="md"
             />
           </div>

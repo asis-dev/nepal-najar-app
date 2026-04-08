@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useCluster } from '@/lib/hooks/use-complaints';
+import { ShareMenu } from '@/components/public/share-menu';
+import { buildComplaintShareData } from '@/lib/complaints/share';
 
 const SEVERITY_STYLES: Record<string, string> = {
   critical: 'bg-red-500/20 text-red-300 border-red-500/30',
@@ -194,43 +196,53 @@ export default function ClusterDetailPage() {
                 : `${complaints.length} Supporting Reports`}
             </h2>
             <div className="space-y-2">
-              {complaints.map((complaint) => (
-                <Link
-                  key={complaint.id}
-                  href={`/complaints/${complaint.id}`}
-                  className="glass-card block p-3 hover:bg-white/[0.04] transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">
-                        {isNe && complaint.title_ne ? complaint.title_ne : complaint.title}
-                      </p>
-                      <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
-                        {complaint.description}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-600">
-                        <span>{timeAgo(complaint.created_at, isNe)}</span>
-                        {complaint.municipality && (
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="w-2.5 h-2.5" />
-                            {complaint.municipality}
-                          </span>
-                        )}
-                        {complaint.evidence_count > 0 && (
-                          <span>{complaint.evidence_count} {isNe ? 'प्रमाण' : 'evidence'}</span>
-                        )}
+              {complaints.map((complaint) => {
+                const shareData = buildComplaintShareData(complaint, isNe ? 'ne' : 'en');
+                return (
+                  <div key={complaint.id} className="glass-card flex items-start gap-1 p-3 transition-colors hover:bg-white/[0.04]">
+                    <Link href={`/complaints/${complaint.id}`} className="block min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-medium text-white">
+                            {isNe && complaint.title_ne ? complaint.title_ne : complaint.title}
+                          </p>
+                          <p className="mt-0.5 line-clamp-1 text-[11px] text-gray-500">
+                            {complaint.description}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2 text-[10px] text-gray-600">
+                            <span>{timeAgo(complaint.created_at, isNe)}</span>
+                            {complaint.municipality && (
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin className="h-2.5 w-2.5" />
+                                {complaint.municipality}
+                              </span>
+                            )}
+                            {complaint.evidence_count > 0 && (
+                              <span>{complaint.evidence_count} {isNe ? 'प्रमाण' : 'evidence'}</span>
+                            )}
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex flex-shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
+                            STATUS_STYLES[complaint.status] || STATUS_STYLES.open
+                          }`}
+                        >
+                          {complaint.status.replace('_', ' ')}
+                        </span>
                       </div>
+                    </Link>
+                    <div className="pt-0.5">
+                      <ShareMenu
+                        shareUrl={shareData.shareUrl}
+                        shareText={shareData.shareText}
+                        shareTitle={shareData.shareTitle}
+                        ogParams={shareData.ogParams}
+                        size="sm"
+                      />
                     </div>
-                    <span
-                      className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium flex-shrink-0 ${
-                        STATUS_STYLES[complaint.status] || STATUS_STYLES.open
-                      }`}
-                    >
-                      {complaint.status.replace('_', ' ')}
-                    </span>
                   </div>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

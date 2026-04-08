@@ -12,11 +12,18 @@ function AdminLoginForm() {
 
   const from = searchParams.get('from') || '/home';
   const notAdmin = searchParams.get('error') === 'not-admin';
+  const ownerOnly = searchParams.get('error') === 'owner-only';
 
   const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
-  const [roleError, setRoleError] = useState(notAdmin ? 'This account does not have admin access.' : '');
+  const [roleError, setRoleError] = useState(
+    ownerOnly
+      ? 'This dashboard is owner-only. Sign in with the configured owner account.'
+      : notAdmin
+        ? 'This account does not have admin access.'
+        : '',
+  );
 
   const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
   const isPhoneInput = /^\+?\d{7,15}$/.test(identifier.replace(/\s/g, ''));

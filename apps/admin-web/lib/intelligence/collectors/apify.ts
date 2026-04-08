@@ -104,7 +104,7 @@ const APIFY_BASE = 'https://api.apify.com/v2';
 
 // Apify actor for Facebook posts scraping
 // "apify/facebook-posts-scraper" — well-maintained, handles public profiles
-const FB_POSTS_ACTOR = 'apify/facebook-posts-scraper';
+const FB_POSTS_ACTOR = 'apify~facebook-posts-scraper';
 
 // Alternative actors you can swap in:
 // "apify/facebook-scraper" — broader scraper

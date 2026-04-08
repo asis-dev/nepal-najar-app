@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Award, Users, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut, Swords, Scale, AlertCircle, Shield, ClipboardCheck, MessageSquareWarning, Target, Home } from 'lucide-react';
+import { Award, Users, User, X, Heart, Star, Globe, HelpCircle, MessageSquare, LogOut, Swords, Scale, AlertCircle, Shield, ClipboardCheck, MessageSquareWarning, Target, Home, Grid3x3, FolderLock } from 'lucide-react';
 import { useTrending } from '@/lib/hooks/use-trending';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
@@ -94,6 +94,20 @@ export function BottomNav() {
 
             {/* Menu items */}
             <div className="space-y-1">
+              <MeSheetLink
+                href="/services"
+                icon={Grid3x3}
+                label={locale === 'ne' ? 'सेवा निर्देशिका' : 'Services Directory'}
+                onClick={() => setShowMeSheet(false)}
+                isActive={pathname.startsWith('/services')}
+              />
+              <MeSheetLink
+                href="/me/vault"
+                icon={FolderLock}
+                label={locale === 'ne' ? 'मेरो कागजात कोष' : 'My Vault'}
+                onClick={() => setShowMeSheet(false)}
+                isActive={pathname.startsWith('/me/vault')}
+              />
               <MeSheetLink
                 href="/watchlist"
                 icon={Heart}

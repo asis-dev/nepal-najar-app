@@ -2,7 +2,7 @@
 
 import { ExternalLink, CheckCircle2, XCircle, Minus } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { CardActions } from '@/components/public/card-actions';
+import { ShareMenu } from '@/components/public/share-menu';
 import type { MockNewsArticle } from '@/lib/data/promises';
 
 interface ArticleCardProps {
@@ -125,14 +125,17 @@ export function ArticleCard({ article }: ArticleCardProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <CardActions
+          <ShareMenu
+            shareUrl="/evidence"
             shareTitle={headline || article.headline}
-            shareUrl={article.source_url}
             shareText={excerpt || article.excerpt}
+            ogParams={{
+              ogTitle: headline || article.headline,
+              ogSubtitle: `${article.source_name} · ${locale === 'ne' ? classification.label_ne : classification.label} · ${Math.round(article.confidence * 100)}%`,
+              ogSection: 'articles',
+              ogLocale: locale,
+            }}
             size="sm"
-            ogTitle={headline || article.headline}
-            ogSubtitle={`${article.source_name} · ${locale === 'ne' ? classification.label_ne : classification.label} · ${Math.round(article.confidence * 100)}%`}
-            ogSection="articles"
           />
           <span className="text-[10px] text-primary-400 flex items-center gap-1">
             {locale === 'ne' ? 'पूरा पढ्नुहोस्' : 'Read full article'}

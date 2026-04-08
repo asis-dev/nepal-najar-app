@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Activity, MessageSquare, Target, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
-import { CardActions } from '@/components/public/card-actions';
+import { ShareMenu } from '@/components/public/share-menu';
 import type { Minister } from '@/lib/hooks/use-ministers';
 import { useI18n } from '@/lib/i18n';
 
@@ -11,17 +11,66 @@ interface MinisterCardProps {
   locale: string;
 }
 
-function activityLevel(totalSignals: number): { label: string; color: string; dotColor: string } {
-  if (totalSignals >= 5) return { label: 'Active', color: 'text-emerald-400', dotColor: 'bg-emerald-400' };
-  if (totalSignals >= 1) return { label: 'Moderate', color: 'text-yellow-400', dotColor: 'bg-yellow-400' };
-  return { label: 'Quiet', color: 'text-gray-500', dotColor: 'bg-gray-500' };
+interface PulseLevel {
+  emoji: string;
+  label: string;
+  labelNe: string;
+  color: string;
+  textClass: string;
+  bgClass: string;
+  borderClass: string;
+  pulseValue: number;
+}
+
+function getActivityPulse(stats: {
+  totalSignals: number;
+  confirming: number;
+  contradicting: number;
+  directMentions: number;
+}): PulseLevel {
+  const pulse = Math.min(100,
+    stats.confirming * 3 +
+    stats.contradicting * 2 +
+    stats.directMentions * 1.5 +
+    Math.max(0, stats.totalSignals - stats.confirming - stats.contradicting) * 1
+  );
+  if (pulse >= 25) return {
+    emoji: '🔥', label: 'On Fire', labelNe: 'कर्मठ', color: '#f97316',
+    textClass: 'text-orange-400', bgClass: 'bg-orange-400/10', borderClass: 'border-orange-400/30',
+    pulseValue: Math.min(100, Math.round(pulse)),
+  };
+  if (pulse >= 12) return {
+    emoji: '⚡', label: 'Active', labelNe: 'सक्रिय', color: '#22c55e',
+    textClass: 'text-emerald-400', bgClass: 'bg-emerald-400/10', borderClass: 'border-emerald-400/30',
+    pulseValue: Math.round(pulse),
+  };
+  if (pulse >= 4) return {
+    emoji: '📡', label: 'Moderate', labelNe: 'सामान्य', color: '#eab308',
+    textClass: 'text-yellow-400', bgClass: 'bg-yellow-400/10', borderClass: 'border-yellow-400/30',
+    pulseValue: Math.round(pulse),
+  };
+  if (pulse >= 1) return {
+    emoji: '💤', label: 'Quiet', labelNe: 'शान्त', color: '#6b7280',
+    textClass: 'text-gray-400', bgClass: 'bg-gray-400/10', borderClass: 'border-gray-500/30',
+    pulseValue: Math.round(pulse),
+  };
+  return {
+    emoji: '👻', label: 'Ghost', labelNe: 'लापता', color: '#374151',
+    textClass: 'text-gray-500', bgClass: 'bg-gray-500/10', borderClass: 'border-gray-600/30',
+    pulseValue: 0,
+  };
 }
 
 export function MinisterCard({ minister, locale }: MinisterCardProps) {
   const { localizeField } = useI18n();
   const isNe = locale === 'ne';
   const { weeklyActivity } = minister;
-  const activity = activityLevel(weeklyActivity.totalSignals);
+  const pulse = getActivityPulse({
+    totalSignals: weeklyActivity.totalSignals,
+    confirming: weeklyActivity.confirming,
+    contradicting: weeklyActivity.contradicting,
+    directMentions: weeklyActivity.directMentions,
+  });
   const topSignal = weeklyActivity.topSignals?.[0];
 
   return (
@@ -42,9 +91,9 @@ export function MinisterCard({ minister, locale }: MinisterCardProps) {
             {minister.ministry}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className={`inline-block h-2 w-2 rounded-full ${activity.dotColor}`} />
-          <span className={`text-xs font-medium ${activity.color}`}>{activity.label}</span>
+        <div className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 ${pulse.bgClass} border ${pulse.borderClass}`}>
+          <span className="text-sm">{pulse.emoji}</span>
+          <span className={`text-xs font-bold ${pulse.textClass}`}>{pulse.pulseValue}</span>
         </div>
       </div>
 
@@ -86,16 +135,25 @@ export function MinisterCard({ minister, locale }: MinisterCardProps) {
         <span className="flex items-center gap-1 text-xs text-gray-500">
           <Target className="h-3 w-3" />
           {minister.ownedCommitmentIds.length} commitment{minister.ownedCommitmentIds.length !== 1 ? 's' : ''}
+          {typeof minister.complaintCount === 'number' && minister.complaintCount > 0 ? (
+            <span className="text-amber-400">
+              {' '}· {minister.complaintCount} civic case{minister.complaintCount !== 1 ? 's' : ''}
+            </span>
+          ) : null}
         </span>
         <div className="flex items-center gap-1">
-          <CardActions
-            ministerSlug={minister.slug}
-            shareTitle={`${minister.name} - ${weeklyActivity.totalSignals} signals this week`}
+          <ShareMenu
             shareUrl={`/ministers/${minister.slug}`}
-            detailUrl={`/ministers/${minister.slug}`}
+            shareTitle={locale === 'ne' && minister.nameNe ? minister.nameNe : minister.name}
+            shareText={locale === 'ne'
+              ? `${minister.nameNe || minister.name} — ${minister.titleNe || minister.title} · ${minister.ownedCommitmentIds.length} प्रतिबद्धता · ${weeklyActivity.totalSignals} यो हप्ता संकेत`
+              : `${minister.name} — ${minister.title} · ${minister.ownedCommitmentIds.length} commitments · ${weeklyActivity.totalSignals} signals this week`}
+            ogParams={{
+              ogType: 'minister',
+              ogSlug: minister.slug,
+              ogLocale: locale,
+            }}
             size="sm"
-            ogTitle={minister.name}
-            ogSubtitle={`${minister.title} · ${minister.ownedCommitmentIds.length} commitments · ${weeklyActivity.totalSignals} signals this week`}
           />
           <ChevronRight className="h-3.5 w-3.5 text-gray-600 transition-colors group-hover:text-gray-400" />
         </div>

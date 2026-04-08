@@ -36,18 +36,27 @@ interface RawSignal {
   discovered_at: string;
   matched_promise_ids: number[] | null;
   relevance_score: number | null;
-  classification: string | null;
   extracted_data: Record<string, unknown> | null;
   metadata: Record<string, unknown> | null;
-  content: string | null;
-  author: string | null;
+  content_summary: string | null;
 }
 
 interface TrendingCache {
   items: TrendingItem[];
   pulse: number;
   updatedAt: string;
+  signalCount: number;
+  sourceTypeCount: number;
   expiresAt: number; // epoch ms
+}
+
+export interface TrendingSnapshot {
+  period: string;
+  items: TrendingItem[];
+  pulse: number;
+  updatedAt: string;
+  signalCount: number;
+  sourceTypeCount: number;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -55,6 +64,22 @@ interface TrendingCache {
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const HOURS_24_MS = 24 * 60 * 60 * 1000;
 const HOURS_48_MS = 48 * 60 * 60 * 1000;
+const SNAPSHOT_TABLE = 'intelligence_trending_snapshots';
+const SNAPSHOT_PERIOD = '24h';
+const SNAPSHOT_STALE_MS =
+  Math.max(
+    10 * 60 * 1000,
+    Number.parseInt(process.env.INTELLIGENCE_TRENDING_STALE_MS || '', 10) ||
+      6 * 60 * 60 * 1000,
+  );
+const TRENDING_SIGNAL_LIMIT = Math.max(
+  200,
+  Math.min(
+    Number.parseInt(process.env.INTELLIGENCE_TRENDING_SIGNAL_LIMIT || '', 10) ||
+      700,
+    2000,
+  ),
+);
 
 /** Source types considered official / authoritative get a 2x weight boost */
 const OFFICIAL_SOURCE_TYPES = new Set([
@@ -85,6 +110,102 @@ let _trendingCache: TrendingCache | null = null;
 
 function isCacheValid(): boolean {
   return _trendingCache !== null && Date.now() < _trendingCache.expiresAt;
+}
+
+function isSnapshotTableMissing(errorMessage?: string): boolean {
+  if (!errorMessage) return false;
+  const normalized = errorMessage.toLowerCase();
+  return (
+    normalized.includes('intelligence_trending_snapshots') &&
+    (normalized.includes('does not exist') || normalized.includes('relation'))
+  );
+}
+
+function isDuplicateSignal(signal: RawSignal): boolean {
+  const metadata = signal.metadata;
+  if (!metadata || typeof metadata !== 'object') return false;
+  const duplicateOf = (metadata as Record<string, unknown>).duplicate_of;
+  return typeof duplicateOf === 'string' && duplicateOf.trim().length > 0;
+}
+
+function clampPulse(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(100, Math.round(numeric)));
+}
+
+function parseTrendingItems(value: unknown): TrendingItem[] {
+  if (!Array.isArray(value)) return [];
+
+  const items: TrendingItem[] = [];
+
+  for (const raw of value) {
+    if (!raw || typeof raw !== 'object') continue;
+    const entry = raw as Record<string, unknown>;
+    const type = entry.type;
+    if (
+      type !== 'commitment' &&
+      type !== 'topic' &&
+      type !== 'person' &&
+      type !== 'event'
+    ) {
+      continue;
+    }
+
+    if (typeof entry.id !== 'string' || typeof entry.title !== 'string') continue;
+
+    const topSignals: TrendingItem['topSignals'] = [];
+    if (Array.isArray(entry.topSignals)) {
+      for (const signal of entry.topSignals) {
+        if (!signal || typeof signal !== 'object') continue;
+        const s = signal as Record<string, unknown>;
+        if (typeof s.id !== 'string' || typeof s.title !== 'string' || typeof s.url !== 'string') {
+          continue;
+        }
+        topSignals.push({
+          id: s.id,
+          title: s.title,
+          url: s.url,
+          source: typeof s.source === 'string' ? s.source : 'Unknown',
+        });
+      }
+    }
+
+    items.push({
+      id: entry.id,
+      type,
+      title: entry.title,
+      titleNe: typeof entry.titleNe === 'string' ? entry.titleNe : undefined,
+      score: Number(entry.score) || 0,
+      signalCount: Number(entry.signalCount) || 0,
+      signalCountPrev: Number(entry.signalCountPrev) || 0,
+      trend:
+        entry.trend === 'rising' ||
+        entry.trend === 'falling' ||
+        entry.trend === 'new'
+          ? entry.trend
+          : 'stable',
+      topSignals,
+      engagement: Number(entry.engagement) || 0,
+      lastActivity:
+        typeof entry.lastActivity === 'string'
+          ? entry.lastActivity
+          : new Date().toISOString(),
+    });
+  }
+
+  return items;
+}
+
+function hydrateCache(snapshot: TrendingSnapshot): void {
+  _trendingCache = {
+    items: snapshot.items,
+    pulse: snapshot.pulse,
+    updatedAt: snapshot.updatedAt,
+    signalCount: snapshot.signalCount,
+    sourceTypeCount: snapshot.sourceTypeCount,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -197,15 +318,7 @@ function normalizeScore(rawScore: number, maxScore: number): number {
 
 // ── Main computation ─────────────────────────────────────────────────────────
 
-/**
- * Compute trending data from recent intelligence signals.
- * Results are cached for 15 minutes.
- */
-export async function computeTrending(): Promise<TrendingItem[]> {
-  if (isCacheValid()) {
-    return _trendingCache!.items;
-  }
-
+async function computeTrendingSnapshotFromSignals(): Promise<TrendingSnapshot> {
   const supabase = getSupabase();
   const now = Date.now();
   const cutoff24h = new Date(now - HOURS_24_MS).toISOString();
@@ -216,20 +329,20 @@ export async function computeTrending(): Promise<TrendingItem[]> {
     .from('intelligence_signals')
     .select(
       'id, title, title_ne, url, source_id, signal_type, published_at, discovered_at, ' +
-      'matched_promise_ids, relevance_score, classification, extracted_data, metadata, content, author',
+      'matched_promise_ids, relevance_score, extracted_data, metadata, content_summary',
     )
     .gte('discovered_at', cutoff48h)
     .gte('relevance_score', 0.2)
-    .or('metadata.is.null,metadata->>duplicate_of.is.null') // exclude duplicates
     .order('discovered_at', { ascending: false })
-    .limit(1000);
+    .limit(TRENDING_SIGNAL_LIMIT);
 
   if (error) {
-    console.error('[Trending] Failed to fetch signals:', error.message);
-    return _trendingCache?.items || [];
+    throw new Error(error.message);
   }
 
-  const signals = (rawSignals || []) as unknown as RawSignal[];
+  const signals = ((rawSignals || []) as unknown as RawSignal[]).filter(
+    (signal) => !isDuplicateSignal(signal),
+  );
 
   // Split into current (0-24h) and previous (24-48h) periods
   const currentSignals = signals.filter(
@@ -289,9 +402,6 @@ export async function computeTrending(): Promise<TrendingItem[]> {
 
     const titleData = commitmentTitles.get(pid);
     const sourceTypes = new Set(data.current.map((s) => s.signal_type));
-    const hasOfficialSource = data.current.some(
-      (s) => OFFICIAL_SOURCE_TYPES.has(s.signal_type) || OFFICIAL_SOURCE_TYPES.has(s.source_id),
-    );
 
     // Compute raw score
     let rawScore = 0;
@@ -390,7 +500,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
   const keywordFreq = new Map<string, { count: number; signalIds: Set<string> }>();
 
   for (const signal of unmatchedCurrent) {
-    const text = [signal.title_ne || signal.title, signal.content || ''].join(' ');
+    const text = [signal.title_ne || signal.title, signal.content_summary || ''].join(' ');
     const keywords = extractKeywords(text);
     const seen = new Set<string>(); // dedupe within a signal
 
@@ -443,7 +553,7 @@ export async function computeTrending(): Promise<TrendingItem[]> {
     // Count previous period signals mentioning this keyword
     let prevCount = 0;
     for (const signal of prevSignals) {
-      const text = [signal.title_ne || signal.title, signal.content || ''].join(' ');
+      const text = [signal.title_ne || signal.title, signal.content_summary || ''].join(' ');
       if (extractKeywords(text).includes(keyword)) prevCount++;
     }
 
@@ -492,14 +602,139 @@ export async function computeTrending(): Promise<TrendingItem[]> {
 
   const pulse = computePulseFromSignals(currentSignals, prevSignals);
 
-  _trendingCache = {
+  const updatedAt = new Date().toISOString();
+  const sourceTypeCount = new Set(currentSignals.map((signal) => signal.signal_type)).size;
+
+  return {
+    period: SNAPSHOT_PERIOD,
     items: trendingItems,
     pulse,
-    updatedAt: new Date().toISOString(),
-    expiresAt: Date.now() + CACHE_TTL_MS,
+    updatedAt,
+    signalCount: currentSignals.length,
+    sourceTypeCount,
+  };
+}
+
+/**
+ * Compute trending data from recent intelligence signals.
+ * Results are cached for 15 minutes.
+ */
+export async function computeTrending(options?: { force?: boolean }): Promise<TrendingItem[]> {
+  if (!options?.force && isCacheValid()) {
+    return _trendingCache!.items;
+  }
+
+  try {
+    const snapshot = await computeTrendingSnapshotFromSignals();
+    hydrateCache(snapshot);
+    return snapshot.items;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown error';
+    console.error('[Trending] Failed to compute signals snapshot:', message);
+
+    const fallbackSnapshot = await getLatestTrendingSnapshot().catch(() => null);
+    if (fallbackSnapshot) {
+      hydrateCache(fallbackSnapshot);
+      return fallbackSnapshot.items;
+    }
+
+    return _trendingCache?.items || [];
+  }
+}
+
+async function persistTrendingSnapshot(snapshot: TrendingSnapshot): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase.from(SNAPSHOT_TABLE).insert({
+    period: snapshot.period,
+    pulse: snapshot.pulse,
+    trending_items: snapshot.items,
+    signal_count: snapshot.signalCount,
+    source_type_count: snapshot.sourceTypeCount,
+    computed_at: snapshot.updatedAt,
+  });
+
+  if (error) {
+    if (!isSnapshotTableMissing(error.message)) {
+      console.warn('[Trending] Failed to persist snapshot:', error.message);
+    }
+  }
+}
+
+export async function getLatestTrendingSnapshot(
+  period = SNAPSHOT_PERIOD,
+): Promise<TrendingSnapshot | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from(SNAPSHOT_TABLE)
+    .select('period, pulse, trending_items, signal_count, source_type_count, computed_at')
+    .eq('period', period)
+    .order('computed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (!isSnapshotTableMissing(error.message)) {
+      console.warn('[Trending] Failed to load snapshot:', error.message);
+    }
+    return null;
+  }
+
+  if (!data) return null;
+
+  const snapshot: TrendingSnapshot = {
+    period: typeof data.period === 'string' ? data.period : SNAPSHOT_PERIOD,
+    items: parseTrendingItems(data.trending_items),
+    pulse: clampPulse(data.pulse),
+    updatedAt:
+      typeof data.computed_at === 'string' ? data.computed_at : new Date().toISOString(),
+    signalCount: Number(data.signal_count) || 0,
+    sourceTypeCount: Number(data.source_type_count) || 0,
   };
 
-  return trendingItems;
+  return snapshot;
+}
+
+export async function refreshTrendingSnapshot(
+  options?: { force?: boolean; period?: string },
+): Promise<TrendingSnapshot | null> {
+  const period = options?.period || SNAPSHOT_PERIOD;
+
+  if (!options?.force) {
+    const existing = await getLatestTrendingSnapshot(period);
+    if (existing) {
+      const ageMs = Date.now() - new Date(existing.updatedAt).getTime();
+      if (ageMs <= SNAPSHOT_STALE_MS) {
+        hydrateCache(existing);
+        return existing;
+      }
+    }
+  }
+
+  const items = await computeTrending({ force: true });
+  const pulse = await computePulse();
+  const snapshot: TrendingSnapshot = {
+    period,
+    items,
+    pulse,
+    updatedAt: _trendingCache?.updatedAt || new Date().toISOString(),
+    signalCount: _trendingCache?.signalCount || 0,
+    sourceTypeCount: _trendingCache?.sourceTypeCount || 0,
+  };
+
+  await persistTrendingSnapshot(snapshot);
+  return snapshot;
+}
+
+export function getCachedTrendingSnapshot(): TrendingSnapshot | null {
+  if (!_trendingCache) return null;
+  return {
+    period: SNAPSHOT_PERIOD,
+    items: _trendingCache.items,
+    pulse: _trendingCache.pulse,
+    updatedAt: _trendingCache.updatedAt,
+    signalCount: _trendingCache.signalCount,
+    sourceTypeCount: _trendingCache.sourceTypeCount,
+  };
 }
 
 // ── Pulse computation ────────────────────────────────────────────────────────
@@ -547,13 +782,13 @@ function computePulseFromSignals(
  * Get the current pulse value (0-100).
  * Triggers a full compute if cache is stale.
  */
-export async function computePulse(): Promise<number> {
-  if (isCacheValid()) {
+export async function computePulse(options?: { force?: boolean }): Promise<number> {
+  if (!options?.force && isCacheValid()) {
     return _trendingCache!.pulse;
   }
 
   // computeTrending also computes and caches pulse
-  await computeTrending();
+  await computeTrending(options);
   return _trendingCache?.pulse || 0;
 }
 

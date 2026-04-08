@@ -152,8 +152,8 @@ const APIFY_TOKEN = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || ''
 const APIFY_BASE = 'https://api.apify.com/v2';
 
 // Apify actors for TikTok scraping
-const TIKTOK_PROFILE_ACTOR = 'clockworks/free-tiktok-scraper';
-const TIKTOK_HASHTAG_ACTOR = 'microworlds/tiktok-scraper';
+const TIKTOK_PROFILE_ACTOR = 'clockworks~free-tiktok-scraper';
+const TIKTOK_HASHTAG_ACTOR = 'clockworks~tiktok-hashtag-scraper';
 
 /**
  * Scrape a TikTok user profile using Apify actor.

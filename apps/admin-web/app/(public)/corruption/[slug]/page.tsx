@@ -19,6 +19,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { ShareMenu } from '@/components/public/share-menu';
+import { useI18n } from '@/lib/i18n';
 import { useCorruptionCase } from '@/lib/hooks/use-corruption';
 import { ReactionBar } from '@/components/public/reaction-bar';
 import { CorruptionComments } from '@/components/public/corruption-comments';
@@ -87,6 +88,8 @@ const VERIFICATION_COLOR: Record<VerificationStatus, string> = {
 };
 
 export default function CaseDetailPage() {
+  const { locale } = useI18n();
+  const isNe = locale === 'ne';
   const params = useParams();
   const slug = params.slug as string;
   const { data, isLoading } = useCorruptionCase(slug);
@@ -185,9 +188,26 @@ export default function CaseDetailPage() {
             <span>Updated: {new Date(caseData.updated_at).toLocaleDateString()}</span>
             <ShareMenu
               shareUrl={`/corruption/${slug}`}
-              shareTitle={caseData.title}
+              shareTitle={isNe && caseData.title_ne ? caseData.title_ne : caseData.title}
               shareText={caseData.summary || caseData.title}
-              ogParams={{ ogTitle: caseData.title, ogSubtitle: STATUS_LABELS[caseData.status].en, ogSection: 'corruption' }}
+              ogParams={{
+                ogType: 'corruption',
+                ogSlug: slug,
+                ogTitle: isNe && caseData.title_ne ? caseData.title_ne : caseData.title,
+                ogSubtitle: STATUS_LABELS[caseData.status][isNe ? 'ne' : 'en'] || STATUS_LABELS[caseData.status].en,
+                ogSection: 'corruption',
+                ogStatus: caseData.status,
+                ogLocale: locale,
+                ogFacts: isNe ? [
+                  caseData.estimated_amount_npr ? `रू ${formatAmountNpr(caseData.estimated_amount_npr)}` : null,
+                  caseData.severity ? `गम्भीरता: ${SEVERITY_LABELS[caseData.severity].en}` : null,
+                  CORRUPTION_TYPE_LABELS[caseData.corruption_type]?.en,
+                ].filter(Boolean).join('|') : [
+                  caseData.estimated_amount_npr ? `NPR ${formatAmountNpr(caseData.estimated_amount_npr)} estimated` : null,
+                  caseData.severity ? `${SEVERITY_LABELS[caseData.severity].en} severity` : null,
+                  CORRUPTION_TYPE_LABELS[caseData.corruption_type]?.en,
+                ].filter(Boolean).join('|'),
+              }}
               size="sm"
             />
           </div>

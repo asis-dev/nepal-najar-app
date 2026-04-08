@@ -49,17 +49,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       220,
     );
 
-    const ogParams = new URLSearchParams({
-      title: pageTitle,
-      subtitle,
-      section: 'report',
-    });
-
     return createMetadata({
       title: pageTitle,
       description,
       path: `/ministers/${slug}`,
-      ogImage: `/api/og?${ogParams.toString()}`,
+      ogImage: `/api/og/minister?slug=${encodeURIComponent(slug)}&format=card`,
     });
   } catch {
     return createMetadata({

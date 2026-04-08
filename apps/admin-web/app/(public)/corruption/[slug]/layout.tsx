@@ -36,17 +36,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const subtitle = `${label(c.status)} · ${label(c.severity)} severity · ${amount}`;
   const description = compactText(c.summary || subtitle, 220);
 
-  const ogParams = new URLSearchParams({
-    title,
-    subtitle,
-    section: 'corruption',
-  });
-
   return createMetadata({
     title,
     description,
     path: `/corruption/${slug}`,
-    ogImage: `/api/og?${ogParams.toString()}`,
+    ogImage: `/api/og/corruption?slug=${encodeURIComponent(slug)}&format=card`,
   });
 }
 

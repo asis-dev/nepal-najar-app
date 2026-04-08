@@ -3,10 +3,13 @@
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ChevronRight, Loader2, MapPin, MessageSquareWarning, Mic, Search, Send, Square } from 'lucide-react';
+import { AlertCircle, ArrowDownUp, ChevronRight, Loader2, MapPin, MessageSquareWarning, Mic, Search, Send, Square, Users } from 'lucide-react';
 import { useComplaints } from '@/lib/hooks/use-complaints';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
+import { ShareMenu } from '@/components/public/share-menu';
+import { buildComplaintShareData } from '@/lib/complaints/share';
+import { PhotoUpload } from '@/components/public/photo-upload';
 
 const STATUS_OPTIONS = [
   'submitted',
@@ -60,40 +63,59 @@ function statusBadgeColor(status: string): string {
 
 /** Compact issue row used in both panels */
 function IssueRow({ complaint, isNe }: { complaint: any; isNe: boolean }) {
+  const shareData = buildComplaintShareData(complaint, isNe ? 'ne' : 'en');
+
   return (
-    <Link
-      href={`/complaints/${complaint.id}`}
-      className="flex items-start gap-2.5 py-2.5 transition-colors hover:bg-white/[0.03] rounded-lg group px-1"
-    >
-      <div className="mt-1.5 shrink-0">
-        <div className={`h-2 w-2 rounded-full ${statusDotColor(complaint.status)}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-[13px] font-medium text-gray-200 truncate group-hover:text-white transition-colors">
-          {isNe && complaint.title_ne ? complaint.title_ne : complaint.title}
-        </h3>
-        <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-          <span className={`inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize ${statusBadgeColor(complaint.status)}`}>
-            {complaint.status.replace('_', ' ')}
-          </span>
-          <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-gray-400 capitalize">
-            {complaint.issue_type}
-          </span>
-          {(complaint.municipality || complaint.ward_number) && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-500">
-              <MapPin className="h-2.5 w-2.5" />
-              {[complaint.municipality, complaint.ward_number ? `W${complaint.ward_number}` : null]
-                .filter(Boolean)
-                .join(', ')}
+    <div className="flex items-start gap-2 py-1">
+      <Link
+        href={`/complaints/${complaint.id}`}
+        className="group flex min-w-0 flex-1 items-start gap-2.5 rounded-lg px-1 py-2.5 transition-colors hover:bg-white/[0.03]"
+      >
+        <div className="mt-1.5 shrink-0">
+          <div className={`h-2 w-2 rounded-full ${statusDotColor(complaint.status)}`} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-[13px] font-medium text-gray-200 transition-colors group-hover:text-white">
+            {isNe && complaint.title_ne ? complaint.title_ne : complaint.title}
+          </h3>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span className={`inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize ${statusBadgeColor(complaint.status)}`}>
+              {complaint.status.replace('_', ' ')}
+            </span>
+            <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-gray-400 capitalize">
+              {complaint.issue_type}
+            </span>
+            {(complaint.municipality || complaint.ward_number) && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-500">
+                <MapPin className="h-2.5 w-2.5" />
+                {[complaint.municipality, complaint.ward_number ? `W${complaint.ward_number}` : null]
+                  .filter(Boolean)
+                  .join(', ')}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {(complaint.follower_count ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-500" title={isNe ? 'समर्थक' : 'Supporters'}>
+              <Users className="h-2.5 w-2.5" />
+              {complaint.follower_count}
             </span>
           )}
+          <span className="tabular-nums text-[10px] text-gray-600">{timeAgo(complaint.last_activity_at, isNe)}</span>
+          <ChevronRight className="h-3 w-3 text-gray-700 transition-colors group-hover:text-gray-500" />
         </div>
+      </Link>
+      <div className="pt-2.5">
+        <ShareMenu
+          shareUrl={shareData.shareUrl}
+          shareText={shareData.shareText}
+          shareTitle={shareData.shareTitle}
+          ogParams={shareData.ogParams}
+          size="sm"
+        />
       </div>
-      <div className="shrink-0 flex items-center gap-2">
-        <span className="text-[10px] text-gray-600 tabular-nums">{timeAgo(complaint.last_activity_at, isNe)}</span>
-        <ChevronRight className="h-3 w-3 text-gray-700 group-hover:text-gray-500 transition-colors" />
-      </div>
-    </Link>
+    </div>
   );
 }
 
@@ -107,7 +129,10 @@ export default function ComplaintsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [issueType, setIssueType] = useState('');
+  const [sortBy, setSortBy] = useState('last_activity_at');
   const [rightTab, setRightTab] = useState<'all' | 'mine' | 'followed'>('all');
+  const [pageOffset, setPageOffset] = useState(0);
+  const PAGE_SIZE = 30;
 
   // ── Report form state ──
   const [title, setTitle] = useState('');
@@ -120,6 +145,7 @@ export default function ComplaintsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
@@ -135,10 +161,12 @@ export default function ComplaintsPage() {
       q: search || undefined,
       status: status || undefined,
       issue_type: issueType || undefined,
-      limit: 40,
-      offset: 0,
+      sort_by: sortBy,
+      sort_order: sortBy === 'follower_count' ? 'desc' : 'desc',
+      limit: PAGE_SIZE,
+      offset: pageOffset,
     }),
-    [isAuthenticated, rightTab, search, status, issueType],
+    [isAuthenticated, rightTab, search, status, issueType, sortBy, pageOffset],
   );
   const { data: issueData, isLoading: issueLoading, error: issueError, refetch: refetchAll } = useComplaints(issueFilters);
   const issueComplaints = issueData?.complaints || [];
@@ -237,9 +265,14 @@ export default function ComplaintsPage() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Try codecs in order: webm/opus (Chrome/Firefox), mp4 (Safari/iOS), then default
       const preferredMime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
-        : undefined;
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : MediaRecorder.isTypeSupported('audio/wav')
+            ? 'audio/wav'
+            : undefined;
       const recorder = preferredMime
         ? new MediaRecorder(stream, { mimeType: preferredMime })
         : new MediaRecorder(stream);
@@ -311,6 +344,7 @@ export default function ComplaintsPage() {
           is_anonymous: isAnonymous,
           input_mode: inputMode,
           language: isNe ? 'ne' : 'en',
+          media_urls: mediaUrls.length > 0 ? mediaUrls : undefined,
         }),
       });
 
@@ -326,6 +360,7 @@ export default function ComplaintsPage() {
       setMunicipality('');
       setWard('');
       setIsAnonymous(false);
+      setMediaUrls([]);
       setVoiceError(null);
       setVoiceMessage(null);
       setSubmitMessage(
@@ -482,6 +517,20 @@ export default function ComplaintsPage() {
                   </p>
                 )}
 
+                {/* Photo/PDF upload */}
+                <div className="mt-2">
+                  <PhotoUpload
+                    onUpload={(urls) => setMediaUrls((prev) => [...prev, ...urls])}
+                    maxFiles={5}
+                    disabled={isSubmitting}
+                  />
+                  {mediaUrls.length > 0 && (
+                    <p className="mt-1 text-[10px] text-emerald-400">
+                      {mediaUrls.length} {isNe ? 'फाइल अपलोड भयो' : 'file(s) uploaded'}
+                    </p>
+                  )}
+                </div>
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -523,10 +572,10 @@ export default function ComplaintsPage() {
                     {issueData?.total || 0} {isNe ? 'समस्या' : 'issues'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value)}
+                    onChange={(e) => { setStatus(e.target.value); setPageOffset(0); }}
                     className="shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.03] px-2 py-1.5 text-[11px] text-gray-200 focus:outline-none"
                   >
                     <option value="">{isNe ? 'स्थिति' : 'Status'}</option>
@@ -536,7 +585,7 @@ export default function ComplaintsPage() {
                   </select>
                   <select
                     value={issueType}
-                    onChange={(e) => setIssueType(e.target.value)}
+                    onChange={(e) => { setIssueType(e.target.value); setPageOffset(0); }}
                     className="shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.03] px-2 py-1.5 text-[11px] text-gray-200 focus:outline-none"
                   >
                     <option value="">{isNe ? 'विषय' : 'Type'}</option>
@@ -544,11 +593,20 @@ export default function ComplaintsPage() {
                       <option key={o} value={o}>{o}</option>
                     ))}
                   </select>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => { setSortBy(e.target.value); setPageOffset(0); }}
+                    className="shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.03] px-2 py-1.5 text-[11px] text-gray-200 focus:outline-none"
+                  >
+                    <option value="last_activity_at">{isNe ? 'नयाँ गतिविधि' : 'Recent activity'}</option>
+                    <option value="created_at">{isNe ? 'नयाँ दर्ता' : 'Newest'}</option>
+                    <option value="follower_count">{isNe ? 'धेरै समर्थन' : 'Most supported'}</option>
+                  </select>
                   <label className="relative flex flex-1 min-w-0 items-center">
                     <Search className="pointer-events-none absolute left-2 h-3 w-3 text-gray-500" />
                     <input
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => { setSearch(e.target.value); setPageOffset(0); }}
                       placeholder={isNe ? 'खोज्नुहोस्...' : 'Search...'}
                       className="w-full rounded-lg border border-white/[0.1] bg-white/[0.03] py-1.5 pl-7 pr-2 text-[11px] text-white placeholder:text-gray-500 focus:outline-none"
                     />
@@ -580,6 +638,29 @@ export default function ComplaintsPage() {
                   issueComplaints.map((complaint) => (
                     <IssueRow key={complaint.id} complaint={complaint} isNe={isNe} />
                   ))
+                )}
+
+                {/* Pagination */}
+                {(issueData?.total ?? 0) > 0 && (
+                  <div className="flex items-center justify-between py-3 px-1">
+                    <button
+                      onClick={() => setPageOffset(Math.max(0, pageOffset - PAGE_SIZE))}
+                      disabled={pageOffset === 0}
+                      className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/[0.08] disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {isNe ? '← अघिल्लो' : '← Previous'}
+                    </button>
+                    <span className="text-[10px] text-gray-500 tabular-nums">
+                      {pageOffset + 1}–{Math.min(pageOffset + PAGE_SIZE, issueData?.total ?? 0)} / {issueData?.total ?? 0}
+                    </span>
+                    <button
+                      onClick={() => setPageOffset(pageOffset + PAGE_SIZE)}
+                      disabled={pageOffset + PAGE_SIZE >= (issueData?.total ?? 0)}
+                      className="rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/[0.08] disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {isNe ? 'अर्को →' : 'Next →'}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

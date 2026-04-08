@@ -1,12 +1,18 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import type { ComplaintCase, ComplaintEvent, ComplaintEvidence } from '@/lib/complaints/types';
+import type {
+  ComplaintAuthorityChainNode,
+  ComplaintCase,
+  ComplaintEvent,
+  ComplaintEvidence,
+} from '@/lib/complaints/types';
 import type { ComplaintCluster } from '@/lib/complaints/clusters';
 
 export interface ComplaintListItem extends ComplaintCase {
   reporter_name?: string;
   is_following?: boolean;
+  authority_chain?: ComplaintAuthorityChainNode[];
 }
 
 export interface ComplaintFilters {
@@ -19,6 +25,8 @@ export interface ComplaintFilters {
   district?: string;
   municipality?: string;
   q?: string;
+  sort_by?: string;
+  sort_order?: string;
   limit?: number;
   offset?: number;
 }
@@ -26,7 +34,7 @@ export interface ComplaintFilters {
 export interface ComplaintInboxFilters {
   status?: string;
   department_key?: string;
-  sla_state?: 'on_track' | 'due_soon' | 'breached' | 'not_applicable';
+  sla_state?: 'on_track' | 'due_soon' | 'breached' | 'not_applicable' | 'paused';
   assigned_to_me?: boolean;
   q?: string;
   limit?: number;
@@ -136,6 +144,12 @@ export function useComplaintDepartments() {
       description: string | null;
       level: string;
       is_active: boolean;
+      ministry_slug?: string | null;
+      ministry_name?: string | null;
+      ministry_name_ne?: string | null;
+      department_head_title?: string | null;
+      department_head_title_ne?: string | null;
+      facebook_page_url?: string | null;
     }>;
   }>({
     queryKey: ['complaint-departments'],
@@ -163,6 +177,16 @@ export function useComplaintInbox(filters?: ComplaintInboxFilters) {
       breached_open: number;
       due_soon_open: number;
       unassigned_open: number;
+    };
+    queue_breakdown: {
+      needs_triage: number;
+      unassigned: number;
+      awaiting_citizen: number;
+      escalated: number;
+      reopened: number;
+      due_soon: number;
+      breached: number;
+      assigned_to_me: number;
     };
     departments_scope: 'all' | string[];
   }>({

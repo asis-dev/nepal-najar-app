@@ -25,8 +25,8 @@ export const getSupabaseBrowser = createSupabaseBrowserClient;
 
 /**
  * Backwards-compatible export — used by hooks that read public data.
- * This is the same client but accessible as a direct import.
+ * Uses the SAME singleton to avoid "lock was stolen" race conditions.
  */
 export const supabasePublic: SupabaseClient | null = hasPublicSupabaseConfig
-  ? createBrowserClient(supabaseUrl!, supabaseAnonKey!)
+  ? createSupabaseBrowserClient()
   : null;

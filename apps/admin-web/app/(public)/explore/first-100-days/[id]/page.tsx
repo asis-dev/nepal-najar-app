@@ -441,6 +441,15 @@ export default function PromiseDetailPage() {
   const shareTitle = promise ? (locale === 'ne' ? (promise.title_ne || promise.title) : promise.title) : '';
   const shareText = promise ? commitmentShareText({ title: shareTitle, progress: promise.progress, status: promise.status, locale }) : '';
   const shareUrl = promise ? `/explore/first-100-days/${promise.slug || promise.id}` : '';
+  const shareOgParams = promise ? {
+    ogType: 'commitment' as const,
+    ogSlug: promise.slug || promise.id,
+    ogTitle: shareTitle,
+    ogSection: 'commitments' as const,
+    ogProgress: promise.progress,
+    ogStatus: promise.status,
+    ogLocale: locale,
+  } : undefined;
 
   /* ── Not found ── */
   if (!promise) {
@@ -1063,6 +1072,7 @@ export default function PromiseDetailPage() {
               shareUrl={shareUrl}
               shareText={shareText}
               shareTitle={shareTitle}
+              ogParams={shareOgParams}
               size="sm"
             />
 
@@ -1099,6 +1109,7 @@ export default function PromiseDetailPage() {
             shareUrl={shareUrl}
             shareText={shareText}
             shareTitle={shareTitle}
+            ogParams={shareOgParams}
             size="md"
           />
 

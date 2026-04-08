@@ -7,6 +7,7 @@ import {
 import { translatePendingNepaliSignals } from '@/lib/intelligence/translate';
 import { generateDailyBrief } from '@/lib/intelligence/daily-brief';
 import { generateAndStoreDailyAudio } from '@/lib/intelligence/brief-narrator';
+import { refreshTrendingSnapshot } from '@/lib/intelligence/trending';
 import { sendOpsAlert } from '@/lib/intelligence/ops-alerts';
 import {
   bearerMatchesSecret,
@@ -117,13 +118,25 @@ export async function POST(request: NextRequest) {
       ? await translatePendingNepaliSignals(translationBatchSize)
       : null;
 
+    const trendingResult =
+      includesSignalAnalysis(jobTypes) && result.completed > 0
+        ? await regenerateTrendingSnapshot()
+        : null;
+
     // Auto-regenerate daily brief + audio after signal processing
     let briefResult: { regenerated: boolean; audioGenerated: boolean; error?: string } | null = null;
     if (includesSignalAnalysis(jobTypes) && body.regenerateBrief !== false) {
       briefResult = await regenerateBriefAndAudio();
     }
 
-    return NextResponse.json({ status: 'ok', bootstrap, translation, briefResult, ...result });
+    return NextResponse.json({
+      status: 'ok',
+      bootstrap,
+      translation,
+      trendingResult,
+      briefResult,
+      ...result,
+    });
   } catch (err) {
     await sendOpsAlert({
       severity: 'error',
@@ -177,12 +190,24 @@ export async function GET(request: NextRequest) {
       ? await translatePendingNepaliSignals(translationBatchSize)
       : null;
 
+    const trendingResult =
+      includesSignalAnalysis(jobTypes) && result.completed > 0
+        ? await regenerateTrendingSnapshot()
+        : null;
+
     // Auto-regenerate daily brief + audio after scheduled worker run
     const briefResult = includesSignalAnalysis(jobTypes)
       ? await regenerateBriefAndAudio()
       : null;
 
-    return NextResponse.json({ status: 'ok', bootstrap, translation, briefResult, ...result });
+    return NextResponse.json({
+      status: 'ok',
+      bootstrap,
+      translation,
+      trendingResult,
+      briefResult,
+      ...result,
+    });
   } catch (err) {
     await sendOpsAlert({
       severity: 'error',
@@ -218,4 +243,28 @@ async function regenerateBriefAndAudio(): Promise<{
   }
 }
 
-export const maxDuration = 300;
+async function regenerateTrendingSnapshot(): Promise<{
+  refreshed: boolean;
+  pulse: number;
+  error?: string;
+}> {
+  try {
+    const snapshot = await refreshTrendingSnapshot({ force: true });
+    return {
+      refreshed: !!snapshot,
+      pulse: snapshot?.pulse || 0,
+    };
+  } catch (err) {
+    console.warn(
+      '[Worker] Trending snapshot refresh error:',
+      err instanceof Error ? err.message : 'unknown',
+    );
+    return {
+      refreshed: false,
+      pulse: 0,
+      error: err instanceof Error ? err.message : 'unknown',
+    };
+  }
+}
+
+export const maxDuration = 800; // ~13 minutes — handles large classification batches

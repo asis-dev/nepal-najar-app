@@ -7,6 +7,10 @@
  *
  * Now accepts promises as a parameter — caller passes real data from Supabase.
  * Falls back to static data import when no promises are provided.
+ *
+ * v2: Supports time-adjusted scoring via computeTimeAdjustedGhantiScore().
+ * The time-adjusted engine answers "are they on track for THIS point in time?"
+ * rather than penalizing a 9-day-old government for not delivering everything.
  */
 
 import { promises as staticPromises, type GovernmentPromise } from './promises';
@@ -16,6 +20,7 @@ import { promises as staticPromises, type GovernmentPromise } from './promises';
    ═══════════════════════════════════════════════ */
 
 export type GhantiGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+export type GovPhase = 'early' | 'ramp' | 'delivery';
 export type DataConfidence = 'insufficient' | 'partial' | 'sufficient';
 
 export interface GhantiSubScores {
@@ -35,6 +40,59 @@ export interface GhantiScore {
   dataConfidence: DataConfidence;
   /** Number of promises with verified/partial trust level */
   verifiedDataPoints: number;
+  /** Government phase — determines if letter grades should be shown */
+  phase: GovPhase;
+  /** Days since government took office */
+  dayInTerm: number;
+  /** Human-readable phase label */
+  phaseLabel: { en: string; ne: string };
+}
+
+/* ═══════════════════════════════════════════════
+   GOVERNMENT PHASE
+   ═══════════════════════════════════════════════ */
+
+const GOV_START = new Date('2026-03-26T00:00:00+05:45').getTime();
+
+export function getGovPhase(): { phase: GovPhase; dayInTerm: number; label: { en: string; ne: string } } {
+  const dayInTerm = Math.max(0, Math.floor((Date.now() - GOV_START) / (1000 * 60 * 60 * 24)));
+
+  if (dayInTerm <= 30) {
+    return {
+      phase: 'early',
+      dayInTerm,
+      label: {
+        en: `Day ${dayInTerm} — Early Assessment`,
+        ne: `दिन ${dayInTerm} — प्रारम्भिक मूल्यांकन`,
+      },
+    };
+  }
+  if (dayInTerm <= 100) {
+    return {
+      phase: 'ramp',
+      dayInTerm,
+      label: {
+        en: `Day ${dayInTerm} — First 100 Days`,
+        ne: `दिन ${dayInTerm} — पहिलो १०० दिन`,
+      },
+    };
+  }
+  return {
+    phase: 'delivery',
+    dayInTerm,
+    label: {
+      en: `Day ${dayInTerm}`,
+      ne: `दिन ${dayInTerm}`,
+    },
+  };
+}
+
+/**
+ * In the early phase (0-30 days), letter grades are misleading.
+ * We show "Too Early to Grade" instead. After 30 days, grades appear.
+ */
+export function shouldShowGrade(phase: GovPhase): boolean {
+  return phase !== 'early';
 }
 
 /* ═══════════════════════════════════════════════
@@ -149,6 +207,8 @@ export function computeGhantiScore(
     WEIGHTS.citizenSentiment * subScores.citizenSentiment,
   );
 
+  const { phase, dayInTerm, label: phaseLabel } = getGovPhase();
+
   return {
     score,
     change: 0, // No fake weekly change
@@ -156,6 +216,9 @@ export function computeGhantiScore(
     subScores,
     dataConfidence: confidence,
     verifiedDataPoints: count,
+    phase,
+    dayInTerm,
+    phaseLabel,
   };
 }
 
@@ -176,3 +239,10 @@ export const GRADE_COLORS: Record<GhantiGrade, { text: string; bg: string; glow:
   D: { text: 'text-orange-400', bg: 'bg-orange-500/15', glow: 'shadow-[0_0_12px_rgba(249,115,22,0.3)]' },
   F: { text: 'text-red-400', bg: 'bg-red-500/15', glow: 'shadow-[0_0_12px_rgba(239,68,68,0.3)]' },
 };
+
+/* ═══════════════════════════════════════════════
+   TIME-ADJUSTED SCORE (v2)
+   See lib/data/ghanti-score-server.ts for the server-only
+   computeTimeAdjustedGhantiScore() function that delegates
+   to the AI-powered scoring engine.
+   ═══════════════════════════════════════════════ */

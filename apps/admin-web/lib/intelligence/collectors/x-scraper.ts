@@ -237,7 +237,7 @@ const NITTER_INSTANCES = [
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '';
 const APIFY_BASE = 'https://api.apify.com/v2';
-const TWEET_SCRAPER_ACTOR = 'quacker/twitter-scraper';
+const TWEET_SCRAPER_ACTOR = 'quacker~twitter-scraper';
 
 // ─── Approach 1: Apify-based scraping ────────────────────────────────────────
 

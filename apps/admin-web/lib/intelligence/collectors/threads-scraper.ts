@@ -210,7 +210,7 @@ export const THREADS_ACCOUNTS: ThreadsAccountConfig[] = [
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '';
 const APIFY_BASE = 'https://api.apify.com/v2';
-const THREADS_ACTOR = 'apify/threads-scraper';
+const THREADS_ACTOR = 'apify~threads-profile-api-scraper';
 
 /**
  * Scrape a single Threads account using the Apify threads-scraper actor.

@@ -4,6 +4,7 @@ import { getSupabase } from '@/lib/supabase/server';
 import type { ComplaintCase, ComplaintEvidence } from '@/lib/complaints/types';
 import { canViewComplaint, getComplaintAuthContext, isComplaintOwner } from '@/lib/complaints/access';
 import { notifyComplaintUsers } from '@/lib/complaints/notifications';
+import { sanitizeEvidenceSubmitterForViewer } from '@/lib/complaints/privacy';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -83,10 +84,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   return NextResponse.json({
-    evidence: evidenceRows.map((row) => ({
-      ...row,
-      submitter_name: nameMap.get(row.user_id) || 'Citizen',
-    })),
+    evidence: evidenceRows.map((row) =>
+      sanitizeEvidenceSubmitterForViewer(
+        {
+          ...row,
+          submitter_name: nameMap.get(row.user_id) || 'Citizen',
+        },
+        complaint,
+        auth,
+      ),
+    ),
   });
 }
 

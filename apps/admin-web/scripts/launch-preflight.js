@@ -28,6 +28,10 @@ function minLen(name, n) {
   return typeof value === 'string' && value.length >= n;
 }
 
+function hasAnyValue(names) {
+  return names.some((name) => hasValue(name));
+}
+
 let ok = true;
 
 ok = check('SCRAPE_SECRET', minLen('SCRAPE_SECRET', 24), 'Set SCRAPE_SECRET to a long random secret.') && ok;
@@ -55,6 +59,17 @@ if (process.env.INTELLIGENCE_STATUS_AUTOPILOT_AUTO_APPLY === 'true') {
 
 if (!hasValue('INTELLIGENCE_ALERT_WEBHOOK_URL') && !hasValue('OPS_ALERT_WEBHOOK_URL')) {
   warn('Ops alert webhook', 'No webhook configured. Failures will only appear in logs.');
+}
+
+if (!hasAnyValue(['OWNER_USER_ID', 'OWNER_USER_IDS', 'OWNER_EMAIL', 'OWNER_EMAILS'])) {
+  warn('Owner lock', 'No OWNER_* value set. Any admin can access dashboard/admin APIs.');
+}
+
+if (process.env.ADMIN_ROLE_PROMOTION_ENABLED === 'true') {
+  warn(
+    'Elevated promotions enabled',
+    'New users can be promoted to verifier/admin. Keep false for tighter control.',
+  );
 }
 
 if (ok) {

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, createSupabaseServerClient } from '@/lib/supabase/server';
+import { isAdminPromotionEnabled, isOwnerUser } from '@/lib/auth/owner';
+import { isAdminRole, isElevatedRole, isValidAppRole, normalizeAppRole } from '@/lib/auth/roles';
 
 /**
  * Helper: verify the calling user is an admin.
@@ -18,12 +20,16 @@ async function requireAdmin(): Promise<{ error?: NextResponse; userId?: string }
     const supabase = getSupabase();
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, email')
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'admin') {
+    if (!profile || !isAdminRole(profile.role)) {
       return { error: NextResponse.json({ error: 'Forbidden — admin role required' }, { status: 403 }) };
+    }
+
+    if (!isOwnerUser({ id: user.id, email: user.email || profile.email })) {
+      return { error: NextResponse.json({ error: 'Forbidden — owner access required' }, { status: 403 }) };
     }
 
     return { userId: user.id };
@@ -56,7 +62,7 @@ export async function GET() {
 /**
  * POST /api/users
  * Create a new user. Admin-only.
- * Body: { email: string, display_name?: string, role?: 'citizen' | 'admin' }
+ * Body: { email: string, display_name?: string, role?: string }
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin();
@@ -87,16 +93,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: createError.message }, { status: 400 });
     }
 
-    // If a role was specified (and it's valid), update the profile
-    if (role && ['citizen', 'admin'].includes(role) && newUser.user) {
-      await supabase
+    if (role && !isValidAppRole(role)) {
+      return NextResponse.json({ error: 'Invalid role value' }, { status: 400 });
+    }
+
+    const requestedRole = role ? normalizeAppRole(role) : null;
+
+    if (requestedRole && isElevatedRole(requestedRole) && !isAdminPromotionEnabled()) {
+      return NextResponse.json(
+        { error: 'Elevated-role promotions are locked. Set ADMIN_ROLE_PROMOTION_ENABLED=true to allow.' },
+        { status: 403 },
+      );
+    }
+
+    let finalRole = 'citizen';
+
+    if (newUser.user) {
+      const { data: createdProfile } = await supabase
         .from('profiles')
-        .update({ role })
-        .eq('id', newUser.user.id);
+        .select('role')
+        .eq('id', newUser.user.id)
+        .maybeSingle();
+      finalRole = normalizeAppRole(createdProfile?.role, 'citizen');
+
+      if (requestedRole && requestedRole !== finalRole) {
+        const { error: roleErr } = await supabase
+          .from('profiles')
+          .update({ role: requestedRole })
+          .eq('id', newUser.user.id);
+
+        if (roleErr) {
+          return NextResponse.json({ error: roleErr.message }, { status: 400 });
+        }
+        finalRole = requestedRole;
+      }
     }
 
     return NextResponse.json(
-      { id: newUser.user.id, email, display_name: display_name || '', role: role || 'citizen' },
+      {
+        id: newUser.user.id,
+        email,
+        display_name: display_name || '',
+        role: finalRole,
+      },
       { status: 201 }
     );
   } catch {

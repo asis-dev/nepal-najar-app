@@ -32,7 +32,9 @@ type PulseLevel = 'low' | 'moderate' | 'high' | 'very_high';
 
 async function fetchTrending(limit: number): Promise<TrendingResponse> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  // Trending can take a few seconds on cold cache; avoid false timeouts that
+  // force pulse to 0 on the homepage.
+  const timeout = setTimeout(() => controller.abort(), 12000);
   try {
     const res = await fetch(`/api/trending?limit=${limit}`, { signal: controller.signal });
     clearTimeout(timeout);
@@ -51,7 +53,7 @@ export function useTrending(limit = 8) {
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: false,
+    retry: 1,
   });
 
   const trendingIds = new Set<string>(

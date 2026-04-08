@@ -9,6 +9,7 @@ import {
 } from '@/lib/complaints/access';
 import { notifyComplaintUsers } from '@/lib/complaints/notifications';
 import { refreshComplaintSla } from '@/lib/complaints/sla';
+import { sanitizeEventActorForViewer } from '@/lib/complaints/privacy';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -79,14 +80,22 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   }
 
   return NextResponse.json({
-    events: events.map((event) => ({
-      ...event,
-      actor_name: event.actor_id
+    events: events.map((event) => {
+      const actorName = event.actor_id
         ? actorNameMap.get(event.actor_id) || 'Citizen'
         : event.actor_type === 'ai'
           ? 'AI Engine'
-          : 'System',
-    })),
+          : 'System';
+
+      return sanitizeEventActorForViewer(
+        {
+          ...event,
+          actor_name: actorName,
+        },
+        complaint,
+        auth,
+      );
+    }),
   });
 }
 

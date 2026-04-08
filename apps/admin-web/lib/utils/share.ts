@@ -16,7 +16,7 @@ const DEFAULT_SITE_URL =
    TYPES
    ═══════════════════════════════════════════ */
 
-export type SharePlatform = 'x' | 'whatsapp' | 'facebook' | 'copy' | 'native';
+export type SharePlatform = 'x' | 'whatsapp' | 'facebook' | 'instagram' | 'copy' | 'native';
 
 /** OG image params for native share (Instagram, etc.) */
 export interface ShareImageParams {
@@ -25,6 +25,14 @@ export interface ShareImageParams {
   ogSection?: string;
   ogProgress?: number;
   ogStatus?: string;
+  /** Pipe-separated context facts for the story image, e.g. "5 sources found|Day 9 of tracking" */
+  ogFacts?: string;
+  /** Locale for image rendering — 'en' or 'ne' */
+  ogLocale?: string;
+  /** Context type for data-fetching OG routes — renders rich images with real data */
+  ogType?: 'commitment' | 'corruption' | 'minister' | 'scorecard' | 'report-card' | 'daily' | 'generic';
+  /** Slug/ID for data-fetching routes */
+  ogSlug?: string;
 }
 
 /** Everything needed to share a piece of content */
@@ -123,7 +131,13 @@ export function scorecardShareText(opts: {
   grade?: string;
   score?: number;
   locale?: string;
+  dayInTerm?: number;
 }): string {
+  // Early phase — no grade, show day count
+  if (!opts.grade && opts.dayInTerm != null) {
+    if (opts.locale === 'ne') return `दिन ${opts.dayInTerm} — सरकारी प्रतिबद्धता ट्र्याक हुँदैछ`;
+    return `Day ${opts.dayInTerm} — tracking government commitments`;
+  }
   if (opts.locale === 'ne') {
     return opts.grade
       ? `नेपाल सरकारको ग्रेड: ${opts.grade} (${opts.score}/100)`
@@ -144,9 +158,55 @@ export function dailyBriefShareText(opts: { date: string; locale?: string }): st
   return `Today's Nepal brief (${opts.date})`;
 }
 
-export function complaintShareText(opts: { locale?: string }): string {
-  if (opts.locale === 'ne') return `नागरिक समस्या रिपोर्ट गर्नुहोस्`;
-  return `Report civic issues — AI monitors resolution`;
+export function complaintShareText(opts: {
+  locale?: string;
+  title?: string;
+  status?: string;
+  issueType?: string;
+  municipality?: string | null;
+  aiAuthority?: string | null;
+  assignedDepartment?: string | null;
+  ministryName?: string | null;
+  ministerName?: string | null;
+}): string {
+  const isNe = opts.locale === 'ne';
+  const title = opts.title ? shorten(opts.title, 56) : null;
+  const status = opts.status ? shorten(opts.status, 22) : null;
+  const issue = opts.issueType ? shorten(opts.issueType.replace(/_/g, ' '), 20) : null;
+  const place = opts.municipality ? shorten(opts.municipality, 26) : null;
+  const aiAuthority = opts.aiAuthority ? shorten(opts.aiAuthority, 34) : null;
+  const assigned = opts.assignedDepartment
+    ? shorten(opts.assignedDepartment.replace(/_/g, ' '), 30)
+    : null;
+  const ministry = opts.ministryName ? shorten(opts.ministryName, 34) : null;
+  const minister = opts.ministerName ? shorten(opts.ministerName, 30) : null;
+
+  if (isNe) {
+    const parts = [
+      title ? `📢 ${title}` : '📢 नागरिक समस्या ट्र्याक',
+      status ? `स्थिति: ${status}` : null,
+      issue ? `विषय: ${issue}` : null,
+      place ? `स्थान: ${place}` : null,
+      aiAuthority ? `AI रुटिङ: ${aiAuthority}` : null,
+      assigned ? `जिम्मा: ${assigned}` : null,
+      ministry ? `मन्त्रालय: ${ministry}` : null,
+      minister ? `मन्त्री: ${minister}` : null,
+    ].filter(Boolean);
+    return shorten(parts.join(' · '), 200);
+  }
+
+  const parts = [
+    title ? `📢 ${title}` : '📢 Civic issue tracker',
+    status ? `Status: ${status}` : null,
+    issue ? `Issue: ${issue}` : null,
+    place ? `Location: ${place}` : null,
+    aiAuthority ? `AI routed to: ${aiAuthority}` : null,
+    assigned ? `Assigned to: ${assigned}` : null,
+    ministry ? `Ministry: ${ministry}` : null,
+    minister ? `Minister: ${minister}` : null,
+  ].filter(Boolean);
+
+  return shorten(parts.join(' · '), 200);
 }
 
 /* ═══════════════════════════════════════════
@@ -169,19 +229,100 @@ export function ogImageUrl(opts: {
   return `/api/og?${params.toString()}`;
 }
 
-async function fetchShareImage(ogParams?: ShareImageParams): Promise<File | null> {
+/** Build URL for Instagram story/reel format (1080x1920 portrait) */
+export function storyImageUrl(opts: {
+  title?: string;
+  subtitle?: string;
+  progress?: number;
+  status?: string;
+  section?: string;
+  format?: 'story' | 'post';
+  facts?: string;
+  locale?: string;
+}): string {
+  const params = new URLSearchParams();
+  if (opts.title) params.set('title', opts.title);
+  if (opts.subtitle) params.set('subtitle', opts.subtitle);
+  if (opts.progress != null) params.set('progress', String(opts.progress));
+  if (opts.status) params.set('status', opts.status);
+  if (opts.section) params.set('section', opts.section);
+  if (opts.format) params.set('format', opts.format);
+  if (opts.facts) params.set('facts', opts.facts);
+  if (opts.locale) params.set('locale', opts.locale);
+  return `/api/og/story?${params.toString()}`;
+}
+
+function normalizeSection(section?: string): string | undefined {
+  if (!section) return undefined;
+  const key = section.trim().toLowerCase();
+
+  if (key === 'daily') return 'stories';
+  if (key === 'what-changed') return 'stories';
+  if (key === 'evidence') return 'articles';
+
+  return section;
+}
+
+/**
+ * Build the best image URL for the given share context.
+ * Prefers data-fetching routes (rich images) when ogType + ogSlug are provided.
+ * Falls back to generic story route with query params.
+ */
+function resolveShareImageUrl(ogParams: ShareImageParams): string {
+  const locale = ogParams.ogLocale || 'en';
+  const normalizedSection = normalizeSection(ogParams.ogSection);
+
+  // Data-fetching routes — fetch real data server-side, render rich images
+  if (ogParams.ogType && ogParams.ogSlug) {
+    switch (ogParams.ogType) {
+      case 'commitment':
+        return `/api/og/commitment?id=${encodeURIComponent(ogParams.ogSlug)}&lang=${locale}&format=story`;
+      case 'report-card':
+        return `/api/og/report-card?format=story&locale=${locale}`;
+      case 'corruption':
+        return `/api/og/corruption?${ogParams.ogSlug ? `slug=${encodeURIComponent(ogParams.ogSlug)}&` : ''}lang=${locale}&format=story`;
+      case 'minister':
+        return `/api/og/minister?slug=${encodeURIComponent(ogParams.ogSlug)}&lang=${locale}&format=story`;
+      // Not yet on dedicated data routes — render via rich generic story route.
+      case 'scorecard':
+      case 'daily':
+        break;
+    }
+  }
+
+  // Report card without slug still gets the rich route
+  if (ogParams.ogType === 'report-card') {
+    return `/api/og/report-card?format=story&locale=${locale}`;
+  }
+
+  // Corruption dashboard (no slug) still gets the rich route
+  if (ogParams.ogType === 'corruption') {
+    return `/api/og/corruption?lang=${locale}&format=story`;
+  }
+
+  // Fallback to generic story route
+  return storyImageUrl({
+    title: ogParams.ogTitle,
+    subtitle: ogParams.ogSubtitle,
+    progress: ogParams.ogProgress,
+    status: ogParams.ogStatus,
+    section: normalizedSection,
+    facts: ogParams.ogFacts,
+    locale,
+  });
+}
+
+/**
+ * Fetch a share image. Uses context-specific data-fetching routes when available,
+ * or falls back to the generic story format (1080x1920) for Instagram.
+ */
+export async function fetchShareImage(ogParams?: ShareImageParams): Promise<File | null> {
   if (!ogParams) return null;
   try {
-    const imgUrl = ogImageUrl({
-      title: ogParams.ogTitle,
-      subtitle: ogParams.ogSubtitle,
-      progress: ogParams.ogProgress,
-      status: ogParams.ogStatus,
-      section: ogParams.ogSection,
-    });
+    const imgUrl = resolveShareImageUrl(ogParams);
     const origin = detectOrigin();
     const fullUrl = imgUrl.startsWith('/') ? `${origin}${imgUrl}` : imgUrl;
-    const res = await fetch(fullUrl, { signal: AbortSignal.timeout(6000) });
+    const res = await fetch(fullUrl, { signal: AbortSignal.timeout(12000) });
     if (!res.ok) return null;
     const blob = await res.blob();
     return new File([blob], 'nepal-republic.png', { type: blob.type || 'image/png' });
@@ -210,8 +351,9 @@ function whatsappIntentUrl(text: string, pageUrl: string): string {
 }
 
 function facebookIntentUrl(pageUrl: string): string {
-  const trackedUrl = withUtm(pageUrl, 'facebook');
-  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(trackedUrl)}`;
+  // Use clean URL — UTM params create a "new" URL Facebook hasn't scraped → no OG image
+  const clean = cleanUrl(pageUrl);
+  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clean)}`;
 }
 
 /* ═══════════════════════════════════════════
@@ -226,37 +368,122 @@ export async function shareToPlatform(
 ): Promise<'shared' | 'copied' | 'opened' | 'failed'> {
   const fullUrl = normalizeUrl(payload.url);
 
-  // --- X: open intent URL in new window ---
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // --- X: open intent URL ---
   if (platform === 'x') {
     const intentUrl = xIntentUrl(payload.text, fullUrl);
-    window.open(intentUrl, '_blank', 'noopener,noreferrer');
+    if (isMobile) {
+      // On mobile, window.open creates a blank tab that stays behind when
+      // the X app opens. Use location.href so the current tab navigates
+      // and the user just taps "back" to return.
+      window.location.href = intentUrl;
+    } else {
+      window.open(intentUrl, '_blank', 'noopener,noreferrer');
+    }
     return 'opened';
   }
 
   // --- WhatsApp: open intent URL ---
   if (platform === 'whatsapp') {
     const intentUrl = whatsappIntentUrl(payload.text, fullUrl);
-    window.open(intentUrl, '_blank', 'noopener,noreferrer');
+    if (isMobile) {
+      window.location.href = intentUrl;
+    } else {
+      window.open(intentUrl, '_blank', 'noopener,noreferrer');
+    }
     return 'opened';
   }
 
-  // --- Facebook: open sharer ---
+  // --- Facebook: share clean URL so OG image shows up ---
+  // Facebook caches OG data per exact URL. Using UTM params creates a "new"
+  // URL that Facebook hasn't scraped yet → no image preview.
+  // Solution: share the clean canonical URL (no UTM) so Facebook's existing
+  // scrape cache kicks in. Also copy marketing text to clipboard since
+  // sharer.php doesn't support pre-filling text.
   if (platform === 'facebook') {
-    const intentUrl = facebookIntentUrl(fullUrl);
-    window.open(intentUrl, '_blank', 'noopener,noreferrer,width=600,height=400');
-    return 'opened';
+    const clean = cleanUrl(fullUrl);
+    const shareMessage = `${shorten(payload.text, 280)}\n\n${clean}`;
+
+    // Copy the marketing message + link to clipboard
+    try {
+      await navigator.clipboard.writeText(shareMessage);
+    } catch {
+      // Clipboard failed — still open Facebook
+    }
+
+    // Use clean URL (no UTM) — Facebook must recognise the exact URL it scraped
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clean)}`;
+    if (isMobile) {
+      window.location.href = fbUrl;
+    } else {
+      window.open(fbUrl, 'facebook-share', 'width=600,height=500,noopener,noreferrer');
+    }
+    return 'copied';
   }
 
-  // --- Copy: text + clean URL to clipboard ---
+  // --- Copy: clean URL only (for easy pasting on Instagram, etc.) ---
   if (platform === 'copy') {
     const clean = cleanUrl(fullUrl);
-    const copyText = `${payload.text}\n${clean}`;
     try {
-      await navigator.clipboard.writeText(copyText);
+      await navigator.clipboard.writeText(clean);
       return 'copied';
     } catch {
       return 'failed';
     }
+  }
+
+  // --- Instagram: share OG image via native share (mobile) or download (desktop) ---
+  if (platform === 'instagram') {
+    const imageFile = await fetchShareImage(payload.ogParams);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // Mobile: use navigator.share with image file — opens share sheet with Instagram Stories
+    if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        const shareData: ShareData = {
+          title: payload.title,
+          text: payload.text,
+        };
+
+        // Try sharing with the image file first (for Instagram Stories)
+        if (imageFile) {
+          try {
+            await navigator.share({ ...shareData, files: [imageFile] });
+            return 'shared';
+          } catch {
+            // If file sharing fails, fall through to share without file
+          }
+        }
+
+        // Share without file — still shows Instagram in the share sheet
+        await navigator.share({ ...shareData, url: fullUrl });
+        return 'shared';
+      } catch {
+        return 'failed';
+      }
+    }
+
+    // Desktop: download the OG image so user can upload to Instagram manually
+    if (imageFile) {
+      try {
+        const blobUrl = URL.createObjectURL(imageFile);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = 'nepal-republic-share.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+        return 'shared';
+      } catch {
+        return 'failed';
+      }
+    }
+
+    // Last resort: open OG image in new tab
+    window.open(`${detectOrigin()}/api/og?title=${encodeURIComponent(payload.title)}`, '_blank');
+    return 'opened';
   }
 
   // --- Native: navigator.share with optional image (for Instagram etc.) ---

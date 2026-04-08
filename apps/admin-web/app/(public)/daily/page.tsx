@@ -687,6 +687,17 @@ export default function DailyPage() {
               shareUrl="/daily"
               shareTitle="Nepal Republic Streak"
               shareText={isNe ? `Nepal Republic मा मेरो streak ${currentStreak} दिन!` : `My Nepal Republic streak is ${currentStreak} days!`}
+              ogParams={{
+                ogTitle: isNe ? 'मेरो नागरिक स्ट्रीक' : 'My Civic Streak',
+                ogSubtitle: isNe
+                  ? `लगातार ${currentStreak} दिन अपडेट ट्र्याक गर्दै`
+                  : `Tracking accountability for ${currentStreak} straight days`,
+                ogSection: 'daily',
+                ogLocale: locale,
+                ogFacts: isNe
+                  ? [`स्ट्रीक: ${currentStreak} दिन`, 'दैनिक अपडेट', 'जवाफदेहिता ट्र्याकिङ'].join('|')
+                  : [`Streak: ${currentStreak} days`, 'Daily updates', 'Accountability tracking'].join('|'),
+              }}
               size="md"
             />
           </div>

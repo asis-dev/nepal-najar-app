@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, createSupabaseServerClient } from '@/lib/supabase/server';
+import {
+  getOwnerIds,
+  isAdminPromotionEnabled,
+  isOwnerLockEnabled,
+  isOwnerUser,
+} from '@/lib/auth/owner';
+import { isAdminRole, isElevatedRole, isValidAppRole, normalizeAppRole } from '@/lib/auth/roles';
 
 /**
  * Helper: verify the calling user is an admin.
@@ -16,12 +23,16 @@ async function requireAdmin(): Promise<{ error?: NextResponse; userId?: string }
     const supabase = getSupabase();
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, email')
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'admin') {
+    if (!profile || !isAdminRole(profile.role)) {
       return { error: NextResponse.json({ error: 'Forbidden — admin role required' }, { status: 403 }) };
+    }
+
+    if (!isOwnerUser({ id: user.id, email: user.email || profile.email })) {
+      return { error: NextResponse.json({ error: 'Forbidden — owner access required' }, { status: 403 }) };
     }
 
     return { userId: user.id };
@@ -33,7 +44,7 @@ async function requireAdmin(): Promise<{ error?: NextResponse; userId?: string }
 /**
  * PATCH /api/users/[id]
  * Update a user's profile (role, display_name). Admin-only.
- * Body: { role?: 'citizen' | 'admin', display_name?: string }
+ * Body: { role?: string, display_name?: string }
  */
 export async function PATCH(
   request: NextRequest,
@@ -48,8 +59,34 @@ export async function PATCH(
     const body = await request.json();
     const updates: Record<string, string> = {};
 
-    if (body.role && ['citizen', 'admin'].includes(body.role)) {
-      updates.role = body.role;
+    if (body.role) {
+      if (!isValidAppRole(body.role)) {
+        return NextResponse.json({ error: 'Invalid role value' }, { status: 400 });
+      }
+
+      const targetRole = normalizeAppRole(body.role);
+
+      if (isElevatedRole(targetRole) && !isAdminPromotionEnabled()) {
+        return NextResponse.json(
+          { error: 'Elevated-role promotions are locked. Set ADMIN_ROLE_PROMOTION_ENABLED=true to allow.' },
+          { status: 403 },
+        );
+      }
+
+      const ownerIds = getOwnerIds();
+      if (
+        targetRole !== 'admin' &&
+        isOwnerLockEnabled() &&
+        ownerIds.length > 0 &&
+        ownerIds.includes(id)
+      ) {
+        return NextResponse.json(
+          { error: 'Cannot demote configured owner account.' },
+          { status: 400 },
+        );
+      }
+
+      updates.role = targetRole;
     }
     if (typeof body.display_name === 'string') {
       updates.display_name = body.display_name;

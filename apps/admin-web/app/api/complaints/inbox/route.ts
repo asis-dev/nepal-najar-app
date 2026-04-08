@@ -92,12 +92,24 @@ export async function GET(request: NextRequest) {
     unassigned_open: filtered.filter((row) => !isTerminalComplaintStatus(row.status) && !row.assigned_user_id).length,
   };
 
+  const queueBreakdown = {
+    needs_triage: enriched.filter((row) => ['submitted', 'triaged'].includes(row.status)).length,
+    unassigned: enriched.filter((row) => !isTerminalComplaintStatus(row.status) && !row.assigned_user_id).length,
+    awaiting_citizen: enriched.filter((row) => row.status === 'needs_info').length,
+    escalated: enriched.filter((row) => !isTerminalComplaintStatus(row.status) && (row.escalation_level || 0) > 0).length,
+    reopened: enriched.filter((row) => row.status === 'reopened').length,
+    due_soon: enriched.filter((row) => !isTerminalComplaintStatus(row.status) && row.sla_state === 'due_soon').length,
+    breached: enriched.filter((row) => !isTerminalComplaintStatus(row.status) && row.sla_state === 'breached').length,
+    assigned_to_me: enriched.filter((row) => row.assigned_user_id === auth.user?.id).length,
+  };
+
   return NextResponse.json({
     complaints: paged,
     total,
     limit,
     offset,
     summary,
+    queue_breakdown: queueBreakdown,
     departments_scope: auth.isElevated ? 'all' : allowedDepartments,
   });
 }

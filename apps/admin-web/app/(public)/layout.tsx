@@ -19,7 +19,7 @@ export default function PublicLayout({
     alternateName: 'नेपाल रिपब्लिक',
     url: 'https://www.nepalrepublic.org',
     description:
-      'AI-powered civic intelligence platform holding Nepal\'s government accountable',
+      'AI-powered civic intelligence on people\'s issues and government promises, backed by evidence and accountability assessment.',
     sameAs: [],
   };
 

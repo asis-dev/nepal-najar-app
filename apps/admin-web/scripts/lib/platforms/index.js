@@ -17,28 +17,102 @@ function dayInOffice() {
   return Math.max(1, Math.floor((Date.now() - GOV_START.getTime()) / 86400000) + 1);
 }
 
-function generateCaptions(lang = 'ne') {
+async function fetchBrief(date) {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(`${url}/rest/v1/daily_briefs?date=eq.${date}&select=*&limit=1`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    const rows = await res.json();
+    return rows?.[0] || null;
+  } catch { return null; }
+}
+
+function clean(s, max = 180) {
+  if (!s) return '';
+  s = String(s).replace(/\s+/g, ' ').trim();
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+async function generateCaptions(lang = 'ne', date) {
   const day = dayInOffice();
+  date = date || new Date().toISOString().slice(0, 10);
+  const brief = await fetchBrief(date);
+
+  const stories = brief?.top_stories || [];
+  const moved = brief?.commitments_moved || [];
+  const score = brief?.republic_score ?? brief?.ghanti_score;
+  const grade = brief?.grade;
+  const nStarted = stories.length;
+
+  // Pick top 3 headlines
+  const titles = stories.slice(0, 3).map(s => lang === 'ne' ? (s.title_ne || s.title) : (s.title_en || s.title)).filter(Boolean);
+  const top1 = clean(titles[0], 140);
+  const top2 = clean(titles[1], 120);
+  const top3 = clean(titles[2], 120);
+
+  const movedCount = moved.length;
+  const scoreLine = (score != null)
+    ? (lang === 'ne'
+        ? `📊 आजको रिपब्लिक स्कोर: ${score}/100${grade ? ` (${grade})` : ''}`
+        : `📊 Today's Republic Score: ${score}/100${grade ? ` (${grade})` : ''}`)
+    : '';
 
   if (lang === 'ne') {
+    const headlines = [top1, top2, top3].filter(Boolean).map((t, i) => `${i + 1}️⃣ ${t}`).join('\n');
+    const movedLine = movedCount > 0 ? `\n📌 ${movedCount} वचनबद्धतामा प्रगति` : '';
+    const reel = [
+      `🇳🇵 दिन ${day} — सरकार जवाफदेही रिपोर्ट`,
+      scoreLine,
+      '',
+      headlines || 'आजको मुख्य समाचार भिडियोमा हेर्नुहोस् 👆',
+      movedLine,
+      '',
+      '🤖 AI ले हरेक दिन १०९ वचनबद्धता ट्र्याक गर्दैछ',
+      '👉 nepalrepublic.org',
+      '',
+      'सरकारलाई कति अंक दिनुहुन्छ? कमेन्टमा भन्नुहोस् 👇',
+      '',
+      '#नेपालरिपब्लिक #बालेनशाह #नेपाल #सरकार #जवाफदेही #RSP #Day' + day,
+    ].filter(Boolean).join('\n');
+
     return {
-      reel: `📊 दिन ${day} — सरकारले आज के गर्यो?\n\n🔴 आजका मुख्य समाचार + १०९ वचनबद्धता ट्र्याकर + PM स्कोरकार्ड — सबै एकै ठाउँमा!\n\nAI ले हरेक दिन ट्र्याक गर्दैछ। ${day} दिनमा कति प्रगति?\n\n👉 nepalrepublic.org\n\nसरकारलाई कति अंक दिनुहुन्छ? कमेन्टमा भन्नुहोस् 👇`,
-      short: `📊 दिन ${day} — सरकारको ${day} दिनको कार्यसम्पादन 🇳🇵\n\n👉 nepalrepublic.org`,
-      tweet: `📊 दिन ${day} — सरकारले आज के गर्यो?\n\n🔴 AI ले ट्र्याक गरिरहेको छ!\n\n👉 nepalrepublic.org\n\n#नेपालरिपब्लिक #बालेनशाह #Day${day}`,
-      hashtagsNe: ['#नेपालरिपब्लिक', '#बालेनशाह', '#सरकार', '#जवाफदेही', '#नेपाल', '#प्रधानमन्त्री', '#RSP', `#Day${day}`],
+      reel,
+      short: `दिन ${day} 🇳🇵 ${top1 || 'नेपाल सरकार अपडेट'}\n${scoreLine}\n👉 nepalrepublic.org`,
+      tweet: clean(`दिन ${day}: ${top1 || 'सरकार अपडेट'}\n${scoreLine}\n👉 nepalrepublic.org\n#नेपालरिपब्लिक #Day${day}`, 270),
+      hashtagsNe: ['#नेपालरिपब्लिक', '#बालेनशाह', '#सरकार', '#जवाफदेही', '#नेपाल', '#RSP', `#Day${day}`],
     };
   }
 
+  const headlines = [top1, top2, top3].filter(Boolean).map((t, i) => `${i + 1}️⃣ ${t}`).join('\n');
+  const movedLine = movedCount > 0 ? `\n📌 ${movedCount} commitments moved today` : '';
+  const reel = [
+    `🇳🇵 Day ${day} — Nepal Government Accountability Report`,
+    scoreLine,
+    '',
+    headlines || "Today's top stories in the video 👆",
+    movedLine,
+    '',
+    '🤖 AI tracking all 109 RSP promises in real-time',
+    '👉 nepalrepublic.org',
+    '',
+    'How would you grade this government? Drop your score 👇',
+    '',
+    '#NepalRepublic #BalenShah #Nepal #Accountability #RSP #Day' + day,
+  ].filter(Boolean).join('\n');
+
   return {
-    reel: `📊 Day ${day} — What has Nepal's government done today?\n\n🔴 Top headlines + 109 promise tracker + PM scorecard — all in 60 seconds!\n\nAI-powered daily accountability tracker.\n\n👉 nepalrepublic.org\n\nHow would you grade this government? Drop your score 👇`,
-    short: `📊 Day ${day} — Nepal Government Accountability Check 🇳🇵\n\n👉 nepalrepublic.org`,
-    tweet: `📊 Day ${day} — Nepal's government accountability update.\n\nAI tracking 109 promises in real-time.\n\n👉 nepalrepublic.org\n\n#NepalRepublic #Nepal #BalenShah #Day${day}`,
-    hashtagsEn: ['#NepalRepublic', '#Nepal', '#BalenShah', '#GovernmentTracker', '#Accountability', '#AI', `#Day${day}`, '#RSP', '#NepalPolitics'],
+    reel,
+    short: `Day ${day} 🇳🇵 ${top1 || 'Nepal Government Update'}\n${scoreLine}\n👉 nepalrepublic.org`,
+    tweet: clean(`Day ${day}: ${top1 || 'Nepal government update'}\n${scoreLine}\n👉 nepalrepublic.org\n#NepalRepublic #Day${day}`, 270),
+    hashtagsEn: ['#NepalRepublic', '#Nepal', '#BalenShah', '#Accountability', '#RSP', `#Day${day}`, '#NepalPolitics'],
   };
 }
 
 async function postToAllPlatforms({ videoPath, lang = 'ne', date }) {
-  const captions = generateCaptions(lang);
+  const captions = await generateCaptions(lang, date);
   const results = {};
 
   console.log(`\n📱 Posting ${lang.toUpperCase()} reel to all platforms...\n`);

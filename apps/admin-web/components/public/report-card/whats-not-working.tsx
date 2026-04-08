@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Globe, XCircle, Clock, AlertOctagon } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { ShareMenu } from '@/components/public/share-menu';
 import type { DownSource, SilentPromise } from '@/lib/hooks/use-accountability';
 
 interface WhatsNotWorkingProps {
@@ -93,17 +94,39 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
             </span>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 overflow-hidden max-w-full">
+          <div className="grid w-full min-w-0 max-w-full gap-2 overflow-hidden sm:grid-cols-2">
             {govPortals.map((source) => (
               <div
                 key={source.url}
-                className="glass-card p-3 border-l-2 border-red-500/40 overflow-hidden min-w-0 max-w-full"
+                className="glass-card block w-full min-w-0 max-w-full overflow-hidden border-l-2 border-red-500/40 p-3"
               >
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className={`w-2 h-2 rounded-full ${statusDot(source.status)} animate-pulse`} />
                   <span className="text-sm font-medium text-gray-200 truncate flex-1">
                     {source.name}
                   </span>
+                  <ShareMenu
+                    shareUrl="/report-card"
+                    shareText={isNe
+                      ? `⚠️ ${source.name} — सरकारी पोर्टल ${t(statusLabelKey(source.status))}`
+                      : `⚠️ ${source.name} — government portal ${t(statusLabelKey(source.status))}`}
+                    shareTitle={source.name}
+                    size="sm"
+                    ogParams={{
+                      ogTitle: source.name,
+                      ogSubtitle: isNe ? `सरकारी पोर्टल · ${t(statusLabelKey(source.status))}` : `Government portal · ${t(statusLabelKey(source.status))}`,
+                      ogSection: 'report',
+                      ogStatus: 'stalled',
+                      ogFacts: isNe ? [
+                        `स्थिति: ${t(statusLabelKey(source.status))}`,
+                        'सरकारी पोर्टल',
+                      ].join('|') : [
+                        `Status: ${t(statusLabelKey(source.status))}`,
+                        'Government portal',
+                      ].join('|'),
+                      ogLocale: locale,
+                    }}
+                  />
                   <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border border-current/20 ${statusColors(source.status)}`}>
                     {t(statusLabelKey(source.status))}
                   </span>
@@ -134,11 +157,11 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
             </span>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 overflow-hidden max-w-full">
+          <div className="grid w-full min-w-0 max-w-full gap-2 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
             {failedSources.map((source) => (
               <div
                 key={source.url}
-                className="glass-card p-3 border-l-2 border-amber-500/30 overflow-hidden min-w-0 max-w-full"
+                className="glass-card block w-full min-w-0 max-w-full overflow-hidden border-l-2 border-amber-500/30 p-3"
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${statusDot(source.status)}`} />
@@ -168,16 +191,47 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
             </span>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 overflow-hidden max-w-full">
+          <div className="grid w-full min-w-0 max-w-full gap-2 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
             {silentPromises.map((p) => (
-              <Link
+              <div
                 key={p.id}
-                href={`/explore/first-100-days/${p.id}`}
-                className="glass-card p-3 border-l-2 border-gray-500/20 hover:bg-white/[0.03] hover:border-gray-400/30 transition-all overflow-hidden min-w-0 max-w-full"
+                className="glass-card block w-full min-w-0 max-w-full overflow-hidden border-l-2 border-gray-500/20 p-3 transition-all hover:border-gray-400/30 hover:bg-white/[0.03]"
               >
-                <span className="text-xs font-medium text-gray-400 line-clamp-2">
-                  {isNe && p.title_ne ? p.title_ne : p.title}
-                </span>
+                <div className="flex items-start justify-between gap-1">
+                  <Link
+                    href={`/explore/first-100-days/${p.id}`}
+                    className="text-xs font-medium text-gray-400 line-clamp-2 hover:text-gray-200 transition-colors"
+                  >
+                    {isNe && p.title_ne ? p.title_ne : p.title}
+                  </Link>
+                  <ShareMenu
+                    shareUrl={`/explore/first-100-days/${p.id}`}
+                    shareText={isNe
+                      ? `⚠️ "${isNe && p.title_ne ? p.title_ne : p.title}" — कुनै प्रमाण छैन`
+                      : `⚠️ "${p.title}" — zero evidence found`}
+                    shareTitle={isNe && p.title_ne ? p.title_ne : p.title}
+                    size="sm"
+                    ogParams={{
+                      ogTitle: isNe && p.title_ne ? p.title_ne : p.title,
+                      ogSubtitle: isNe
+                        ? `${t(`categoryName.${p.category}`)} · कुनै प्रमाण छैन`
+                        : `${t(`categoryName.${p.category}`)} · Zero evidence`,
+                      ogSection: 'report',
+                      ogProgress: 0,
+                      ogStatus: 'not_started',
+                      ogFacts: isNe ? [
+                        'कुनै लेख भेटिएन',
+                        'कुनै प्रगति अपडेट छैन',
+                        t(`categoryName.${p.category}`),
+                      ].join('|') : [
+                        'No articles found',
+                        'No progress updates',
+                        t(`categoryName.${p.category}`),
+                      ].join('|'),
+                      ogLocale: locale,
+                    }}
+                  />
+                </div>
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="text-[10px] uppercase tracking-wider text-gray-600">
                     {t(`categoryName.${p.category}`)}
@@ -186,7 +240,7 @@ export function WhatsNotWorkingSection({ downSources, silentPromises }: WhatsNot
                     {t('accountability.noUpdates')}
                   </span>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </div>

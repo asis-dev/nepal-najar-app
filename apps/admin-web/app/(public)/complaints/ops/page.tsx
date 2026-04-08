@@ -10,6 +10,8 @@ import {
   useComplaintDepartments,
   useComplaintInbox,
 } from '@/lib/hooks/use-complaints';
+import { ShareMenu } from '@/components/public/share-menu';
+import { buildComplaintShareData } from '@/lib/complaints/share';
 
 export default function ComplaintOpsPage() {
   const { locale } = useI18n();
@@ -18,7 +20,7 @@ export default function ComplaintOpsPage() {
 
   const [department, setDepartment] = useState('');
   const [status, setStatus] = useState('');
-  const [slaState, setSlaState] = useState<'' | 'on_track' | 'due_soon' | 'breached' | 'not_applicable'>('');
+  const [slaState, setSlaState] = useState<'' | 'on_track' | 'due_soon' | 'breached' | 'not_applicable' | 'paused'>('');
   const [scanBusy, setScanBusy] = useState(false);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
 
@@ -145,6 +147,25 @@ export default function ComplaintOpsPage() {
             </div>
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="glass-card p-4">
+              <p className="text-xs uppercase tracking-wide text-gray-400">{isNe ? 'Triage Queue' : 'Triage Queue'}</p>
+              <p className="mt-1 text-2xl font-semibold text-white">{inboxData?.queue_breakdown?.needs_triage ?? '—'}</p>
+            </div>
+            <div className="glass-card p-4">
+              <p className="text-xs uppercase tracking-wide text-gray-400">{isNe ? 'Awaiting Citizen' : 'Awaiting Citizen'}</p>
+              <p className="mt-1 text-2xl font-semibold text-amber-200">{inboxData?.queue_breakdown?.awaiting_citizen ?? '—'}</p>
+            </div>
+            <div className="glass-card p-4">
+              <p className="text-xs uppercase tracking-wide text-gray-400">{isNe ? 'Escalated Open' : 'Escalated Open'}</p>
+              <p className="mt-1 text-2xl font-semibold text-orange-300">{inboxData?.queue_breakdown?.escalated ?? '—'}</p>
+            </div>
+            <div className="glass-card p-4">
+              <p className="text-xs uppercase tracking-wide text-gray-400">{isNe ? 'Reopened' : 'Reopened'}</p>
+              <p className="mt-1 text-2xl font-semibold text-cyan-200">{inboxData?.queue_breakdown?.reopened ?? '—'}</p>
+            </div>
+          </div>
+
           <div className="glass-card p-4 sm:p-5">
             <div className="grid gap-3 md:grid-cols-4">
               <select
@@ -171,13 +192,14 @@ export default function ComplaintOpsPage() {
               </select>
               <select
                 value={slaState}
-                onChange={(event) => setSlaState(event.target.value as '' | 'on_track' | 'due_soon' | 'breached' | 'not_applicable')}
+                onChange={(event) => setSlaState(event.target.value as '' | 'on_track' | 'due_soon' | 'breached' | 'not_applicable' | 'paused')}
                 className="rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none"
               >
                 <option value="">{isNe ? 'सबै SLA स्थिति' : 'All SLA states'}</option>
                 <option value="on_track">on_track</option>
                 <option value="due_soon">due_soon</option>
                 <option value="breached">breached</option>
+                <option value="paused">paused</option>
               </select>
               <button
                 onClick={() => { setDepartment(''); setStatus(''); setSlaState(''); }}
@@ -224,21 +246,34 @@ export default function ComplaintOpsPage() {
               <p className="text-sm text-red-200">{inboxError instanceof Error ? inboxError.message : 'Failed to load inbox.'}</p>
             ) : (
               <div className="space-y-2">
-                {(inboxData?.complaints || []).map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/complaints/${item.id}`}
-                    className="block rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.06]"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <strong className="text-white">{item.title}</strong>
-                      <span className="text-xs text-gray-400">
-                        {item.status} · {item.sla_state || 'n/a'} · {item.assigned_department_key || item.department_key || 'unassigned'}
-                      </span>
+                {(inboxData?.complaints || []).map((item) => {
+                  const shareData = buildComplaintShareData(item, isNe ? 'ne' : 'en');
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-start gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.06]"
+                    >
+                      <Link href={`/complaints/${item.id}`} className="block min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <strong className="text-white">{item.title}</strong>
+                          <span className="text-xs text-gray-400">
+                            {item.status} · {item.sla_state || 'n/a'} · {item.assigned_department_key || item.department_key || 'unassigned'}
+                          </span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs text-gray-300">{item.description}</p>
+                      </Link>
+                      <div className="pt-0.5">
+                        <ShareMenu
+                          shareUrl={shareData.shareUrl}
+                          shareText={shareData.shareText}
+                          shareTitle={shareData.shareTitle}
+                          ogParams={shareData.ogParams}
+                          size="sm"
+                        />
+                      </div>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-gray-300">{item.description}</p>
-                  </Link>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

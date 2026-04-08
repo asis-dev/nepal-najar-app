@@ -58,6 +58,11 @@ const DEFAULT_FILES = [
   'supabase/030-brief-audio-storage.sql',
   'supabase/031-civic-complaints.sql',
   'supabase/032-complaint-operations.sql',
+  'supabase/034-complaint-clusters.sql',
+  'supabase/038-complaints-security-hardening.sql',
+  'supabase/039-complaint-sla-pause-and-queues.sql',
+  'supabase/040-complaint-authority-chain.sql',
+  'supabase/041-trending-snapshots.sql',
 ];
 
 function buildConnectionString() {

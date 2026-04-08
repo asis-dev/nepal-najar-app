@@ -253,7 +253,14 @@ async function main() {
   const brief = briefs[0];
   const stories = brief.top_stories || [];
   const moved = brief.commitments_moved || [];
-  const todaySignals = await supabaseCount('intelligence_signals', `discovered_at=gte.${date}T00:00:00Z`);
+  // Rolling 24h window so the count is never 0 just because UTC midnight just rolled over
+  const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  let todaySignals = await supabaseCount('intelligence_signals', `discovered_at=gte.${since24h}`);
+  if (!todaySignals) {
+    // Fallback: last 48h if 24h is empty (e.g. sweep hasn't run yet)
+    const since48h = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+    todaySignals = await supabaseCount('intelligence_signals', `discovered_at=gte.${since48h}`);
+  }
   const promises = await supabaseGet('promises', 'select=id,title,title_ne,status,progress&order=id.asc&limit=109');
 
   const sb = { notStarted: 0, inProgress: 0, stalled: 0, delivered: 0 };

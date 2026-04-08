@@ -54,6 +54,9 @@ export interface ComplaintCase {
   sla_target_hours: number | null;
   sla_due_at: string | null;
   sla_breached_at: string | null;
+  sla_paused_at: string | null;
+  sla_pause_reason: string | null;
+  sla_total_paused_minutes: number;
   department_response_at: string | null;
   first_acknowledged_at: string | null;
   resolved_at: string | null;
@@ -72,6 +75,29 @@ export interface ComplaintCase {
   evidence_count: number;
   updates_count: number;
   last_activity_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplaintAuthorityChainNode {
+  id: string;
+  complaint_id: string;
+  node_order: number;
+  node_type: 'primary_authority' | 'department_head' | 'ministry' | 'minister' | 'oversight';
+  authority_level: 'local' | 'district' | 'provincial' | 'federal' | 'ministry' | 'national';
+  department_key: string | null;
+  authority_name: string;
+  authority_name_ne: string | null;
+  office: string | null;
+  office_ne: string | null;
+  ministry_slug: string | null;
+  minister_slug: string | null;
+  official_name: string | null;
+  official_title: string | null;
+  facebook_url: string | null;
+  confidence: number | null;
+  is_active: boolean;
+  metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }

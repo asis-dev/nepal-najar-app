@@ -16,7 +16,6 @@ import {
   Eye,
 } from 'lucide-react';
 import { ShareMenu } from '@/components/public/share-menu';
-import { CardActions } from '@/components/public/card-actions';
 import { PublicPageHero } from '@/components/public/page-hero';
 import { useCorruptionCases, useCorruptionStats } from '@/lib/hooks/use-corruption';
 import {
@@ -108,7 +107,7 @@ export default function CorruptionPage() {
                 shareUrl="/corruption"
                 shareTitle={isNe ? 'भ्रष्टाचार ट्र्याकर' : 'Corruption Tracker'}
                 shareText={isNe ? 'नेपालको सरकारमा भ्रष्टाचारका घटना, अनुसन्धान र जवाफदेहिताको अनुगमन। nepalrepublic.org' : 'Track corruption cases, investigations, and accountability across Nepal\'s government. nepalrepublic.org'}
-                ogParams={{ ogTitle: 'Corruption Tracker', ogSubtitle: `${stats?.totalCases ?? 0} cases tracked`, ogSection: 'corruption' }}
+                ogParams={{ ogType: 'corruption', ogTitle: 'Corruption Summary', ogSubtitle: `${stats?.totalCases ?? 0} cases exposed`, ogSection: 'corruption' }}
                 size="sm"
               />
             </div>
@@ -359,6 +358,8 @@ export default function CorruptionPage() {
 /* ── Case Card ── */
 
 function CaseCard({ caseData }: { caseData: CorruptionCase }) {
+  const { locale } = useI18n();
+  const isNe = locale === 'ne';
   const statusColor = STATUS_COLORS[caseData.status];
   const severityColor = caseData.severity ? SEVERITY_COLORS[caseData.severity] : null;
 
@@ -413,16 +414,31 @@ function CaseCard({ caseData }: { caseData: CorruptionCase }) {
           <Clock className="h-3 w-3" />
           Updated {new Date(caseData.updated_at).toLocaleDateString()}
         </span>
-        <CardActions
-          shareTitle={caseData.title}
+        <ShareMenu
+          shareTitle={isNe && caseData.title_ne ? caseData.title_ne : caseData.title}
           shareUrl={`/corruption/${caseData.slug}`}
           shareText={caseData.summary || caseData.title}
-          detailUrl={`/corruption/${caseData.slug}`}
           size="sm"
-          ogTitle={caseData.title}
-          ogSubtitle={caseData.estimated_amount_npr ? `রू ${formatAmountNpr(caseData.estimated_amount_npr)} · ${STATUS_LABELS[caseData.status].en}` : STATUS_LABELS[caseData.status].en}
-          ogSection="corruption"
-          ogStatus={caseData.status}
+          ogParams={{
+            ogType: 'corruption',
+            ogSlug: caseData.slug,
+            ogTitle: isNe && caseData.title_ne ? caseData.title_ne : caseData.title,
+            ogSubtitle: caseData.estimated_amount_npr
+              ? `रू ${formatAmountNpr(caseData.estimated_amount_npr)} · ${STATUS_LABELS[caseData.status][isNe ? 'ne' : 'en']}`
+              : STATUS_LABELS[caseData.status][isNe ? 'ne' : 'en'],
+            ogSection: 'corruption',
+            ogStatus: caseData.status,
+            ogLocale: locale,
+            ogFacts: isNe ? [
+              caseData.estimated_amount_npr ? `रू ${formatAmountNpr(caseData.estimated_amount_npr)}` : null,
+              `स्थिति: ${STATUS_LABELS[caseData.status].ne}`,
+              caseData.severity ? `गम्भीरता: ${SEVERITY_LABELS[caseData.severity].en}` : null,
+            ].filter(Boolean).join('|') : [
+              caseData.estimated_amount_npr ? `NPR ${formatAmountNpr(caseData.estimated_amount_npr)} estimated` : null,
+              `Status: ${STATUS_LABELS[caseData.status].en}`,
+              caseData.severity ? `${SEVERITY_LABELS[caseData.severity].en} severity` : null,
+            ].filter(Boolean).join('|'),
+          }}
         />
       </div>
     </Link>

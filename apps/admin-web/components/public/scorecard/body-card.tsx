@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight, Users } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { CardActions } from '@/components/public/card-actions';
+import { ShareMenu } from '@/components/public/share-menu';
 import {
   GRADE_COLORS,
   GRADE_LABELS,
@@ -49,14 +49,22 @@ export function BodyCard({ body }: { body: GovernmentBody }) {
           </span>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
-          <CardActions
-            shareTitle={`${isNe ? body.nameNe : body.name} — ${body.avgProgress}% avg progress`}
+          <ShareMenu
             shareUrl={`/scorecard/${body.slug}`}
+            shareTitle={isNe ? body.nameNe : body.name}
+            shareText={isNe
+              ? `${body.nameNe} — ग्रेड ${grade} · ${body.avgProgress}% औसत प्रगति · ${body.commitmentCount} प्रतिबद्धता`
+              : `${body.name} — Grade ${grade} · ${body.avgProgress}% avg progress · ${body.commitmentCount} commitments`}
+            ogParams={{
+              ogTitle: isNe ? body.nameNe : body.name,
+              ogSubtitle: isNe
+                ? `${typeLabel} · ग्रेड ${grade} · ${body.avgProgress}% औसत प्रगति`
+                : `${typeLabel} · Grade ${grade} · ${body.avgProgress}% avg progress`,
+              ogSection: 'report',
+              ogProgress: body.avgProgress,
+              ogLocale: locale,
+            }}
             size="sm"
-            ogTitle={isNe ? body.nameNe : body.name}
-            ogSubtitle={`${typeLabel} · Grade ${grade} · ${body.avgProgress}% avg progress`}
-            ogSection="report"
-            ogProgress={body.avgProgress}
           />
           <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
         </div>
