@@ -54,6 +54,23 @@ function targetFromCommitment(id: number) {
   return { target_type: 'party' as const, target_slug: 'rsp', target_name: 'RSP Government' };
 }
 
+async function pushIfUrgent(newItems: Array<{ id: string; title: string; priority: number; link?: string }>) {
+  try {
+    const urgent = newItems.filter((i) => i.priority === 1).slice(0, 3);
+    if (urgent.length === 0) return;
+    const { sendPushToAll } = await import('@/lib/push/send');
+    for (const it of urgent) {
+      await sendPushToAll({
+        title: '🚨 New urgent action item',
+        body: it.title.slice(0, 140),
+        url: it.link || '/inbox',
+      });
+    }
+  } catch (e) {
+    console.error('[inbox/pushIfUrgent]', e);
+  }
+}
+
 export async function generateInboxItems(): Promise<{ upserted: number; kinds: Record<string, number> }> {
   const supabase = getSupabase();
   const items: Item[] = [];
@@ -191,25 +208,46 @@ export async function generateInboxItems(): Promise<{ upserted: number; kinds: R
     /* optional */
   }
 
+  // Fetch existing source_refs so we know which inserts are NEW (for push alerts)
+  const existingKeys = new Set<string>();
+  try {
+    const { data: existing } = await supabase
+      .from('party_action_items')
+      .select('source_kind, source_ref');
+    for (const e of existing || []) existingKeys.add(`${e.source_kind}::${e.source_ref}`);
+  } catch {
+    /* noop */
+  }
+
   // Upsert all
   let upserted = 0;
   const chunkSize = 100;
   const now2 = new Date().toISOString();
+  const freshlyAdded: Array<{ id: string; title: string; priority: number; link?: string }> = [];
   for (let i = 0; i < items.length; i += chunkSize) {
     const chunk = items.slice(i, i + chunkSize).map((it) => ({
       ...it,
       last_seen_at: now2,
     }));
-    const { error, count } = await supabase
+    const { data, error, count } = await supabase
       .from('party_action_items')
-      .upsert(chunk, { onConflict: 'source_kind,source_ref', count: 'exact' });
+      .upsert(chunk, { onConflict: 'source_kind,source_ref', count: 'exact' })
+      .select('id, title, priority, link, source_kind, source_ref');
     if (error) {
       console.error('[inbox/generator] upsert error', error);
       continue;
     }
     upserted += count || chunk.length;
     for (const it of chunk) kinds[it.source_kind] = (kinds[it.source_kind] || 0) + 1;
+    for (const row of data || []) {
+      const key = `${row.source_kind}::${row.source_ref}`;
+      if (!existingKeys.has(key) && row.priority === 1) {
+        freshlyAdded.push({ id: row.id, title: row.title, priority: row.priority, link: row.link });
+      }
+    }
   }
+
+  await pushIfUrgent(freshlyAdded);
 
   return { upserted, kinds };
 }

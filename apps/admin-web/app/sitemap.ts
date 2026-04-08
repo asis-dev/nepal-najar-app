@@ -45,6 +45,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/complaints`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/corruption`, lastModified: now, changeFrequency: 'daily', priority: 0.75 },
     { url: `${SITE_URL}/ministers`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/inbox`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
+    { url: `${SITE_URL}/petitions`, lastModified: now, changeFrequency: 'hourly', priority: 0.85 },
+    { url: `${SITE_URL}/petitions/new`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/api-docs`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/services`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${SITE_URL}/me`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 },
     { url: `${SITE_URL}/privacy`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/terms`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
@@ -173,6 +178,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     commitmentPages = [];
   }
 
+  // ── Petitions ──
+  let petitionPages: MetadataRoute.Sitemap = [];
+  try {
+    const { getSupabase, isSupabaseConfigured } = await import('@/lib/supabase/server');
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabase();
+      const { data } = await supabase
+        .from('petitions')
+        .select('slug, created_at')
+        .eq('status', 'published')
+        .limit(500);
+      petitionPages = (data || []).map((p: any) => ({
+        url: `${SITE_URL}/petitions/${p.slug}`,
+        lastModified: p.created_at ? new Date(p.created_at) : now,
+        changeFrequency: 'hourly' as const,
+        priority: 0.75,
+      }));
+    }
+  } catch {
+    petitionPages = [];
+  }
+
   return [
     ...staticPages,
     ...trackPages,
@@ -188,5 +215,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...officialPages,
     ...topicPages,
     ...commitmentPages,
+    ...petitionPages,
   ];
 }

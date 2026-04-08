@@ -3,11 +3,20 @@ import { getSupabase, isSupabaseConfigured } from '@/lib/supabase/server';
 import { UpvoteButton } from '@/components/public/inbox/upvote-button';
 import { DigestSubscribe } from '@/components/public/digest-subscribe';
 import { PushOptIn } from '@/components/public/push-opt-in';
+import { ShareButton } from '@/components/public/inbox/share-button';
 
 export const revalidate = 60;
 export const metadata = {
   title: 'Party Action Inbox — Nepal Republic',
   description: 'Auto-generated public todo list for the government. Upvote what matters to you.',
+  alternates: {
+    types: { 'application/rss+xml': '/inbox.rss' },
+  },
+  openGraph: {
+    title: 'Party Action Inbox — Nepal Republic',
+    description: 'Live public todo list for the government.',
+    url: 'https://nepalrepublic.org/inbox',
+  },
 };
 
 const KIND_LABELS: Record<string, { label: string; tone: string }> = {
@@ -91,14 +100,14 @@ export default async function InboxPage() {
                     {it.description && (
                       <div className="text-sm text-zinc-400 mt-1 line-clamp-2">{it.description}</div>
                     )}
-                    {it.link && (
-                      <Link
-                        href={it.link}
-                        className="text-xs text-red-400 hover:underline inline-block mt-2"
-                      >
-                        Read more →
-                      </Link>
-                    )}
+                    <div className="mt-2 flex items-center">
+                      {it.link && (
+                        <Link href={it.link} className="text-xs text-red-400 hover:underline">
+                          Read more →
+                        </Link>
+                      )}
+                      <ShareButton id={it.id} title={it.title} />
+                    </div>
                   </div>
                 </div>
               </li>
