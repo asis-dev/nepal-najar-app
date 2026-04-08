@@ -31,6 +31,10 @@
     {
       "path": "/api/inbox/generate",
       "schedule": "40 1,13 * * *"
+    },
+    {
+      "path": "/api/digest/weekly",
+      "schedule": "0 2 * * 0"
     }
   ]
 }

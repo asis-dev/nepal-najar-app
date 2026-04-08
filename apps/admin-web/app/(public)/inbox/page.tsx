@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase/server';
 import { UpvoteButton } from '@/components/public/inbox/upvote-button';
+import { DigestSubscribe } from '@/components/public/digest-subscribe';
 
 export const revalidate = 60;
 export const metadata = {
@@ -103,6 +104,10 @@ export default async function InboxPage() {
           })}
         </ul>
       )}
+
+      <div className="mt-10 max-w-xl mx-auto">
+        <DigestSubscribe />
+      </div>
 
       <div className="mt-10 text-center text-xs text-zinc-500">
         Items auto-refresh when the intelligence sweep runs. Resolved items disappear automatically.

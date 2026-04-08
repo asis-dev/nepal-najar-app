@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from './providers';
 import { StructuredData } from '@/components/seo/structured-data';
 import { createMetadata } from '@/lib/seo';
+import { PWAInstallPrompt } from '@/components/public/pwa-install-prompt';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -53,6 +54,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${playfair.variable} ${mukta.variable} font-sans antialiased`}>
         <Providers>
           {children}
+          <PWAInstallPrompt />
         </Providers>
       </body>
     </html>
