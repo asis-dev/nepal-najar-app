@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
     office_visit_required: workflow.officeVisitRequired ?? false,
     milestones: workflow.milestones,
     actions: workflow.actions || [],
+    action_state: {},
     missing_docs: state.missingDocs,
     ready_docs: state.readyDocs,
     answers: { source_query: question },

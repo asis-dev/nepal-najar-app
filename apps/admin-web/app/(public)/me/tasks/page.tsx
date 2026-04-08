@@ -66,6 +66,16 @@ export default function MyServiceTasksPage() {
     if (response.ok) reload();
   }
 
+  async function completeAction(task: ServiceTaskRecord, actionId: string, placeholder?: string) {
+    const value = placeholder ? window.prompt(placeholder) || '' : '';
+    const response = await fetch(`/api/me/service-tasks/${task.id}/actions/${actionId}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+    });
+    if (response.ok) reload();
+  }
+
   if (!authReady || loading) {
     return <div className="max-w-4xl mx-auto px-4 py-10 text-zinc-400">Loading tasks…</div>;
   }
@@ -203,24 +213,37 @@ export default function MyServiceTasksPage() {
                     <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Quick actions</div>
                     <div className="flex flex-wrap gap-2">
                       {task.actions.map((action) => (
-                        action.href ? (
-                          <a
-                            key={`${task.id}-${action.label}`}
-                            href={action.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center rounded-full bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/20"
-                          >
-                            {action.label}
-                          </a>
-                        ) : (
-                          <span
-                            key={`${task.id}-${action.label}`}
-                            className="inline-flex items-center rounded-full border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300"
-                          >
-                            {action.label}
-                          </span>
-                        )
+                        <div key={`${task.id}-${action.id}`} className="flex flex-wrap gap-2">
+                          {action.href ? (
+                            <a
+                              href={action.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center rounded-full bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/20"
+                            >
+                              {action.label}
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300">
+                              {action.label}
+                            </span>
+                          )}
+
+                          {action.completionLabel && !task.actionState[action.id]?.completed && (
+                            <button
+                              onClick={() => completeAction(task, action.id, action.placeholder)}
+                              className="inline-flex items-center rounded-full border border-emerald-500/30 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
+                            >
+                              {action.completionLabel}
+                            </button>
+                          )}
+
+                          {task.actionState[action.id]?.completed && (
+                            <span className="inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
+                              Done{task.actionState[action.id]?.value ? ` · ${task.actionState[action.id]?.value}` : ''}
+                            </span>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>

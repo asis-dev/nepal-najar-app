@@ -129,6 +129,7 @@ export function mapTaskRow(row: any): ServiceTaskRecord {
     officeVisitRequired: !!row.office_visit_required,
     milestones: row.milestones || [],
     actions: row.actions || [],
+    actionState: row.action_state || {},
     startedAt: row.started_at,
     lastActivityAt: row.last_activity_at,
     completedAt: row.completed_at,

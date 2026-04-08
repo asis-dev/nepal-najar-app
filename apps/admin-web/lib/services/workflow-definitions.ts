@@ -3,9 +3,16 @@ import type { Service } from './types';
 export type WorkflowMode = 'guide_only' | 'appointment' | 'payment' | 'mixed';
 
 export interface WorkflowAction {
+  id: string;
   label: string;
   kind: 'official_site' | 'payment' | 'appointment' | 'call' | 'directions';
   href?: string;
+  completionLabel?: string;
+  placeholder?: string;
+  statusOnComplete?: 'ready' | 'in_progress' | 'booked' | 'submitted' | 'completed';
+  stepOnComplete?: number;
+  progressOnComplete?: number;
+  nextActionOnComplete?: string;
 }
 
 export interface WorkflowDefinition {
@@ -35,8 +42,41 @@ const WORKFLOW_OVERRIDES: Record<string, WorkflowDefinition> = {
       'Track card delivery',
     ],
     actions: [
-      { label: 'Open DoTM site', kind: 'official_site', href: 'https://www.dotm.gov.np' },
-      { label: 'Book appointment', kind: 'appointment', href: 'https://www.dotm.gov.np' },
+      { id: 'open_dotm', label: 'Open DoTM site', kind: 'official_site', href: 'https://www.dotm.gov.np' },
+      {
+        id: 'appointment_booked',
+        label: 'Book appointment',
+        kind: 'appointment',
+        href: 'https://www.dotm.gov.np',
+        completionLabel: 'Mark appointment booked',
+        placeholder: 'Appointment date / reference',
+        statusOnComplete: 'booked',
+        stepOnComplete: 2,
+        progressOnComplete: 45,
+        nextActionOnComplete: 'Pay the renewal fee and keep the receipt.',
+      },
+      {
+        id: 'renewal_fee_paid',
+        label: 'Pay renewal fee',
+        kind: 'payment',
+        completionLabel: 'Mark fee paid',
+        placeholder: 'Payment receipt / wallet reference',
+        statusOnComplete: 'in_progress',
+        stepOnComplete: 3,
+        progressOnComplete: 65,
+        nextActionOnComplete: 'Visit the transport office for biometrics on your appointment day.',
+      },
+      {
+        id: 'office_visit_done',
+        label: 'Complete office visit',
+        kind: 'directions',
+        completionLabel: 'Mark office visit done',
+        placeholder: 'Office visited / visit note',
+        statusOnComplete: 'submitted',
+        stepOnComplete: 4,
+        progressOnComplete: 85,
+        nextActionOnComplete: 'Wait for smart card delivery / pickup update.',
+      },
     ],
   },
   'new-passport': {
@@ -54,7 +94,7 @@ const WORKFLOW_OVERRIDES: Record<string, WorkflowDefinition> = {
       'Collect passport',
     ],
     actions: [
-      { label: 'Open passport portal', kind: 'official_site', href: 'https://nepalpassport.gov.np' },
+      { id: 'passport_portal', label: 'Open passport portal', kind: 'official_site', href: 'https://nepalpassport.gov.np' },
     ],
   },
   'citizenship-by-descent': {
@@ -70,7 +110,7 @@ const WORKFLOW_OVERRIDES: Record<string, WorkflowDefinition> = {
       'Review issued certificate',
     ],
     actions: [
-      { label: 'Open MoHA info', kind: 'official_site', href: 'https://www.moha.gov.np' },
+      { id: 'moha_info', label: 'Open MoHA info', kind: 'official_site', href: 'https://www.moha.gov.np' },
     ],
   },
   'pan-individual': {
@@ -86,7 +126,7 @@ const WORKFLOW_OVERRIDES: Record<string, WorkflowDefinition> = {
       'Receive PAN card',
     ],
     actions: [
-      { label: 'Open IRD portal', kind: 'official_site', href: 'https://taxpayerportal.ird.gov.np' },
+      { id: 'ird_portal', label: 'Open IRD portal', kind: 'official_site', href: 'https://taxpayerportal.ird.gov.np' },
     ],
   },
   'nea-electricity-bill': {
@@ -102,9 +142,20 @@ const WORKFLOW_OVERRIDES: Record<string, WorkflowDefinition> = {
       'Save receipt',
     ],
     actions: [
-      { label: 'Open NEA site', kind: 'official_site', href: 'https://www.nea.org.np' },
-      { label: 'Pay with eSewa', kind: 'payment', href: 'https://esewa.com.np' },
-      { label: 'Pay with Khalti', kind: 'payment', href: 'https://khalti.com' },
+      { id: 'open_nea', label: 'Open NEA site', kind: 'official_site', href: 'https://www.nea.org.np' },
+      { id: 'pay_esewa', label: 'Pay with eSewa', kind: 'payment', href: 'https://esewa.com.np' },
+      { id: 'pay_khalti', label: 'Pay with Khalti', kind: 'payment', href: 'https://khalti.com' },
+      {
+        id: 'nea_bill_paid',
+        label: 'Confirm NEA bill payment',
+        kind: 'payment',
+        completionLabel: 'Mark bill paid',
+        placeholder: 'Receipt / transaction reference',
+        statusOnComplete: 'completed',
+        stepOnComplete: 4,
+        progressOnComplete: 100,
+        nextActionOnComplete: 'Payment recorded. Save the receipt in case NEA asks for proof.',
+      },
     ],
   },
   'kukl-water-bill': {
@@ -120,9 +171,9 @@ const WORKFLOW_OVERRIDES: Record<string, WorkflowDefinition> = {
       'Save receipt',
     ],
     actions: [
-      { label: 'Open KUKL site', kind: 'official_site', href: 'https://kathmanduwater.org' },
-      { label: 'Pay with eSewa', kind: 'payment', href: 'https://esewa.com.np' },
-      { label: 'Pay with Khalti', kind: 'payment', href: 'https://khalti.com' },
+      { id: 'open_kukl', label: 'Open KUKL site', kind: 'official_site', href: 'https://kathmanduwater.org' },
+      { id: 'pay_esewa', label: 'Pay with eSewa', kind: 'payment', href: 'https://esewa.com.np' },
+      { id: 'pay_khalti', label: 'Pay with Khalti', kind: 'payment', href: 'https://khalti.com' },
     ],
   },
 };

@@ -40,6 +40,7 @@ export interface ServiceTaskRecord {
   officeVisitRequired: boolean;
   milestones: string[];
   actions: WorkflowAction[];
+  actionState: Record<string, { completed: boolean; value?: string; completedAt?: string }>;
   startedAt: string;
   lastActivityAt: string;
   completedAt?: string | null;

@@ -32,6 +32,7 @@ create table if not exists service_tasks (
   office_visit_required boolean not null default false,
   milestones jsonb not null default '[]'::jsonb,
   actions jsonb not null default '[]'::jsonb,
+  action_state jsonb not null default '{}'::jsonb,
   missing_docs jsonb not null default '[]'::jsonb,
   ready_docs jsonb not null default '[]'::jsonb,
   answers jsonb not null default '{}'::jsonb,
