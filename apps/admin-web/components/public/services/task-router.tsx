@@ -47,6 +47,21 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
     }
   }
 
+  const samples =
+    locale === 'ne'
+      ? [
+          'मेरो लाइसेन्स नवीकरण गर्नुपर्‍यो',
+          'अस्पतालको समय बुक गर्नुपर्‍यो',
+          'मेरो NEA बिल तिर्नुपर्‍यो',
+          'नागरिकता बनाउन के चाहिन्छ?',
+        ]
+      : [
+          'Renew my driving license',
+          'Book hospital appointment',
+          'Pay my electricity bill',
+          'What do I need for citizenship certificate?',
+        ];
+
   return (
     <div className="rounded-3xl border border-red-500/20 bg-gradient-to-br from-red-500/10 via-zinc-900 to-zinc-950 p-5 md:p-6">
       <div className="text-xs uppercase tracking-wide text-red-400 font-bold mb-2">
@@ -88,12 +103,7 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {[
-          'Renew my driving license',
-          'Book hospital appointment',
-          'Pay my electricity bill',
-          'Get citizenship certificate',
-        ].map((sample) => (
+        {samples.map((sample) => (
           <button
             key={sample}
             type="button"

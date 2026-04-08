@@ -35,6 +35,10 @@
     {
       "path": "/api/digest/weekly",
       "schedule": "0 2 * * 0"
+    },
+    {
+      "path": "/api/scoreboard/generate",
+      "schedule": "30 2 * * 0"
     }
   ]
 }

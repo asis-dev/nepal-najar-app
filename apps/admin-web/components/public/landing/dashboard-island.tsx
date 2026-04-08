@@ -23,6 +23,7 @@ import { useContradictions } from '@/lib/hooks/use-contradictions';
 import { UnifiedDailyBrief } from '@/components/public/landing/unified-daily-brief';
 import { PulseBar } from '@/components/public/landing/pulse-bar';
 import { ActiveTasksOverview } from '@/components/public/services/active-tasks-overview';
+import { TaskRouter } from '@/components/public/services/task-router';
 
 /* ═══════════════════════════════════════════
    Constants
@@ -294,6 +295,10 @@ export function DashboardIsland() {
               )}
             </div>
           )}
+        </div>
+
+        <div className="mb-3 md:mb-5">
+          <TaskRouter locale={locale} />
         </div>
 
         {/* ── Listen about app + Report Civic Issue — single row ── */}

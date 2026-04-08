@@ -82,6 +82,9 @@ const desktopPrimaryLinks = [
 const desktopMoreLinks = [
   { href: '/inbox', labelKey: 'nav.inbox', icon: MessageSquareWarning },
   { href: '/petitions', labelKey: 'nav.petitions', icon: Megaphone },
+  { href: '/scoreboard-weekly', labelKey: 'nav.weeklyScoreboard', icon: ClipboardCheck },
+  { href: '/leaderboard-citizens', labelKey: 'nav.citizenLeaderboard', icon: Star },
+  { href: '/what-changed-week', labelKey: 'nav.whatChangedWeek', icon: RefreshCw },
   { href: '/me/vault', labelKey: 'nav.vault', icon: FolderLock },
   { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
   { href: '/corruption', labelKey: 'nav.corruption', icon: Shield },

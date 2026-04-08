@@ -75,6 +75,14 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (existing) {
+    await supabase.from('service_task_events').insert({
+      task_id: existing.id,
+      owner_id: user.id,
+      event_type: 'task_updated',
+      note: 'Resumed from assistant request',
+      meta: { source_query: question, reused: true },
+    });
+
     return NextResponse.json({
       task: mapTaskRow(existing),
       service: {
@@ -115,6 +123,14 @@ export async function POST(request: NextRequest) {
   }).select('*').single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await supabase.from('service_task_events').insert({
+    task_id: data.id,
+    owner_id: user.id,
+    event_type: 'task_started',
+    note: `Started ${service.title.en} from assistant request`,
+    meta: { service_slug: service.slug, status: state.status, source_query: question },
+  });
 
   return NextResponse.json({
     task: mapTaskRow(data),
