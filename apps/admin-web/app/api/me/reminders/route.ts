@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
+
+function getServiceSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false } });
+}
 
 /**
  * Cron-callable endpoint: sends push notifications for applications
@@ -10,7 +17,7 @@ export const runtime = 'nodejs';
  */
 export async function GET() {
   try {
-    const supabase = getSupabase();
+    const supabase = getServiceSupabase();
     if (!supabase) return NextResponse.json({ error: 'no_db' }, { status: 500 });
 
     const today = new Date().toISOString().slice(0, 10);
