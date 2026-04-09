@@ -17,7 +17,7 @@ export function PortalLinks({ serviceSlug }: { serviceSlug: string }) {
         {portals.map((p) => (
           <a
             key={p.id}
-            href={p.url}
+            href={p.action_url || p.url}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between rounded-xl bg-zinc-800/50 border border-zinc-700/50 px-4 py-3 hover:bg-zinc-800 transition-colors group"
