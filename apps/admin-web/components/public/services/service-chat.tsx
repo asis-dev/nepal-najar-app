@@ -17,6 +17,9 @@ interface ChatMessage {
   cited?: CitedService[];
   cached?: boolean;
   topService?: CitedService | null;
+  routeMode?: 'direct' | 'ambiguous' | 'none';
+  routeReason?: string | null;
+  followUpPrompt?: string | null;
 }
 
 interface Props {
@@ -73,6 +76,9 @@ export default function ServiceChat({ locale = 'en', contextServiceSlug }: Props
           cited: j.cited || [],
           cached: j.cached,
           topService: j.topService || null,
+          routeMode: j.routeMode || 'none',
+          routeReason: j.routeReason || null,
+          followUpPrompt: j.followUpPrompt || null,
         },
       ]);
     } catch {
@@ -187,6 +193,12 @@ export default function ServiceChat({ locale = 'en', contextServiceSlug }: Props
               }`}
             >
               {m.text}
+              {m.role === 'assistant' && (m.routeReason || m.followUpPrompt) && (
+                <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/70 px-3 py-2 text-[11px] text-zinc-300">
+                  {m.routeReason && <div>{m.routeReason}</div>}
+                  {m.followUpPrompt && <div className="mt-1 text-zinc-400">{m.followUpPrompt}</div>}
+                </div>
+              )}
               {m.cited && m.cited.length > 0 && (
                 <div className="mt-3 space-y-1 border-t border-zinc-700 pt-2">
                   <div className="text-[10px] uppercase text-zinc-400 mb-1">

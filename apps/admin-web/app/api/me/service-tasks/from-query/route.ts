@@ -71,14 +71,17 @@ export async function POST(request: NextRequest) {
   const service = result.topService;
   if (!service) {
     return NextResponse.json({
+      ambiguous: true,
       error: 'No confident service match found',
+      routeReason: result.routeReason,
+      followUpPrompt: result.followUpPrompt,
       serviceOptions: result.cited.slice(0, 5).map((candidate) => ({
         slug: candidate.slug,
         category: candidate.category,
         title: candidate.title,
         providerName: candidate.providerName,
       })),
-    }, { status: 409 });
+    });
   }
 
   if (!user) {

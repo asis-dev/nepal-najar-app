@@ -68,7 +68,7 @@ async function getAuthedContext() {
 export async function GET() {
   const { supabase, user } = await getAuthedContext();
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ authenticated: false, profile: null });
   }
 
   const fallback = {
@@ -120,6 +120,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
+    authenticated: true,
     profile: mapProfileRow(profileRow, fallback),
   });
 }

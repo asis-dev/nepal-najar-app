@@ -5,6 +5,11 @@
  * Run manually before go-live: npm run -w @nepal-progress/admin-web launch:check
  */
 
+const path = require('path');
+const { loadEnvConfig } = require('@next/env');
+
+loadEnvConfig(path.join(__dirname, '..'));
+
 function check(name, test, message) {
   if (test) {
     console.log(`PASS  ${name}`);

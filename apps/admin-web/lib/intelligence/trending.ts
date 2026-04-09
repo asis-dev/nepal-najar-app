@@ -107,6 +107,7 @@ const STOP_WORDS = new Set([
 // ── Cache ────────────────────────────────────────────────────────────────────
 
 let _trendingCache: TrendingCache | null = null;
+let _snapshotTableMissingLogged = false;
 
 function isCacheValid(): boolean {
   return _trendingCache !== null && Date.now() < _trendingCache.expiresAt;
@@ -117,8 +118,20 @@ function isSnapshotTableMissing(errorMessage?: string): boolean {
   const normalized = errorMessage.toLowerCase();
   return (
     normalized.includes('intelligence_trending_snapshots') &&
-    (normalized.includes('does not exist') || normalized.includes('relation'))
+    (
+      normalized.includes('does not exist') ||
+      normalized.includes('relation') ||
+      normalized.includes('schema cache') ||
+      normalized.includes('could not find the table')
+    )
   );
+}
+
+function shouldLogSnapshotTableWarning(errorMessage?: string): boolean {
+  if (!isSnapshotTableMissing(errorMessage)) return true;
+  if (_snapshotTableMissingLogged) return false;
+  _snapshotTableMissingLogged = true;
+  return true;
 }
 
 function isDuplicateSignal(signal: RawSignal): boolean {
@@ -654,7 +667,7 @@ async function persistTrendingSnapshot(snapshot: TrendingSnapshot): Promise<void
   });
 
   if (error) {
-    if (!isSnapshotTableMissing(error.message)) {
+    if (shouldLogSnapshotTableWarning(error.message) && !isSnapshotTableMissing(error.message)) {
       console.warn('[Trending] Failed to persist snapshot:', error.message);
     }
   }
@@ -673,7 +686,7 @@ export async function getLatestTrendingSnapshot(
     .maybeSingle();
 
   if (error) {
-    if (!isSnapshotTableMissing(error.message)) {
+    if (shouldLogSnapshotTableWarning(error.message) && !isSnapshotTableMissing(error.message)) {
       console.warn('[Trending] Failed to load snapshot:', error.message);
     }
     return null;

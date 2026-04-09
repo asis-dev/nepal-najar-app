@@ -9,6 +9,7 @@ import SaveToVault from '@/components/public/services/save-to-vault';
 import StartServiceTask from '@/components/public/services/start-service-task';
 import { ReportIssue } from '@/components/public/services/report-issue';
 import { WaitTimeWidget } from '@/components/public/services/wait-times';
+import { PortalLinks } from '@/components/public/services/portal-links';
 
 export const revalidate = 300;
 
@@ -88,7 +89,25 @@ export default async function ServiceDetailPage({ params }: { params: { category
         )}
       </div>
 
+      {/* Apply in-app CTA */}
+      <div className="rounded-2xl bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/30 p-5 mb-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-sm font-bold text-white mb-1">Fill this form from home</h3>
+            <p className="text-xs text-zinc-400">Autofills from your profile · Saves drafts · Print-ready PDF</p>
+          </div>
+          <Link
+            href={`/services/${cat}/${svc.slug}/apply`}
+            className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-500 transition-colors"
+          >
+            📝 Apply in-app
+          </Link>
+        </div>
+      </div>
+
       <StartServiceTask serviceSlug={svc.slug} serviceTitle={svc.title.en} />
+
+      <PortalLinks serviceSlug={svc.slug} />
 
       {svc.documents.length > 0 && <SaveToVault serviceSlug={svc.slug} serviceTitle={svc.title.en} />}
 

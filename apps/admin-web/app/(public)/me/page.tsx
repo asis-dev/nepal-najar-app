@@ -554,6 +554,100 @@ export default function MePage() {
 
               <HouseholdCard locale={isNe ? 'ne' : 'en'} />
 
+              {/* Services Hub */}
+              <div className="glass-card p-5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                  {isNe ? 'मेरो सेवाहरू' : 'My Services'}
+                </h3>
+                <div className="space-y-1">
+                  <Link
+                    href="/me/identity"
+                    className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🪪</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'परिचय प्रोफाइल' : 'Identity Profile'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'एक पटक भर्नुहोस्, सबै फर्म भरिनेछ' : 'Fill once, autofill every form'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
+                  <Link
+                    href="/me/applications"
+                    className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📋</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'मेरो आवेदनहरू' : 'My Applications'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'ट्र्याक, रिमाइन्डर, रसिद' : 'Track status, reminders, receipts'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
+                  <Link
+                    href="/me/vault"
+                    className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📁</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'कागजात भल्ट' : 'Document Vault'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'नागरिकता, राहदानी, प्यान फोटो' : 'Citizenship, passport, PAN scans'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
+                  <Link
+                    href="/services"
+                    className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🏛️</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'सबै सरकारी सेवाहरू' : 'All Government Services'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'खोज्नुहोस्, फर्म भर्नुहोस्, प्रिन्ट गर्नुहोस्' : 'Search, fill forms, print PDFs'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
+                  <Link
+                    href="/me/bills"
+                    className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">💡</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'बिल भुक्तानी' : 'Pay Bills'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'बिजुली, पानी, इन्टरनेट, फोन' : 'Electricity, water, internet, phone'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
+                </div>
+              </div>
+
               {/* Quick links */}
               <div className="glass-card divide-y divide-np-border">
                 <QuickLink

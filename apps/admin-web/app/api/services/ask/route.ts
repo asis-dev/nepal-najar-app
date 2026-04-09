@@ -55,6 +55,9 @@ export async function POST(req: NextRequest) {
       cached: result.cached,
       model: result.model,
       topServiceConfidence: result.topServiceConfidence,
+      routeMode: result.routeMode,
+      routeReason: result.routeReason,
+      followUpPrompt: result.followUpPrompt,
       topService: result.topService
         ? {
             id: result.topService.id,
