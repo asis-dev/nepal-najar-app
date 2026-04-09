@@ -12,6 +12,15 @@ describe('services AI routing helpers', () => {
     expect(query).toContain('bir');
   });
 
+  it('extracts hospital routing signals from admission-style phrasing', () => {
+    const query = buildRoutingQuery(
+      'Need hospital admission and specialist checkup for my father in Kathmandu',
+    );
+
+    expect(query).toContain('hospital');
+    expect(query).toContain('appointment');
+  });
+
   it('does not auto-route broad hospital requests when multiple hospitals are plausible', async () => {
     const ranked = await rankServices(buildRoutingQuery('hospital appointment'), 'en');
     expect(shouldAutoRoute(buildRoutingQuery('hospital appointment'), ranked)).toBe(false);
@@ -42,5 +51,11 @@ describe('services AI routing helpers', () => {
     const result = await ask('pay my nea bill', 'en');
     expect(result.topService?.slug).toBe('nea-electricity-bill');
     expect(result.routeMode).toBe('direct');
+  });
+
+  it('keeps admission-style hospital questions ambiguous instead of misrouting', async () => {
+    const result = await ask('Need hospital admission for my father', 'en');
+    expect(result.topService).toBeNull();
+    expect(result.routeMode).toBe('ambiguous');
   });
 });

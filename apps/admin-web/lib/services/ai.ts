@@ -60,7 +60,7 @@ export function buildRoutingQuery(question: string) {
 
   const signals = new Set<string>();
 
-  if (/(hospital|opd|doctor|clinic|appointment|health)/.test(normalized)) {
+  if (/(hospital|opd|doctor|clinic|appointment|health|admission|checkup|specialist|अस्पताल|समय|टिकट)/.test(normalized)) {
     signals.add('hospital');
     signals.add('appointment');
   }
@@ -118,7 +118,7 @@ export function shouldAutoRoute(question: string, ranked: Array<{ service: Servi
 
   const normalized = normalizeIntentText(question);
   const broadHospitalIntent =
-    /(hospital|opd|doctor|clinic|appointment|health)/.test(normalized) &&
+    /(hospital|opd|doctor|clinic|appointment|health|admission|checkup|specialist|अस्पताल|समय|टिकट)/.test(normalized) &&
     !/(bir|teaching|tuth|patan|civil|kanti|maternity|bharatpur|oncology)/.test(normalized);
 
   const broadBillIntent =
@@ -569,7 +569,7 @@ function buildFollowUpPrompt(
   if (ranked.length === 0) return null;
   const normalized = normalizeIntentText(question);
 
-  if (/(hospital|opd|doctor|clinic|appointment|health)/.test(normalized)) {
+  if (/(hospital|opd|doctor|clinic|appointment|health|admission|checkup|specialist|अस्पताल|समय|टिकट)/.test(normalized)) {
     return locale === 'ne'
       ? 'कुन अस्पताल चाहिएको हो? जस्तै: Bir, TUTH, Patan, Civil.'
       : 'Which hospital do you mean? For example: Bir, TUTH, Patan, or Civil.';

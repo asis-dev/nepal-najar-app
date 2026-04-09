@@ -645,6 +645,40 @@ export default function MePage() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-gray-600" />
                   </Link>
+                  <Link
+                    href="/me/status-checker"
+                    className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🔍</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'स्थिति जाँच' : 'Check Status'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'राहदानी, लाइसेन्स, प्यान ट्र्याक गर्नुहोस्' : 'Track passport, license, PAN status'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
+                  <Link
+                    href="/me/emergency"
+                    className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 transition-colors hover:bg-red-500/10"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🆘</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'आपतकालीन नम्बर' : 'Emergency & Helplines'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'प्रहरी, एम्बुलेन्स, अस्पताल' : 'Police, ambulance, hospitals'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
                 </div>
               </div>
 

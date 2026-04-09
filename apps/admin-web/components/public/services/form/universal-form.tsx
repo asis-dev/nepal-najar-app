@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { FormSchema } from '@/lib/services/form-schemas';
+import { BSDateInput } from './bs-date-input';
+import { ShareFormQR } from '@/components/public/services/qr/share-form-qr';
+import { todayBS, formatBSNepali } from '@/lib/nepali/date-converter';
 
 type Props = {
   schema: FormSchema;
@@ -13,6 +16,8 @@ export function UniversalServiceForm({ schema, onComplete }: Props) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const bsToday = todayBS();
 
   // Load draft + profile in parallel
   useEffect(() => {
@@ -111,6 +116,7 @@ export function UniversalServiceForm({ schema, onComplete }: Props) {
         submitted: true,
       }),
     });
+    setSubmitted(true);
     onComplete?.(values);
     window.print();
   }
@@ -124,7 +130,7 @@ export function UniversalServiceForm({ schema, onComplete }: Props) {
     <div className="space-y-6 print:bg-white print:text-black">
       {!profileLoaded && (
         <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-300 print:hidden">
-          💡 Tip: Fill out <a href="/me/profile" className="underline font-semibold">your profile</a> once
+          💡 Tip: Fill out <a href="/me/identity" className="underline font-semibold">your identity profile</a> once
           to autofill this and every future form.
         </div>
       )}
@@ -145,7 +151,14 @@ export function UniversalServiceForm({ schema, onComplete }: Props) {
                   <label className="text-[11px] font-semibold text-gray-700 block mb-0.5">
                     {f.label}{f.required && ' *'}
                   </label>
-                  {f.type === 'select' ? (
+                  {f.type === 'date' ? (
+                    <BSDateInput
+                      value={values[f.key] || ''}
+                      onChange={(v) => setValues({ ...values, [f.key]: v })}
+                      label={undefined}
+                      required={f.required}
+                    />
+                  ) : f.type === 'select' ? (
                     <select
                       className="w-full border-b border-black bg-transparent px-1 py-1 text-sm print:bg-white"
                       value={values[f.key] || ''}
@@ -181,8 +194,10 @@ export function UniversalServiceForm({ schema, onComplete }: Props) {
             <div className="border-b border-black h-0" />
           </div>
           <div>
-            <div className="text-xs text-gray-700 mb-8">Date:</div>
-            <div className="border-b border-black h-0">{new Date().toLocaleDateString()}</div>
+            <div className="text-xs text-gray-700 mb-1">Date:</div>
+            <div className="text-sm">{formatBSNepali(bsToday)}</div>
+            <div className="text-[10px] text-gray-500">{new Date().toLocaleDateString()}</div>
+            <div className="border-b border-black h-0 mt-4" />
           </div>
         </div>
       </div>
@@ -199,6 +214,33 @@ export function UniversalServiceForm({ schema, onComplete }: Props) {
       <div className="text-[11px] text-zinc-500 print:hidden">
         Tip: after "Complete & print" the form opens the browser print dialog. Save as PDF or print and take to the office.
       </div>
+
+      {submitted && (
+        <div className="space-y-4 print:hidden">
+          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-center">
+            <div className="text-2xl mb-1">✅</div>
+            <div className="text-sm font-bold text-emerald-300">Form completed!</div>
+            <div className="text-xs text-emerald-400/60 mt-1">
+              Tracked in <a href="/me/applications" className="underline">My Applications</a>. Print the form and take it to the office.
+            </div>
+          </div>
+
+          <ShareFormQR
+            serviceSlug={schema.slug}
+            serviceTitle={schema.title}
+            formData={{
+              full_name_en: values.full_name_en,
+              full_name_ne: values.full_name_ne,
+              permanent_province: values.permanent_province,
+              permanent_district: values.permanent_district,
+              permanent_municipality: values.permanent_municipality,
+              permanent_ward: values.permanent_ward,
+              mobile: values.mobile,
+              email: values.email,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

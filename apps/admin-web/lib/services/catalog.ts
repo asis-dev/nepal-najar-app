@@ -18,9 +18,11 @@ const STOP_WORDS = new Set([
 ]);
 
 const TOKEN_SYNONYMS: Record<string, string[]> = {
-  hospital: ['opd', 'doctor', 'clinic', 'health', 'appointment', 'ticket'],
-  appointment: ['book', 'slot', 'time', 'opd', 'visit'],
-  doctor: ['hospital', 'opd', 'appointment', 'clinic'],
+  hospital: ['opd', 'doctor', 'clinic', 'health', 'appointment', 'ticket', 'admission', 'checkup'],
+  appointment: ['book', 'slot', 'time', 'opd', 'visit', 'admission', 'queue'],
+  doctor: ['hospital', 'opd', 'appointment', 'clinic', 'specialist', 'checkup'],
+  admission: ['hospital', 'appointment', 'doctor', 'opd', 'bed'],
+  checkup: ['hospital', 'doctor', 'opd', 'clinic', 'appointment'],
   license: ['licence', 'driving', 'dotm', 'renewal', 'trial', 'smart'],
   licence: ['license', 'driving', 'dotm', 'renewal', 'trial', 'smart'],
   renewal: ['renew', 'expire', 'extension'],
@@ -31,6 +33,11 @@ const TOKEN_SYNONYMS: Record<string, string[]> = {
   electricity: ['nea', 'bill', 'power'],
   water: ['kukl', 'bill', 'connection'],
   bank: ['account', 'kyc'],
+  अस्पताल: ['hospital', 'opd', 'doctor', 'appointment', 'admission'],
+  समय: ['appointment', 'slot', 'book'],
+  टिकट: ['opd', 'hospital', 'appointment'],
+  लाइसेन्स: ['license', 'renewal', 'driving'],
+  बिल: ['bill', 'payment', 'nea', 'kukl'],
 };
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -164,7 +171,7 @@ function scoreService(service: Service, query: string, locale: 'en' | 'ne') {
   score += scoreField(offices, tokens, 4);
 
   const hospitalIntent = includesAny(normalizedQuery, [
-    'hospital', 'opd', 'doctor', 'clinic', 'appointment', 'bir', 'teaching', 'maternity', 'kanti', 'civil',
+    'hospital', 'opd', 'doctor', 'clinic', 'appointment', 'admission', 'checkup', 'bir', 'teaching', 'maternity', 'kanti', 'civil',
   ]);
   const licenseIntent = includesAny(normalizedQuery, [
     'license', 'licence', 'renewal', 'renew', 'dotm', 'driving', 'trial', 'लाइसेन्स', 'अनुमतिपत्र',

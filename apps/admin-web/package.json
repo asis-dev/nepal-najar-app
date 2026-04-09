@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "jest --passWithNoTests",
+    "services:smoke": "node scripts/service-smoke-check.js",
     "launch:check": "node scripts/launch-preflight.js",
     "db:migrate:intelligence": "node scripts/run-pg-migration.js",
     "audio:about": "npx tsx scripts/generate-about-audio.ts"
