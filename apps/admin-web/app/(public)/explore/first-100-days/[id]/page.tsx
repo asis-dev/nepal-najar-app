@@ -3,6 +3,8 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { DisputeForm } from '@/components/public/accountability/dispute-form';
+import { MinisterResponseForm } from '@/components/public/accountability/minister-response-form';
 import {
   ArrowLeft,
   Bookmark,
@@ -1040,6 +1042,18 @@ export default function PromiseDetailPage() {
         <section className={`pb-8 ${activeTab !== 'evidence' ? 'hidden md:block' : ''}`}>
           <SectionHeader icon={'\uD83D\uDCAC'} title={t('detail.discussion')} />
           <CommentsSection promiseId={promise.id} />
+        </section>
+
+        {/* Accountability layer: dispute + minister response */}
+        <section className="pb-8 grid gap-4 md:grid-cols-2">
+          <div>
+            <SectionHeader icon={'\u2696\uFE0F'} title="Dispute / appeal" />
+            <DisputeForm commitmentId={promise.id} />
+          </div>
+          <div>
+            <SectionHeader icon={'\uD83D\uDCE2'} title="Official response" />
+            <MinisterResponseForm commitmentId={promise.id} />
+          </div>
         </section>
 
         {/* Footer accent line */}

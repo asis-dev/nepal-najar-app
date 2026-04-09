@@ -26,6 +26,21 @@ const endpoints = [
     desc: 'Open party action items (stalled, overdue, silent commitments + complaints).',
     params: 'kind, limit',
   },
+  {
+    path: '/api/public/v1/petitions',
+    desc: 'Top citizen petitions ranked by signature count.',
+    params: 'limit',
+  },
+  {
+    path: '/api/public/v1/disputes',
+    desc: 'Citizen-submitted disputes / appeals on commitment status or progress.',
+    params: 'commitment_id, status',
+  },
+  {
+    path: '/api/public/v1/scoreboard',
+    desc: 'Weekly auto-drafted scoreboard threads with stats.',
+    params: '—',
+  },
 ];
 
 export default function ApiDocsPage() {

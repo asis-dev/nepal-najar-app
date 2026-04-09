@@ -4,6 +4,15 @@ export const revalidate = 300;
 export const metadata = {
   title: 'Weekly Scoreboard — Nepal Republic',
   description: 'Auto-drafted weekly government report card for journalists and citizens.',
+  openGraph: {
+    title: 'Weekly Scoreboard — Nepal Republic',
+    description: 'Live RSP government grade and weekly summary.',
+    images: ['/api/og/scoreboard'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/api/og/scoreboard'],
+  },
 };
 
 async function getLatest() {
