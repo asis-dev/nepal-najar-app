@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import ServiceChat from '@/components/public/services/service-chat';
 import PostHogProvider from '@/components/public/services/posthog-provider';
 import { OfflineBanner } from '@/components/public/services/offline-banner';
+import { PWAInstallPrompt } from '@/components/public/services/pwa-install-prompt';
 
 export const metadata: Metadata = {
   title: 'Nepal Services Directory — Nepal Republic',
@@ -20,6 +21,7 @@ export default function ServicesLayout({ children }: { children: React.ReactNode
       <PostHogProvider />
       {children}
       <ServiceChat locale="en" />
+      <PWAInstallPrompt />
     </div>
   );
 }

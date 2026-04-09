@@ -663,6 +663,23 @@ export default function MePage() {
                     <ChevronRight className="h-4 w-4 text-gray-600" />
                   </Link>
                   <Link
+                    href="/me/holidays"
+                    className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📅</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'सरकारी बिदा' : 'Government Holidays'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'कार्यालय बन्द हुने दिनहरू' : 'Plan your office visits'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
+                  <Link
                     href="/me/emergency"
                     className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 transition-colors hover:bg-red-500/10"
                   >

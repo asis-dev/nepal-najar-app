@@ -4,6 +4,7 @@ import type { FormSchema } from '@/lib/services/form-schemas';
 import { BSDateInput } from './bs-date-input';
 import { ShareFormQR } from '@/components/public/services/qr/share-form-qr';
 import { todayBS, formatBSNepali } from '@/lib/nepali/date-converter';
+import { markFormCompleted } from '@/components/public/services/pwa-install-prompt';
 
 type Props = {
   schema: FormSchema;
@@ -117,6 +118,7 @@ export function UniversalServiceForm({ schema, onComplete }: Props) {
       }),
     });
     setSubmitted(true);
+    markFormCompleted();
     onComplete?.(values);
     window.print();
   }

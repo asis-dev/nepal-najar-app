@@ -39,6 +39,10 @@
     {
       "path": "/api/scoreboard/generate",
       "schedule": "30 2 * * 0"
+    },
+    {
+      "path": "/api/me/reminders",
+      "schedule": "0 3,9,15,21 * * *"
     }
   ]
 }

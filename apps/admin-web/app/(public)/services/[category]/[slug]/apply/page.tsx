@@ -4,6 +4,7 @@ import { getServiceBySlug } from '@/lib/services/catalog';
 import { getOrBuildSchema } from '@/lib/services/form-schemas';
 import { UniversalServiceForm } from '@/components/public/services/form/universal-form';
 import { CATEGORY_LABELS, type ServiceCategory } from '@/lib/services/types';
+import { DocReadiness } from '@/components/public/services/doc-readiness';
 
 export const revalidate = 300;
 
@@ -67,6 +68,10 @@ export default async function ApplyPage({ params }: { params: { category: string
             Tip: Upload these to your <a href="/me/vault" className="underline">Document Vault</a> for easy access.
           </p>
         </div>
+      )}
+
+      {svc.documents.length > 0 && (
+        <DocReadiness serviceSlug={svc.slug} documents={svc.documents} />
       )}
 
       <UniversalServiceForm schema={schema} />
