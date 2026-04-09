@@ -12,13 +12,14 @@
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import type { Service } from './types';
-import { getAllServices, searchServices } from './catalog';
+import { getAllServices, rankServices, searchServices } from './catalog';
 
 const GEMINI_API_KEY = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || '';
 const GEN_MODEL = process.env.SERVICES_AI_MODEL || 'gemini-2.0-flash';
 const EMBED_MODEL = 'text-embedding-004';
 const AI_ENABLED = process.env.SERVICES_AI_ENABLED !== 'false';
 const DAILY_CAP = parseInt(process.env.SERVICES_AI_DAILY_CAP || '1000', 10);
+const CACHE_VERSION = 'routing-v2';
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -29,6 +30,51 @@ export interface AskResult {
   cached: boolean;
   model: string | null;
   topService: Service | null;
+  topServiceConfidence: number;
+}
+
+function normalizeIntentText(value: string) {
+  return value.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function shouldAutoRoute(question: string, ranked: Array<{ service: Service; score: number }>) {
+  const topRanked = ranked[0];
+  const secondRanked = ranked[1];
+  const topScore = topRanked?.score ?? 0;
+  const secondScore = secondRanked?.score ?? 0;
+
+  if (!topRanked || topScore < 65) return false;
+
+  const normalized = normalizeIntentText(question);
+  const broadHospitalIntent =
+    /(hospital|opd|doctor|clinic|appointment|health)/.test(normalized) &&
+    !/(bir|teaching|tuth|patan|civil|kanti|maternity|bharatpur|oncology)/.test(normalized);
+
+  const broadBillIntent =
+    /(bill|payment|pay)/.test(normalized) &&
+    !/(nea|electricity|kukl|water)/.test(normalized);
+
+  if (broadHospitalIntent) {
+    if (
+      topRanked.service.providerType === 'hospital' &&
+      secondRanked?.service.providerType === 'hospital' &&
+      secondScore >= topScore * 0.7
+    ) {
+      return false;
+    }
+  }
+
+  if (broadBillIntent) {
+    if (
+      topRanked.service.category === 'utilities' &&
+      secondRanked?.service.category === 'utilities' &&
+      secondScore >= topScore * 0.75
+    ) {
+      return false;
+    }
+  }
+
+  return secondScore === 0 || (topScore - secondScore >= 18 && topScore >= secondScore * 1.15);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -37,7 +83,7 @@ export interface AskResult {
 function hashQuestion(q: string, locale: string) {
   return crypto
     .createHash('sha256')
-    .update(`${locale}::${q.trim().toLowerCase().replace(/\s+/g, ' ')}`)
+    .update(`${CACHE_VERSION}::${locale}::${q.trim().toLowerCase().replace(/\s+/g, ' ')}`)
     .digest('hex');
 }
 
@@ -70,7 +116,15 @@ export async function getCachedAnswer(question: string, locale: 'en' | 'ne'): Pr
     .map((id: string) => all.find((s) => s.id === id))
     .filter(Boolean) as Service[];
 
-  return { answer: data.answer, cited, cached: true, model: data.model, topService: cited[0] || null };
+  const topService = cited[0] || null;
+  return {
+    answer: data.answer,
+    cited,
+    cached: true,
+    model: data.model,
+    topService,
+    topServiceConfidence: topService ? 0.5 : 0,
+  };
 }
 
 export async function saveAnswer(
@@ -143,9 +197,7 @@ export async function retrieveServices(question: string, locale: 'en' | 'ne', to
   const hits = await searchServices(question, locale);
   if (hits.length > 0) return hits.slice(0, topK);
 
-  // Tier 3: top popular
-  const all = await getAllServices();
-  return all.slice(0, topK);
+  return [];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -275,33 +327,65 @@ export async function generateAnswer(
 // ─────────────────────────────────────────────────────────────
 export async function ask(question: string, locale: 'en' | 'ne' = 'en'): Promise<AskResult> {
   const trimmed = question.trim();
-  if (!trimmed) return { answer: '', cited: [], cached: false, model: null, topService: null };
+  if (!trimmed) {
+    return { answer: '', cited: [], cached: false, model: null, topService: null, topServiceConfidence: 0 };
+  }
 
   // 1. cache
   const cached = await getCachedAnswer(trimmed, locale);
   if (cached) return cached;
 
+  const ranked = await rankServices(trimmed, locale);
+  const topRanked = ranked[0];
+  const topScore = topRanked?.score ?? 0;
+  const confidentTopService = shouldAutoRoute(trimmed, ranked) && topRanked
+    ? topRanked.service
+    : null;
+
   // 2. retrieve
-  const cited = await retrieveServices(trimmed, locale, 5);
+  const cited = ranked.length > 0
+    ? ranked.slice(0, 5).map((entry) => entry.service)
+    : await retrieveServices(trimmed, locale, 5);
 
   // 3. daily cap check
   const under = await checkDailyCap();
   if (!under || !GEMINI_API_KEY || !AI_ENABLED) {
     // Static fallback: return top matches as a structured answer.
     const answer = buildStaticAnswer(trimmed, cited, locale);
-    return { answer, cited, cached: false, model: null, topService: cited[0] || null };
+    return {
+      answer,
+      cited,
+      cached: false,
+      model: null,
+      topService: confidentTopService,
+      topServiceConfidence: topScore,
+    };
   }
 
   // 4. generate
   const gen = await generateAnswer(trimmed, cited, locale);
   if (!gen) {
     const answer = buildStaticAnswer(trimmed, cited, locale);
-    return { answer, cited, cached: false, model: null, topService: cited[0] || null };
+    return {
+      answer,
+      cited,
+      cached: false,
+      model: null,
+      topService: confidentTopService,
+      topServiceConfidence: topScore,
+    };
   }
 
   // 5. persist
   await saveAnswer(trimmed, locale, gen.text, cited, gen.model);
-  return { answer: gen.text, cited, cached: false, model: gen.model, topService: cited[0] || null };
+  return {
+    answer: gen.text,
+    cited,
+    cached: false,
+    model: gen.model,
+    topService: confidentTopService,
+    topServiceConfidence: topScore,
+  };
 }
 
 function buildStaticAnswer(_q: string, services: Service[], locale: 'en' | 'ne'): string {

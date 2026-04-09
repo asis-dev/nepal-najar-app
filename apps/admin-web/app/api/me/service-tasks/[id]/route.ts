@@ -47,6 +47,20 @@ async function listVaultDocs(supabase: Awaited<ReturnType<typeof createSupabaseS
   }));
 }
 
+async function getTargetMember(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  targetMemberId: string | undefined,
+) {
+  if (!targetMemberId) return null;
+  const { data } = await supabase
+    .from('household_members')
+    .select('*')
+    .eq('id', targetMemberId)
+    .is('archived_at', null)
+    .maybeSingle();
+  return data || null;
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const { supabase, user } = await getAuthedContext();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -72,6 +86,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const vaultDocs = await listVaultDocs(supabase);
   const derived = getTaskStatus(service, vaultDocs);
   const workflow = getWorkflowDefinition(service);
+  const requestedTargetMemberId =
+    typeof body.targetMemberId === 'string' && body.targetMemberId.trim()
+      ? body.targetMemberId.trim()
+      : undefined;
+  const targetMember = await getTargetMember(supabase, requestedTargetMemberId);
 
   const nextStatus =
     typeof body.status === 'string' && MUTABLE_STATUSES.includes(body.status as ServiceTaskStatus)
@@ -101,6 +120,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     summary: typeof body.summary === 'string' ? body.summary.slice(0, 1000) : derived.summary,
     notes: typeof body.notes === 'string' ? body.notes.slice(0, 2000) : existing.notes,
     workflow_mode: workflow.mode,
+    target_member_id: targetMember?.id ?? existing.target_member_id ?? null,
+    target_member_name: targetMember?.display_name ?? existing.target_member_name ?? null,
     requires_appointment: workflow.requiresAppointment ?? false,
     supports_online_payment: workflow.supportsOnlinePayment ?? false,
     office_visit_required: workflow.officeVisitRequired ?? false,
@@ -123,8 +144,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     task_id: params.id,
     owner_id: user.id,
     event_type: 'task_updated',
-    note: `Moved to ${nextStatus}`,
-    meta: { current_step: requestedStep, progress: computedProgress },
+    note: targetMember?.display_name
+      ? `Moved to ${nextStatus} for ${targetMember.display_name}`
+      : `Moved to ${nextStatus}`,
+    meta: {
+      current_step: requestedStep,
+      progress: computedProgress,
+      target_member_id: targetMember?.id ?? existing.target_member_id ?? null,
+    },
   });
 
   return NextResponse.json({ task: mapTaskRow(data) });

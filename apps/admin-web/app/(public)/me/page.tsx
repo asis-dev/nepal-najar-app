@@ -32,6 +32,7 @@ import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useReputation, getNextLevelThreshold, getCurrentLevelThreshold } from '@/lib/hooks/use-reputation';
 import { useWatchlistStore, usePreferencesStore, NEPAL_PROVINCES } from '@/lib/stores/preferences';
+import { HouseholdCard } from '@/components/public/me/household-card';
 
 export default function MePage() {
   const { locale, setLocale } = useI18n();
@@ -550,6 +551,8 @@ export default function MePage() {
                   <ChevronRight className="h-4 w-4 text-gray-600" />
                 </Link>
               </div>
+
+              <HouseholdCard locale={isNe ? 'ne' : 'en'} />
 
               {/* Quick links */}
               <div className="glass-card divide-y divide-np-border">

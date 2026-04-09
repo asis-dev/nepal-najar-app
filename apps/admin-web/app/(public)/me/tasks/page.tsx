@@ -129,6 +129,11 @@ export default function MyServiceTasksPage() {
                       {task.serviceCategory}
                     </div>
                     <h3 className="text-lg font-semibold text-zinc-100">{task.serviceTitle}</h3>
+                    {task.targetMemberName && (
+                      <div className="mt-1 text-xs font-medium text-cyan-300">
+                        For {task.targetMemberName}
+                      </div>
+                    )}
                     <p className="text-sm text-zinc-400 mt-1">{task.summary}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
                       <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300">

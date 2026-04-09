@@ -21,6 +21,8 @@ export interface ServiceTaskDocStatus {
 export interface ServiceTaskRecord {
   id: string;
   ownerId: string;
+  targetMemberId?: string | null;
+  targetMemberName?: string | null;
   serviceSlug: string;
   serviceTitle: string;
   serviceCategory: ServiceCategory;

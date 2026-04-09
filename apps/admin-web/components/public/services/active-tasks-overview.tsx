@@ -93,6 +93,11 @@ export function ActiveTasksOverview({ variant = 'compact' }: ActiveTasksOverview
                   <div className="truncate text-sm font-semibold text-white">
                     {task.serviceTitle}
                   </div>
+                  {task.targetMemberName && (
+                    <div className="mt-1 text-[11px] font-medium text-cyan-300">
+                      For {task.targetMemberName}
+                    </div>
+                  )}
                   <div className="mt-1 text-xs text-gray-400">
                     {task.nextAction || 'Continue this workflow.'}
                   </div>

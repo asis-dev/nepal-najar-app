@@ -2,12 +2,28 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAuth } from '@/lib/hooks/use-auth';
+import type { HouseholdMember } from '@/lib/household/types';
+import { HOUSEHOLD_RELATIONSHIP_LABELS } from '@/lib/household/types';
 
 export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
   const router = useRouter();
+  const authReady = useAuth((s) => s._initialized);
+  const user = useAuth((s) => s.user);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [targetMemberId, setTargetMemberId] = useState('');
+
+  useEffect(() => {
+    if (!authReady || !user) return;
+    fetch('/api/me/household-members')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setMembers(data?.members || []))
+      .catch(() => setMembers([]));
+  }, [authReady, user]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,10 +34,14 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
       const response = await fetch('/api/me/service-tasks/from-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, locale }),
+        body: JSON.stringify({ question, locale, targetMemberId: targetMemberId || undefined }),
       });
       const data = await response.json();
       if (!response.ok) {
+        if (data.serviceOptions?.length) {
+          router.push(`/services/search?q=${encodeURIComponent(question.trim())}`);
+          return;
+        }
         setError(data.error || 'Could not route that request.');
         return;
       }
@@ -87,6 +107,20 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
           }
           className="flex-1 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-red-500 focus:outline-none"
         />
+        {user && members.length > 0 && (
+          <select
+            value={targetMemberId}
+            onChange={(e) => setTargetMemberId(e.target.value)}
+            className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 text-sm text-zinc-100 focus:border-red-500 focus:outline-none md:w-64"
+          >
+            <option value="">{locale === 'ne' ? 'मेरो लागि' : 'For me'}</option>
+            {members.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.displayName} · {HOUSEHOLD_RELATIONSHIP_LABELS[member.relationship][locale]}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           type="submit"
           disabled={loading}

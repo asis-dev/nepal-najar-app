@@ -46,7 +46,7 @@ export async function GET() {
           <div style={{ background: '#dc143c', padding: '6px 14px', borderRadius: 999, fontSize: 18, fontWeight: 800, letterSpacing: 1 }}>
             WEEKLY SCOREBOARD
           </div>
-          <div style={{ fontSize: 18, color: '#a1a1aa' }}>Week of {week}</div>
+          <div style={{ display: 'flex', fontSize: 18, color: '#a1a1aa' }}>Week of {week}</div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 36, marginTop: 50 }}>
@@ -66,9 +66,9 @@ export async function GET() {
             {grade}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 28, color: '#a1a1aa' }}>RSP Government</div>
-            <div style={{ fontSize: 64, fontWeight: 900, marginTop: 8 }}>{avg}%</div>
-            <div style={{ fontSize: 22, color: '#a1a1aa', marginTop: 8 }}>average commitment progress</div>
+            <div style={{ display: 'flex', fontSize: 28, color: '#a1a1aa' }}>RSP Government</div>
+            <div style={{ display: 'flex', fontSize: 64, fontWeight: 900, marginTop: 8 }}>{avg}%</div>
+            <div style={{ display: 'flex', fontSize: 22, color: '#a1a1aa', marginTop: 8 }}>average commitment progress</div>
           </div>
         </div>
 
@@ -80,8 +80,8 @@ export async function GET() {
 
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#dc143c' }}>NEPAL REPUBLIC</div>
-          <div style={{ fontSize: 18, color: '#71717a' }}>nepalrepublic.org/scoreboard-weekly</div>
+          <div style={{ display: 'flex', fontSize: 28, fontWeight: 900, color: '#dc143c' }}>NEPAL REPUBLIC</div>
+          <div style={{ display: 'flex', fontSize: 18, color: '#71717a' }}>nepalrepublic.org/scoreboard-weekly</div>
         </div>
       </div>
     ),
@@ -92,8 +92,8 @@ export async function GET() {
 function Stat({ label, v, color }: { label: string; v: number; color: string }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#18181b', borderRadius: 16, padding: 20 }}>
-      <div style={{ fontSize: 18, color: '#71717a' }}>{label}</div>
-      <div style={{ fontSize: 48, fontWeight: 900, color }}>{v}</div>
+      <div style={{ display: 'flex', fontSize: 18, color: '#71717a' }}>{label}</div>
+      <div style={{ display: 'flex', fontSize: 48, fontWeight: 900, color }}>{v}</div>
     </div>
   );
 }

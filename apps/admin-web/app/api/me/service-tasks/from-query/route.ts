@@ -35,6 +35,20 @@ async function listVaultDocs(supabase: Awaited<ReturnType<typeof createSupabaseS
   }));
 }
 
+async function getTargetMember(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  targetMemberId: string | undefined,
+) {
+  if (!targetMemberId) return null;
+  const { data } = await supabase
+    .from('household_members')
+    .select('*')
+    .eq('id', targetMemberId)
+    .is('archived_at', null)
+    .maybeSingle();
+  return data || null;
+}
+
 export async function POST(request: NextRequest) {
   const { supabase, user } = await getAuthedContext();
 
@@ -46,13 +60,25 @@ export async function POST(request: NextRequest) {
   }
 
   const question = typeof body.question === 'string' ? body.question.trim().slice(0, 500) : '';
+  const targetMemberId =
+    typeof body.targetMemberId === 'string' && body.targetMemberId.trim()
+      ? body.targetMemberId.trim()
+      : undefined;
   const locale = body.locale === 'ne' ? 'ne' : 'en';
   if (!question) return NextResponse.json({ error: 'question required' }, { status: 400 });
 
   const result = await ask(question, locale);
   const service = result.topService;
   if (!service) {
-    return NextResponse.json({ error: 'No matching service found' }, { status: 404 });
+    return NextResponse.json({
+      error: 'No confident service match found',
+      serviceOptions: result.cited.slice(0, 5).map((candidate) => ({
+        slug: candidate.slug,
+        category: candidate.category,
+        title: candidate.title,
+        providerName: candidate.providerName,
+      })),
+    }, { status: 409 });
   }
 
   if (!user) {
@@ -97,6 +123,7 @@ export async function POST(request: NextRequest) {
   const vaultDocs = await listVaultDocs(supabase);
   const state = getTaskStatus(service, vaultDocs);
   const workflow = getWorkflowDefinition(service);
+  const targetMember = await getTargetMember(supabase, targetMemberId);
 
   const { data, error } = await supabase.from('service_tasks').insert({
     owner_id: user.id,
@@ -111,6 +138,8 @@ export async function POST(request: NextRequest) {
     summary: state.summary,
     next_action: state.nextAction,
     workflow_mode: workflow.mode,
+    target_member_id: targetMember?.id || null,
+    target_member_name: targetMember?.display_name || null,
     requires_appointment: workflow.requiresAppointment ?? false,
     supports_online_payment: workflow.supportsOnlinePayment ?? false,
     office_visit_required: workflow.officeVisitRequired ?? false,

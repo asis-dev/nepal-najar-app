@@ -110,6 +110,8 @@ export function mapTaskRow(row: any): ServiceTaskRecord {
   return {
     id: row.id,
     ownerId: row.owner_id,
+    targetMemberId: row.target_member_id || null,
+    targetMemberName: row.target_member_name || null,
     serviceSlug: row.service_slug,
     serviceTitle: row.service_title,
     serviceCategory: row.service_category,

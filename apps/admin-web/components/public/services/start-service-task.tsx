@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
 import type { ServiceTaskRecord } from '@/lib/services/task-types';
+import type { HouseholdMember } from '@/lib/household/types';
+import { HOUSEHOLD_RELATIONSHIP_LABELS } from '@/lib/household/types';
 
 interface Props {
   serviceSlug: string;
@@ -16,6 +18,8 @@ export default function StartServiceTask({ serviceSlug, serviceTitle, locale = '
   const user = useAuth((s) => s.user);
   const [task, setTask] = useState<ServiceTaskRecord | null>(null);
   const [loading, setLoading] = useState(false);
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [targetMemberId, setTargetMemberId] = useState('');
 
   useEffect(() => {
     if (!authReady || !user) return;
@@ -34,13 +38,21 @@ export default function StartServiceTask({ serviceSlug, serviceTitle, locale = '
     };
   }, [authReady, user, serviceSlug]);
 
+  useEffect(() => {
+    if (!authReady || !user) return;
+    fetch('/api/me/household-members')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setMembers(data?.members || []))
+      .catch(() => setMembers([]));
+  }, [authReady, user]);
+
   async function startTask() {
     setLoading(true);
     try {
       const response = await fetch('/api/me/service-tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceSlug, locale }),
+        body: JSON.stringify({ serviceSlug, locale, targetMemberId: targetMemberId || undefined }),
       });
       const data = await response.json();
       if (response.ok) setTask(data.task);
@@ -66,6 +78,22 @@ export default function StartServiceTask({ serviceSlug, serviceTitle, locale = '
                 ? 'कागजात, अर्को कदम, र प्रगति एउटै ठाउँमा राख्नुहोस्।'
                 : 'Keep documents, next actions, and progress in one place.'}
           </p>
+          {!task && user && members.length > 0 && (
+            <div className="mt-3">
+              <select
+                value={targetMemberId}
+                onChange={(e) => setTargetMemberId(e.target.value)}
+                className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-red-500 focus:outline-none"
+              >
+                <option value="">{locale === 'ne' ? 'मेरो लागि' : 'For me'}</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.displayName} · {HOUSEHOLD_RELATIONSHIP_LABELS[member.relationship][locale]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {!authReady || !user ? (
@@ -78,7 +106,7 @@ export default function StartServiceTask({ serviceSlug, serviceTitle, locale = '
         ) : task ? (
           <div className="flex flex-col gap-2 text-right">
             <div className="text-xs text-zinc-400">
-              {task.progress}% · {task.status.replace(/_/g, ' ')}
+              {task.progress}% · {task.status.replace(/_/g, ' ')}{task.targetMemberName ? ` · ${task.targetMemberName}` : ''}
             </div>
             <Link
               href="/me/tasks"
