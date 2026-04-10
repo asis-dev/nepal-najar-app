@@ -8,6 +8,11 @@ import { CivicSkyBackground } from '@/components/ui/civic-sky-background';
 import { createMetadata } from '@/lib/seo';
 import { getCorruptionStats } from '@/lib/data/corruption-data';
 import { formatAmountNpr } from '@/lib/data/corruption-types';
+import {
+  SHARE_BRAND_SUBTITLE_EN,
+  SHARE_BRAND_TITLE_EN,
+  withOgVersion,
+} from '@/lib/share/brand';
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getCorruptionStats();
@@ -16,10 +21,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const ogStats = `109 Commitments Tracked|${stats.totalCases} Corruption Cases|रू ${amount} Exposed|80+ Live Sources`;
 
   return createMetadata({
-    title: 'AI-powered citizen platform for Nepal.',
-    description: `From everyday services to national accountability, AI-powered navigation for Nepal. 109 commitments monitored. रू ${amount} in corruption exposed. ${stats.totalCases} cases. Daily briefings powered by 80+ sources.`,
+    title: SHARE_BRAND_TITLE_EN,
+    description: `${SHARE_BRAND_SUBTITLE_EN} 109 commitments monitored. रू ${amount} in corruption exposed. ${stats.totalCases} cases. Daily briefings powered by 80+ sources.`,
     path: '/',
-    ogImage: `/api/og?title=${encodeURIComponent('AI-powered citizen platform for Nepal.')}&subtitle=${encodeURIComponent('From everyday services to national accountability, AI-powered navigation for Nepal.')}&section=dashboard&stats=${encodeURIComponent(ogStats)}`,
+    ogImage: withOgVersion(
+      `/api/og?title=${encodeURIComponent(SHARE_BRAND_TITLE_EN)}&subtitle=${encodeURIComponent(
+        SHARE_BRAND_SUBTITLE_EN,
+      )}&section=dashboard&stats=${encodeURIComponent(ogStats)}`,
+    ),
   });
 }
 

@@ -5,7 +5,7 @@ export const metadata = createMetadata({
   description:
     'Weekly government accountability report card — transparency score, what is working, what is not, and public voice on Nepal government commitments. सरकारी प्रगति रिपोर्ट कार्ड।',
   path: '/report-card',
-  ogImage: '/api/report-card',
+  ogImage: '/api/og/report-card?format=card&locale=en',
 });
 
 export default function ReportCardLayout({

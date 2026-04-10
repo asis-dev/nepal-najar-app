@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
+import { OG_IMAGE_VERSION, withOgVersion } from '@/lib/share/brand';
 
 const SITE_NAME = 'Nepal Republic — नेपाल रिपब्लिक';
-const SITE_DESCRIPTION = 'From everyday services to national accountability, AI-powered navigation for Nepal.';
+const SITE_DESCRIPTION =
+  'AI-powered citizen platform for Nepal. Get services done, track issues, and follow accountability in one place.';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nepalrepublic.org';
 
 export function createMetadata(overrides?: {
@@ -15,7 +17,7 @@ export function createMetadata(overrides?: {
     : SITE_NAME;
   const description = overrides?.description || SITE_DESCRIPTION;
   const url = overrides?.path ? `${SITE_URL}${overrides.path}` : SITE_URL;
-  const rawOgImage = overrides?.ogImage || '/api/og';
+  const rawOgImage = withOgVersion(overrides?.ogImage || '/api/og');
   const ogImage = rawOgImage.startsWith('http') ? rawOgImage : `${SITE_URL}${rawOgImage}`;
 
   return {
@@ -71,6 +73,7 @@ export function createMetadata(overrides?: {
       'शासन',
       'पारदर्शिता',
       'AI नागरिक बुद्धिमत्ता',
+      `share-version-${OG_IMAGE_VERSION}`,
     ],
   };
 }
@@ -82,7 +85,8 @@ export function governmentServiceSchema() {
     '@type': 'GovernmentService',
     name: 'Nepal Republic',
     alternateName: 'नेपाल रिपब्लिक',
-    description: 'AI-powered citizen platform for Nepal. From everyday services to national accountability, AI-powered navigation for Nepal.',
+    description:
+      'AI-powered citizen platform for Nepal. Get services done, track issues, and follow accountability in one place.',
     url: SITE_URL,
     serviceArea: {
       '@type': 'Country',
@@ -103,7 +107,8 @@ export function webSiteSchema() {
     name: 'Nepal Republic',
     alternateName: ['नेपाल रिपब्लिक', 'Nepal Republic Civic Intelligence'],
     url: SITE_URL,
-    description: 'AI-powered citizen platform for Nepal. From everyday services to national accountability, AI-powered navigation for Nepal.',
+    description:
+      'AI-powered citizen platform for Nepal. Get services done, track issues, and follow accountability in one place.',
     inLanguage: ['en', 'ne'],
     potentialAction: {
       '@type': 'SearchAction',

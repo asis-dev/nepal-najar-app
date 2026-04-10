@@ -67,8 +67,19 @@ if (process.env.INTELLIGENCE_STATUS_AUTOPILOT_AUTO_APPLY === 'true') {
   );
 }
 
-if (!hasValue('INTELLIGENCE_ALERT_WEBHOOK_URL') && !hasValue('OPS_ALERT_WEBHOOK_URL')) {
-  warn('Ops alert webhook', 'No webhook configured. Failures will only appear in logs.');
+if (
+  !hasAnyValue([
+    'INTELLIGENCE_ALERT_WEBHOOK_URL',
+    'OPS_ALERT_WEBHOOK_URL',
+    'RESEND_API_KEY',
+    'SMTP_USER',
+    'SMTP_PASS',
+  ])
+) {
+  warn(
+    'Ops alert delivery',
+    'No webhook or email provider configured. Failures will only appear in logs.',
+  );
 }
 
 if (!hasAnyValue(['OWNER_USER_ID', 'OWNER_USER_IDS', 'OWNER_EMAIL', 'OWNER_EMAILS'])) {

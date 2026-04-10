@@ -298,9 +298,9 @@ export function DashboardIsland() {
           <ActiveTasksOverview variant="compact" />
         </div>
 
-        <div className="mb-3 md:mb-5 flex items-center gap-2">
+        <div className="mb-3 md:mb-5">
           <button
-            className="flex flex-1 basis-1/2 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-600/15 px-2.5 py-2.5 text-[12px] font-bold text-red-100 transition-colors hover:bg-red-600/25"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-600/15 px-4 py-3 text-[13px] font-bold text-red-100 transition-colors hover:bg-red-600/25"
             onClick={() => {
               const lang = locale === 'ne' ? 'ne' : 'en';
               if (playingAboutLang === lang) {
@@ -316,19 +316,12 @@ export function DashboardIsland() {
             }}
           >
             {playingAboutLang
-              ? <Pause className="h-4 w-4" />
-              : <Play className="h-4 w-4 fill-current" />}
+              ? <Pause className="h-5 w-5" />
+              : <Play className="h-5 w-5 fill-current" />}
             {playingAboutLang
               ? (locale === 'ne' ? 'बजाउँदै…' : 'Playing…')
-              : (locale === 'ne' ? 'एप बारे सुन्नुहोस्' : 'About this app')}
+              : (locale === 'ne' ? 'एप बारे सुन्नुहोस्' : 'Listen — What is Nepal Republic?')}
           </button>
-          <Link
-            href="/complaints"
-            className="flex flex-1 basis-1/2 items-center justify-center gap-1.5 rounded-xl border border-amber-400/30 bg-amber-500/15 px-2.5 py-2.5 text-[12px] font-bold text-amber-100 transition-colors hover:bg-amber-500/25"
-          >
-            <AlertTriangle className="h-4 w-4" />
-            {locale === 'ne' ? 'नागरिक समस्या दर्ता' : 'Report Civic Issue'}
-          </Link>
         </div>
 
         {/* ── Voice-first search — below About / Report row ── */}

@@ -1,5 +1,11 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import {
+  SHARE_BRAND_SUBTITLE_EN,
+  SHARE_BRAND_SUBTITLE_NE,
+  SHARE_BRAND_TITLE_EN,
+  SHARE_BRAND_TITLE_NE,
+} from '@/lib/share/brand';
 
 export const runtime = 'edge';
 
@@ -35,10 +41,10 @@ const SECTION_THEMES: Record<string, SectionTheme> = {
   daily:       { accent: '#d946ef', label: 'DAILY BRIEF', labelNe: 'दैनिक ब्रिफ', emoji: '📡', hook: 'Your daily government intelligence', hookNe: 'तपाईंको दैनिक सरकारी जानकारी' },
   'what-changed': { accent: '#a78bfa', label: 'WHAT CHANGED', labelNe: 'के परिवर्तन भयो', emoji: '🧭', hook: 'See what moved today — verified', hookNe: 'आज के बदलियो हेर्नुहोस् — प्रमाणित' },
   scorecard:   { accent: '#8b5cf6', label: 'SCORECARD', labelNe: 'स्कोरकार्ड', emoji: '📊', hook: 'AI-scored government accountability', hookNe: 'AI-स्कोर सरकारी जवाफदेहिता' },
-  dashboard:   { accent: '#22d3ee', label: 'LIVE DASHBOARD', labelNe: 'लाइभ ड्यासबोर्ड', emoji: '🇳🇵', hook: 'Real-time government accountability', hookNe: 'रियल-टाइम सरकारी जवाफदेहिता' },
+  dashboard:   { accent: '#22d3ee', label: 'LIVE DASHBOARD', labelNe: 'लाइभ ड्यासबोर्ड', emoji: '🇳🇵', hook: SHARE_BRAND_SUBTITLE_EN, hookNe: SHARE_BRAND_SUBTITLE_NE },
 };
 
-const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', label: '', labelNe: '', emoji: '🔔', hook: 'From everyday services to national accountability, AI-powered navigation for Nepal.', hookNe: 'दैनिक सेवाहरूदेखि राष्ट्रिय जवाफदेहितासम्म, नेपालको लागि AI-संचालित नेभिगेसन।' };
+const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', label: '', labelNe: '', emoji: '🔔', hook: SHARE_BRAND_SUBTITLE_EN, hookNe: SHARE_BRAND_SUBTITLE_NE };
 
 // Status labels in both languages
 const STATUS_LABELS: Record<string, { en: string; ne: string }> = {
@@ -55,13 +61,13 @@ const STATUS_LABELS: Record<string, { en: string; ne: string }> = {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const title = searchParams.get('title') || 'Nepal Republic';
+  const format = searchParams.get('format') || 'story';
+  const locale = searchParams.get('locale') || 'en';
+  const title = searchParams.get('title') || (locale === 'ne' ? SHARE_BRAND_TITLE_NE : SHARE_BRAND_TITLE_EN);
   const subtitle = searchParams.get('subtitle') || '';
   const progress = searchParams.get('progress');
   const status = searchParams.get('status');
   const section = searchParams.get('section');
-  const format = searchParams.get('format') || 'story';
-  const locale = searchParams.get('locale') || 'en';
   const facts = searchParams.get('facts');
 
   const isNe = locale === 'ne';
@@ -94,8 +100,8 @@ export async function GET(request: NextRequest) {
   const sectionLabel = isNe ? theme.labelNe : theme.label;
   const hookText = isNe ? theme.hookNe : theme.hook;
   const ctaTagline = isNe
-    ? 'नागरिक समस्या रिपोर्ट · वाचा ट्र्याक · सत्य प्रमाणित'
-    : 'Services, tracking, and public truth.';
+    ? 'सेवा लिनुहोस् · समस्या ट्र्याक गर्नुहोस् · जवाफदेहिता पछ्याउनुहोस्'
+    : 'Get services done · Track issues · Follow accountability';
   const progressLabel = isNe ? 'प्रगति' : 'PROGRESS';
 
   // Date stamp

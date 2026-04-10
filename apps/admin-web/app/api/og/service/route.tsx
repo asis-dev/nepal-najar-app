@@ -2,10 +2,12 @@ import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { getServiceBySlug } from '@/lib/services/catalog';
 import { CATEGORY_ICONS, CATEGORY_LABELS, type ServiceCategory } from '@/lib/services/types';
+import { SHARE_BRAND_SUBTITLE_EN } from '@/lib/share/brand';
 
 export const runtime = 'nodejs';
 
 const NEPAL_RED = '#DC143C';
+const NEPAL_BLUE = '#003893';
 const BG = '#0a0e1a';
 
 export async function GET(req: NextRequest) {
@@ -25,7 +27,7 @@ export async function GET(req: NextRequest) {
         style={{
           width: '100%', height: '100%',
           display: 'flex', flexDirection: 'column',
-          background: `linear-gradient(135deg, ${BG} 0%, #1a1f35 100%)`,
+          background: `linear-gradient(145deg, ${BG} 0%, #10182a 45%, #15112a 100%)`,
           padding: 72, color: 'white',
           fontFamily: 'system-ui',
           position: 'relative',
@@ -33,15 +35,43 @@ export async function GET(req: NextRequest) {
       >
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, height: 8,
-          background: `linear-gradient(90deg, ${NEPAL_RED}, #003893)`,
+          background: `linear-gradient(90deg, ${NEPAL_RED}, ${NEPAL_BLUE})`,
+        }} />
+
+        <div style={{
+          position: 'absolute',
+          top: '16%',
+          right: '-6%',
+          width: 420,
+          height: 420,
+          borderRadius: 9999,
+          background: 'radial-gradient(circle, rgba(34,211,238,0.16) 0%, rgba(34,211,238,0) 72%)',
         }} />
 
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 40 }}>
           <div style={{
-            fontSize: 28, fontWeight: 900, color: NEPAL_RED, letterSpacing: -0.5,
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            background: `linear-gradient(135deg, ${NEPAL_RED}, ${NEPAL_BLUE})`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}>
-            नेपाल रिपब्लिक · Nepal Republic
+            <span style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>NR</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{
+              fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: -0.5,
+            }}>
+              Nepal Republic
+            </div>
+            <div style={{
+              fontSize: 13, color: '#94a3b8',
+            }}>
+              {SHARE_BRAND_SUBTITLE_EN}
+            </div>
           </div>
         </div>
 
@@ -87,7 +117,7 @@ export async function GET(req: NextRequest) {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 'auto', alignItems: 'flex-end' }}>
             <div style={{ fontSize: 16, color: '#64748b' }}>{provider}</div>
-            <div style={{ fontSize: 20, color: NEPAL_RED, fontWeight: 700 }}>
+            <div style={{ fontSize: 20, color: '#fff', fontWeight: 700 }}>
               nepalrepublic.org/services
             </div>
           </div>

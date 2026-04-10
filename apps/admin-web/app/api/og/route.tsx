@@ -1,5 +1,11 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import {
+  SHARE_BRAND_SUBTITLE_EN,
+  SHARE_BRAND_SUBTITLE_NE,
+  SHARE_BRAND_TITLE_EN,
+  SHARE_BRAND_TITLE_NE,
+} from '@/lib/share/brand';
 
 export const runtime = 'edge';
 
@@ -30,10 +36,10 @@ const SECTION_THEMES: Record<string, SectionTheme> = {
   daily:       { accent: '#d946ef', emoji: '📡', label: 'DAILY BRIEF', labelNe: 'दैनिक ब्रिफ', tagline: 'AI-curated daily intelligence on Nepal', taglineNe: 'AI-संचालित दैनिक जानकारी' },
   'what-changed': { accent: '#a78bfa', emoji: '🧭', label: 'WHAT CHANGED', labelNe: 'के परिवर्तन भयो', tagline: 'Recent verified changes across the tracker', taglineNe: 'ट्र्याकरभरिका पछिल्ला प्रमाणित परिवर्तनहरू' },
   scorecard:   { accent: '#8b5cf6', emoji: '📊', label: 'SCORECARD', labelNe: 'स्कोरकार्ड', tagline: 'AI-scored government accountability', taglineNe: 'AI-स्कोर सरकारी जवाफदेहिता' },
-  dashboard:   { accent: '#22d3ee', emoji: '🇳🇵', label: 'LIVE DASHBOARD', labelNe: 'लाइभ ड्यासबोर्ड', tagline: 'From everyday services to national accountability, AI-powered navigation for Nepal.', taglineNe: 'दैनिक सेवाहरूदेखि राष्ट्रिय जवाफदेहितासम्म, नेपालको लागि AI-संचालित नेभिगेसन।' },
+  dashboard:   { accent: '#22d3ee', emoji: '🇳🇵', label: 'LIVE DASHBOARD', labelNe: 'लाइभ ड्यासबोर्ड', tagline: SHARE_BRAND_SUBTITLE_EN, taglineNe: SHARE_BRAND_SUBTITLE_NE },
 };
 
-const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', emoji: '🔔', label: '', labelNe: '', tagline: 'From everyday services to national accountability, AI-powered navigation for Nepal.', taglineNe: 'दैनिक सेवाहरूदेखि राष्ट्रिय जवाफदेहितासम्म, नेपालको लागि AI-संचालित नेभिगेसन।' };
+const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', emoji: '🔔', label: '', labelNe: '', tagline: SHARE_BRAND_SUBTITLE_EN, taglineNe: SHARE_BRAND_SUBTITLE_NE };
 
 const STATUS_LABELS: Record<string, { en: string; ne: string }> = {
   in_progress: { en: 'IN PROGRESS', ne: 'प्रगतिमा' },
@@ -49,15 +55,14 @@ const STATUS_LABELS: Record<string, { en: string; ne: string }> = {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const title = searchParams.get('title') || 'Nepal Republic';
+  const locale = searchParams.get('locale') || 'en';
+  const isNe = locale === 'ne';
+  const title = searchParams.get('title') || (isNe ? SHARE_BRAND_TITLE_NE : SHARE_BRAND_TITLE_EN);
   const subtitle = searchParams.get('subtitle') || '';
   const progress = searchParams.get('progress');
   const status = searchParams.get('status');
   const section = searchParams.get('section');
-  const locale = searchParams.get('locale') || 'en';
   const stats = searchParams.get('stats');
-
-  const isNe = locale === 'ne';
   const theme = (section && SECTION_THEMES[section]) || DEFAULT_THEME;
 
   const statusColor =

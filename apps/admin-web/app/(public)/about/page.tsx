@@ -168,7 +168,7 @@ export default function AboutPage() {
     alternateName: 'नेपाल रिपब्लिक',
     url: 'https://www.nepalrepublic.org',
     description:
-      'AI-powered citizen platform for Nepal. From everyday services to national accountability, AI-powered navigation for Nepal.',
+      'AI-powered citizen platform for Nepal. Get services done, track issues, and follow accountability in one place.',
     inLanguage: ['en', 'ne'],
     publisher: {
       '@type': 'Organization',

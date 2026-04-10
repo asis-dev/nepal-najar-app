@@ -5,6 +5,7 @@ import {
   computeStats,
   type GovernmentPromise,
 } from '@/lib/data/promises';
+import { SHARE_BRAND_SUBTITLE_EN, SHARE_BRAND_SUBTITLE_NE } from '@/lib/share/brand';
 
 export const runtime = 'edge';
 
@@ -353,7 +354,7 @@ export async function GET(request: NextRequest) {
         >
           <span style={{ color: BELL_GOLD, fontWeight: 700 }}>nepalrepublic.org</span>
           <span>·</span>
-          <span>{lang === 'ne' ? 'सेवा, ट्र्याकिङ, र सार्वजनिक सत्य' : 'Services, tracking, and public truth.'}</span>
+          <span>{lang === 'ne' ? SHARE_BRAND_SUBTITLE_NE : SHARE_BRAND_SUBTITLE_EN}</span>
         </div>
       </div>
     ),

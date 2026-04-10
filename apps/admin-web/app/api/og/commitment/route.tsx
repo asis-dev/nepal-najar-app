@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { getPromiseById, getPromiseBySlug } from '@/lib/data/promises';
+import { SHARE_BRAND_SUBTITLE_EN, SHARE_BRAND_SUBTITLE_NE } from '@/lib/share/brand';
 
 export const runtime = 'edge';
 
@@ -207,7 +208,7 @@ export async function GET(request: NextRequest) {
             <span style={{ color: 'white', fontSize: '18px', fontWeight: 700, letterSpacing: '0.08em', display: 'flex' }}>nepalrepublic.org</span>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px', display: 'flex' }}>
-            {isNe ? 'सेवा, ट्र्याकिङ, र सार्वजनिक सत्य' : 'Services, tracking, and public truth'}
+            {isNe ? SHARE_BRAND_SUBTITLE_NE : SHARE_BRAND_SUBTITLE_EN}
           </span>
         </div>
 

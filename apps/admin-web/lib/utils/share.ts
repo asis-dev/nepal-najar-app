@@ -1,3 +1,5 @@
+import { withOgVersion } from '@/lib/share/brand';
+
 /**
  * Unified sharing system for Nepal Republic.
  *
@@ -226,7 +228,7 @@ export function ogImageUrl(opts: {
   if (opts.progress != null) params.set('progress', String(opts.progress));
   if (opts.status) params.set('status', opts.status);
   if (opts.section) params.set('section', opts.section);
-  return `/api/og?${params.toString()}`;
+  return withOgVersion(`/api/og?${params.toString()}`);
 }
 
 /** Build URL for Instagram story/reel format (1080x1920 portrait) */
@@ -249,7 +251,7 @@ export function storyImageUrl(opts: {
   if (opts.format) params.set('format', opts.format);
   if (opts.facts) params.set('facts', opts.facts);
   if (opts.locale) params.set('locale', opts.locale);
-  return `/api/og/story?${params.toString()}`;
+  return withOgVersion(`/api/og/story?${params.toString()}`);
 }
 
 function normalizeSection(section?: string): string | undefined {
@@ -276,13 +278,19 @@ function resolveShareImageUrl(ogParams: ShareImageParams): string {
   if (ogParams.ogType && ogParams.ogSlug) {
     switch (ogParams.ogType) {
       case 'commitment':
-        return `/api/og/commitment?id=${encodeURIComponent(ogParams.ogSlug)}&lang=${locale}&format=story`;
+        return withOgVersion(
+          `/api/og/commitment?id=${encodeURIComponent(ogParams.ogSlug)}&lang=${locale}&format=story`,
+        );
       case 'report-card':
-        return `/api/og/report-card?format=story&locale=${locale}`;
+        return withOgVersion(`/api/og/report-card?format=story&locale=${locale}`);
       case 'corruption':
-        return `/api/og/corruption?${ogParams.ogSlug ? `slug=${encodeURIComponent(ogParams.ogSlug)}&` : ''}lang=${locale}&format=story`;
+        return withOgVersion(
+          `/api/og/corruption?${ogParams.ogSlug ? `slug=${encodeURIComponent(ogParams.ogSlug)}&` : ''}lang=${locale}&format=story`,
+        );
       case 'minister':
-        return `/api/og/minister?slug=${encodeURIComponent(ogParams.ogSlug)}&lang=${locale}&format=story`;
+        return withOgVersion(
+          `/api/og/minister?slug=${encodeURIComponent(ogParams.ogSlug)}&lang=${locale}&format=story`,
+        );
       // Not yet on dedicated data routes — render via rich generic story route.
       case 'scorecard':
       case 'daily':
@@ -292,12 +300,12 @@ function resolveShareImageUrl(ogParams: ShareImageParams): string {
 
   // Report card without slug still gets the rich route
   if (ogParams.ogType === 'report-card') {
-    return `/api/og/report-card?format=story&locale=${locale}`;
+    return withOgVersion(`/api/og/report-card?format=story&locale=${locale}`);
   }
 
   // Corruption dashboard (no slug) still gets the rich route
   if (ogParams.ogType === 'corruption') {
-    return `/api/og/corruption?lang=${locale}&format=story`;
+    return withOgVersion(`/api/og/corruption?lang=${locale}&format=story`);
   }
 
   // Fallback to generic story route
@@ -482,7 +490,10 @@ export async function shareToPlatform(
     }
 
     // Last resort: open OG image in new tab
-    window.open(`${detectOrigin()}/api/og?title=${encodeURIComponent(payload.title)}`, '_blank');
+    window.open(
+      `${detectOrigin()}${withOgVersion(`/api/og?title=${encodeURIComponent(payload.title)}`)}`,
+      '_blank',
+    );
     return 'opened';
   }
 

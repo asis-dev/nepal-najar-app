@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
+import { SHARE_BRAND_SUBTITLE_EN, SHARE_BRAND_SUBTITLE_NE } from '@/lib/share/brand';
 import { PROMISES_KNOWLEDGE } from '@/lib/intelligence/knowledge-base';
 
 export const runtime = 'nodejs';
@@ -814,7 +815,7 @@ async function renderCabinetDashboard(width: number, height: number, isNe: boole
               background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)',
             }}>
               <span style={{ fontSize: isCard ? 13 : 15, fontWeight: 700, color: '#3b82f6', letterSpacing: 1.5 }}>
-                {isNe ? 'जवाफदेहिता ट्र्याक गर्नुहोस्' : 'TRACK ACCOUNTABILITY'}
+                {isNe ? SHARE_BRAND_SUBTITLE_NE : SHARE_BRAND_SUBTITLE_EN}
               </span>
             </div>
           </div>

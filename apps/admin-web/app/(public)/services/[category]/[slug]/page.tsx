@@ -17,13 +17,14 @@ import { ServiceExecutionPanel } from '@/components/public/services/service-exec
 import { CounterpartyStatusCard } from '@/components/public/services/counterparty-status-card';
 import { IntegrationStatusCard } from '@/components/public/services/integration-status-card';
 import { getWorkflowDefinition } from '@/lib/services/workflow-definitions';
+import { withOgVersion } from '@/lib/share/brand';
 
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: { category: string; slug: string } }) {
   const svc = await getServiceBySlug(params.slug);
   if (!svc) return { title: 'Service — Nepal Republic' };
-  const ogUrl = `/api/og/service?slug=${encodeURIComponent(svc.slug)}`;
+  const ogUrl = withOgVersion(`/api/og/service?slug=${encodeURIComponent(svc.slug)}`);
   return {
     title: `${svc.title.en} · ${svc.title.ne} — Nepal Republic`,
     description: svc.summary.en,

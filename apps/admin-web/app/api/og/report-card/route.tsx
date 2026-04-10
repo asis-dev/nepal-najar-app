@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { promises, computeStats, formatNPR } from '@/lib/data/promises';
 import { computeGhantiScore, shouldShowGrade } from '@/lib/data/ghanti-score';
+import { SHARE_BRAND_SUBTITLE_EN, SHARE_BRAND_SUBTITLE_NE } from '@/lib/share/brand';
 
 export const runtime = 'edge';
 
@@ -226,7 +227,7 @@ export async function GET(request: NextRequest) {
             border: '1px solid rgba(255,255,255,0.1)',
           }}>
             <span style={{ fontSize: isCard ? 12 : 14, fontWeight: 700, color: '#e5e7eb', letterSpacing: 1.5 }}>
-              {isNe ? 'जवाफदेहिता ट्र्याक गर्नुहोस्' : 'TRACK ACCOUNTABILITY'}
+              {isNe ? SHARE_BRAND_SUBTITLE_NE : SHARE_BRAND_SUBTITLE_EN}
             </span>
           </div>
         </div>
