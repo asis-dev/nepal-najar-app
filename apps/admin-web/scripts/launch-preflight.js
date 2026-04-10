@@ -32,6 +32,11 @@ let ok = true;
 
 ok = check('SCRAPE_SECRET', minLen('SCRAPE_SECRET', 24), 'Set SCRAPE_SECRET to a long random secret.') && ok;
 ok = check('CRON_SECRET', minLen('CRON_SECRET', 24), 'Set CRON_SECRET so cron routes are protected.') && ok;
+ok = check(
+  'SERVICE_OPS_WORKER_SECRET',
+  minLen('SERVICE_OPS_WORKER_SECRET', 24) || minLen('CRON_SECRET', 24),
+  'Set SERVICE_OPS_WORKER_SECRET (or rely on CRON_SECRET) so the service ops AI worker cron is protected.',
+) && ok;
 ok = check('JWT_SECRET', minLen('JWT_SECRET', 32), 'Set JWT_SECRET to a long random value.') && ok;
 ok = check(
   'Legacy admin secret disabled',
