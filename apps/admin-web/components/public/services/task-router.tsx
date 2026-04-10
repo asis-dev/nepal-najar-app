@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { useVoiceInput } from '@/lib/hooks/use-voice-input';
+import { useUserPreferencesStore } from '@/lib/stores/preferences';
 import type { HouseholdMember } from '@/lib/household/types';
 import { HOUSEHOLD_RELATIONSHIP_LABELS } from '@/lib/household/types';
 
@@ -15,10 +16,39 @@ interface ServiceOption {
   providerName: string;
 }
 
-export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
+const CYCLING_PLACEHOLDERS_EN = [
+  'I need a passport...',
+  'How do I get a driving license?',
+  'My hospital bill is wrong...',
+  'I want to register a business...',
+  'I need a citizenship certificate...',
+  'How to file taxes?',
+  'Land registration process...',
+  'Report a broken road...',
+  'Birth certificate for my child...',
+];
+
+const CYCLING_PLACEHOLDERS_NE = [
+  'मलाई पासपोर्ट चाहिन्छ...',
+  'ड्राइभिङ लाइसेन्स कसरी बनाउने?',
+  'अस्पताल बिल गलत छ...',
+  'व्यापार दर्ता गर्नु छ...',
+  'नागरिकता प्रमाणपत्र चाहिन्छ...',
+  'कर कसरी फाइल गर्ने?',
+  'जग्गा दर्ता प्रक्रिया...',
+  'बिग्रेको सडक रिपोर्ट गर्ने...',
+  'बच्चाको जन्म दर्ता...',
+];
+
+export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
   const router = useRouter();
+  const storeLocale = useUserPreferencesStore((s) => s.locale);
+  const locale = localeProp ?? storeLocale ?? 'en';
+  const isNe = locale === 'ne';
+
   const authReady = useAuth((s) => s._initialized);
   const user = useAuth((s) => s.user);
+
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +59,18 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [targetMemberId, setTargetMemberId] = useState('');
   const [sessionId, setSessionId] = useState('');
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Cycle placeholder every 3 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPlaceholderIdx((i) => (i + 1) % CYCLING_PLACEHOLDERS_EN.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Session ID for multi-turn routing
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const storageKey = `nr-task-router-session-${locale}`;
@@ -43,6 +84,7 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
     setSessionId(created);
   }, [locale]);
 
+  // Load household members
   useEffect(() => {
     if (!authReady || !user) return;
     fetch('/api/me/household-members')
@@ -50,6 +92,29 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
       .then((data) => setMembers(data?.members || []))
       .catch(() => setMembers([]));
   }, [authReady, user]);
+
+  // Voice input
+  const handleVoiceResult = useCallback((voiceText: string) => {
+    setQuestion(voiceText);
+    setTimeout(() => routeQuestion(voiceText), 300);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const {
+    isListening,
+    interimTranscript,
+    startListening,
+    stopListening,
+    isSupported,
+    error: voiceError,
+  } = useVoiceInput({ onResult: handleVoiceResult });
+
+  // Show interim transcript live
+  useEffect(() => {
+    if (interimTranscript && isListening) {
+      setQuestion(interimTranscript);
+    }
+  }, [interimTranscript, isListening]);
 
   async function routeQuestion(nextQuestion: string) {
     if (!nextQuestion.trim() || loading) return;
@@ -105,76 +170,153 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
     }
   }
 
-  const samples =
-    locale === 'ne'
-      ? [
-          'मेरो लाइसेन्स नवीकरण गर्नुपर्‍यो',
-          'अस्पतालको समय बुक गर्नुपर्‍यो',
-          'मेरो NEA बिल तिर्नुपर्‍यो',
-          'नागरिकता बनाउन के चाहिन्छ?',
-        ]
-      : [
-          'Renew my driving license',
-          'I am not feeling well',
-          'Book hospital appointment',
-          'Pay my electricity bill',
-          'What do I need for citizenship certificate?',
-        ];
+  const handleSubmit = useCallback(() => {
+    const trimmed = question.trim();
+    if (trimmed && !loading) {
+      routeQuestion(trimmed);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question, loading]);
+
+  const currentPlaceholder = isNe
+    ? CYCLING_PLACEHOLDERS_NE[placeholderIdx]
+    : CYCLING_PLACEHOLDERS_EN[placeholderIdx];
 
   return (
-    <div className="rounded-3xl border border-red-500/20 bg-gradient-to-br from-red-500/10 via-zinc-900 to-zinc-950 p-5 md:p-6">
-      <div className="text-xs uppercase tracking-wide text-red-400 font-bold mb-2">
-        Assistant-first
+    <div className="w-full max-w-2xl mx-auto px-4">
+      {/* Title */}
+      <div className="text-center mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+          {isNe ? 'म तपाईंलाई कसरी मद्दत गर्न सक्छु?' : 'What can I help you with?'}
+        </h2>
       </div>
-      <h2 className="text-2xl md:text-3xl font-black text-zinc-100">
-        {locale === 'ne' ? 'तपाईंलाई के काम छ?' : 'What do you need help with?'}
-      </h2>
-      <p className="mt-2 text-sm md:text-base text-zinc-400 max-w-2xl">
-        {locale === 'ne'
-          ? 'सेवा खोज्नु पर्दैन। समस्या लेख्नुहोस्, Nepal Republic ले सही सेवा र अर्को कदम देखाउँछ।'
-          : "Don't hunt through categories. Describe the problem and Nepal Republic will route you to the right service and next step."}
-      </p>
 
-      <form onSubmit={(e) => { e.preventDefault(); routeQuestion(question); }} className="mt-4 flex flex-col gap-3 md:flex-row">
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder={
-            locale === 'ne'
-              ? 'जस्तै: लाइसेन्स नवीकरण गर्नुपर्‍यो, बिर अस्पतालमा समय चाहियो, NEA बिल तिर्नुपर्‍यो'
-              : 'Example: I am not feeling well, renew my license, book a hospital appointment'
-          }
-          className="flex-1 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-red-500 focus:outline-none"
-        />
-        {user && members.length > 0 && (
-          <select
-            value={targetMemberId}
-            onChange={(e) => setTargetMemberId(e.target.value)}
-            className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 text-sm text-zinc-100 focus:border-red-500 focus:outline-none md:w-64"
-          >
-            <option value="">{locale === 'ne' ? 'मेरो लागि' : 'For me'}</option>
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.displayName} · {HOUSEHOLD_RELATIONSHIP_LABELS[member.relationship][locale]}
-              </option>
-            ))}
-          </select>
-        )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-2xl bg-red-600 px-5 py-4 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60"
+      {/* Unified voice + text search bar with gradient border */}
+      <div className="relative">
+        <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-r from-[#DC143C] via-[#003893] to-[#DC143C] opacity-60 blur-[2px] animate-gradient-shift" />
+
+        <div
+          className={`relative flex items-center gap-2 bg-zinc-900 border rounded-3xl border-zinc-700/50 px-5 py-4 transition-colors ${
+            isListening ? 'border-[#DC143C]/50 ring-2 ring-[#DC143C]/20' : ''
+          }`}
         >
-          {loading ? (locale === 'ne' ? 'रुट गर्दै…' : 'Routing…') : (locale === 'ne' ? 'सुरु गर्नुहोस्' : 'Start')}
-        </button>
-      </form>
+          <input
+            ref={inputRef}
+            type="text"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !loading) handleSubmit(); }}
+            placeholder={currentPlaceholder}
+            disabled={loading || isListening}
+            className={`flex-1 min-w-0 bg-transparent text-lg text-white outline-none placeholder-zinc-500 ${
+              isListening ? 'text-zinc-400 italic' : ''
+            }`}
+          />
 
+          {/* Household member selector */}
+          {user && members.length > 0 && (
+            <select
+              value={targetMemberId}
+              onChange={(e) => setTargetMemberId(e.target.value)}
+              className="hidden md:block rounded-xl border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-300 focus:border-red-500 focus:outline-none max-w-[140px]"
+            >
+              <option value="">{isNe ? 'मेरो लागि' : 'For me'}</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.displayName} · {HOUSEHOLD_RELATIONSHIP_LABELS[member.relationship][locale]}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Submit button */}
+          {question.trim() && !isListening && (
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-shrink-0 rounded-xl bg-[#DC143C] px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#DC143C]/80 active:scale-95 disabled:opacity-40"
+            >
+              {loading
+                ? (isNe ? 'रुट गर्दै…' : 'Routing…')
+                : (isNe ? 'खोज्नुहोस्' : 'Go')}
+            </button>
+          )}
+
+          {/* Mic button */}
+          {isSupported && (
+            <button
+              onClick={isListening ? stopListening : startListening}
+              disabled={loading}
+              className={`relative flex-shrink-0 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 h-14 w-14 ${
+                isListening
+                  ? 'bg-[#DC143C] shadow-[0_0_24px_rgba(220,20,60,0.5)]'
+                  : 'bg-zinc-700 hover:bg-zinc-600'
+              }`}
+              aria-label={isListening ? 'Stop listening' : 'Start voice input'}
+            >
+              {isListening && (
+                <>
+                  <span className="absolute inset-0 rounded-full bg-[#DC143C] animate-voice-pulse opacity-40" />
+                  <span className="absolute inset-0 rounded-full bg-[#DC143C] animate-voice-pulse-delayed opacity-20" />
+                </>
+              )}
+              <svg
+                className="text-white relative z-10 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                {isListening ? (
+                  <>
+                    <rect x="4" y="8" width="2" height="8" rx="1" fill="currentColor" className="animate-voice-bar-1" />
+                    <rect x="8" y="5" width="2" height="14" rx="1" fill="currentColor" className="animate-voice-bar-2" />
+                    <rect x="12" y="3" width="2" height="18" rx="1" fill="currentColor" className="animate-voice-bar-3" />
+                    <rect x="16" y="5" width="2" height="14" rx="1" fill="currentColor" className="animate-voice-bar-2" />
+                    <rect x="20" y="8" width="2" height="8" rx="1" fill="currentColor" className="animate-voice-bar-1" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </>
+                )}
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Voice error */}
+      {voiceError && (
+        <p className="mt-2 text-xs text-red-400 text-center">{voiceError}</p>
+      )}
+
+      {/* Listening indicator */}
+      {isListening && (
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <div className="flex gap-0.5">
+            <span className="h-2 w-0.5 rounded-full bg-[#DC143C] animate-voice-bar-1" />
+            <span className="h-2 w-0.5 rounded-full bg-[#DC143C] animate-voice-bar-2" />
+            <span className="h-2 w-0.5 rounded-full bg-[#DC143C] animate-voice-bar-3" />
+            <span className="h-2 w-0.5 rounded-full bg-[#DC143C] animate-voice-bar-2" />
+            <span className="h-2 w-0.5 rounded-full bg-[#DC143C] animate-voice-bar-1" />
+          </div>
+          <span className="text-xs text-zinc-500 animate-pulse">
+            {isNe ? 'सुन्दैछ...' : 'Listening...'}
+          </span>
+        </div>
+      )}
+
+      {/* Error from routing */}
       {error && (
-        <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+        <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300 text-center">
           {error}
         </div>
       )}
 
+      {/* AI routing results — follow-ups and service options */}
       {(routeReason || followUpPrompt || serviceOptions.length > 0) && (
         <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4">
           {routeReason && (
@@ -189,14 +331,14 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
                 <button
                   key={option}
                   type="button"
-                onClick={() => {
-                  const nextQuestion = `${question.trim()}. ${option}`.trim();
-                  setQuestion(nextQuestion);
-                  routeQuestion(nextQuestion);
-                }}
-                className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
-              >
-                {option}
+                  onClick={() => {
+                    const nextQuestion = `${question.trim()}. ${option}`.trim();
+                    setQuestion(nextQuestion);
+                    routeQuestion(nextQuestion);
+                  }}
+                  className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
+                >
+                  {option}
                 </button>
               ))}
             </div>
@@ -210,7 +352,7 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
                   className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-3 text-left hover:border-red-500/40 hover:bg-zinc-900/80"
                 >
                   <div className="text-sm font-semibold text-zinc-100">
-                    {locale === 'ne' ? option.title.ne : option.title.en}
+                    {isNe ? option.title.ne : option.title.en}
                   </div>
                   <div className="mt-1 text-xs text-zinc-500">{option.providerName}</div>
                 </Link>
@@ -220,22 +362,32 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
                 onClick={() => router.push(`/services/search?q=${encodeURIComponent(question.trim())}`)}
                 className="mt-1 rounded-xl border border-zinc-800 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-900"
               >
-                {locale === 'ne' ? 'थप विकल्प हेर्नुहोस्' : 'See more options'}
+                {isNe ? 'थप विकल्प हेर्नुहोस्' : 'See more options'}
               </button>
             </div>
           )}
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {samples.map((sample) => (
+      {/* Quick action pills */}
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {[
+          { ne: 'पासपोर्ट', en: 'Passport' },
+          { ne: 'नागरिकता', en: 'Citizenship' },
+          { ne: 'ड्राइभिङ लाइसेन्स', en: 'License' },
+          { ne: 'विदेश जाने', en: 'Go abroad' },
+          { ne: 'व्यापार दर्ता', en: 'Business' },
+          { ne: 'कर फाइल', en: 'Tax filing' },
+        ].map((item) => (
           <button
-            key={sample}
-            type="button"
-            onClick={() => setQuestion(sample)}
-            className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
+            key={item.en}
+            onClick={() => {
+              setQuestion(isNe ? item.ne : item.en);
+              routeQuestion(isNe ? item.ne : item.en);
+            }}
+            className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-xs text-zinc-400 transition-all hover:border-[#DC143C]/30 hover:bg-[#DC143C]/5 hover:text-white active:scale-95"
           >
-            {sample}
+            {isNe ? item.ne : item.en}
           </button>
         ))}
       </div>
