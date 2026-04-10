@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, createSupabaseServerClient } from '@/lib/supabase/server';
 import {
-  getOwnerIds,
   isAdminPromotionEnabled,
-  isOwnerLockEnabled,
+  isProtectedOwnerIdentity,
   isOwnerUser,
 } from '@/lib/auth/owner';
 import { isAdminRole, isElevatedRole, isValidAppRole, normalizeAppRole } from '@/lib/auth/roles';
@@ -73,13 +72,22 @@ export async function PATCH(
         );
       }
 
-      const ownerIds = getOwnerIds();
-      if (
-        targetRole !== 'admin' &&
-        isOwnerLockEnabled() &&
-        ownerIds.length > 0 &&
-        ownerIds.includes(id)
-      ) {
+      if (targetRole !== 'admin') {
+        const { data: targetProfile } = await getSupabase()
+          .from('profiles')
+          .select('id, email')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (isProtectedOwnerIdentity({ id, email: targetProfile?.email })) {
+          return NextResponse.json(
+            { error: 'Cannot demote configured owner account.' },
+            { status: 400 },
+          );
+        }
+      }
+
+      if (targetRole !== 'admin' && isProtectedOwnerIdentity({ id })) {
         return NextResponse.json(
           { error: 'Cannot demote configured owner account.' },
           { status: 400 },
@@ -133,6 +141,16 @@ export async function DELETE(
   }
 
   const supabase = getSupabase();
+  const { data: targetProfile } = await supabase
+    .from('profiles')
+    .select('id, email')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (isProtectedOwnerIdentity({ id, email: targetProfile?.email })) {
+    return NextResponse.json({ error: 'Cannot delete configured owner account' }, { status: 400 });
+  }
+
   const { error } = await supabase.auth.admin.deleteUser(id);
 
   if (error) {

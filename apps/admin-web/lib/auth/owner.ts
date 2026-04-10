@@ -61,6 +61,11 @@ export function isOwnerUser(identity: OwnerIdentity): boolean {
   return false;
 }
 
+export function isProtectedOwnerIdentity(identity: OwnerIdentity): boolean {
+  if (!isOwnerLockEnabled()) return false;
+  return isOwnerUser(identity);
+}
+
 export function isAdminPromotionEnabled(): boolean {
   return process.env.ADMIN_ROLE_PROMOTION_ENABLED === 'true';
 }

@@ -17,6 +17,7 @@ public/swe-worker-*.js
 public/workbox-*.js
 .playwright-cli/
 apps/admin-web/.next.prepush-check/
+apps/admin-web/.next.bak-*/
 output/
 .vercel
 .env.vercel-production
