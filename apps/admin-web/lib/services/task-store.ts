@@ -1,5 +1,33 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { IntakeSlots, IntakeState } from './ai';
+
+type IntakeState = {
+  domain: 'health' | 'utilities' | 'license' | 'citizenship' | 'passport' | 'general';
+  subject: 'self' | 'parent' | 'child' | 'family' | 'unknown';
+  urgency: 'today' | 'soon' | 'routine' | 'unknown';
+  careNeed: 'same_day' | 'specialist' | 'admission' | 'booking' | 'general' | 'unknown';
+};
+
+type IntakeSlots = {
+  health: {
+    hospitalHint: 'bir' | 'tuth' | 'patan' | 'civil' | 'kanti' | 'maternity' | 'unknown';
+    specialtyHint: 'general' | 'pediatric' | 'maternity' | 'specialist' | 'unknown';
+    visitGoal: 'same_day' | 'specialist' | 'admission' | 'booking' | 'unknown';
+  };
+  utilities: {
+    provider: 'nea' | 'kukl' | 'unknown';
+    amountKnown: boolean;
+    accountKnown: boolean;
+  };
+  license: {
+    intent: 'renewal' | 'new' | 'trial' | 'unknown';
+  };
+  citizenship: {
+    intent: 'descent' | 'birth' | 'duplicate' | 'unknown';
+  };
+  passport: {
+    intent: 'new' | 'renewal' | 'tracking' | 'unknown';
+  };
+};
 
 const OPTIONAL_SERVICE_TASK_COLUMNS = new Set([
   'workflow_mode',
