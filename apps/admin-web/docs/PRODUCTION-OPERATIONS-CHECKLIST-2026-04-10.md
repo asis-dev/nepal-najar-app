@@ -90,7 +90,23 @@ As of 2026-04-10:
 - production build passes
 - real-world smoke suite passes at 144 / 144
 - service-ops AI worker is schedulable and protected
-- owner lock and webhook setup still depend on environment configuration at deploy time
+- `ENABLE_LEGACY_ADMIN_SECRET=false` is set in production
+- `ADMIN_ROLE_PROMOTION_ENABLED=false` is set in production
+- `OWNER_EMAIL` and `OWNER_USER_ID` are both set in production
+- `SERVICE_OPS_WORKER_SECRET` is set in production
+- live deployment has been re-verified after environment refresh
+- ops alert delivery still depends on `OPS_ALERT_WEBHOOK_URL` or `INTELLIGENCE_ALERT_WEBHOOK_URL`
+
+## Remaining External Blockers
+
+These are the only production-readiness items that still require an external input or operational decision:
+
+- `OPS_ALERT_WEBHOOK_URL` or `INTELLIGENCE_ALERT_WEBHOOK_URL`
+  Needed if you want Slack or webhook-based failure alerts for intelligence and ops pipelines.
+- authenticated smoke credentials
+  `TEST_EMAIL` and `TEST_PASSWORD` are still not configured for automated end-to-end citizen-auth flow checks.
+- release-branch parity
+  The pushed clean branch exists, but production is currently pinned to the last known-good deployed snapshot because the clean branch does not yet contain the entire broader services surface from the local working tree.
 
 ## Deploy Commands
 
