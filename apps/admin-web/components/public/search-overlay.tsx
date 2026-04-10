@@ -8,6 +8,7 @@ import {
   useCallback,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, X, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -255,13 +256,16 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
   if (!isOpen) return null;
 
+  // Portal to document.body so the overlay escapes any parent stacking context (e.g. sticky nav)
+  if (typeof document === 'undefined') return null;
+
   /* ═══════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════ */
 
   let runningIndex = 0;
 
-  return (
+  return createPortal(
     <>
       {/* ── Mobile: full-screen overlay ── */}
       <div className="fixed inset-0 z-[100] flex flex-col bg-np-void/95 backdrop-blur-xl md:hidden">
@@ -401,7 +405,8 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 

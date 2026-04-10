@@ -6,7 +6,6 @@ import { BottomNav } from '@/components/public/bottom-nav';
 import { HometownPicker } from '@/components/public/hometown-picker';
 import { PilotAnalytics } from '@/components/public/pilot-analytics';
 import { CivicSkyBackground } from '@/components/ui/civic-sky-background';
-import { UrgentInboxFloater } from '@/components/public/inbox/urgent-floater';
 
 export default function PublicLayout({
   children,
@@ -37,7 +36,6 @@ export default function PublicLayout({
       <Footer />
       <BottomNav />
       <HometownPicker />
-      <UrgentInboxFloater />
     </div>
   );
 }
