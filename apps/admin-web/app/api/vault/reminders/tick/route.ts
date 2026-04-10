@@ -36,10 +36,24 @@ async function sendEmail(to: string, subject: string, html: string) {
 }
 
 export async function GET(req: NextRequest) {
-  // Auth: either a Vercel cron bearer, or matching CRON_SECRET header/query
-  const auth = req.headers.get('authorization') || '';
-  const qs = req.nextUrl.searchParams.get('key') || '';
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}` && qs !== CRON_SECRET) {
+  // Auth: Vercel cron header or Bearer token only (no query-string fallback).
+  const cronHeader = req.headers.get('x-vercel-cron-secret') || '';
+  const authHeader = req.headers.get('authorization') || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+  function timingSafeEqual(a: string, b: string): boolean {
+    if (a.length !== b.length) return false;
+    let mismatch = 0;
+    for (let i = 0; i < a.length; i++) {
+      mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+    return mismatch === 0;
+  }
+
+  const isAuthed =
+    !!CRON_SECRET &&
+    (timingSafeEqual(cronHeader, CRON_SECRET) || timingSafeEqual(bearerToken, CRON_SECRET));
+  if (!isAuthed) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 

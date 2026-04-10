@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { recordUserActivityBestEffort } from '@/lib/activity/activity-log';
 import { getServiceBySlug } from '@/lib/services/catalog';
 import { getWorkflowDefinition } from '@/lib/services/workflow-definitions';
 import { mapTaskRow } from '@/lib/services/task-engine';
+import {
+  insertTaskEventBestEffort,
+  updateServiceTaskWithCompatibility,
+} from '@/lib/services/task-store';
 
 async function getAuthedContext() {
   const supabase = await createSupabaseServerClient();
@@ -28,6 +33,7 @@ export async function POST(
     .from('service_tasks')
     .select('*')
     .eq('id', params.id)
+    .eq('owner_id', user.id)
     .maybeSingle();
   if (loadError) return NextResponse.json({ error: loadError.message }, { status: 500 });
   if (!existing) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
@@ -61,15 +67,10 @@ export async function POST(
   if (action.nextActionOnComplete) updates.next_action = action.nextActionOnComplete;
   if (action.statusOnComplete === 'completed') updates.completed_at = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from('service_tasks')
-    .update(updates)
-    .eq('id', params.id)
-    .select('*')
-    .single();
+  const { data, error } = await updateServiceTaskWithCompatibility(supabase, params.id, updates);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  await supabase.from('service_task_events').insert({
+  await insertTaskEventBestEffort(supabase, {
     task_id: params.id,
     owner_id: user.id,
     event_type: 'action_completed',
@@ -77,6 +78,21 @@ export async function POST(
     meta: {
       action_id: params.actionId,
       value: value || null,
+      resulting_status: action.statusOnComplete || existing.status,
+    },
+  });
+
+  await recordUserActivityBestEffort(supabase, {
+    owner_id: user.id,
+    event_type: 'service_task_action_completed',
+    entity_type: 'service_task',
+    entity_id: params.id,
+    title: `Completed ${action.label}`,
+    summary: action.statusOnComplete ? `Status: ${action.statusOnComplete}` : 'Checkpoint completed',
+    meta: {
+      service_slug: service.slug,
+      action_id: params.actionId,
+      action_label: action.label,
       resulting_status: action.statusOnComplete || existing.status,
     },
   });

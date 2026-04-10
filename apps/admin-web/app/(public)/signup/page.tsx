@@ -418,6 +418,16 @@ export default function SignupPage() {
               {t('auth.signIn')}
             </Link>
           </div>
+
+          {/* Voice onboarding link */}
+          <div className="mt-4 text-center">
+            <Link
+              href="/onboarding"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#003893]/10 px-4 py-2.5 text-sm font-medium text-[#003893] transition-colors hover:bg-[#003893]/20 dark:bg-[#003893]/20 dark:text-blue-300 dark:hover:bg-[#003893]/30"
+            >
+              🎤 Sign up with your phone / फोनबाट खाता बनाउनुहोस्
+            </Link>
+          </div>
         </div>
       </div>
     </div>

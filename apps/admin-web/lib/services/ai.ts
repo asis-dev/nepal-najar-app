@@ -19,7 +19,7 @@ const GEN_MODEL = process.env.SERVICES_AI_MODEL || 'gemini-2.0-flash';
 const EMBED_MODEL = 'text-embedding-004';
 const AI_ENABLED = process.env.SERVICES_AI_ENABLED !== 'false';
 const DAILY_CAP = parseInt(process.env.SERVICES_AI_DAILY_CAP || '1000', 10);
-const CACHE_VERSION = 'routing-v2';
+const CACHE_VERSION = 'routing-v3';
 const AI_COOLDOWN_MS = Math.max(
   60_000,
   Number.parseInt(process.env.SERVICES_AI_COOLDOWN_MS || '', 10) || 15 * 60 * 1000,
@@ -28,6 +28,13 @@ const AI_COOLDOWN_MS = Math.max(
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 let aiCooldownUntil = 0;
+
+export interface UserContext {
+  district?: string | null;
+  municipality?: string | null;
+  ward?: string | null;
+  province?: string | null;
+}
 
 export interface AskResult {
   answer: string;
@@ -39,10 +46,267 @@ export interface AskResult {
   routeMode: 'direct' | 'ambiguous' | 'none';
   routeReason: string | null;
   followUpPrompt: string | null;
+  followUpOptions: string[];
+  intakeState: IntakeState | null;
+  intakeSlots: IntakeSlots | null;
 }
+
+export interface IntakeState {
+  domain: 'health' | 'utilities' | 'license' | 'citizenship' | 'passport' | 'general';
+  subject: 'self' | 'parent' | 'child' | 'family' | 'unknown';
+  urgency: 'today' | 'soon' | 'routine' | 'unknown';
+  careNeed: 'same_day' | 'specialist' | 'admission' | 'booking' | 'general' | 'unknown';
+}
+
+export interface IntakeSlots {
+  health: {
+    hospitalHint: 'bir' | 'tuth' | 'patan' | 'civil' | 'kanti' | 'maternity' | 'unknown';
+    specialtyHint: 'general' | 'pediatric' | 'maternity' | 'specialist' | 'unknown';
+    visitGoal: 'same_day' | 'specialist' | 'admission' | 'booking' | 'unknown';
+  };
+  utilities: {
+    provider: 'nea' | 'kukl' | 'unknown';
+    amountKnown: boolean;
+    accountKnown: boolean;
+  };
+  license: {
+    intent: 'renewal' | 'new' | 'trial' | 'unknown';
+  };
+  citizenship: {
+    intent: 'descent' | 'birth' | 'duplicate' | 'unknown';
+  };
+  passport: {
+    intent: 'new' | 'renewal' | 'tracking' | 'unknown';
+  };
+}
+
+interface IntakeSessionState {
+  intakeState: IntakeState;
+  intakeSlots: IntakeSlots;
+  lastQuestion: string;
+  updatedAt: number;
+}
+
+const INTAKE_SESSION_TTL_MS = 20 * 60 * 1000;
+const intakeSessions = new Map<string, IntakeSessionState>();
 
 function normalizeIntentText(value: string) {
   return value.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function emptyIntakeSlots(): IntakeSlots {
+  return {
+    health: {
+      hospitalHint: 'unknown',
+      specialtyHint: 'unknown',
+      visitGoal: 'unknown',
+    },
+    utilities: {
+      provider: 'unknown',
+      amountKnown: false,
+      accountKnown: false,
+    },
+    license: {
+      intent: 'unknown',
+    },
+    citizenship: {
+      intent: 'unknown',
+    },
+    passport: {
+      intent: 'unknown',
+    },
+  };
+}
+
+function getActiveIntakeSession(sessionId?: string | null) {
+  if (!sessionId) return null;
+  const session = intakeSessions.get(sessionId);
+  if (!session) return null;
+  if (Date.now() - session.updatedAt > INTAKE_SESSION_TTL_MS) {
+    intakeSessions.delete(sessionId);
+    return null;
+  }
+  return session;
+}
+
+function saveIntakeSession(
+  sessionId: string | null | undefined,
+  intakeState: IntakeState,
+  intakeSlots: IntakeSlots,
+  lastQuestion: string,
+) {
+  if (!sessionId) return;
+  intakeSessions.set(sessionId, {
+    intakeState,
+    intakeSlots,
+    lastQuestion,
+    updatedAt: Date.now(),
+  });
+}
+
+function mergeIntakeState(previous: IntakeState | null, next: IntakeState): IntakeState {
+  if (!previous) return next;
+
+  return {
+    domain: next.domain !== 'general' ? next.domain : previous.domain,
+    subject: next.subject !== 'unknown' ? next.subject : previous.subject,
+    urgency: next.urgency !== 'unknown' ? next.urgency : previous.urgency,
+    careNeed: next.careNeed !== 'unknown' ? next.careNeed : previous.careNeed,
+  };
+}
+
+function inferIntakeSlots(question: string, intakeState: IntakeState): IntakeSlots {
+  const normalized = normalizeIntentText(question);
+  const slots = emptyIntakeSlots();
+
+  if (intakeState.domain === 'health') {
+    if (/\bbir\b/.test(normalized)) slots.health.hospitalHint = 'bir';
+    else if (/\btuth\b|teaching/.test(normalized)) slots.health.hospitalHint = 'tuth';
+    else if (/\bpatan\b/.test(normalized)) slots.health.hospitalHint = 'patan';
+    else if (/\bcivil\b/.test(normalized)) slots.health.hospitalHint = 'civil';
+    else if (/\bkanti\b|childrens hospital/.test(normalized)) slots.health.hospitalHint = 'kanti';
+    else if (isMaternityNeed(normalized) || /maternity|prasuti/.test(normalized)) slots.health.hospitalHint = 'maternity';
+
+    if (intakeState.subject === 'child' || /pediatric|paediatric|child|kid|baby|infant|बाल|बच्चा/.test(normalized)) {
+      slots.health.specialtyHint = 'pediatric';
+    } else if (isMaternityNeed(normalized)) {
+      slots.health.specialtyHint = 'maternity';
+    } else if (intakeState.careNeed === 'specialist' || /specialist|विशेषज्ञ/.test(normalized)) {
+      slots.health.specialtyHint = 'specialist';
+    } else if (intakeState.careNeed !== 'unknown') {
+      slots.health.specialtyHint = 'general';
+    }
+
+    if (intakeState.careNeed === 'same_day') slots.health.visitGoal = 'same_day';
+    else if (intakeState.careNeed === 'specialist') slots.health.visitGoal = 'specialist';
+    else if (intakeState.careNeed === 'admission') slots.health.visitGoal = 'admission';
+    else if (intakeState.careNeed === 'booking' || isHospitalNeed(normalized)) slots.health.visitGoal = 'booking';
+  }
+
+  if (intakeState.domain === 'utilities') {
+    if (/nea|electricity|power/.test(normalized)) slots.utilities.provider = 'nea';
+    else if (/kukl|water|khanepani/.test(normalized)) slots.utilities.provider = 'kukl';
+    slots.utilities.accountKnown = /\b\d{5,}\b|customer id|sc number|account number|ग्राहक/.test(normalized);
+    slots.utilities.amountKnown = /\brs\b|npr|amount|due|bill amount|तिर्ने रकम|रकम/.test(normalized);
+  }
+
+  if (intakeState.domain === 'license') {
+    if (/renew|renewal|नवीकरण/.test(normalized)) slots.license.intent = 'renewal';
+    else if (/trial|ट्रायल/.test(normalized)) slots.license.intent = 'trial';
+    else if (/new license|fresh license|नयाँ/.test(normalized)) slots.license.intent = 'new';
+  }
+
+  if (intakeState.domain === 'citizenship') {
+    if (/descent|वंशज/.test(normalized)) slots.citizenship.intent = 'descent';
+    else if (/birth|जन्म/.test(normalized)) slots.citizenship.intent = 'birth';
+    else if (/duplicate|प्रतिलिपि|copy/.test(normalized)) slots.citizenship.intent = 'duplicate';
+  }
+
+  if (intakeState.domain === 'passport') {
+    if (/renew|renewal/.test(normalized)) slots.passport.intent = 'renewal';
+    else if (/track|status/.test(normalized)) slots.passport.intent = 'tracking';
+    else if (/new|apply|application/.test(normalized)) slots.passport.intent = 'new';
+  }
+
+  return slots;
+}
+
+function mergeIntakeSlots(previous: IntakeSlots | null, next: IntakeSlots): IntakeSlots {
+  if (!previous) return next;
+  return {
+    health: {
+      hospitalHint: next.health.hospitalHint !== 'unknown' ? next.health.hospitalHint : previous.health.hospitalHint,
+      specialtyHint: next.health.specialtyHint !== 'unknown' ? next.health.specialtyHint : previous.health.specialtyHint,
+      visitGoal: next.health.visitGoal !== 'unknown' ? next.health.visitGoal : previous.health.visitGoal,
+    },
+    utilities: {
+      provider: next.utilities.provider !== 'unknown' ? next.utilities.provider : previous.utilities.provider,
+      amountKnown: next.utilities.amountKnown || previous.utilities.amountKnown,
+      accountKnown: next.utilities.accountKnown || previous.utilities.accountKnown,
+    },
+    license: {
+      intent: next.license.intent !== 'unknown' ? next.license.intent : previous.license.intent,
+    },
+    citizenship: {
+      intent: next.citizenship.intent !== 'unknown' ? next.citizenship.intent : previous.citizenship.intent,
+    },
+    passport: {
+      intent: next.passport.intent !== 'unknown' ? next.passport.intent : previous.passport.intent,
+    },
+  };
+}
+
+function buildSessionContextFragment(intakeState: IntakeState) {
+  const parts: string[] = [];
+  if (intakeState.domain !== 'general') parts.push(intakeState.domain);
+  if (intakeState.subject !== 'unknown') parts.push(intakeState.subject);
+  if (intakeState.urgency !== 'unknown') parts.push(intakeState.urgency);
+  if (intakeState.careNeed !== 'unknown') parts.push(intakeState.careNeed);
+  return parts.join(' ');
+}
+
+function applySessionContext(question: string, session: IntakeSessionState | null) {
+  if (!session) return question;
+
+  const normalized = normalizeIntentText(question);
+  const inferred = inferIntakeState(question);
+  const shortFollowUp = normalized.split(' ').length <= 8;
+  const explicitDomain = inferred.domain !== 'general';
+
+  if (!shortFollowUp || explicitDomain) return question;
+
+  const context = buildSessionContextFragment(session.intakeState);
+  if (!context) return question;
+
+  return `${question}. context ${context}`;
+}
+
+function isHealthSymptomNeed(normalized: string) {
+  return /(\bnot feeling well\b|\bunwell\b|\bsick\b|\bill\b|\bfever\b|\bpain\b|\binjury\b|\bcough\b|\bvomit(?:ing)?\b|\bdiarrhea\b|\binfection\b|\bbimari\b|\bbirami\b|\bbiraami\b|बिरामी|ठिक छैन|ज्वरो|दुखाइ|घाउ|खोकी)/.test(normalized);
+}
+
+function isHospitalNeed(normalized: string) {
+  return /(hospital|opd|doctor|clinic|appointment|health|admission|checkup|specialist|अस्पताल|डाक्टर|समय|टिकट)/.test(normalized);
+}
+
+function isMaternityNeed(normalized: string) {
+  return /\b(pregnan|pregnancy|delivery|antenatal|postnatal|maternal|gynae|gyne)\b|प्रसूति|गर्भ/.test(normalized);
+}
+
+function inferIntakeState(question: string): IntakeState {
+  const normalized = normalizeIntentText(question);
+
+  let domain: IntakeState['domain'] = 'general';
+  if (isHospitalNeed(normalized) || isHealthSymptomNeed(normalized)) domain = 'health';
+  else if (/(nea|electricity|power|kukl|water|bill|payment|pay)/.test(normalized)) domain = 'utilities';
+  else if (/(license|licence|driving|renewal|dotm|trial|smart license)/.test(normalized)) domain = 'license';
+  else if (/(citizenship|nagarikta)/.test(normalized)) domain = 'citizenship';
+  else if (/(passport|rahadani|e passport|epassport)/.test(normalized)) domain = 'passport';
+
+  let subject: IntakeState['subject'] = 'unknown';
+  if (/\b(my child|my kid|my baby|my son|my daughter|for my child|for my kid|for my baby)\b|बच्चाको लागि|छोराको लागि|छोरीको लागि/.test(normalized)) {
+    subject = 'child';
+  } else if (/\b(my father|my mother|my dad|my mom|for my parent|for my parents)\b|बुबाको लागि|आमाको लागि|बाबु आमाको लागि|अभिभावकको लागि/.test(normalized)) {
+    subject = 'parent';
+  } else if (/\b(my family|for family|for my family|for my wife|for my husband)\b|परिवारको लागि|श्रीमतीको लागि|श्रीमानको लागि/.test(normalized)) {
+    subject = 'family';
+  } else if (/\b(i |my |me\b|for me\b)|मेरो|मलाई/.test(normalized)) {
+    subject = 'self';
+  }
+
+  let urgency: IntakeState['urgency'] = 'unknown';
+  if (/\b(today|now|immediately|urgent|asap|right now)\b|आजै|अहिले|तुरुन्त/.test(normalized)) urgency = 'today';
+  else if (/\b(this week|soon|tomorrow|next week)\b|चाँडै|भोलि|यो हप्ता|अर्को हप्ता/.test(normalized)) urgency = 'soon';
+  else if (/\b(checkup|routine|regular|follow up)\b|नियमित|फलो अप|चेकअप/.test(normalized)) urgency = 'routine';
+
+  let careNeed: IntakeState['careNeed'] = 'unknown';
+  if (/\b(admission|admit|emergency|er)\b|भर्ना|इमर्जेन्सी/.test(normalized)) careNeed = 'admission';
+  else if (/\b(specialist|consultant|dermatologist|cardiologist|orthopedic|gynae|gyne|oncology)\b|विशेषज्ञ/.test(normalized)) careNeed = 'specialist';
+  else if (/\b(doctor today|same day|today|urgent checkup)\b|आजै डाक्टर|आजै जाँच/.test(normalized)) careNeed = 'same_day';
+  else if (/\b(appointment|booking|book|opd)\b|समय|बुक/.test(normalized)) careNeed = 'booking';
+  else if (domain === 'health') careNeed = 'general';
+
+  return { domain, subject, urgency, careNeed };
 }
 
 function isAiCoolingDown() {
@@ -54,13 +318,115 @@ function beginAiCooldown(reason: string) {
   console.warn(`[services/ai] Cooling down provider usage for ${Math.round(AI_COOLDOWN_MS / 1000)}s: ${reason}`);
 }
 
+// ── Location helpers ──────────────────────────────────────────────
+// Approximate centroids for major Nepal districts (Kathmandu valley + common ones)
+const DISTRICT_COORDS: Record<string, { lat: number; lng: number }> = {
+  kathmandu:    { lat: 27.7172, lng: 85.3240 },
+  lalitpur:     { lat: 27.6588, lng: 85.3247 },
+  bhaktapur:    { lat: 27.6710, lng: 85.4298 },
+  kavrepalanchok: { lat: 27.5500, lng: 85.5500 },
+  chitwan:      { lat: 27.5291, lng: 84.3542 },
+  kaski:        { lat: 28.2096, lng: 83.9856 },
+  morang:       { lat: 26.6650, lng: 87.2800 },
+  sunsari:      { lat: 26.6800, lng: 87.1700 },
+  jhapa:        { lat: 26.5500, lng: 87.8900 },
+  rupandehi:    { lat: 27.5000, lng: 83.4500 },
+  makwanpur:    { lat: 27.4200, lng: 85.0200 },
+  nuwakot:      { lat: 27.9100, lng: 85.1600 },
+  dhading:      { lat: 27.8700, lng: 84.9300 },
+  sindhupalchok:{ lat: 27.9500, lng: 85.7000 },
+  dolakha:      { lat: 27.7800, lng: 86.0700 },
+  rasuwa:       { lat: 28.0600, lng: 85.3100 },
+};
+
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  // Haversine — good enough for ranking
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getUserCoords(userCtx?: UserContext | null): { lat: number; lng: number } | null {
+  if (!userCtx) return null;
+  const district = (userCtx.district || '').toLowerCase().replace(/\s+/g, '');
+  if (DISTRICT_COORDS[district]) return DISTRICT_COORDS[district];
+  // Try partial match
+  for (const [key, coords] of Object.entries(DISTRICT_COORDS)) {
+    if (district.includes(key) || key.includes(district)) return coords;
+  }
+  return null;
+}
+
+function getServiceCoords(service: Service): { lat: number; lng: number } | null {
+  for (const office of service.offices || []) {
+    if (office.lat && office.lng) return { lat: office.lat, lng: office.lng };
+  }
+  return null;
+}
+
+function reprioritizeRankedServices(
+  ranked: Array<{ service: Service; score: number }>,
+  intakeState: IntakeState,
+  originalQuestion: string,
+  userCtx?: UserContext | null,
+) {
+  if (ranked.length === 0) return ranked;
+  const normalized = normalizeIntentText(originalQuestion);
+
+  if (intakeState.domain !== 'health') return ranked;
+
+  const userCoords = getUserCoords(userCtx);
+
+  return ranked
+    .map((entry) => {
+      let boost = 0;
+      const slug = entry.service.slug;
+      const title = normalizeIntentText(`${entry.service.title.en} ${entry.service.title.ne} ${entry.service.providerName}`);
+
+      if (intakeState.subject === 'child') {
+        if (slug === 'kanti-childrens-hospital' || title.includes('kanti')) boost += 180;
+        if (title.includes('child') || title.includes('pediatric') || title.includes('children')) boost += 90;
+      }
+
+      if (isMaternityNeed(normalized)) {
+        if (slug === 'maternity-hospital' || title.includes('maternity') || title.includes('prasuti')) boost += 180;
+      }
+
+      if (intakeState.careNeed === 'same_day') {
+        if (title.includes('opd') || title.includes('hospital')) boost += 25;
+      }
+
+      if (intakeState.careNeed === 'specialist') {
+        if (title.includes('teaching') || title.includes('tuth')) boost += 35;
+      }
+
+      // Location-based proximity boost for hospitals
+      if (userCoords && entry.service.providerType === 'hospital') {
+        const serviceCoords = getServiceCoords(entry.service);
+        if (serviceCoords) {
+          const km = distanceKm(userCoords.lat, userCoords.lng, serviceCoords.lat, serviceCoords.lng);
+          // Boost nearby hospitals: <5km = +60, <10km = +40, <20km = +20
+          if (km < 5) boost += 60;
+          else if (km < 10) boost += 40;
+          else if (km < 20) boost += 20;
+        }
+      }
+
+      return { ...entry, score: entry.score + boost };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
 export function buildRoutingQuery(question: string) {
   const normalized = normalizeIntentText(question);
   if (!normalized) return question.trim();
+  const intake = inferIntakeState(question);
 
   const signals = new Set<string>();
 
-  if (/(hospital|opd|doctor|clinic|appointment|health|admission|checkup|specialist|अस्पताल|समय|टिकट)/.test(normalized)) {
+  if (intake.domain === 'health') {
     signals.add('hospital');
     signals.add('appointment');
   }
@@ -69,8 +435,21 @@ export function buildRoutingQuery(question: string) {
   if (/\bpatan\b/.test(normalized)) signals.add('patan');
   if (/\bcivil\b/.test(normalized)) signals.add('civil');
   if (/\bkanti\b/.test(normalized)) signals.add('kanti');
+  if (intake.subject === 'child' || /\b(child|kid|baby|infant|pediatric|paediatric)\b|बच्चा|बाल/.test(normalized)) {
+    signals.add('child');
+    signals.add('kanti');
+  }
+  if (isMaternityNeed(normalized)) {
+    signals.add('maternity');
+    signals.add('hospital');
+    signals.add('appointment');
+  }
   if (/(maternity|prasuti)/.test(normalized)) signals.add('maternity');
   if (/(oncology|b p koirala|bp koirala)/.test(normalized)) signals.add('oncology');
+  if (intake.careNeed === 'same_day') signals.add('doctor');
+  if (intake.careNeed === 'specialist') signals.add('specialist');
+  if (intake.careNeed === 'admission') signals.add('admission');
+  if (intake.subject === 'parent') signals.add('adult');
 
   if (/(license|licence|driving|renewal|renew|dotm|trial|smart license)/.test(normalized)) {
     signals.add('driving');
@@ -96,7 +475,7 @@ export function buildRoutingQuery(question: string) {
   if (/(citizenship|nagarikta)/.test(normalized)) {
     signals.add('citizenship');
   }
-  if (/(pan|tax)/.test(normalized)) {
+  if (/\b(pan|tax)\b/.test(normalized) && !/\btaxi\b/.test(normalized)) {
     signals.add('pan');
     signals.add('tax');
   }
@@ -117,8 +496,9 @@ export function shouldAutoRoute(question: string, ranked: Array<{ service: Servi
   if (!topRanked || topScore < 65) return false;
 
   const normalized = normalizeIntentText(question);
+  const intake = inferIntakeState(question);
   const broadHospitalIntent =
-    /(hospital|opd|doctor|clinic|appointment|health|admission|checkup|specialist|अस्पताल|समय|टिकट)/.test(normalized) &&
+    (isHospitalNeed(normalized) || isHealthSymptomNeed(normalized)) &&
     !/(bir|teaching|tuth|patan|civil|kanti|maternity|bharatpur|oncology)/.test(normalized);
 
   const broadBillIntent =
@@ -126,6 +506,15 @@ export function shouldAutoRoute(question: string, ranked: Array<{ service: Servi
     !/(nea|electricity|kukl|water)/.test(normalized);
 
   const explicitUtilityProvider = /(nea|electricity|kukl|water)/.test(normalized);
+  const explicitHospitalProvider = /(bir|teaching|tuth|patan|civil|kanti|maternity|prasuti)/.test(normalized);
+
+  if (intake.domain === 'health' && isHealthSymptomNeed(normalized) && !explicitHospitalProvider) {
+    return false;
+  }
+
+  if (intake.domain === 'health' && (intake.subject === 'child' || isMaternityNeed(normalized)) && !explicitHospitalProvider) {
+    return false;
+  }
 
   if (broadHospitalIntent) {
     if (
@@ -216,6 +605,9 @@ export async function getCachedAnswer(question: string, locale: 'en' | 'ne'): Pr
     routeMode: topService ? 'direct' : cited.length > 0 ? 'ambiguous' : 'none',
     routeReason: topService ? 'Cached confident route.' : null,
     followUpPrompt: null,
+    followUpOptions: [],
+    intakeState: inferIntakeState(question),
+    intakeSlots: inferIntakeSlots(question, inferIntakeState(question)),
   };
 }
 
@@ -347,26 +739,29 @@ Official URL: ${s.officialUrl || 'n/a'}
     .join('\n---\n');
 
   const instructions = locale === 'ne'
-    ? `तिमी Nepal Republic को सेवा सहायक हौ। प्रयोगकर्तालाई नेपाल सरकार र अत्यावश्यक सेवाहरूबारे व्यावहारिक जवाफ देऊ।
+    ? `तिमी Nepal Republic को AI सहायक हौ — नेपालमा बस्ने मानिसहरूको लागि बुद्धिमान जीवन सहायक।
 
-नियमहरू:
-1. तल दिइएको SERVICE CONTEXT मा भएको जानकारी मात्र प्रयोग गर।
-2. यदि उत्तर context मा छैन भने — "माफ गर्नुहोस्, मसँग यो जानकारी छैन। कार्यालयमा फोन गर्नुहोस् वा आधिकारिक वेबसाइट हेर्नुहोस्।" भन।
-3. कहिल्यै कुरा नबनाऊ। शुल्क, समय, कागजात बारे अनुमान नगर।
-4. नेपालीमा छोटो र स्पष्ट जवाफ देऊ। bullet points प्रयोग गर।
-5. सम्भव भए फोन नम्बर र कार्यालय सुझाऊ।`
-    : `You are the Nepal Republic services assistant. Give Nepalis practical, concrete answers about government and essential services.
+तिमीले गर्नुपर्ने:
+1. प्रयोगकर्ताको वास्तविक आवश्यकता बुझ — तिनीहरूले के भनिरहेका छन् त्यो मात्र नभई के चाहिन्छ त्यो बुझ।
+2. यदि तलको SERVICE CONTEXT मा उत्तर छ भने — त्यो प्रयोग गर, शुल्क/समय/कागजात बारे अनुमान नगर।
+3. यदि SERVICE CONTEXT मा उत्तर छैन तर तिमीलाई नेपालको बारेमा सामान्य ज्ञान छ भने — व्यावहारिक सल्लाह दिन सक्छौ (जस्तै खाना, यातायात, मौसम, दैनिक जीवन)।
+4. यदि तिमीलाई पक्का थाहा छैन भने — स्पष्ट भन "मलाई यसबारे पक्का जानकारी छैन" र सम्भव भए कहाँ सोध्ने सुझाव दिन।
+5. छोटो, स्पष्ट, मैत्रीपूर्ण जवाफ देऊ। bullet points प्रयोग गर।
+6. प्रयोगकर्तालाई अझ राम्रोसँग मद्दत गर्न follow-up प्रश्नहरू सोध।`
+    : `You are the Nepal Republic AI assistant — a wise, practical life assistant for people living in Nepal.
 
-Rules:
-1. Use ONLY the SERVICE CONTEXT below. Do not use outside knowledge.
-2. If the answer isn't in the context, say: "Sorry, I don't have that info — please call the office or check the official site." Do not guess.
-3. Never invent fees, timelines, or documents.
-4. Be concise. Use bullets. Short paragraphs.
-5. When possible, include the office phone number and location from the context.`;
+Your job:
+1. UNDERSTAND what the user actually needs — not just what they literally said, but what they're trying to accomplish.
+2. If the SERVICE CONTEXT below has the answer — use it. Never invent fees, timelines, or documents for government services.
+3. If the SERVICE CONTEXT doesn't cover it but you have general knowledge about Nepal — give practical advice (food, transport, daily life, weather, culture, recommendations, etc.).
+4. If you genuinely don't know — say "I'm not sure about this" and suggest where they could find out.
+5. Be concise, warm, and helpful. Use bullets. Short paragraphs.
+6. When the user's need is vague, ask smart follow-up questions to narrow it down.
+7. Think about the user's REAL situation. "I am hungry" means they want food options. "I am bored" means they want things to do. "I need money" means they need financial help. Be human about it.`;
 
   return `${instructions}
 
-=== SERVICE CONTEXT ===
+=== SERVICE CONTEXT (Government & Essential Services) ===
 ${context}
 === END CONTEXT ===
 
@@ -375,14 +770,74 @@ User question (${locale}): ${question}
 Answer:`;
 }
 
-export async function generateAnswer(
-  question: string,
-  services: Service[],
-  locale: 'en' | 'ne',
-): Promise<{ text: string; model: string } | null> {
-  if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) return null;
-  const prompt = buildPrompt(question, services, locale);
+function buildUserLocationFragment(userCtx?: UserContext | null): string {
+  if (!userCtx) return '';
+  const parts: string[] = [];
+  if (userCtx.ward) parts.push(`Ward ${userCtx.ward}`);
+  if (userCtx.municipality) parts.push(userCtx.municipality);
+  if (userCtx.district) parts.push(userCtx.district);
+  if (userCtx.province) parts.push(`Province ${userCtx.province}`);
+  if (parts.length === 0) return '';
+  return `\n\nUser's location: ${parts.join(', ')}. Prefer services and offices nearest to this location when suggesting options.`;
+}
 
+/**
+ * General-purpose AI prompt for when no services match at all.
+ * This makes the assistant helpful even for non-government-service questions.
+ */
+function buildGeneralPrompt(question: string, locale: 'en' | 'ne'): string {
+  const instructions = locale === 'ne'
+    ? `तिमी Nepal Republic को AI सहायक हौ — नेपालमा बस्ने मानिसहरूको लागि बुद्धिमान जीवन सहायक।
+
+तिमीले मानिसहरूलाई नेपालमा दैनिक जीवनसँग सम्बन्धित कुनै पनि कुरामा मद्दत गर्छौ:
+• खाना र रेस्टुरेन्ट — Foodmandu, Pathao Food, Bhojdeals, स्थानीय खानाका ठाउँहरू
+• यातायात — Pathao, InDrive, बस रुटहरू, उडान जानकारी
+• स्वास्थ्य — अस्पताल, फार्मेसी, आपतकालीन नम्बरहरू (102 एम्बुलेन्स, 100 प्रहरी)
+• शिक्षा — विद्यालय, कलेज, परीक्षा, छात्रवृत्ति
+• बैंकिङ — eSewa, Khalti, बैंक सेवा, QR भुक्तानी
+• खरिद — Daraz, SastoDeal, स्थानीय बजारहरू
+• मनोरञ्जन — ठाउँहरू, कार्यक्रमहरू, यात्रा गन्तव्य
+• आपतकालीन — प्रहरी 100, एम्बुलेन्स 102, दमकल 101, Hello Sarkar 1111
+• सरकारी सेवा — कागजात, कर, कानुनी प्रक्रिया
+• दैनिक जीवन — मौसम, चाडपर्व, संस्कृति, सल्लाह
+
+नियमहरू:
+1. प्रयोगकर्ताको वास्तविक आवश्यकता बुझ।
+2. व्यावहारिक, कार्ययोग्य सल्लाह दिन — सामान्य कुरा मात्र नभन।
+3. सम्भव भए विशिष्ट नाम, फोन नम्बर, एप, वेबसाइट सुझाव दिन।
+4. यदि पक्का थाहा छैन भने भन — अनुमान नगर।
+5. छोटो, मैत्रीपूर्ण, र स्पष्ट जवाफ देऊ।`
+    : `You are the Nepal Republic AI assistant — a wise, practical life assistant for people living in Nepal.
+
+You help people with ANYTHING related to daily life in Nepal:
+• Food & restaurants — Foodmandu, Pathao Food, Bhojdeals, local eateries, food recommendations
+• Transport — Pathao, InDrive, bus routes, domestic flights (Buddha Air, Yeti Airlines)
+• Health — hospitals, pharmacies, emergency numbers (102 ambulance, 100 police)
+• Education — schools, colleges, exams, scholarships
+• Banking & payments — eSewa, Khalti, bank services, QR payments, IME remittance
+• Shopping — Daraz, SastoDeal, local markets (Ason, New Road, Durbar Marg)
+• Entertainment — places to visit, events, travel destinations, movies
+• Emergency — Police 100, Ambulance 102, Fire 101, Hello Sarkar 1111
+• Government services — documents, taxes, legal processes
+• Daily life — weather, festivals, culture, practical advice, tips
+
+Rules:
+1. UNDERSTAND the user's real need — read between the lines.
+2. Give PRACTICAL, actionable advice — not generic fluff.
+3. When possible, suggest specific names, phone numbers, apps, websites.
+4. If you're not sure — say so honestly. Don't make things up.
+5. Be concise, warm, and helpful. Use bullets.
+6. Ask follow-up questions if the need is vague — help narrow it down.`;
+
+  return `${instructions}
+
+User question (${locale}): ${question}
+
+Answer:`;
+}
+
+async function callGemini(prompt: string, maxTokens = 1000): Promise<{ text: string; model: string } | null> {
+  if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) return null;
   try {
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEN_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
@@ -392,9 +847,9 @@ export async function generateAnswer(
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.2,
-            topP: 0.9,
-            maxOutputTokens: 700,
+            temperature: 0.4,
+            topP: 0.92,
+            maxOutputTokens: maxTokens,
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -422,10 +877,218 @@ export async function generateAnswer(
   }
 }
 
+/** Context about the user's active task — lets AI give step-specific guidance */
+export interface ActiveTaskContext {
+  serviceSlug: string;
+  currentStep: number;
+  progress: number;
+  status: string;
+  /** AI workflow context from WorkflowDefinition.aiWorkflowContext */
+  aiWorkflowContext?: string;
+  /** AI guidance prompt for the current action from WorkflowAction.aiGuidancePrompt */
+  currentActionGuidance?: string;
+  /** Which actions are already completed */
+  completedActions?: string[];
+}
+
+function buildTaskContextFragment(taskCtx?: ActiveTaskContext | null): string {
+  if (!taskCtx) return '';
+  const parts: string[] = [
+    `\n\n=== ACTIVE TASK CONTEXT ===`,
+    `Service: ${taskCtx.serviceSlug}`,
+    `Status: ${taskCtx.status} · Step ${taskCtx.currentStep} · ${taskCtx.progress}% complete`,
+  ];
+  if (taskCtx.completedActions?.length) {
+    parts.push(`Completed: ${taskCtx.completedActions.join(', ')}`);
+  }
+  if (taskCtx.aiWorkflowContext) {
+    parts.push(`\nWorkflow knowledge:\n${taskCtx.aiWorkflowContext}`);
+  }
+  if (taskCtx.currentActionGuidance) {
+    parts.push(`\nCurrent step guidance:\n${taskCtx.currentActionGuidance}`);
+  }
+  parts.push(`\nUse this context to give SPECIFIC, actionable advice for the user's current step. Don't repeat generic steps they've already completed.`);
+  parts.push(`=== END TASK CONTEXT ===`);
+  return parts.join('\n');
+}
+
+export async function generateAnswer(
+  question: string,
+  services: Service[],
+  locale: 'en' | 'ne',
+  userCtx?: UserContext | null,
+  taskCtx?: ActiveTaskContext | null,
+): Promise<{ text: string; model: string } | null> {
+  const prompt = buildPrompt(question, services, locale)
+    + buildUserLocationFragment(userCtx)
+    + buildTaskContextFragment(taskCtx);
+  return callGemini(prompt, 1000);
+}
+
+/**
+ * General-purpose answer when no services match.
+ * Uses broad Nepal life knowledge instead of service context.
+ * Falls back to smart static answers if Gemini is unavailable.
+ */
+export async function generateGeneralAnswer(
+  question: string,
+  locale: 'en' | 'ne',
+): Promise<{ text: string; model: string } | null> {
+  // Try AI first
+  const prompt = buildGeneralPrompt(question, locale);
+  const aiResult = await callGemini(prompt, 1000);
+  if (aiResult) return aiResult;
+
+  // Fall back to smart static answer based on keywords
+  const staticAnswer = buildGeneralStaticAnswer(question, locale);
+  if (staticAnswer) return { text: staticAnswer, model: 'static' };
+
+  return null;
+}
+
+/** Smart static answers for common life queries when Gemini is unavailable */
+function buildGeneralStaticAnswer(question: string, locale: 'en' | 'ne'): string | null {
+  const q = normalizeIntentText(question);
+  const isNe = locale === 'ne';
+
+  // Food / hungry
+  if (/(hungry|food|eat|restaurant|khana|bhok|pizza|momo|order food|delivery)/i.test(q)) {
+    return isNe
+      ? '🍽️ खाना अर्डर गर्न:\n\n• **Foodmandu** — foodmandu.com वा एपबाट अर्डर गर्नुहोस्\n• **Pathao Food** — Pathao एपमा Food खण्ड हेर्नुहोस्\n• **Bhojdeals** — bhojdeals.com मा विशेष छुटहरू\n• **eSewa** मा पनि खाना अर्डर गर्न सकिन्छ\n\nनजिकको रेस्टुरेन्ट खोज्न Google Maps प्रयोग गर्नुहोस्।'
+      : '🍽️ Here are your options for food:\n\n• **Foodmandu** — Order at foodmandu.com or their app\n• **Pathao Food** — Open the Pathao app, go to Food section\n• **Bhojdeals** — Check bhojdeals.com for deals\n• **eSewa** — Also has food ordering built in\n\nFor nearby restaurants, search on Google Maps. Popular spots in Kathmandu: Thamel for variety, Jhamsikhel for cafes, New Road for local food.';
+  }
+
+  // Transport / taxi / ride
+  if (/(taxi|cab|ride|travel|bus|yatayat|gadi|pathao|indrive|flight|airport)/i.test(q)) {
+    return isNe
+      ? '🚗 यातायात विकल्पहरू:\n\n• **Pathao** — बाइक/कार राइड बुक गर्नुहोस् (एप डाउनलोड गर्नुहोस्)\n• **InDrive** — मूल्य सम्झौता गर्न सक्ने राइड\n• **Tootle** — बाइक राइड\n• **Sajha Yatayat** — सस्तो सार्वजनिक बस\n• उडानको लागि: Buddha Air, Yeti Airlines\n• हवाई अड्डा: 014113001'
+      : '🚗 Transport options:\n\n• **Pathao** — Book bike/car rides (download the app)\n• **InDrive** — Negotiate your fare\n• **Tootle** — Bike rides\n• **Sajha Yatayat** — Affordable public buses\n• Domestic flights: Buddha Air, Yeti Airlines\n• Airport info: 014113001';
+  }
+
+  // Money / payment / remittance
+  if (/(money|pay|payment|esewa|khalti|send money|remittance|ime|bank|atm|paisa)/i.test(q)) {
+    return isNe
+      ? '💰 भुक्तानी र पैसा:\n\n• **eSewa** — QR भुक्तानी, बिल भुक्तानी, पैसा पठाउनुहोस्\n• **Khalti** — डिजिटल वालेट\n• **IME Pay** — रेमिट्यान्स र भुक्तानी\n• **ConnectIPS** — बैंक ट्रान्सफर\n• नजिकको ATM खोज्न Google Maps प्रयोग गर्नुहोस्'
+      : '💰 Payments & money:\n\n• **eSewa** — QR payments, bill pay, send money\n• **Khalti** — Digital wallet\n• **IME Pay** — Remittance and payments\n• **ConnectIPS** — Bank-to-bank transfers\n• For ATMs, search Google Maps for your nearest one';
+  }
+
+  // Emergency
+  if (/(emergency|help|accident|fire|theft|stolen|police|ambulance|aapatkal)/i.test(q)) {
+    return isNe
+      ? '🚨 आपतकालीन नम्बरहरू:\n\n• **100** — प्रहरी\n• **101** — दमकल\n• **102** — एम्बुलेन्स\n• **1111** — Hello Sarkar (सरकारी गुनासो)\n• **103** — बाल हेल्पलाइन\n• **1098** — महिला हेल्पलाइन\n• **107** — भ्रष्टाचार रिपोर्ट (CIAA)'
+      : '🚨 Emergency numbers:\n\n• **100** — Nepal Police\n• **101** — Fire Brigade\n• **102** — Ambulance\n• **1111** — Hello Sarkar (Government grievances)\n• **103** — Child Helpline\n• **1098** — Women Helpline\n• **107** — Anti-corruption (CIAA)';
+  }
+
+  // Shopping
+  if (/(shop|buy|purchase|daraz|online|kinna|market|bazaar)/i.test(q)) {
+    return isNe
+      ? '🛒 किनमेल:\n\n• **Daraz** — daraz.com.np (सबैभन्दा ठूलो अनलाइन स्टोर)\n• **SastoDeal** — sastodeal.com\n• **HamroBazar** — hamrobazaar.com (दोस्रो हात सामान)\n• स्थानीय बजार: आसन, न्यु रोड, माहाबौद्ध\n• मल: City Center, Civil Mall, Labim Mall'
+      : '🛒 Shopping options:\n\n• **Daraz** — daraz.com.np (largest online store)\n• **SastoDeal** — sastodeal.com\n• **HamroBazar** — hamrobazaar.com (second-hand goods)\n• Local markets: Ason, New Road, Maharajgunj\n• Malls: City Center, Civil Mall, Labim Mall';
+  }
+
+  // Bored / entertainment / fun
+  if (/(bored|fun|entertainment|movie|cinema|place|visit|ghumna|manoranjan)/i.test(q)) {
+    return isNe
+      ? '🎯 मनोरञ्जन र घुम्ने ठाउँहरू:\n\n• **सिनेमा** — QFX Cinemas, Big Movies\n• **घुम्ने** — स्वयम्भू, बौद्ध, पशुपति, नागार्जुन, शिवपुरी\n• **खेलकुद** — Fun Park (भक्तपुर), Rock Climbing\n• **क्याफे** — Jhamsikhel, Lazimpat, Thamel\n• यात्रा: पोखरा, लुम्बिनी, चितवन, नागरकोट'
+      : '🎯 Things to do:\n\n• **Movies** — QFX Cinemas, Big Movies\n• **Visit** — Swayambhu, Boudha, Pashupatinath, Nagarjun, Shivapuri\n• **Activities** — Fun Park (Bhaktapur), Rock Climbing\n• **Cafes** — Jhamsikhel, Lazimpat, Thamel\n• Travel: Pokhara, Lumbini, Chitwan, Nagarkot';
+  }
+
+  // Weather
+  if (/(weather|mausam|rain|hot|cold|temperature)/i.test(q)) {
+    return isNe
+      ? '🌤️ मौसम जानकारी:\n\n• **mfd.gov.np** — नेपाल मौसम विज्ञान विभाग\n• **weather.com** मा "Kathmandu" खोज्नुहोस्\n• एप: AccuWeather, Weather Channel\n\nनेपालमा अहिले (अप्रिल): दिनमा तातो (~28°C), बिहान चिसो। मनसुन जुनदेखि सुरु हुन्छ।'
+      : '🌤️ Weather info:\n\n• **mfd.gov.np** — Nepal Meteorological Department\n• Search "Kathmandu" on weather.com\n• Apps: AccuWeather, Weather Channel\n\nNepal in April: Warm days (~28°C), cool mornings. Monsoon starts in June.';
+  }
+
+  // Internet / phone / recharge
+  if (/(internet|wifi|recharge|data|ntc|ncell|phone|sim|mobile)/i.test(q)) {
+    return isNe
+      ? '📱 मोबाइल र इन्टरनेट:\n\n• **NTC** — *400# डायल गरेर रिचार्ज\n• **Ncell** — *902# डायल गरेर प्याकेज\n• रिचार्ज: eSewa, Khalti, IME Pay बाट\n• WiFi: Vianet, WorldLink, Subisu, Classic Tech\n• SIM कार्ड: NTC/Ncell दुवैमा नागरिकता चाहिन्छ'
+      : '📱 Mobile & internet:\n\n• **NTC** — Dial *400# for recharge\n• **Ncell** — Dial *902# for packages\n• Recharge via: eSewa, Khalti, IME Pay\n• WiFi providers: Vianet, WorldLink, Subisu, Classic Tech\n• SIM card: Need citizenship/passport at NTC/Ncell store';
+  }
+
+  // Health / medicine / pharmacy
+  if (/(medicine|pharmacy|drug|aushadhi|pharma|tablet)/i.test(q)) {
+    return isNe
+      ? '💊 औषधि र फार्मेसी:\n\n• नजिकको फार्मेसी Google Maps मा खोज्नुहोस्\n• **१०२** — एम्बुलेन्स\n• सरकारी अस्पताल: बिर, TUTH, पाटन\n• HealthAt Home (एप) — घरमै डाक्टर\n• आपतकालीन: Norvic, Grande, Mediciti (निजी)'
+      : '💊 Pharmacy & medicine:\n\n• Search Google Maps for nearest pharmacy\n• **102** — Ambulance\n• Government hospitals: Bir, TUTH, Patan\n• HealthAt Home (app) — Doctor at home\n• Emergency: Norvic, Grande, Mediciti (private)';
+  }
+
+  // Job / work
+  if (/(job|work|kaam|rojgar|vacancy|hire|career|intern)/i.test(q)) {
+    return isNe
+      ? '💼 रोजगार:\n\n• **MeroJob** — merojob.com (सबैभन्दा ठूलो)\n• **JobsNepal** — jobsnepal.com\n• **KumarijOb** — kumarijob.com\n• **Lok Sewa** — psc.gov.np (सरकारी जागिर)\n• **LinkedIn** — अन्तर्राष्ट्रिय र कर्पोरेट\n• **Freelancing** — Upwork, Fiverr'
+      : '💼 Job search:\n\n• **MeroJob** — merojob.com (largest job portal)\n• **JobsNepal** — jobsnepal.com\n• **KumarijOb** — kumarijob.com\n• **Lok Sewa** — psc.gov.np (government jobs)\n• **LinkedIn** — International & corporate\n• **Freelancing** — Upwork, Fiverr';
+  }
+
+  // Education / study
+  if (/(study|school|college|university|exam|padhai|bidhyalaya|scholarship)/i.test(q)) {
+    return isNe
+      ? '📚 शिक्षा:\n\n• **TU** — tribhuvan-university.edu.np (त्रिभुवन विश्वविद्यालय)\n• **KU** — ku.edu.np (काठमाडौं विश्वविद्यालय)\n• **NEB** — neb.gov.np (बोर्ड परीक्षा)\n• **Lok Sewa** — psc.gov.np (प्रतियोगिता परीक्षा)\n• छात्रवृत्ति: moest.gov.np\n• विदेश पढ्न: EducateNepal.com'
+      : '📚 Education:\n\n• **TU** — tribhuvan-university.edu.np\n• **KU** — ku.edu.np (Kathmandu University)\n• **NEB** — neb.gov.np (Board exams)\n• **Lok Sewa** — psc.gov.np (Civil service exams)\n• Scholarships: moest.gov.np\n• Study abroad: EducateNepal.com';
+  }
+
+  // Rent / house
+  if (/(rent|house|flat|room|apartment|ghar|kotha|bhadha)/i.test(q)) {
+    return isNe
+      ? '🏠 घर/कोठा खोज्न:\n\n• **HamroBazar** — hamrobazaar.com (कोठा/फ्ल्याट)\n• **RentNepal** — Facebook group\n• **Nepal Flat** — nepalflat.com\n• **OLX Nepal** — olx.com.np\n• Facebook मा "Room for rent Kathmandu" खोज्नुहोस्'
+      : '🏠 Finding a place to live:\n\n• **HamroBazar** — hamrobazaar.com (rooms/flats)\n• **RentNepal** — Facebook group\n• **Nepal Flat** — nepalflat.com\n• **OLX Nepal** — olx.com.np\n• Search Facebook for "Room for rent Kathmandu"';
+  }
+
+  // Generic greeting or unclear
+  if (/(hello|hi|namaste|kasto|how are you|sup)/i.test(q)) {
+    return isNe
+      ? 'नमस्ते! 🙏 म Nepal Republic को AI सहायक हुँ। म तपाईंलाई सरकारी सेवा, खाना, यातायात, स्वास्थ्य, किनमेल, र दैनिक जीवनमा मद्दत गर्न सक्छु। के चाहिन्छ?'
+      : 'Namaste! 🙏 I\'m the Nepal Republic AI assistant. I can help you with government services, food, transport, health, shopping, and daily life in Nepal. What do you need?';
+  }
+
+  return null;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Top-level ask
 // ─────────────────────────────────────────────────────────────
-export async function ask(question: string, locale: 'en' | 'ne' = 'en'): Promise<AskResult> {
+function getMissingSlots(intakeState: IntakeState, intakeSlots: IntakeSlots) {
+  if (intakeState.domain === 'health') {
+    const missing: string[] = [];
+    if (intakeSlots.health.visitGoal === 'unknown') missing.push('visit_goal');
+    if (intakeState.subject === 'unknown') missing.push('subject');
+    if (intakeSlots.health.hospitalHint === 'unknown' && intakeSlots.health.specialtyHint === 'unknown') {
+      missing.push('facility_preference');
+    }
+    return missing;
+  }
+
+  if (intakeState.domain === 'utilities') {
+    const missing: string[] = [];
+    if (intakeSlots.utilities.provider === 'unknown') missing.push('provider');
+    if (!intakeSlots.utilities.accountKnown) missing.push('account');
+    if (!intakeSlots.utilities.amountKnown) missing.push('amount');
+    return missing;
+  }
+
+  if (intakeState.domain === 'license') {
+    return intakeSlots.license.intent === 'unknown' ? ['license_intent'] : [];
+  }
+
+  if (intakeState.domain === 'citizenship') {
+    return intakeSlots.citizenship.intent === 'unknown' ? ['citizenship_intent'] : [];
+  }
+
+  if (intakeState.domain === 'passport') {
+    return intakeSlots.passport.intent === 'unknown' ? ['passport_intent'] : [];
+  }
+
+  return [];
+}
+
+export async function ask(
+  question: string,
+  locale: 'en' | 'ne' = 'en',
+  sessionId?: string | null,
+  userCtx?: UserContext | null,
+  taskCtx?: ActiveTaskContext | null,
+): Promise<AskResult> {
   const trimmed = question.trim();
   if (!trimmed) {
     return {
@@ -438,38 +1101,55 @@ export async function ask(question: string, locale: 'en' | 'ne' = 'en'): Promise
       routeMode: 'none',
       routeReason: null,
       followUpPrompt: null,
+      followUpOptions: [],
+      intakeState: null,
+      intakeSlots: null,
     };
   }
 
-  const routingQuestion = buildRoutingQuery(trimmed);
+  const previousSession = getActiveIntakeSession(sessionId);
+  const effectiveQuestion = applySessionContext(trimmed, previousSession);
+  const routingQuestion = buildRoutingQuery(effectiveQuestion);
+  const intakeState = mergeIntakeState(previousSession?.intakeState || null, inferIntakeState(effectiveQuestion));
+  const intakeSlots = mergeIntakeSlots(
+    previousSession?.intakeSlots || null,
+    inferIntakeSlots(effectiveQuestion, intakeState),
+  );
 
   // 1. cache
-  const cached = await getCachedAnswer(trimmed, locale);
+  const cached = previousSession ? null : await getCachedAnswer(trimmed, locale);
   if (cached) return cached;
 
-  const ranked = await rankServices(routingQuestion, locale);
+  const ranked = reprioritizeRankedServices(await rankServices(routingQuestion, locale), intakeState, effectiveQuestion, userCtx);
   const topRanked = ranked[0];
   const topScore = topRanked?.score ?? 0;
-  const confidentTopService = shouldAutoRoute(routingQuestion, ranked) && topRanked
+  const confidentTopService = shouldAutoRoute(effectiveQuestion, ranked) && topRanked
     ? topRanked.service
     : null;
   const routeMode: AskResult['routeMode'] =
     confidentTopService ? 'direct' : ranked.length > 0 ? 'ambiguous' : 'none';
-  const routeReason = buildRouteReason(trimmed, routingQuestion, ranked, confidentTopService, locale);
-  const followUpPrompt = routeMode === 'ambiguous'
-    ? buildFollowUpPrompt(trimmed, ranked, locale)
+  const routeReason = buildRouteReason(effectiveQuestion, routingQuestion, ranked, confidentTopService, locale, intakeState);
+  const missingSlots = getMissingSlots(intakeState, intakeSlots);
+  // Always generate follow-ups — even for 'none' mode so the user gets suggestions
+  const followUpPrompt = routeMode !== 'direct'
+    ? buildFollowUpPrompt(effectiveQuestion, ranked, locale, intakeState, intakeSlots, missingSlots)
     : null;
+  const followUpOptions = routeMode !== 'direct'
+    ? buildFollowUpOptions(effectiveQuestion, ranked, locale, intakeState, intakeSlots, missingSlots)
+    : [];
 
   // 2. retrieve
   const cited = ranked.length > 0
     ? ranked.slice(0, 5).map((entry) => entry.service)
     : await retrieveServices(routingQuestion, locale, 5);
 
+  saveIntakeSession(sessionId, intakeState, intakeSlots, trimmed);
+
   // 3. daily cap check
   const under = await checkDailyCap();
   if (!under || !GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) {
     // Static fallback: return top matches as a structured answer.
-    const answer = buildStaticAnswer(trimmed, cited, locale);
+    const answer = buildStaticAnswer(effectiveQuestion, cited, locale, intakeState);
     return {
       answer,
       cited,
@@ -480,13 +1160,16 @@ export async function ask(question: string, locale: 'en' | 'ne' = 'en'): Promise
       routeMode,
       routeReason,
       followUpPrompt,
+      followUpOptions,
+      intakeState,
+      intakeSlots,
     };
   }
 
   // 4. generate
-  const gen = await generateAnswer(trimmed, cited, locale);
+  const gen = await generateAnswer(effectiveQuestion, cited, locale, userCtx, taskCtx);
   if (!gen) {
-    const answer = buildStaticAnswer(trimmed, cited, locale);
+    const answer = buildStaticAnswer(effectiveQuestion, cited, locale, intakeState);
     return {
       answer,
       cited,
@@ -497,6 +1180,9 @@ export async function ask(question: string, locale: 'en' | 'ne' = 'en'): Promise
       routeMode,
       routeReason,
       followUpPrompt,
+      followUpOptions,
+      intakeState,
+      intakeSlots,
     };
   }
 
@@ -512,6 +1198,9 @@ export async function ask(question: string, locale: 'en' | 'ne' = 'en'): Promise
     routeMode,
     routeReason,
     followUpPrompt,
+    followUpOptions,
+    intakeState,
+    intakeSlots,
   };
 }
 
@@ -521,11 +1210,30 @@ function buildRouteReason(
   ranked: Array<{ service: Service; score: number }>,
   topService: Service | null,
   locale: 'en' | 'ne',
+  intakeState: IntakeState,
 ) {
   if (topService) {
     return locale === 'ne'
       ? `${topService.title.ne} स्पष्ट रूपमा सबैभन्दा नजिकको सेवा देखियो।`
       : `${topService.title.en} is the clearest match for this request.`;
+  }
+
+  if (intakeState.domain === 'health' && isMaternityNeed(normalizeIntentText(originalQuestion))) {
+    return locale === 'ne'
+      ? 'यो मातृस्वास्थ्यसम्बन्धी आवश्यकता जस्तो देखिन्छ। NepalRepublic ले ANC, delivery, वा specialist care मध्ये के चाहिएको हो भनेर छोटो पुष्टि लिनुपर्छ।'
+      : 'This looks like a maternity or pregnancy-related health need. NepalRepublic should confirm whether this is for ANC, delivery, or specialist care before choosing the path.';
+  }
+
+  if (intakeState.domain === 'health' && isHealthSymptomNeed(normalizeIntentText(originalQuestion))) {
+    if (intakeState.subject === 'child') {
+      return locale === 'ne'
+        ? 'यो बच्चाको स्वास्थ्यसम्बन्धी आवश्यकता जस्तो देखिन्छ। NepalRepublic ले अझै केही छोटा प्रश्न सोधेर सही अस्पताल र care type छान्नुपर्छ।'
+        : 'This looks like a child health need. NepalRepublic should ask a couple of quick questions before picking the right hospital and care path.';
+    }
+
+    return locale === 'ne'
+      ? 'यो स्वास्थ्यसम्बन्धी आवश्यकता जस्तो देखिन्छ। सही बाटो छान्न NepalRepublic ले केही द्रुत प्रश्न सोध्नुपर्छ।'
+      : 'This looks like a health need. NepalRepublic should narrow it with a few quick questions before choosing the path.';
   }
 
   if (ranked.length >= 2) {
@@ -565,14 +1273,100 @@ function buildFollowUpPrompt(
   question: string,
   ranked: Array<{ service: Service; score: number }>,
   locale: 'en' | 'ne',
+  intakeState: IntakeState,
+  intakeSlots: IntakeSlots,
+  missingSlots: string[],
 ) {
-  if (ranked.length === 0) return null;
   const normalized = normalizeIntentText(question);
 
-  if (/(hospital|opd|doctor|clinic|appointment|health|admission|checkup|specialist|अस्पताल|समय|टिकट)/.test(normalized)) {
+  if (ranked.length === 0) {
+    return locale === 'ne'
+      ? 'तपाईंलाई वास्तवमा के चाहिन्छ? म सरकारी सेवा, स्वास्थ्य, यातायात, खाना, र अरू धेरै कुरामा मद्दत गर्न सक्छु।'
+      : 'What do you actually need? I can help with government services, health, transport, food, and much more.';
+  }
+
+  if (intakeState.domain === 'health' && isMaternityNeed(normalized)) {
+    return locale === 'ne'
+      ? 'यो गर्भ/प्रसूति सम्बन्धी सेवा हो? ANC, delivery, कि विशेषज्ञ भेट?'
+      : 'Is this for ANC, delivery, or a maternity specialist appointment?';
+  }
+
+  if (intakeState.domain === 'health' && intakeState.subject === 'child') {
+    return locale === 'ne'
+      ? 'बच्चाका लागि अहिले के चाहिएको हो: आजै जाँच, बाल विशेषज्ञ, कि अस्पताल/OPD समय?'
+      : 'For your child, what do you need right now: same-day care, a pediatric specialist, or a hospital/OPD booking?';
+  }
+
+  if (intakeState.domain === 'health' && intakeState.subject === 'parent') {
+    return locale === 'ne'
+      ? 'अभिभावकका लागि अहिले के चाहिएको हो: आजै जाँच, विशेषज्ञ भेट, कि अस्पताल/OPD समय?'
+      : 'For your parent, what do you need right now: same-day care, a specialist appointment, or a hospital/OPD booking?';
+  }
+
+  if (isHealthSymptomNeed(normalized)) {
+    return locale === 'ne'
+      ? 'तपाईंलाई अहिले कस्तो मद्दत चाहिएको हो: आजै जाँच, विशेषज्ञ भेट, कि अस्पताल/OPD समय?'
+      : 'What do you need right now: same-day medical care, a specialist appointment, or a hospital/OPD booking?';
+  }
+
+  if (isHospitalNeed(normalized)) {
     return locale === 'ne'
       ? 'कुन अस्पताल चाहिएको हो? जस्तै: Bir, TUTH, Patan, Civil.'
       : 'Which hospital do you mean? For example: Bir, TUTH, Patan, or Civil.';
+  }
+
+  if (intakeState.domain === 'health' && missingSlots[0] === 'facility_preference') {
+    return locale === 'ne'
+      ? 'कुन अस्पताल वा care type नजिक छ: Bir, TUTH, Patan, Civil, Kanti, कि Maternity?'
+      : 'Which hospital or care type sounds closest: Bir, TUTH, Patan, Civil, Kanti, or maternity care?';
+  }
+
+  if (intakeState.domain === 'health' && missingSlots[0] === 'visit_goal') {
+    return locale === 'ne'
+      ? 'अहिले तपाईंलाई के चाहिएको हो: आजै डाक्टर, विशेषज्ञ, कि अस्पताल समय?'
+      : 'What do you need right now: same-day care, a specialist, or a hospital booking?';
+  }
+
+  if (intakeState.domain === 'health' && missingSlots[0] === 'subject') {
+    return locale === 'ne'
+      ? 'यो कसका लागि हो: तपाईं, बच्चा, कि बुबा/आमा?'
+      : 'Who is this for: you, your child, or your parent?';
+  }
+
+  if (intakeState.domain === 'utilities' && missingSlots[0] === 'provider') {
+    return locale === 'ne'
+      ? 'कुन बिल हो: NEA बिजुली कि KUKL पानी?'
+      : 'Which bill is this: NEA electricity or KUKL water?';
+  }
+
+  if (intakeState.domain === 'utilities' && missingSlots[0] === 'account') {
+    return locale === 'ne'
+      ? 'ग्राहक आईडी वा SC नम्बर छ? त्यो भए NepalRepublic ले बिल path तयार गर्न सक्छ।'
+      : 'Do you have the customer ID or SC number? With that, NepalRepublic can prepare the bill flow.';
+  }
+
+  if (intakeState.domain === 'utilities' && missingSlots[0] === 'amount') {
+    return locale === 'ne'
+      ? 'तिर्ने रकम थाहा छ? थाहा भए सिधै payment तर्फ जान सक्छौं।'
+      : 'Do you already know the amount due? If yes, we can continue straight to payment.';
+  }
+
+  if (intakeState.domain === 'license' && missingSlots[0] === 'license_intent') {
+    return locale === 'ne'
+      ? 'लाइसेन्समा के काम छ: नवीकरण, नयाँ आवेदन, कि ट्रायल?'
+      : 'What do you need for the license: renewal, new application, or trial?';
+  }
+
+  if (intakeState.domain === 'citizenship' && missingSlots[0] === 'citizenship_intent') {
+    return locale === 'ne'
+      ? 'कुन प्रकारको नागरिकता सेवा हो: वंशज, जन्मसिद्ध, कि प्रतिलिपि?'
+      : 'Which citizenship service is this: by descent, by birth, or duplicate?';
+  }
+
+  if (intakeState.domain === 'passport' && missingSlots[0] === 'passport_intent') {
+    return locale === 'ne'
+      ? 'राहदानीमा के चाहिएको हो: नयाँ आवेदन, नवीकरण, कि status tracking?'
+      : 'What do you need for passport: new application, renewal, or status tracking?';
   }
 
   if (/(bill|payment|pay)/.test(normalized) && !/(nea|electricity|kukl|water)/.test(normalized)) {
@@ -596,12 +1390,194 @@ function buildFollowUpPrompt(
   return null;
 }
 
-function buildStaticAnswer(_q: string, services: Service[], locale: 'en' | 'ne'): string {
+function buildFollowUpOptions(
+  question: string,
+  ranked: Array<{ service: Service; score: number }>,
+  locale: 'en' | 'ne',
+  intakeState: IntakeState,
+  intakeSlots: IntakeSlots,
+  missingSlots: string[],
+) {
+  const normalized = normalizeIntentText(question);
+
+  // Even when no services match, provide helpful suggestions
+  if (ranked.length === 0) {
+    return locale === 'ne'
+      ? ['पासपोर्ट बनाउन के गर्ने?', 'नजिकको अस्पताल कुन?', 'बिजुली बिल कसरी तिर्ने?', 'नागरिकता कसरी लिने?']
+      : ['How do I get a passport?', 'Which hospital is nearby?', 'How to pay electricity bill?', 'How to get citizenship?'];
+  }
+
+  if (intakeState.domain === 'health' && isMaternityNeed(normalized)) {
+    return locale === 'ne'
+      ? [
+          'ANC checkup चाहियो',
+          'Delivery सम्बन्धी जानकारी चाहियो',
+          'मातृ विशेषज्ञ appointment चाहियो',
+          'प्रसूति अस्पताल ठीक होला',
+        ]
+      : [
+          'I need an ANC checkup',
+          'I need delivery-related help',
+          'I need a maternity specialist appointment',
+          'Maternity hospital sounds right',
+        ];
+  }
+
+  if (intakeState.domain === 'health' && intakeState.subject === 'child') {
+    return locale === 'ne'
+      ? [
+          'आजै बच्चा डाक्टर चाहियो',
+          'बाल विशेषज्ञ चाहियो',
+          'कान्ति अस्पताल ठीक होला',
+          'अर्को अस्पताल विकल्प देखाउनुहोस्',
+        ]
+      : [
+          'My child needs a doctor today',
+          'My child needs a pediatric specialist',
+          'Kanti hospital sounds right',
+          'Show other hospital options',
+        ];
+  }
+
+  if (intakeState.domain === 'health' && intakeState.subject === 'parent') {
+    return locale === 'ne'
+      ? [
+          'आजै डाक्टर चाहियो',
+          'विशेषज्ञ भेट चाहियो',
+          'यो बुबा/आमाका लागि हो',
+          'अर्को अस्पताल विकल्प देखाउनुहोस्',
+        ]
+      : [
+          'My parent needs a doctor today',
+          'My parent needs a specialist appointment',
+          'This is for my father or mother',
+          'Show other hospital options',
+        ];
+  }
+
+  if (isHealthSymptomNeed(normalized)) {
+    return locale === 'ne'
+      ? [
+          'आजै डाक्टर देखाउनुपर्छ',
+          'विशेषज्ञको समय चाहियो',
+          'बाबु/आमाका लागि हो',
+          'बच्चाको लागि हो',
+        ]
+      : [
+          'I need a doctor today',
+          'I need a specialist appointment',
+          'This is for my parent',
+          'This is for my child',
+        ];
+  }
+
+  if (intakeState.domain === 'health' && missingSlots[0] === 'facility_preference') {
+    return locale === 'ne'
+      ? ['Bir अस्पताल', 'TUTH', 'Patan अस्पताल', 'Civil अस्पताल', 'Kanti', 'Maternity care']
+      : ['Bir Hospital', 'TUTH', 'Patan Hospital', 'Civil Hospital', 'Kanti', 'Maternity care'];
+  }
+
+  if (intakeState.domain === 'health' && missingSlots[0] === 'visit_goal') {
+    return locale === 'ne'
+      ? ['आजै डाक्टर चाहियो', 'विशेषज्ञ appointment चाहियो', 'अस्पताल/OPD booking चाहियो']
+      : ['I need a doctor today', 'I need a specialist appointment', 'I need a hospital/OPD booking'];
+  }
+
+  if (intakeState.domain === 'health' && missingSlots[0] === 'subject') {
+    return locale === 'ne'
+      ? ['मेरो लागि', 'मेरो बच्चाका लागि', 'मेरो बुबा/आमाका लागि']
+      : ['This is for me', 'This is for my child', 'This is for my parent'];
+  }
+
+  if (intakeState.domain === 'utilities' && missingSlots[0] === 'provider') {
+    return locale === 'ne'
+      ? ['NEA बिजुली बिल', 'KUKL पानी बिल']
+      : ['NEA electricity bill', 'KUKL water bill'];
+  }
+
+  if (intakeState.domain === 'utilities' && missingSlots[0] === 'account') {
+    return locale === 'ne'
+      ? ['SC नम्बर छ', 'ग्राहक आईडी छ', 'पहिले बिल फोटो स्क्यान गर्छु']
+      : ['I have the SC number', 'I have the customer ID', 'I will scan the bill photo first'];
+  }
+
+  if (intakeState.domain === 'utilities' && missingSlots[0] === 'amount') {
+    return locale === 'ne'
+      ? ['रकम थाहा छ', 'पहिले bill lookup गर्छु', 'बिल फोटो स्क्यान गर्छु']
+      : ['I know the amount due', 'I will check the bill first', 'I will scan the bill photo'];
+  }
+
+  if (intakeState.domain === 'license' && missingSlots[0] === 'license_intent') {
+    return locale === 'ne'
+      ? ['नवीकरण', 'नयाँ लाइसेन्स', 'ट्रायल']
+      : ['License renewal', 'New license', 'Trial booking'];
+  }
+
+  if (intakeState.domain === 'citizenship' && missingSlots[0] === 'citizenship_intent') {
+    return locale === 'ne'
+      ? ['वंशज नागरिकता', 'जन्मसिद्ध नागरिकता', 'प्रतिलिपि']
+      : ['Citizenship by descent', 'Citizenship by birth', 'Duplicate citizenship'];
+  }
+
+  if (intakeState.domain === 'passport' && missingSlots[0] === 'passport_intent') {
+    return locale === 'ne'
+      ? ['नयाँ राहदानी', 'राहदानी नवीकरण', 'status track गर्न']
+      : ['New passport', 'Passport renewal', 'Track passport status'];
+  }
+
+  if (/(bill|payment|pay)/.test(normalized) && !/(nea|electricity|kukl|water)/.test(normalized)) {
+    return locale === 'ne'
+      ? ['NEA बिल', 'KUKL पानी बिल']
+      : ['NEA electricity bill', 'KUKL water bill'];
+  }
+
+  if (/(license|licence|driving)/.test(normalized) && !/(renew|renewal|trial|new)/.test(normalized)) {
+    return locale === 'ne'
+      ? ['नवीकरण', 'नयाँ लाइसेन्स', 'ट्रायल']
+      : ['License renewal', 'New license', 'Trial booking'];
+  }
+
+  if (/(citizenship|nagarikta)/.test(normalized) && !/(birth|descent|duplicate|minor)/.test(normalized)) {
+    return locale === 'ne'
+      ? ['वंशज नागरिकता', 'प्रतिलिपि', 'जन्मसिद्ध']
+      : ['Citizenship by descent', 'Duplicate citizenship', 'Citizenship by birth'];
+  }
+
+  return [];
+}
+
+function buildStaticAnswer(_q: string, services: Service[], locale: 'en' | 'ne', intakeState: IntakeState): string {
+  const normalized = normalizeIntentText(_q);
   if (services.length === 0) {
     return locale === 'ne'
-      ? 'माफ गर्नुहोस्, मैले सम्बन्धित सेवा भेट्टाउन सकिनँ। कृपया अर्को शब्द प्रयोग गरेर खोज्नुहोस्।'
-      : "Sorry, I couldn't find a matching service. Try different keywords.";
+      ? 'मैले सम्बन्धित सरकारी सेवा भेट्टाउन सकिनँ — तर अरू कुरामा मद्दत गर्न सक्छु! तपाईंलाई वास्तवमा के चाहिन्छ?'
+      : "I couldn't find a matching government service — but I can help with other things! What do you actually need?";
   }
+
+  if (intakeState.domain === 'health' && isMaternityNeed(normalized)) {
+    const top = services.slice(0, 3);
+    const names = top.map((s) => (locale === 'ne' ? s.title.ne : s.title.en));
+    return locale === 'ne'
+      ? `यो गर्भ/प्रसूति सम्बन्धी आवश्यकता जस्तो देखिन्छ। अहिले सम्भावित बाटा:\n\n• ${names.join('\n• ')}\n\nअब NepalRepublic ले ANC, delivery, वा specialist appointment मध्ये कुन चाहिएको हो भनेर छोटो पुष्टि लिनुपर्छ।`
+      : `This looks like a maternity or pregnancy-related need. The most likely paths right now are:\n\n• ${names.join('\n• ')}\n\nNepalRepublic should now confirm whether you need ANC, delivery support, or a maternity specialist appointment before choosing the path.`;
+  }
+
+  if (intakeState.domain === 'health' && intakeState.subject === 'child') {
+    const top = services.slice(0, 3);
+    const names = top.map((s) => (locale === 'ne' ? s.title.ne : s.title.en));
+    return locale === 'ne'
+      ? `यो बच्चाको स्वास्थ्यसम्बन्धी आवश्यकता जस्तो देखिन्छ। अहिले सम्भावित बाटा:\n\n• ${names.join('\n• ')}\n\nअब NepalRepublic ले बच्चालाई आजै डाक्टर चाहिएको हो, बाल विशेषज्ञ चाहिएको हो, वा खास अस्पताल बुक गर्नुपरेको हो भन्ने छोटो पुष्टि लिनुपर्छ।`
+      : `This looks like a child health need. The most likely paths right now are:\n\n• ${names.join('\n• ')}\n\nNepalRepublic should now confirm whether your child needs same-day care, a pediatric specialist, or a specific hospital booking before choosing the path.`;
+  }
+
+  if (isHealthSymptomNeed(normalized)) {
+    const top = services.slice(0, 3);
+    const names = top.map((s) => (locale === 'ne' ? s.title.ne : s.title.en));
+    return locale === 'ne'
+      ? `यो स्वास्थ्यसम्बन्धी आवश्यकता जस्तो देखिन्छ। अहिलेको लागि सबैभन्दा सम्भावित बाटा:\n\n• ${names.join('\n• ')}\n\nNepalRepublic ले अर्को चरणमा तपाईंलाई आजै जाँच चाहिएको हो, विशेषज्ञ चाहिएको हो, वा यो कसका लागि हो भनेर सोधेर सही अस्पतालमा साँघुर्याउनुपर्छ।`
+      : `This looks like a health need. The most likely paths right now are:\n\n• ${names.join('\n• ')}\n\nNepalRepublic should now narrow this by asking whether you need same-day care, a specialist, and who this is for before choosing a single hospital.`;
+  }
+
   const lines = services.slice(0, 3).map((s) => {
     const title = locale === 'ne' ? s.title.ne : s.title.en;
     const summary = locale === 'ne' ? s.summary.ne : s.summary.en;

@@ -34,7 +34,7 @@ const MAX_FILES = 5;
 const BUCKET = 'evidence-photos';
 
 function generateId(): string {
-  return Math.random().toString(36).slice(2, 10);
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 }
 
 export async function POST(req: NextRequest) {

@@ -33,6 +33,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { useReputation, getNextLevelThreshold, getCurrentLevelThreshold } from '@/lib/hooks/use-reputation';
 import { useWatchlistStore, usePreferencesStore, NEPAL_PROVINCES } from '@/lib/stores/preferences';
 import { HouseholdCard } from '@/components/public/me/household-card';
+import { SyncStatus } from '@/components/public/services/sync-status';
 
 export default function MePage() {
   const { locale, setLocale } = useI18n();
@@ -524,10 +525,10 @@ export default function MePage() {
                     <FileCheck className="h-5 w-5 text-cyan-400" />
                     <div>
                       <p className="text-sm font-medium text-gray-200">
-                        {isNe ? 'मेरो सेवाहरू' : 'My Tasks'}
+                        {isNe ? 'मेरो केसहरू' : 'My Cases'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {isNe ? 'सेवा कार्यप्रवाह जारी राख्नुहोस्' : 'Continue service workflows'}
+                        {isNe ? 'कार्यप्रवाह, आवेदन, र अर्को चरणहरू' : 'Workflows, applications, and next steps'}
                       </p>
                     </div>
                   </div>
@@ -559,7 +560,8 @@ export default function MePage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
                   {isNe ? 'मेरो सेवाहरू' : 'My Services'}
                 </h3>
-                <div className="space-y-1">
+                <SyncStatus />
+                <div className="space-y-1 mt-1">
                   <Link
                     href="/me/identity"
                     className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
@@ -578,17 +580,17 @@ export default function MePage() {
                     <ChevronRight className="h-4 w-4 text-gray-600" />
                   </Link>
                   <Link
-                    href="/me/applications"
+                    href="/me/tasks#tracked-applications"
                     className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-lg">📋</span>
                       <div>
                         <p className="text-sm font-medium text-gray-200">
-                          {isNe ? 'मेरो आवेदनहरू' : 'My Applications'}
+                          {isNe ? 'ट्र्याक गरिएका आवेदनहरू' : 'Tracked Applications'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {isNe ? 'ट्र्याक, रिमाइन्डर, रसिद' : 'Track status, reminders, receipts'}
+                          {isNe ? 'मेरो केसहरू भित्र स्थिति, रिमाइन्डर, रसिद' : 'Status, reminders, and receipts inside My Cases'}
                         </p>
                       </div>
                     </div>
@@ -606,6 +608,23 @@ export default function MePage() {
                         </p>
                         <p className="text-xs text-gray-500">
                           {isNe ? 'नागरिकता, राहदानी, प्यान फोटो' : 'Citizenship, passport, PAN scans'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  </Link>
+                  <Link
+                    href="/advisor"
+                    className="flex items-center justify-between rounded-xl border border-[#DC143C]/20 bg-[#DC143C]/5 px-4 py-3 transition-colors hover:bg-[#DC143C]/10"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🧭</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-200">
+                          {isNe ? 'सेवा सल्लाहकार' : 'Service Advisor'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {isNe ? 'के गर्ने भन्नुहोस्, हामी बाटो देखाउँछौं' : 'Tell us your goal, we show the steps'}
                         </p>
                       </div>
                     </div>

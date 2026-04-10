@@ -626,3 +626,69 @@
 .card-border-not-started {
   border-left: 4px solid rgba(107, 114, 128, 0.4) !important;
 }
+
+/* ══════════════════════════════════════════
+   Voice UI Animations
+   ══════════════════════════════════════════ */
+
+/* Pulsing ring around mic button */
+@keyframes voice-pulse {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+@keyframes voice-pulse-delayed {
+  0% { transform: scale(1); opacity: 0.2; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.animate-voice-pulse {
+  animation: voice-pulse 1.5s ease-out infinite;
+}
+.animate-voice-pulse-delayed {
+  animation: voice-pulse-delayed 1.5s ease-out 0.3s infinite;
+}
+
+/* Sound wave bar animations */
+@keyframes voice-bar-1 {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+@keyframes voice-bar-2 {
+  0%, 100% { transform: scaleY(0.6); }
+  50% { transform: scaleY(0.3); }
+}
+@keyframes voice-bar-3 {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.5); }
+}
+.animate-voice-bar-1 {
+  animation: voice-bar-1 0.8s ease-in-out infinite;
+  transform-origin: center;
+}
+.animate-voice-bar-2 {
+  animation: voice-bar-2 0.6s ease-in-out infinite;
+  transform-origin: center;
+}
+.animate-voice-bar-3 {
+  animation: voice-bar-3 0.9s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Gradient border animation for hero voice search */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease-in-out infinite;
+}
+
+/* Speaker icon pulse */
+@keyframes speaker-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-speaker-pulse {
+  animation: speaker-pulse 1s ease-in-out infinite;
+}

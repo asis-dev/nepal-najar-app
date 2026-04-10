@@ -24,9 +24,24 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
   const [error, setError] = useState<string | null>(null);
   const [routeReason, setRouteReason] = useState<string | null>(null);
   const [followUpPrompt, setFollowUpPrompt] = useState<string | null>(null);
+  const [followUpOptions, setFollowUpOptions] = useState<string[]>([]);
   const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [targetMemberId, setTargetMemberId] = useState('');
+  const [sessionId, setSessionId] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storageKey = `nr-task-router-session-${locale}`;
+    const existing = window.localStorage.getItem(storageKey);
+    if (existing) {
+      setSessionId(existing);
+      return;
+    }
+    const created = window.crypto?.randomUUID?.() || `router-${Date.now()}`;
+    window.localStorage.setItem(storageKey, created);
+    setSessionId(created);
+  }, [locale]);
 
   useEffect(() => {
     if (!authReady || !user) return;
@@ -36,24 +51,30 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
       .catch(() => setMembers([]));
   }, [authReady, user]);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!question.trim() || loading) return;
+  async function routeQuestion(nextQuestion: string) {
+    if (!nextQuestion.trim() || loading) return;
     setLoading(true);
     setError(null);
     setRouteReason(null);
     setFollowUpPrompt(null);
+    setFollowUpOptions([]);
     setServiceOptions([]);
     try {
       const response = await fetch('/api/me/service-tasks/from-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, locale, targetMemberId: targetMemberId || undefined }),
+        body: JSON.stringify({
+          question: nextQuestion,
+          locale,
+          sessionId,
+          targetMemberId: targetMemberId || undefined,
+        }),
       });
       const data = await response.json();
       if (data.serviceOptions?.length && (data.ambiguous || !response.ok)) {
         setRouteReason(data.routeReason || null);
         setFollowUpPrompt(data.followUpPrompt || null);
+        setFollowUpOptions(data.followUpOptions || []);
         setServiceOptions(data.serviceOptions || []);
         return;
       }
@@ -94,6 +115,7 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
         ]
       : [
           'Renew my driving license',
+          'I am not feeling well',
           'Book hospital appointment',
           'Pay my electricity bill',
           'What do I need for citizenship certificate?',
@@ -113,14 +135,14 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
           : "Don't hunt through categories. Describe the problem and Nepal Republic will route you to the right service and next step."}
       </p>
 
-      <form onSubmit={submit} className="mt-4 flex flex-col gap-3 md:flex-row">
+      <form onSubmit={(e) => { e.preventDefault(); routeQuestion(question); }} className="mt-4 flex flex-col gap-3 md:flex-row">
         <input
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder={
             locale === 'ne'
               ? 'जस्तै: लाइसेन्स नवीकरण गर्नुपर्‍यो, बिर अस्पतालमा समय चाहियो, NEA बिल तिर्नुपर्‍यो'
-              : 'Example: renew my license, book a hospital appointment, pay my NEA bill'
+              : 'Example: I am not feeling well, renew my license, book a hospital appointment'
           }
           className="flex-1 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-red-500 focus:outline-none"
         />
@@ -160,6 +182,24 @@ export function TaskRouter({ locale = 'en' }: { locale?: 'en' | 'ne' }) {
           )}
           {followUpPrompt && (
             <div className="mt-2 text-xs text-zinc-500">{followUpPrompt}</div>
+          )}
+          {followUpOptions.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {followUpOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                onClick={() => {
+                  const nextQuestion = `${question.trim()}. ${option}`.trim();
+                  setQuestion(nextQuestion);
+                  routeQuestion(nextQuestion);
+                }}
+                className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
+              >
+                {option}
+                </button>
+              ))}
+            </div>
           )}
           {serviceOptions.length > 0 && (
             <div className="mt-3 grid gap-2">

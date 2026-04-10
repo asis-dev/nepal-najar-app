@@ -1,0 +1,22 @@
+Nepal Republic — About This App (English Audio Script)
+======================================================
+
+Nepal Republic is an AI-powered citizen platform for Nepal.
+
+It stands between you and Nepal's government. You describe what you need — in plain language or voice — and AI handles the rest.
+
+Here's what it does:
+
+First, AI fills your forms. Whether it's a passport application, a driving license, a land registration, or a hospital referral — you tell us what you need, and AI identifies the right service from over 95 government services and fills out all the required forms for you.
+
+Second, your case gets routed to the right desk. Nepal Republic has mapped 58 government authorities — ministries, departments, municipalities, hospitals, courts, and universities — with 87 active routes. Your request goes directly to the office responsible for it.
+
+Third, every route has a deadline. From 1 hour for ambulance dispatch to 90 days for trademark registration. The system tracks these deadlines, warns when they're approaching, and escalates when authorities miss them.
+
+Fourth, government can respond directly. Authorities receive secure reply links — no login required on their side. They can approve, reject, update the status, or request more information. Every response is logged in your case history.
+
+On the other side of the platform, Nepal Republic tracks public accountability. 109 government promises are scored with letter grades from A to F. AI scans over 40,000 intelligence signals from 80 plus news sources, 17 YouTube channels, and social media. Daily intelligence briefs are published twice a day with audio in both English and Nepali.
+
+The result is one platform where you can get a passport, report a broken road, check if a minister kept a promise, and hear today's accountability brief — all without learning how the bureaucracy works.
+
+Nepal Republic. AI between you and your government.

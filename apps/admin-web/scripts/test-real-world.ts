@@ -479,7 +479,7 @@ const workflowTests = [
     const { status, json } = await fetchOk(`${BASE}/api/services/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'I need a passport' }),
+      body: JSON.stringify({ question: 'I need a passport' }),
     });
     // May need auth or may work publicly
     assert(status < 500, `Server error ${status}`);
@@ -490,7 +490,7 @@ const workflowTests = [
     const { status } = await fetchOk(`${BASE}/api/services/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'मलाई ड्राइभिङ लाइसेन्स चाहिन्छ' }),
+      body: JSON.stringify({ question: 'मलाई ड्राइभिङ लाइसेन्स चाहिन्छ' }),
     });
     assert(status < 500, `Server error ${status}`);
   }),
@@ -499,7 +499,7 @@ const workflowTests = [
     const { status } = await fetchOk(`${BASE}/api/services/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'I need to see a doctor' }),
+      body: JSON.stringify({ question: 'I need to see a doctor' }),
     });
     assert(status < 500, `Server error ${status}`);
   }),
@@ -650,23 +650,54 @@ const coverageTests = ALL_SERVICE_SLUGS.map((slug) =>
 // ║  SUITE 11: AUTHENTICATED USER FLOWS                       ║
 // ╚══════════════════════════════════════════════════════════════╝
 
+// Store full login response for cookie construction
+let authRefreshToken: string | null = null;
+
 async function fetchAuthed(
   url: string,
   opts?: RequestInit,
 ): Promise<{ status: number; body: string; json?: any; ok: boolean }> {
   if (!authToken) throw new Error('No auth token — login failed');
+  // Supabase SSR (@supabase/ssr) stores session as chunked cookies.
+  // Format: sb-<ref>-auth-token.0, sb-<ref>-auth-token.1, etc.
+  // Each chunk is base64url-encoded JSON of the session.
+  const projectRef = SUPABASE_URL.replace('https://', '').split('.')[0];
+  const baseName = `sb-${projectRef}-auth-token`;
+
+  // Build session object that Supabase SSR expects
+  const session = JSON.stringify({
+    access_token: authToken,
+    refresh_token: authRefreshToken || '',
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    user: { id: authUserId },
+  });
+
+  // Supabase SSR chunks at ~3180 chars; our session is usually <1 chunk
+  const encoded = Buffer.from(session).toString('base64url');
+  const CHUNK_SIZE = 3180;
+  const chunks: string[] = [];
+  for (let i = 0; i < encoded.length; i += CHUNK_SIZE) {
+    chunks.push(encoded.slice(i, i + CHUNK_SIZE));
+  }
+
+  const cookieParts = chunks.map((chunk, i) => `${baseName}.${i}=${chunk}`);
+  const cookieStr = cookieParts.join('; ');
+
   return fetchOk(url, {
     ...opts,
     headers: {
       ...(opts?.headers as any),
       Authorization: `Bearer ${authToken}`,
       apikey: SUPABASE_ANON_KEY,
+      Cookie: cookieStr,
     },
   });
 }
 
-const authTests = [
-  defineTest('Login with test user via Supabase auth', async () => {
+// Login runs FIRST, separately, before all other auth tests
+const loginTest = defineTest('Login with test user via Supabase auth', async () => {
     if (!TEST_EMAIL || !TEST_PASSWORD) throw new Error('No TEST_EMAIL / TEST_PASSWORD provided');
 
     const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -681,10 +712,12 @@ const authTests = [
     assert(res.ok, `Login failed: ${data?.error_description || data?.msg || res.status}`);
     assert(!!data.access_token, 'No access_token in response');
     authToken = data.access_token;
+    authRefreshToken = data.refresh_token || null;
     authUserId = data.user?.id || null;
     if (VERBOSE) console.log('    User ID:', authUserId, 'Email:', data.user?.email);
-  }),
+  });
 
+const authTests = [
   defineTest('GET /api/me/profile returns user profile', async () => {
     const { status, json } = await fetchAuthed(`${BASE}/api/me/profile`);
     assert(status === 200, `Status ${status}`);
@@ -734,7 +767,7 @@ const authTests = [
     const { status, json } = await fetchAuthed(`${BASE}/api/me/service-tasks/from-query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'I need a passport', locale: 'en' }),
+      body: JSON.stringify({ question: 'I need a passport', locale: 'en' }),
     });
     assert(status < 500, `Server error: ${status}`);
     if (VERBOSE && json) console.log('    AI response:', JSON.stringify(json).slice(0, 300));
@@ -744,7 +777,7 @@ const authTests = [
     const { status, json } = await fetchAuthed(`${BASE}/api/me/service-tasks/from-query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'मलाई नागरिकता चाहिन्छ', locale: 'ne' }),
+      body: JSON.stringify({ question: 'मलाई नागरिकता चाहिन्छ', locale: 'ne' }),
     });
     assert(status < 500, `Server error: ${status}`);
     if (VERBOSE && json) console.log('    AI response:', JSON.stringify(json).slice(0, 300));
@@ -780,7 +813,7 @@ const authTests = [
     const { status, json } = await fetchAuthed(`${BASE}/api/services/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'How do I pay my land tax?' }),
+      body: JSON.stringify({ question: 'How do I pay my land tax?' }),
     });
     assert(status < 500, `Server error: ${status}`);
     if (VERBOSE && json) console.log('    Ask result:', JSON.stringify(json).slice(0, 200));
@@ -826,7 +859,7 @@ const authTests = [
     const { status: s1, json: j1 } = await fetchAuthed(`${BASE}/api/me/service-tasks/from-query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'My land ownership papers are wrong', locale: 'en' }),
+      body: JSON.stringify({ question: 'My land ownership papers are wrong', locale: 'en' }),
     });
     assert(s1 < 500, `Turn 1: ${s1}`);
     if (VERBOSE) console.log('    Turn 1:', JSON.stringify(j1).slice(0, 200));
@@ -835,7 +868,7 @@ const authTests = [
     const { status: s2, json: j2 } = await fetchAuthed(`${BASE}/api/me/service-tasks/from-query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'I need to do naam saari (land mutation)', locale: 'en' }),
+      body: JSON.stringify({ question: 'I need to do naam saari (land mutation)', locale: 'en' }),
     });
     assert(s2 < 500, `Turn 2: ${s2}`);
     if (VERBOSE) console.log('    Turn 2:', JSON.stringify(j2).slice(0, 200));
@@ -884,7 +917,14 @@ async function main() {
 
   // Authenticated tests — only if credentials provided
   if (TEST_EMAIL && TEST_PASSWORD) {
-    await runSuite('11. Authenticated User Flows', authTests);
+    console.log('\n🔐 Authenticating...');
+    await runTest(loginTest);
+    if (authToken) {
+      await runSuite('11. Authenticated User Flows', authTests);
+    } else {
+      console.log('  ⚠ Login failed — skipping auth tests');
+      skipped += authTests.length;
+    }
   } else {
     console.log('\n📋 11. Authenticated User Flows (SKIPPED — no TEST_EMAIL/TEST_PASSWORD)');
     console.log('─'.repeat(60));

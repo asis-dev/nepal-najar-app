@@ -353,7 +353,7 @@ export async function GET(request: NextRequest) {
         >
           <span style={{ color: BELL_GOLD, fontWeight: 700 }}>nepalrepublic.org</span>
           <span>·</span>
-          <span>{lang === 'ne' ? 'नागरिक समस्या रिपोर्ट · वाचा ट्र्याक' : 'Report civic issues. Track promises. Verify truth.'}</span>
+          <span>{lang === 'ne' ? 'सेवा, ट्र्याकिङ, र सार्वजनिक सत्य' : 'Services, tracking, and public truth.'}</span>
         </div>
       </div>
     ),

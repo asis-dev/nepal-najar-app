@@ -38,7 +38,7 @@ const SECTION_THEMES: Record<string, SectionTheme> = {
   dashboard:   { accent: '#22d3ee', label: 'LIVE DASHBOARD', labelNe: 'लाइभ ड्यासबोर्ड', emoji: '🇳🇵', hook: 'Real-time government accountability', hookNe: 'रियल-टाइम सरकारी जवाफदेहिता' },
 };
 
-const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', label: '', labelNe: '', emoji: '🔔', hook: 'From street problems to national promises, one AI-powered, evidence-backed accountability platform.', hookNe: 'सडकका समस्या देखि राष्ट्रिय वाचासम्म, एउटै AI-संचालित, प्रमाण-आधारित जवाफदेहिता प्लेटफर्म।' };
+const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', label: '', labelNe: '', emoji: '🔔', hook: 'From everyday services to national accountability, AI-powered navigation for Nepal.', hookNe: 'दैनिक सेवाहरूदेखि राष्ट्रिय जवाफदेहितासम्म, नेपालको लागि AI-संचालित नेभिगेसन।' };
 
 // Status labels in both languages
 const STATUS_LABELS: Record<string, { en: string; ne: string }> = {
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
   const hookText = isNe ? theme.hookNe : theme.hook;
   const ctaTagline = isNe
     ? 'नागरिक समस्या रिपोर्ट · वाचा ट्र्याक · सत्य प्रमाणित'
-    : 'Report civic issues. Track promises. Verify truth.';
+    : 'Services, tracking, and public truth.';
   const progressLabel = isNe ? 'प्रगति' : 'PROGRESS';
 
   // Date stamp

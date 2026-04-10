@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
 import {
@@ -17,6 +17,7 @@ import {
   type VaultDoc,
   type VaultDocType,
 } from '@/lib/vault/types';
+import CameraScanner, { type ScannedImage } from '@/components/public/vault/camera-scanner';
 
 export default function VaultPage() {
   const authReady = useAuth((s) => s._initialized);
@@ -25,6 +26,37 @@ export default function VaultPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState<VaultDocType | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanUploading, setScanUploading] = useState(false);
+  const [scanProgress, setScanProgress] = useState<string | null>(null);
+
+  const handleScanSave = useCallback(async (image: ScannedImage, meta: { docType: string; docTitle: string }) => {
+    setScanUploading(true);
+    setScanProgress('Uploading...');
+    try {
+      const formData = new FormData();
+      const file = new File([image.blob], `scan_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      formData.append('file', file);
+      formData.append('doc_type', meta.docType);
+      formData.append('doc_title', meta.docTitle);
+
+      const res = await fetch('/api/vault/upload', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Upload failed');
+      }
+
+      setScanProgress('Saved!');
+      setShowScanner(false);
+      reload();
+    } catch (e: any) {
+      setScanProgress(null);
+      setError(e.message || 'Upload failed');
+    } finally {
+      setScanUploading(false);
+      setTimeout(() => setScanProgress(null), 2000);
+    }
+  }, []);
 
   async function reload() {
     setLoading(true);
@@ -148,6 +180,33 @@ export default function VaultPage() {
       {showAdd && (
         <AddDocModal docType={showAdd} onClose={() => setShowAdd(null)} onSaved={() => { setShowAdd(null); reload(); }} />
       )}
+
+      {showScanner && (
+        <CameraScanner
+          onSave={handleScanSave}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
+      {/* Upload progress toast */}
+      {scanProgress && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-100 shadow-xl">
+          {scanProgress}
+        </div>
+      )}
+
+      {/* Floating Action Button — Scan */}
+      <button
+        onClick={() => setShowScanner(true)}
+        disabled={scanUploading}
+        className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 active:bg-red-700 text-white shadow-lg shadow-red-600/30 flex items-center justify-center transition-all disabled:bg-zinc-600"
+        aria-label="Scan document"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      </button>
     </div>
   );
 }

@@ -74,6 +74,14 @@ const PUBLIC_PREFIXES = [
   '/api/social-post',
   '/complaints',
   '/moderation-policy',
+  '/onboarding',
+  '/api/onboarding',
+  '/partner',
+  '/api/partner-reply',
+  '/api/services',
+  '/api/payments/esewa',
+  '/api/payments/khalti',
+  '/api/payments/initiate',
 ];
 
 // Dashboard routes that require admin auth
@@ -97,6 +105,8 @@ const DASHBOARD_PREFIXES = [
   '/leadership',
   '/moderation',
   '/submissions',
+  '/pilot',
+  '/service-ops',
 ];
 
 function applySecurityHeaders(response: NextResponse, request: NextRequest): NextResponse {
@@ -105,11 +115,24 @@ function applySecurityHeaders(response: NextResponse, request: NextRequest): Nex
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set(
     'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(self), interest-cohort=()'
+    'camera=(), microphone=(self), geolocation=(self), interest-cohort=()'
   );
   if (request.nextUrl.protocol === 'https:') {
     response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
+  response.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://*.supabase.co",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com",
+      "font-src 'self'",
+      "media-src 'self' https://*.supabase.co",
+      "frame-ancestors 'none'",
+    ].join('; ')
+  );
   return response;
 }
 

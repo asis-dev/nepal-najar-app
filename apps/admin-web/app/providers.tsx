@@ -11,19 +11,30 @@ import { useWatchlistStore, useUserPreferencesStore } from '@/lib/stores/prefere
 import { CompareFab } from '@/components/public/compare-fab';
 import { OnboardingGate } from '@/components/public/onboarding/onboarding-gate';
 import { OnboardingChecklist } from '@/components/public/onboarding/onboarding-checklist';
+import { OfflineIndicator } from '@/components/public/services/offline-indicator';
 
 /** Initialize Supabase auth session on app load + merge preferences on sign-in */
 function AuthInitializer() {
   const initialize = useAuth((s) => s.initialize);
   const subscribed = useRef(false);
 
+  const defer = (task: () => Promise<void> | void) => {
+    setTimeout(() => {
+      void Promise.resolve(task()).catch(() => {});
+    }, 0);
+  };
+
   useEffect(() => {
     initialize().then(() => {
       // If user is already logged in on page load, sync from server
       const { isAuthenticated } = useAuth.getState();
       if (isAuthenticated) {
-        useWatchlistStore.getState().syncFromServer();
-        useUserPreferencesStore.getState().syncFromServer();
+        defer(async () => {
+          await Promise.allSettled([
+            useWatchlistStore.getState().syncFromServer(),
+            useUserPreferencesStore.getState().syncFromServer(),
+          ]);
+        });
       }
     });
 
@@ -37,12 +48,13 @@ function AuthInitializer() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          // Merge local preferences with cloud on sign-in
-          await mergeOnLogin(session.user.id);
-          // Sync watchlist from dedicated user_watchlist table
-          useWatchlistStore.getState().syncFromServer();
-          // Sync unified preferences (fetches server prefs, merges with local, pushes back)
-          useUserPreferencesStore.getState().syncFromServer();
+          defer(async () => {
+            await Promise.allSettled([
+              mergeOnLogin(session.user.id),
+              useWatchlistStore.getState().syncFromServer(),
+              useUserPreferencesStore.getState().syncFromServer(),
+            ]);
+          });
         }
       },
     );
@@ -77,6 +89,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <OnboardingGate />
         <OnboardingChecklist />
         <CompareFab />
+        <OfflineIndicator />
       </I18nProvider>
     </QueryClientProvider>
   );

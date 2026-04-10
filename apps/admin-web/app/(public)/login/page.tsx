@@ -1,20 +1,39 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { Suspense, useEffect, useMemo, useState, FormEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useI18n } from '@/lib/i18n';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="public-page flex items-center justify-center px-4 py-16"><div className="text-zinc-400">Loading…</div></div>}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const { signInWithPassword, isLoading, error, clearError } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const next = useMemo(() => {
+    const candidate = searchParams.get('next') || searchParams.get('from') || '/me';
+    if (!candidate.startsWith('/')) return '/me';
+    if (candidate.startsWith('//')) return '/me';
+    return candidate;
+  }, [searchParams]);
+
+  useEffect(() => {
+    router.prefetch(next);
+  }, [next, router]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,7 +41,8 @@ export default function LoginPage() {
 
     try {
       await signInWithPassword(email, password);
-      router.push('/');
+      router.replace(next);
+      router.refresh();
     } catch {
       // error is set in the store
     }
@@ -122,6 +142,16 @@ export default function LoginPage() {
             {t('auth.noAccount')}{' '}
             <Link href="/signup" className="font-medium text-primary-400 transition-colors hover:text-primary-300">
               {t('auth.signUp')}
+            </Link>
+          </div>
+
+          {/* Voice onboarding link */}
+          <div className="mt-4 text-center">
+            <Link
+              href="/onboarding"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#003893]/10 px-4 py-2.5 text-sm font-medium text-[#003893] transition-colors hover:bg-[#003893]/20 dark:bg-[#003893]/20 dark:text-blue-300 dark:hover:bg-[#003893]/30"
+            >
+              🎤 Sign up with your phone / फोनबाट खाता बनाउनुहोस्
             </Link>
           </div>
         </div>

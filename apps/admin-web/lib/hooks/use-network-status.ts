@@ -1,0 +1,45 @@
+'use client';
+
+import { useEffect, useState, useCallback, useRef } from 'react';
+
+interface NetworkStatus {
+  isOnline: boolean;
+  wasOffline: boolean;
+}
+
+export function useNetworkStatus(): NetworkStatus {
+  const [isOnline, setIsOnline] = useState(true);
+  const [wasOffline, setWasOffline] = useState(false);
+  const initializedRef = useRef(false);
+
+  const handleOnline = useCallback(() => {
+    setIsOnline(true);
+  }, []);
+
+  const handleOffline = useCallback(() => {
+    setIsOnline(false);
+    setWasOffline(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Set initial state from navigator
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      const online = navigator.onLine;
+      setIsOnline(online);
+      if (!online) setWasOffline(true);
+    }
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [handleOnline, handleOffline]);
+
+  return { isOnline, wasOffline };
+}

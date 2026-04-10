@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
 
   const question = (body?.question || '').toString().slice(0, 500);
   const locale = body?.locale === 'ne' ? 'ne' : 'en';
+  const sessionId = typeof body?.sessionId === 'string' ? body.sessionId.slice(0, 120) : null;
 
   if (!question.trim()) {
     return NextResponse.json({ error: 'question required' }, { status: 400 });
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await ask(question, locale);
+    const result = await ask(question, locale, sessionId);
     return NextResponse.json({
       answer: result.answer,
       cached: result.cached,
@@ -58,6 +59,9 @@ export async function POST(req: NextRequest) {
       routeMode: result.routeMode,
       routeReason: result.routeReason,
       followUpPrompt: result.followUpPrompt,
+      followUpOptions: result.followUpOptions,
+      intakeState: result.intakeState,
+      intakeSlots: result.intakeSlots,
       topService: result.topService
         ? {
             id: result.topService.id,

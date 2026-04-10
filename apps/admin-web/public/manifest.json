@@ -1,7 +1,7 @@
 {
   "name": "Nepal Republic — नेपाल रिपब्लिक",
   "short_name": "Nepal Republic",
-  "description": "Report civic issues. Track promises. Verify truth.",
+  "description": "AI-powered citizen platform for Nepal. Services, tracking, and public truth.",
   "id": "/",
   "start_url": "/",
   "display": "standalone",

@@ -103,14 +103,24 @@ function expandTokens(tokens: string[]): string[] {
 }
 
 function includesAny(haystack: string, tokens: string[]): boolean {
-  return tokens.some((token) => haystack.includes(token));
+  return tokens.some((token) => hasWholeWord(haystack, token));
+}
+
+function hasWholeWord(haystack: string, word: string): boolean {
+  // For very short tokens (2-3 chars), require word boundary to avoid substring matches
+  // e.g., "tax" in "taxi" should NOT match
+  if (word.length <= 4) {
+    const re = new RegExp(`(?:^|\\s)${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`);
+    return re.test(` ${haystack} `);
+  }
+  return haystack.includes(word);
 }
 
 function scoreField(field: string, tokens: string[], weight: number): number {
   if (!field) return 0;
   let score = 0;
   for (const token of tokens) {
-    if (field.includes(token)) score += weight;
+    if (hasWholeWord(field, token)) score += weight;
   }
   return score;
 }

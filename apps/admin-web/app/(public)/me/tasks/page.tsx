@@ -5,6 +5,25 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
 import type { ServiceTaskRecord, ServiceTaskStatus } from '@/lib/services/task-types';
 import { TaskHistory } from '@/components/public/services/task-history';
+import { TaskIntegrations } from '@/components/public/services/task-integrations';
+import { TaskConversation } from '@/components/public/services/task-conversation';
+import { PortalLinkCard } from '@/components/public/services/portal-link-card';
+
+type ApplicationRecord = {
+  id: string;
+  service_slug: string;
+  service_title: string;
+  reference_no?: string;
+  office_name?: string;
+  portal_url?: string;
+  amount_npr?: number;
+  paid?: boolean;
+  expected_on?: string;
+  completed_on?: string;
+  status: string;
+  notes?: string;
+  updated_at: string;
+};
 
 const STATUS_LABELS: Record<ServiceTaskStatus, string> = {
   intake: 'Intake',
@@ -21,14 +40,20 @@ export default function MyServiceTasksPage() {
   const authReady = useAuth((s) => s._initialized);
   const user = useAuth((s) => s.user);
   const [tasks, setTasks] = useState<ServiceTaskRecord[]>([]);
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function reload() {
     setLoading(true);
     try {
-      const response = await fetch('/api/me/service-tasks');
-      const data = await response.json();
-      setTasks(data.tasks || []);
+      const [taskResponse, appResponse] = await Promise.all([
+        fetch('/api/me/service-tasks'),
+        fetch('/api/me/applications'),
+      ]);
+      const taskData = await taskResponse.json();
+      const appData = await appResponse.json();
+      setTasks(taskData.tasks || []);
+      setApplications(appData.applications || []);
     } finally {
       setLoading(false);
     }
@@ -46,6 +71,11 @@ export default function MyServiceTasksPage() {
     active: tasks.filter((task) => task.status !== 'completed'),
     completed: tasks.filter((task) => task.status === 'completed'),
   }), [tasks]);
+
+  const groupedApplications = useMemo(() => ({
+    active: applications.filter((app) => !['completed', 'cancelled', 'rejected'].includes(app.status)),
+    completed: applications.filter((app) => ['completed', 'cancelled', 'rejected'].includes(app.status)),
+  }), [applications]);
 
   async function advance(task: ServiceTaskRecord) {
     const nextStep = Math.min(task.totalSteps, task.currentStep + 1);
@@ -84,8 +114,8 @@ export default function MyServiceTasksPage() {
   if (!user) {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold text-white mb-2">My Tasks</h1>
-        <p className="text-zinc-400 mb-6">Sign in to track service workflows, next actions, and document readiness.</p>
+        <h1 className="text-2xl font-bold text-white mb-2">My Cases</h1>
+        <p className="text-zinc-400 mb-6">Sign in to track service workflows, applications, next actions, and document readiness.</p>
         <Link href="/login?next=/me/tasks" className="inline-flex rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-500">
           Sign in
         </Link>
@@ -97,15 +127,15 @@ export default function MyServiceTasksPage() {
     <div className="max-w-4xl mx-auto px-4 py-10">
       <div className="mb-8">
         <div className="text-xs uppercase tracking-wide text-red-400 font-bold mb-2">Action layer</div>
-        <h1 className="text-3xl md:text-4xl font-black text-white">My Tasks</h1>
+        <h1 className="text-3xl md:text-4xl font-black text-white">My Cases</h1>
         <p className="text-zinc-400 mt-2">
-          Continue service workflows without hunting through categories. Your next step, missing documents, and progress stay here.
+          Service workflows, tracked applications, next actions, missing documents, and progress now live together here.
         </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3 mb-8">
-        <StatCard label="Active" value={grouped.active.length} />
-        <StatCard label="Completed" value={grouped.completed.length} />
+        <StatCard label="Active" value={grouped.active.length + groupedApplications.active.length} />
+        <StatCard label="Completed" value={grouped.completed.length + groupedApplications.completed.length} />
         <StatCard label="Blocked" value={grouped.active.filter((task) => task.status === 'blocked').length} />
       </div>
 
@@ -193,6 +223,58 @@ export default function MyServiceTasksPage() {
                   </div>
                 </div>
 
+                {task.resolutionPlan && (
+                  <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+                    <div className="text-xs uppercase tracking-wide text-cyan-300 mb-2">Resolution path</div>
+                    <div className="text-sm font-medium text-white">{task.resolutionPlan.headline}</div>
+                    {task.resolutionPlan.citizenContext && (
+                      <div className="mt-2 text-xs text-cyan-100/80">{task.resolutionPlan.citizenContext}</div>
+                    )}
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-1">Your next move</div>
+                        <div className="text-sm text-zinc-200">{task.resolutionPlan.citizenAction}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-1">Department side</div>
+                        <div className="text-sm text-zinc-300">{task.resolutionPlan.departmentAction}</div>
+                      </div>
+                    </div>
+                    {task.resolutionPlan.blockers.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-1">What is blocking resolution</div>
+                        <div className="flex flex-wrap gap-2">
+                          {task.resolutionPlan.blockers.map((blocker) => (
+                            <span
+                              key={blocker}
+                              className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200"
+                            >
+                              {blocker}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-4 rounded-xl bg-zinc-800/60 p-3">
+                  <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Routed to</div>
+                  <div className="text-sm text-zinc-200">
+                    {task.assignedDepartmentName || 'Routing not assigned yet'}
+                  </div>
+                  <div className="mt-1 text-xs text-zinc-400">
+                    {[task.assignedRoleTitle, task.assignedOfficeName, task.assignedAuthorityLevel]
+                      .filter(Boolean)
+                      .join(' · ') || 'The app will use this route to identify the right office or desk.'}
+                  </div>
+                  {task.routingReason && (
+                    <div className="mt-2 text-xs text-zinc-500">
+                      {task.routingReason}
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <div className="rounded-xl bg-zinc-800/60 p-3">
                     <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Workflow mode</div>
@@ -217,6 +299,12 @@ export default function MyServiceTasksPage() {
                 <div className="mt-4">
                   <TaskHistory taskId={task.id} />
                 </div>
+
+                <TaskConversation taskId={task.id} />
+
+                <TaskIntegrations taskId={task.id} />
+
+                <PortalLinkCard serviceSlug={task.serviceSlug} compact />
 
                 {task.actions.length > 0 && (
                   <div className="mt-4 rounded-xl bg-zinc-800/60 p-3">
@@ -264,6 +352,85 @@ export default function MyServiceTasksPage() {
         )}
       </section>
 
+      <section className="mb-10" id="tracked-applications">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-white">Tracked applications</h2>
+            <p className="text-sm text-zinc-500 mt-1">
+              Manual and reference-based cases are kept here alongside the newer workflow engine.
+            </p>
+          </div>
+          <Link href="/me/applications" className="text-sm text-red-400 hover:underline">
+            Open application editor
+          </Link>
+        </div>
+
+        {applications.length === 0 ? (
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-zinc-400">
+            No tracked applications yet. Manual applications and portal-based follow-ups will show up here.
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {groupedApplications.active.map((app) => (
+              <div key={app.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
+                      Application tracker
+                    </div>
+                    <div className="font-semibold text-zinc-100">{app.service_title}</div>
+                    <div className="mt-1 text-sm text-zinc-400">
+                      {app.reference_no ? `Reference: ${app.reference_no}` : 'Reference number not added yet'}
+                    </div>
+                    {app.office_name && (
+                      <div className="mt-1 text-sm text-zinc-500">{app.office_name}</div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300">
+                      {app.status.replace(/_/g, ' ')}
+                    </div>
+                    {typeof app.amount_npr === 'number' && (
+                      <div className="mt-2 text-xs text-zinc-500">
+                        NPR {app.amount_npr.toLocaleString()}
+                        {app.paid ? ' · paid' : ' · unpaid'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-zinc-500">
+                  {app.expected_on && <span>Expected: {new Date(app.expected_on).toLocaleDateString()}</span>}
+                  {app.completed_on && <span>Completed: {new Date(app.completed_on).toLocaleDateString()}</span>}
+                  <span>Updated: {new Date(app.updated_at).toLocaleDateString()}</span>
+                </div>
+
+                {app.notes && <div className="mt-2 text-xs text-zinc-500 italic">{app.notes}</div>}
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {app.portal_url && (
+                    <a
+                      href={app.portal_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+                    >
+                      Open portal
+                    </a>
+                  )}
+                  <Link
+                    href="/me/applications"
+                    className="inline-flex items-center rounded-xl bg-zinc-800 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
+                  >
+                    Edit application
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {grouped.completed.length > 0 && (
         <section>
           <h2 className="text-xl font-bold text-white mb-4">Completed</h2>
@@ -277,6 +444,21 @@ export default function MyServiceTasksPage() {
                   </div>
                   <Link href={`/services/${task.serviceCategory}/${task.serviceSlug}`} className="text-sm text-red-400 hover:underline">
                     View service
+                  </Link>
+                </div>
+              </div>
+            ))}
+            {groupedApplications.completed.map((app) => (
+              <div key={app.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-zinc-100">{app.service_title}</div>
+                    <div className="text-sm text-zinc-500">
+                      {app.completed_on ? `Completed ${new Date(app.completed_on).toLocaleDateString()}` : `Status: ${app.status.replace(/_/g, ' ')}`}
+                    </div>
+                  </div>
+                  <Link href="/me/applications" className="text-sm text-red-400 hover:underline">
+                    View application
                   </Link>
                 </div>
               </div>

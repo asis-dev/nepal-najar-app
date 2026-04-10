@@ -71,7 +71,7 @@ function withUtm(url: string, platform: SharePlatform): string {
     const u = new URL(url);
     u.searchParams.set('utm_source', platform);
     u.searchParams.set('utm_medium', 'social');
-    u.searchParams.set('utm_campaign', 'share');
+    u.searchParams.set('utm_campaign', 'community_share');
     return u.toString();
   } catch {
     return url;

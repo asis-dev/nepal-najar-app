@@ -13,6 +13,7 @@ import {
 } from '@/lib/hooks/use-promises';
 import { useTrending } from '@/lib/hooks/use-trending';
 import { useWatchlistStore, usePreferencesStore, useUserPreferencesStore } from '@/lib/stores/preferences';
+import { HeroVoiceSearch } from '@/components/public/voice/hero-voice-search';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { isPublicCommitment } from '@/lib/data/commitments';
 import { computeGhantiScore, GRADE_COLORS, shouldShowGrade } from '@/lib/data/ghanti-score';
@@ -23,7 +24,6 @@ import { useContradictions } from '@/lib/hooks/use-contradictions';
 import { UnifiedDailyBrief } from '@/components/public/landing/unified-daily-brief';
 import { PulseBar } from '@/components/public/landing/pulse-bar';
 import { ActiveTasksOverview } from '@/components/public/services/active-tasks-overview';
-import { TaskRouter } from '@/components/public/services/task-router';
 
 /* ═══════════════════════════════════════════
    Constants
@@ -253,14 +253,10 @@ export function DashboardIsland() {
         {/* ── Hero ── */}
         <div className="mb-3 md:mb-6 text-center">
           <h1 className="text-base sm:text-xl md:text-2xl font-bold tracking-tight text-white leading-tight">
-            {locale === 'ne'
-              ? t('home.heroTitle')
-              : 'Report civic issues. Track promises. Verify truth.'}
+            {t('home.heroTitle')}
           </h1>
           <p className="mt-1.5 text-[13px] text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            {locale === 'ne'
-              ? t('brand.heroSubheadline')
-              : 'From street problems to national promises, one AI-powered, evidence-backed accountability platform.'}
+            {t('brand.heroSubheadline')}
           </p>
 
           {/* Stats strip */}
@@ -295,10 +291,6 @@ export function DashboardIsland() {
               )}
             </div>
           )}
-        </div>
-
-        <div className="mb-3 md:mb-5">
-          <TaskRouter locale={locale} />
         </div>
 
         {/* ── Listen about app + Report Civic Issue — single row ── */}
@@ -337,6 +329,11 @@ export function DashboardIsland() {
             <AlertTriangle className="h-4 w-4" />
             {locale === 'ne' ? 'नागरिक समस्या दर्ता' : 'Report Civic Issue'}
           </Link>
+        </div>
+
+        {/* ── Voice-first search — below About / Report row ── */}
+        <div className="mt-4">
+          <HeroVoiceSearch />
         </div>
 
         {/* ── Scorecard Strip — compact ring + stats ── */}

@@ -2,6 +2,7 @@ import { DOC_TYPE_META, type VaultDoc, type VaultDocType } from '@/lib/vault/typ
 import type { Service } from './types';
 import type { ServiceTaskDocStatus, ServiceTaskRecord, ServiceTaskStatus } from './task-types';
 import { getWorkflowDefinition } from './workflow-definitions';
+import { buildTaskResolutionPlan } from './resolution-plan';
 
 const DOC_KEYWORDS: Array<{ type: VaultDocType; patterns: RegExp[] }> = [
   { type: 'citizenship', patterns: [/citizenship/i, /नागरिकता/] },
@@ -132,6 +133,19 @@ export function mapTaskRow(row: any): ServiceTaskRecord {
     milestones: row.milestones || [],
     actions: row.actions || [],
     actionState: row.action_state || {},
+    assignedDepartmentKey: row.assigned_department_key || null,
+    assignedDepartmentName: row.assigned_department_name || null,
+    assignedOfficeName: row.assigned_office_name || null,
+    assignedAuthorityLevel: row.assigned_authority_level || null,
+    assignedRoleTitle: row.assigned_role_title || null,
+    routingReason: row.routing_reason || null,
+    routingConfidence: typeof row.routing_confidence === 'number' ? row.routing_confidence : null,
+    queueState: row.queue_state || null,
+    waitingOnParty: row.waiting_on_party || null,
+    assistantIntake: row.answers?.assistant_intake || null,
+    utilityLookup: row.answers?.utility_lookup || null,
+    serviceForm: row.answers?.service_form || null,
+    resolutionPlan: buildTaskResolutionPlan(row),
     startedAt: row.started_at,
     lastActivityAt: row.last_activity_at,
     completedAt: row.completed_at,

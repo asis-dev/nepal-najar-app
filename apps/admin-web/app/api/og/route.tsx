@@ -30,10 +30,10 @@ const SECTION_THEMES: Record<string, SectionTheme> = {
   daily:       { accent: '#d946ef', emoji: '📡', label: 'DAILY BRIEF', labelNe: 'दैनिक ब्रिफ', tagline: 'AI-curated daily intelligence on Nepal', taglineNe: 'AI-संचालित दैनिक जानकारी' },
   'what-changed': { accent: '#a78bfa', emoji: '🧭', label: 'WHAT CHANGED', labelNe: 'के परिवर्तन भयो', tagline: 'Recent verified changes across the tracker', taglineNe: 'ट्र्याकरभरिका पछिल्ला प्रमाणित परिवर्तनहरू' },
   scorecard:   { accent: '#8b5cf6', emoji: '📊', label: 'SCORECARD', labelNe: 'स्कोरकार्ड', tagline: 'AI-scored government accountability', taglineNe: 'AI-स्कोर सरकारी जवाफदेहिता' },
-  dashboard:   { accent: '#22d3ee', emoji: '🇳🇵', label: 'LIVE DASHBOARD', labelNe: 'लाइभ ड्यासबोर्ड', tagline: 'From street problems to national promises, one AI-powered, evidence-backed accountability platform.', taglineNe: 'सडकका समस्या देखि राष्ट्रिय वाचासम्म, एउटै AI-संचालित, प्रमाण-आधारित जवाफदेहिता प्लेटफर्म।' },
+  dashboard:   { accent: '#22d3ee', emoji: '🇳🇵', label: 'LIVE DASHBOARD', labelNe: 'लाइभ ड्यासबोर्ड', tagline: 'From everyday services to national accountability, AI-powered navigation for Nepal.', taglineNe: 'दैनिक सेवाहरूदेखि राष्ट्रिय जवाफदेहितासम्म, नेपालको लागि AI-संचालित नेभिगेसन।' },
 };
 
-const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', emoji: '🔔', label: '', labelNe: '', tagline: 'From street problems to national promises, one AI-powered, evidence-backed accountability platform.', taglineNe: 'सडकका समस्या देखि राष्ट्रिय वाचासम्म, एउटै AI-संचालित, प्रमाण-आधारित जवाफदेहिता प्लेटफर्म।' };
+const DEFAULT_THEME: SectionTheme = { accent: '#22d3ee', emoji: '🔔', label: '', labelNe: '', tagline: 'From everyday services to national accountability, AI-powered navigation for Nepal.', taglineNe: 'दैनिक सेवाहरूदेखि राष्ट्रिय जवाफदेहितासम्म, नेपालको लागि AI-संचालित नेभिगेसन।' };
 
 const STATUS_LABELS: Record<string, { en: string; ne: string }> = {
   in_progress: { en: 'IN PROGRESS', ne: 'प्रगतिमा' },

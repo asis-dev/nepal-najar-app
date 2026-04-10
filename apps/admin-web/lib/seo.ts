@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 const SITE_NAME = 'Nepal Republic — नेपाल रिपब्लिक';
-const SITE_DESCRIPTION = 'From street problems to national promises, one AI-powered, evidence-backed accountability platform.';
+const SITE_DESCRIPTION = 'From everyday services to national accountability, AI-powered navigation for Nepal.';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nepalrepublic.org';
 
 export function createMetadata(overrides?: {
@@ -82,7 +82,7 @@ export function governmentServiceSchema() {
     '@type': 'GovernmentService',
     name: 'Nepal Republic',
     alternateName: 'नेपाल रिपब्लिक',
-    description: 'Report civic issues. Track promises. Verify truth. AI-powered civic intelligence on people\'s issues and government promises, backed by evidence and accountability assessment.',
+    description: 'AI-powered citizen platform for Nepal. From everyday services to national accountability, AI-powered navigation for Nepal.',
     url: SITE_URL,
     serviceArea: {
       '@type': 'Country',
@@ -103,7 +103,7 @@ export function webSiteSchema() {
     name: 'Nepal Republic',
     alternateName: ['नेपाल रिपब्लिक', 'Nepal Republic Civic Intelligence'],
     url: SITE_URL,
-    description: 'Report civic issues. Track promises. Verify truth. AI-powered civic intelligence on people\'s issues and government promises, backed by evidence and accountability assessment.',
+    description: 'AI-powered citizen platform for Nepal. From everyday services to national accountability, AI-powered navigation for Nepal.',
     inLanguage: ['en', 'ne'],
     potentialAction: {
       '@type': 'SearchAction',

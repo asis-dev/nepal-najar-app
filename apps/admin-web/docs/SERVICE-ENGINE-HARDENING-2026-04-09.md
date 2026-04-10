@@ -206,6 +206,43 @@ Result:
 
 - trending can still serve fresh/fallback data without spamming logs about the missing snapshot table
 
+## Iteration 10: Structured intake for hard human language
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/ai.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/services/ask/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/me/service-tasks/from-query/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/ai.test.ts`
+
+Changes:
+
+- added a structured `intakeState` to the backend AI response:
+  - domain
+  - subject
+  - urgency
+  - care need
+- symptom-led health requests now stay conversational instead of over-routing
+- child health requests bias Kanti higher, but still ask follow-up questions unless the user explicitly names a hospital
+- pregnancy / maternity requests now get maternity-specific reasoning, follow-up prompts, and options
+- auto-route decisions now use the original user phrasing, not only the compressed routing query
+- bumped cache version so stale overconfident routes do not linger
+
+Result:
+
+- `I am not feeling well`
+  - stays ambiguous
+  - asks a health triage style follow-up
+- `My child has fever`
+  - stays ambiguous
+  - prioritizes Kanti and pediatric follow-ups
+- `My father needs a doctor today`
+  - stays ambiguous
+  - asks a parent-specific follow-up
+- `Need pregnancy checkup appointment`
+  - stays ambiguous
+  - prioritizes maternity care and asks whether the need is ANC, delivery, or specialist care
+
 ## Current Routing Behavior
 
 Validated examples:
@@ -219,6 +256,252 @@ Validated examples:
   - auto-routes to Driver’s License Renewal
 - `pay my nea bill`
   - should auto-route to NEA bill payment after the explicit-provider hardening pass
+
+## Iteration 11: Short-lived conversational memory for intake
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/ai.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/services/ask/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/me/service-tasks/from-query/route.ts`
+
+Changes:
+
+- kept recent intake context attached to task creation and assistant follow-up
+- made routing decisions less brittle across multi-turn service conversations
+- preserved assistant-side structure so later workflow surfaces can continue from the same case context
+
+Result:
+
+- service intake feels less stateless
+- the backend can carry user intent forward into the task instead of starting over every turn
+
+## Iteration 12: Task-backed execution for services, not just reading
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/me/service-tasks/[id]/form-state/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/form/universal-form.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/(public)/services/[category]/[slug]/apply/page.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-types.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-engine.ts`
+
+Changes:
+
+- connected the in-app forms to the service task instead of keeping them isolated
+- form drafts now save into the case
+- final submit now advances the task state, progress, and activity log
+- users can import scanned documents into the form and reuse extracted identity fields
+
+Result:
+
+- the app now acts like an operator workspace for the citizen
+- users can start, pause, scan, resume, and submit while keeping the whole trail on one task
+
+## Iteration 13: Secure payment profile and approval-gated payments
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/payment-profile.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/me/payment-profile/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/payments/initiate/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/payment-checkout.tsx`
+
+Changes:
+
+- added a stored payment preference profile using masked wallet metadata only
+- made payment launch require explicit user approval when configured
+- attached payment preferences and receipt flow back into the service experience
+
+Result:
+
+- users can move faster on repeat payments
+- the payment flow stays safer and more explicit
+
+## Iteration 14: Shared execution panels across departments
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/service-execution-panel.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/transport-execution-panel.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/(public)/services/[category]/[slug]/page.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/workflow-definitions.ts`
+
+Changes:
+
+- replaced the transport-only execution surface with a reusable task action panel pattern
+- service detail pages can now show a live execution surface for non-health departments whenever a workflow is defined
+- added richer workflow milestones and action checkpoints for:
+  - passports
+  - citizenship variants
+  - PAN and tax flows
+  - civil registration flows
+  - police report follow-up
+  - land and ownership transfer
+  - company and local business registration
+
+Result:
+
+- more services now behave like guided case execution, not static instructions
+- users can save real progress markers such as submissions, payments, office visits, and issuance references
+
+## Validation
+
+Validated in this pass:
+
+- `npx tsc -p /Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/tsconfig.json --noEmit`
+- `npx jest --config /Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/jest.config.js /Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/ai.test.ts /Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-store.test.ts /Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/resolution-plan.test.ts /Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/payment-profile.test.ts --runInBand`
+
+Note:
+
+- running Jest from the repo root hit unrelated workspace-collision issues from `.claude/worktrees`
+- running with the app-local Jest config in `apps/admin-web` passed cleanly
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/ai.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/services/ask/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/me/service-tasks/from-query/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/service-chat.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/task-router.tsx`
+
+Changes:
+
+- added browser-backed `sessionId` support for the service chat and task router
+- added short-lived backend intake session memory
+- follow-up prompts can now understand short replies like:
+  - `for my father`
+  - `for my child`
+  - `yes, Kanti`
+- cache is bypassed when active intake memory exists, so follow-up turns do not get stale generic answers
+
+Result:
+
+- the assistant can carry context across multiple turns instead of treating each message like a fresh cold start
+
+## Iteration 12: Slot-aware follow-up questions without breaking health triage
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/ai.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/ai.test.ts`
+
+Changes:
+
+- added structured `intakeSlots` for:
+  - health hospital hint / specialty hint / visit goal
+  - utility provider / account-known / amount-known
+  - license intent
+  - citizenship intent
+  - passport intent
+- added missing-slot detection so the assistant can ask the next best narrowing question
+- preserved stronger symptom-led health triage prompts ahead of generic slot prompts
+
+Result:
+
+- `I am not feeling well`
+  - still gets care-oriented health triage
+- `for my father`
+  - becomes a parent-health follow-up instead of a generic route jump
+- utility, license, citizenship, and passport flows now ask more targeted narrowing questions
+
+## Iteration 13: Persist assistant understanding into service tasks
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-store.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-store.test.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-engine.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-types.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/me/service-tasks/from-query/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/advisor/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/me/service-tasks/[id]/hospital-appointment-request/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/hospital-appointment-panel.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/utility-bill-panel.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/integrations/hospitals/adapter.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/integrations/hospitals/adapter.test.ts`
+
+Changes:
+
+- new tasks and resumed tasks now store compact assistant context in `answers`:
+  - `assistant_intake`
+  - `assistant_session_id`
+  - `assistant_intake_version`
+  - `source_query`
+- task records now expose assistant intake and saved utility lookup state back to the frontend
+- hospital appointment requests can fall back to assistant-derived recommendations instead of requiring fully manual restatement
+- hospital panel now recommends specialty and window from the saved intake context
+- utility panel now rehydrates saved account details and reflects the assistant’s provider understanding
+
+Result:
+
+- the AI no longer “forgets” what it already understood once a task is created
+- service panels can become progressively smarter without inventing a second inference layer
+- hospital and utility workflows now feel more continuous from routing into execution
+
+## Iteration 14: Shared resolution plans for citizens and departments
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/resolution-plan.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/resolution-plan.test.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-engine.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-types.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/(public)/me/tasks/page.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/ops/service-tasks/inbox/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/ops/service-tasks/[id]/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/(dashboard)/service-ops/page.tsx`
+
+Changes:
+
+- added a derived `resolutionPlan` for every service task
+- the plan normalizes:
+  - who owns the next move
+  - what is blocking progress
+  - what the citizen should do next
+  - what the department should do next
+  - what the provider still needs to return
+- citizen task pages now show a plain-language resolution path instead of only status chips and next action
+- service-ops inbox and case detail views now expose the same resolution plan for staff
+
+Result:
+
+- service requests now read more like real case management and less like disconnected workflow fragments
+- both sides can see a clearer path to resolution using the same underlying logic
+
+## Iteration 15: Universal non-health execution base
+
+Implemented in:
+
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/components/public/services/form/universal-form.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/(public)/services/[category]/[slug]/apply/page.tsx`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/app/api/me/service-tasks/[id]/form-state/route.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-types.ts`
+- `/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/lib/services/task-engine.ts`
+
+Changes:
+
+- universal `/apply` forms are now connected to active service tasks instead of living only as separate drafts
+- form draft state is written back into `service_tasks.answers.service_form`
+- completed forms now push task progress forward and record a case event
+- added generic document scan-to-import support for universal forms using the existing OCR route
+- scanned documents can now populate visible fields like:
+  - citizenship number
+  - passport number
+  - driving license number
+  - PAN
+  - national ID
+  - voter ID
+- apply pages now pass the service slug explicitly so the form stays tied to the correct case
+
+Result:
+
+- non-health departments now share one stronger execution pattern:
+  - autofill from identity profile
+  - draft sync
+  - scan-assisted input
+  - task-backed completion
+- transport, identity, tax, business, land, education, legal, labor, banking, and local-government services all benefit from the same base without waiting for custom UIs first
 
 ## Validation
 
@@ -253,7 +536,7 @@ These are not all guaranteed to expose clean public APIs for every workflow. In 
 
 1. Real provider confirmations
 
-- payment receipts are still mostly user-confirmed
+- payment gateway verification exists for eSewa and Khalti, and NEA-style payment tasks can now be auto-completed from verified callbacks
 - hospital bookings are not synced from provider systems
 - DoTM booking / payment / delivery status are not integrated end-to-end
 

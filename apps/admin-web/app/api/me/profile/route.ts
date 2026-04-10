@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { normalizeAppRole, type AppRole } from '@/lib/auth/roles';
+import { recordUserActivityBestEffort } from '@/lib/activity/activity-log';
 
 interface ProfileResponse {
   id: string;
@@ -96,7 +97,8 @@ export async function GET() {
   if (!error) {
     profileRow = (data as Record<string, unknown> | null) ?? null;
   } else if (error.code !== 'PGRST116' && error.code !== '42P01') {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[profile] fetch error:', error.message);
+    return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 });
   }
 
   // Ensure a row exists for users created before trigger/migration changes.
@@ -187,7 +189,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    console.error('[profile] update error:', updateError.message);
+    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
   }
 
   // Keep auth metadata aligned for display_name/avatar_url.
@@ -205,6 +208,23 @@ export async function PATCH(request: NextRequest) {
     .select('*')
     .eq('id', user.id)
     .maybeSingle();
+
+  await recordUserActivityBestEffort(supabase, {
+    owner_id: user.id,
+    event_type: 'profile_updated',
+    entity_type: 'profile',
+    entity_id: user.id,
+    title: 'Updated profile details',
+    summary: [
+      'displayName' in body ? 'display name' : null,
+      'phone' in body ? 'phone' : null,
+      'province' in body || 'district' in body ? 'location' : null,
+      'avatarUrl' in body ? 'avatar' : null,
+    ].filter(Boolean).join(', ') || 'Profile fields changed',
+    meta: {
+      fields: Object.keys(updates),
+    },
+  });
 
   const fallback = {
     id: user.id,

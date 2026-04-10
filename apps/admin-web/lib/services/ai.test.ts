@@ -58,4 +58,53 @@ describe('services AI routing helpers', () => {
     expect(result.topService).toBeNull();
     expect(result.routeMode).toBe('ambiguous');
   });
+
+  it('treats symptom-based health requests as guided intake instead of a random service list', async () => {
+    const result = await ask('I am not feeling well', 'en');
+    expect(result.topService).toBeNull();
+    expect(result.routeMode).toBe('ambiguous');
+    expect(result.routeReason).toContain('health need');
+    expect(result.followUpPrompt).toContain('What do you need right now');
+    expect(result.followUpOptions).toContain('I need a doctor today');
+    expect(result.intakeState?.domain).toBe('health');
+  });
+
+  it('recognizes child health intake and guides toward pediatric care', async () => {
+    const result = await ask('My child has fever', 'en');
+    expect(result.routeMode).toBe('ambiguous');
+    expect(result.routeReason).toContain('child health need');
+    expect(result.followUpPrompt).toContain('For your child');
+    expect(result.followUpOptions).toContain('My child needs a doctor today');
+    expect(result.intakeState?.subject).toBe('child');
+    expect(result.cited.map((service) => service.slug)).toContain('kanti-childrens-hospital');
+  });
+
+  it('recognizes parent health intake and asks parent-specific follow-up', async () => {
+    const result = await ask('My father needs a doctor today', 'en');
+    expect(result.routeMode).toBe('ambiguous');
+    expect(result.followUpPrompt).toContain('For your parent');
+    expect(result.followUpOptions).toContain('My parent needs a doctor today');
+    expect(result.intakeState?.subject).toBe('parent');
+    expect(result.intakeState?.urgency).toBe('today');
+  });
+
+  it('recognizes pregnancy intake and asks a maternity-specific follow-up', async () => {
+    const result = await ask('Need pregnancy checkup appointment', 'en');
+    expect(result.routeMode).toBe('ambiguous');
+    expect(result.routeReason).toContain('pregnancy-related');
+    expect(result.followUpPrompt).toContain('ANC');
+    expect(result.followUpOptions).toContain('I need an ANC checkup');
+    expect(result.intakeState?.domain).toBe('health');
+  });
+
+  it('keeps intake context across short follow-up turns in the same session', async () => {
+    const sessionId = `test-session-${Date.now()}`;
+    await ask('I am not feeling well', 'en', sessionId);
+    const result = await ask('for my father', 'en', sessionId);
+
+    expect(result.routeMode).toBe('ambiguous');
+    expect(result.intakeState?.domain).toBe('health');
+    expect(result.intakeState?.subject).toBe('parent');
+    expect(result.followUpPrompt).toContain('For your parent');
+  });
 });

@@ -5,6 +5,23 @@ import { getOrBuildSchema } from '@/lib/services/form-schemas';
 import { UniversalServiceForm } from '@/components/public/services/form/universal-form';
 import { CATEGORY_LABELS, type ServiceCategory } from '@/lib/services/types';
 import { DocReadiness } from '@/components/public/services/doc-readiness';
+import { PaymentCheckout } from '@/components/public/services/payment-checkout';
+
+/** Extract numeric NPR amount from a fee string like "Rs. 5,000" or "Rs. 100–500" */
+function parseFeeNPR(fee: string): number | null {
+  // Take first number found (for ranges, use the lower bound)
+  const match = fee.replace(/,/g, '').match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/** Check if a fee string represents a payable amount (not free, not zero) */
+function isPayableFee(fee?: string): boolean {
+  if (!fee) return false;
+  const lower = fee.toLowerCase();
+  if (lower.includes('free') || lower.includes('निःशुल्क')) return false;
+  const amount = parseFeeNPR(fee);
+  return amount !== null && amount > 0;
+}
 
 export const revalidate = 300;
 
@@ -74,7 +91,17 @@ export default async function ApplyPage({ params }: { params: { category: string
         <DocReadiness serviceSlug={svc.slug} documents={svc.documents} />
       )}
 
-      <UniversalServiceForm schema={schema} />
+      <UniversalServiceForm schema={schema} serviceSlug={svc.slug} />
+
+      {/* Payment section — only shown if service has a payable fee */}
+      {svc.feeRange && isPayableFee(svc.feeRange.en) && (
+        <PaymentCheckout
+          serviceSlug={svc.slug}
+          serviceTitle={svc.title.en}
+          feeAmount={svc.feeRange.en}
+          feeAmountNPR={parseFeeNPR(svc.feeRange.en) || 0}
+        />
+      )}
     </div>
   );
 }

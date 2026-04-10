@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { bearerMatchesSecret, secretsEqual } from '@/lib/security/request-auth';
 
 export const runtime = 'nodejs';
 
@@ -11,18 +12,27 @@ function getServiceSupabase() {
 }
 
 /**
- * Cron-callable endpoint: sends push notifications for applications
+ * Cron-callable endpoint: sends push notifications for tracked applications
  * with reminder_on dates that are today or overdue.
  * Called by Vercel cron every 6 hours.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  const cronHeaderSecret = request.headers.get('x-vercel-cron-secret');
+  const isCronAuth =
+    !!cronSecret &&
+    (secretsEqual(cronHeaderSecret, cronSecret) || bearerMatchesSecret(request, cronSecret));
+  if (!isCronAuth) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const supabase = getServiceSupabase();
     if (!supabase) return NextResponse.json({ error: 'no_db' }, { status: 500 });
 
     const today = new Date().toISOString().slice(0, 10);
 
-    // Find applications needing reminders
+    // Find tracked applications needing reminders
     const { data: apps, error: appErr } = await supabase
       .from('user_applications')
       .select('id, owner_id, service_title, service_slug, reminder_on, status, office_name')
@@ -78,7 +88,7 @@ export async function GET() {
           ? `Follow up at ${app.office_name} — your reminder date has arrived.`
           : `Your reminder date for ${app.service_title} has arrived. Check status or visit the office.`,
         icon: '/icon-192.png',
-        url: '/me/applications',
+        url: '/me/tasks#tracked-applications',
       });
 
       for (const sub of userSubs) {

@@ -20,6 +20,7 @@ interface ChatMessage {
   routeMode?: 'direct' | 'ambiguous' | 'none';
   routeReason?: string | null;
   followUpPrompt?: string | null;
+  followUpOptions?: string[];
 }
 
 interface Props {
@@ -28,12 +29,14 @@ interface Props {
 }
 
 const STARTERS_EN = [
+  'I am not feeling well',
   'How do I renew my driving license?',
   'What documents do I need for a passport?',
   'How do I pay my NEA bill?',
   'How do I get citizenship?',
 ];
 const STARTERS_NE = [
+  'मलाई सन्चो छैन',
   'लाइसेन्स नवीकरण कसरी गर्ने?',
   'राहदानीका लागि के-के कागजात चाहिन्छ?',
   'NEA बिल कसरी तिर्ने?',
@@ -47,6 +50,7 @@ export default function ServiceChat({ locale = 'en', contextServiceSlug }: Props
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -54,6 +58,19 @@ export default function ServiceChat({ locale = 'en', contextServiceSlug }: Props
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storageKey = `nr-services-chat-session-${contextServiceSlug || 'global'}`;
+    const existing = window.localStorage.getItem(storageKey);
+    if (existing) {
+      setSessionId(existing);
+      return;
+    }
+    const created = window.crypto?.randomUUID?.() || `session-${Date.now()}`;
+    window.localStorage.setItem(storageKey, created);
+    setSessionId(created);
+  }, [contextServiceSlug]);
 
   async function send(q: string) {
     const question = q.trim();
@@ -65,7 +82,7 @@ export default function ServiceChat({ locale = 'en', contextServiceSlug }: Props
       const r = await fetch('/api/services/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, locale, contextServiceSlug }),
+        body: JSON.stringify({ question, locale, contextServiceSlug, sessionId }),
       });
       const j = await r.json();
       setMessages((m) => [
@@ -79,6 +96,7 @@ export default function ServiceChat({ locale = 'en', contextServiceSlug }: Props
           routeMode: j.routeMode || 'none',
           routeReason: j.routeReason || null,
           followUpPrompt: j.followUpPrompt || null,
+          followUpOptions: j.followUpOptions || [],
         },
       ]);
     } catch {
@@ -92,6 +110,10 @@ export default function ServiceChat({ locale = 'en', contextServiceSlug }: Props
   }
 
   const starters = locale === 'ne' ? STARTERS_NE : STARTERS_EN;
+
+  function sendFollowUp(baseQuestion: string, option: string) {
+    return send(`${baseQuestion}. ${option}`);
+  }
 
   async function startRecording() {
     if (recording) return;
@@ -197,6 +219,26 @@ export default function ServiceChat({ locale = 'en', contextServiceSlug }: Props
                 <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/70 px-3 py-2 text-[11px] text-zinc-300">
                   {m.routeReason && <div>{m.routeReason}</div>}
                   {m.followUpPrompt && <div className="mt-1 text-zinc-400">{m.followUpPrompt}</div>}
+                  {m.followUpOptions && m.followUpOptions.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {m.followUpOptions.map((option) => {
+                        const previousUserText = [...messages]
+                          .slice(0, i)
+                          .reverse()
+                          .find((entry) => entry.role === 'user')?.text || '';
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => sendFollowUp(previousUserText, option)}
+                            className="rounded-full border border-zinc-600 px-2.5 py-1 text-[10px] text-zinc-200 hover:bg-zinc-800"
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
               {m.cited && m.cited.length > 0 && (

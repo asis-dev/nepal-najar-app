@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import type { ServiceDocument } from '@/lib/services/types';
+import { QuickScanButton } from './quick-scan-button';
 
 /**
  * Document readiness checker — cross-references user's vault
@@ -18,6 +19,11 @@ export function DocReadiness({
 }) {
   const [vaultDocs, setVaultDocs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const reloadVault = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
     fetch('/api/vault/list')
@@ -29,7 +35,7 @@ export function DocReadiness({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   if (loading || documents.length === 0) return null;
 
@@ -81,8 +87,18 @@ export function DocReadiness({
       <div className="space-y-2">
         {documents.map((doc, i) => {
           const ready = matchMap[doc.title.en];
+          // Determine vault doc type for scanning
+          const titleLower = doc.title.en.toLowerCase();
+          let scanDocType = 'other';
+          for (const [vaultType, keywords] of Object.entries(docKeywords)) {
+            if (keywords.some((kw) => titleLower.includes(kw))) {
+              scanDocType = vaultType;
+              break;
+            }
+          }
+
           return (
-            <div key={i} className="flex items-center gap-2 text-sm">
+            <div key={i} className="flex items-center gap-2 text-sm flex-wrap">
               <span className={ready ? 'text-emerald-400' : doc.required ? 'text-red-400' : 'text-zinc-600'}>
                 {ready ? '✓' : doc.required ? '✗' : '○'}
               </span>
@@ -97,6 +113,13 @@ export function DocReadiness({
                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   in vault
                 </span>
+              )}
+              {!ready && (
+                <QuickScanButton
+                  docType={scanDocType}
+                  serviceSlug={serviceSlug}
+                  onScanned={reloadVault}
+                />
               )}
             </div>
           );

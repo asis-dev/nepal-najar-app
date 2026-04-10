@@ -10,6 +10,13 @@ import StartServiceTask from '@/components/public/services/start-service-task';
 import { ReportIssue } from '@/components/public/services/report-issue';
 import { WaitTimeWidget } from '@/components/public/services/wait-times';
 import { PortalLinks } from '@/components/public/services/portal-links';
+import { HospitalAppointmentPanel } from '@/components/public/services/hospital-appointment-panel';
+import { UtilityBillPanel } from '@/components/public/services/utility-bill-panel';
+import { TransportExecutionPanel } from '@/components/public/services/transport-execution-panel';
+import { ServiceExecutionPanel } from '@/components/public/services/service-execution-panel';
+import { CounterpartyStatusCard } from '@/components/public/services/counterparty-status-card';
+import { IntegrationStatusCard } from '@/components/public/services/integration-status-card';
+import { getWorkflowDefinition } from '@/lib/services/workflow-definitions';
 
 export const revalidate = 300;
 
@@ -39,6 +46,12 @@ export default async function ServiceDetailPage({ params }: { params: { category
   if (!svc || svc.category !== params.category) notFound();
 
   const cat = svc.category as ServiceCategory;
+  const workflow = getWorkflowDefinition(svc);
+  const shouldShowGenericExecutionPanel =
+    svc.providerType !== 'hospital' &&
+    svc.providerType !== 'utility' &&
+    svc.category !== 'transport' &&
+    ((workflow.actions?.length || 0) > 0 || workflow.mode !== 'guide_only');
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
@@ -106,6 +119,24 @@ export default async function ServiceDetailPage({ params }: { params: { category
       </div>
 
       <StartServiceTask serviceSlug={svc.slug} serviceTitle={svc.title.en} />
+      <CounterpartyStatusCard serviceSlug={svc.slug} />
+      <IntegrationStatusCard serviceSlug={svc.slug} />
+
+      {svc.providerType === 'hospital' && (
+        <HospitalAppointmentPanel serviceSlug={svc.slug} serviceTitle={svc.title.en} />
+      )}
+
+      {svc.providerType === 'utility' && (
+        <UtilityBillPanel serviceSlug={svc.slug} serviceTitle={svc.title.en} />
+      )}
+
+      {svc.category === 'transport' && (
+        <TransportExecutionPanel serviceSlug={svc.slug} serviceTitle={svc.title.en} />
+      )}
+
+      {shouldShowGenericExecutionPanel && (
+        <ServiceExecutionPanel serviceSlug={svc.slug} serviceTitle={svc.title.en} category={cat} />
+      )}
 
       <PortalLinks serviceSlug={svc.slug} />
 

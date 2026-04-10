@@ -164,7 +164,7 @@ export default function StatusCheckerPage() {
           </a>
 
           <p className="text-[11px] text-zinc-600 text-center">
-            Opens {svc.portal} in a new tab. Save your reference number in your <Link href="/me/applications" className="text-red-400 underline">Applications tracker</Link>.
+            Opens {svc.portal} in a new tab. Save your reference number in <Link href="/me/tasks#tracked-applications" className="text-red-400 underline">My Cases</Link>.
           </p>
         </div>
       )}

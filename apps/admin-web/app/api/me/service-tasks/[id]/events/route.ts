@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { listTaskEventsBestEffort } from '@/lib/services/task-store';
 
 async function getAuthedContext() {
   const supabase = await createSupabaseServerClient();
@@ -20,19 +21,18 @@ export async function GET(
     .from('service_tasks')
     .select('id')
     .eq('id', params.id)
+    .eq('owner_id', user.id)
     .maybeSingle();
 
   if (taskError) return NextResponse.json({ error: taskError.message }, { status: 500 });
   if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
 
-  const { data, error } = await supabase
-    .from('service_task_events')
-    .select('*')
-    .eq('task_id', params.id)
-    .order('created_at', { ascending: false })
-    .limit(20);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  let data;
+  try {
+    data = await listTaskEventsBestEffort(supabase, params.id);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json({
     events: (data || []).map((row: any) => ({

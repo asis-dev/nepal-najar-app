@@ -256,7 +256,7 @@ export const EXTRA_SERVICES_2: Service[] = [
   svc({
     slug: 'kanti-childrens-hospital',
     category: 'health',
-    providerType: 'gov',
+    providerType: 'hospital',
     providerName: 'Kanti Children\u2019s Hospital',
     title: { en: 'Kanti Children\u2019s Hospital OPD', ne: 'कान्ति बालअस्पताल OPD' },
     summary: {
@@ -264,19 +264,27 @@ export const EXTRA_SERVICES_2: Service[] = [
       ne: 'महाराजगञ्जस्थित कान्ति बालअस्पतालमा बालबालिकाको OPD।',
     },
     feeRange: { en: 'Rs. 50 OPD ticket', ne: 'रु. ५० OPD' },
-    tags: ['child', 'pediatric', 'कान्ति'],
+    officialUrl: 'https://kantihospital.gov.np',
+    offices: [
+      { name: { en: 'Kanti Children\u2019s Hospital', ne: 'कान्ति बाल अस्पताल' }, address: { en: 'Maharajgunj, Kathmandu', ne: 'महाराजगन्ज, काठमाडौँ' }, phone: '01-4411550', hours: { en: 'OPD: Sun\u2013Fri 10:00\u201314:00 \u00b7 Emergency: 24/7', ne: 'OPD: आइत\u2013शुक्र १०:००\u2013२:०० \u00b7 आपतकालीन: २४ घण्टा' }, lat: 27.7352, lng: 85.3310 },
+    ],
+    tags: ['child', 'pediatric', 'kanti', 'कान्ति', 'बाल अस्पताल'],
   }),
   svc({
     slug: 'maternity-hospital',
     category: 'health',
-    providerType: 'gov',
+    providerType: 'hospital',
     providerName: 'Paropakar Maternity Hospital',
     title: { en: 'Paropakar Maternity Hospital', ne: 'परोपकार प्रसूति अस्पताल' },
     summary: {
       en: 'Free maternity services including delivery, ANC and PNC checkups.',
       ne: 'निःशुल्क प्रसूति, ANC र PNC सेवा।',
     },
-    tags: ['maternity', 'delivery', 'प्रसूति'],
+    officialUrl: 'https://paropakarmaternity.org.np',
+    offices: [
+      { name: { en: 'Paropakar Maternity & Women\u2019s Hospital', ne: 'परोपकार प्रसूति तथा स्त्री रोग अस्पताल' }, address: { en: 'Thapathali, Kathmandu', ne: 'ठपाथली, काठमाडौँ' }, phone: '01-4252314', hours: { en: 'OPD: Sun\u2013Fri 10:00\u201314:00 \u00b7 Emergency/Delivery: 24/7', ne: 'OPD: आइत\u2013शुक्र १०:००\u2013२:०० \u00b7 आपतकालीन/प्रसूति: २४ घण्टा' }, lat: 27.6912, lng: 85.3198 },
+    ],
+    tags: ['maternity', 'delivery', 'प्रसूति', 'paropakar', 'परोपकार'],
   }),
   svc({
     slug: 'bharatpur-cancer',

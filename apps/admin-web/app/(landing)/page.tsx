@@ -14,6 +14,7 @@ export default function LandingPage() {
 
       <div className="relative z-10">
         <DashboardIsland />
+
         <FeedIsland />
         <SupportSection />
       </div>

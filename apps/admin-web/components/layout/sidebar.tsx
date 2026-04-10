@@ -7,7 +7,7 @@ import {
   ClipboardList, FileText, Shield, Bell, Settings,
   CheckCircle2, TrendingUp, Eye, Mountain, Map, Crown,
   MessageCircle, Radar, Globe, HeartPulse, MessageSquare, FileUp, ListChecks,
-  MessageSquarePlus
+  MessageSquarePlus, ClipboardCheck, TimerReset, UserCog, Sparkles
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -58,6 +58,11 @@ const sections: NavSection[] = [
   {
     label: 'Administration',
     items: [
+      { name: 'Service Ops', href: '/service-ops', icon: ClipboardCheck },
+      { name: 'Service Team', href: '/service-ops/team', icon: UserCog },
+      { name: 'Counterparties', href: '/service-ops/counterparties', icon: Building2 },
+      { name: 'Ops AI', href: '/service-ops/ai', icon: Sparkles },
+      { name: 'Service SLA', href: '/service-ops/sla', icon: TimerReset },
       { name: 'Users', href: '/users', icon: Users },
       { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Settings', href: '/settings', icon: Settings },

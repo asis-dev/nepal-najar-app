@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
             <span style={{ color: 'white', fontSize: '18px', fontWeight: 700, letterSpacing: '0.08em', display: 'flex' }}>nepalrepublic.org</span>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px', display: 'flex' }}>
-            {isNe ? 'नागरिक समस्या रिपोर्ट · वाचा ट्र्याक · सत्य प्रमाणित' : 'Report civic issues · Track promises · Verify truth'}
+            {isNe ? 'सेवा, ट्र्याकिङ, र सार्वजनिक सत्य' : 'Services, tracking, and public truth'}
           </span>
         </div>
 

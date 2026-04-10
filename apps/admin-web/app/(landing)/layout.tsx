@@ -16,10 +16,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const ogStats = `109 Commitments Tracked|${stats.totalCases} Corruption Cases|रू ${amount} Exposed|80+ Live Sources`;
 
   return createMetadata({
-    title: 'Report civic issues. Track promises. Verify truth.',
-    description: `From street problems to national promises, one AI-powered, evidence-backed accountability platform. 109 commitments monitored. रू ${amount} in corruption exposed. ${stats.totalCases} cases. Daily briefings powered by 80+ sources.`,
+    title: 'AI-powered citizen platform for Nepal.',
+    description: `From everyday services to national accountability, AI-powered navigation for Nepal. 109 commitments monitored. रू ${amount} in corruption exposed. ${stats.totalCases} cases. Daily briefings powered by 80+ sources.`,
     path: '/',
-    ogImage: `/api/og?title=${encodeURIComponent('Report civic issues. Track promises. Verify truth.')}&subtitle=${encodeURIComponent('From street problems to national promises, one AI-powered, evidence-backed accountability platform.')}&section=dashboard&stats=${encodeURIComponent(ogStats)}`,
+    ogImage: `/api/og?title=${encodeURIComponent('AI-powered citizen platform for Nepal.')}&subtitle=${encodeURIComponent('From everyday services to national accountability, AI-powered navigation for Nepal.')}&section=dashboard&stats=${encodeURIComponent(ogStats)}`,
   });
 }
 
