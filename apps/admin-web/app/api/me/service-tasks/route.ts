@@ -1,64 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { recordUserActivityBestEffort } from '@/lib/activity/activity-log';
 import { getServiceBySlug } from '@/lib/services/catalog';
+import { resolveServiceRouting } from '@/lib/services/service-routing';
 import { getTaskStatus, mapTaskRow } from '@/lib/services/task-engine';
 import { getWorkflowDefinition } from '@/lib/services/workflow-definitions';
-import type { VaultDoc } from '@/lib/vault/types';
+import { buildOpsDeadlines, getServiceWorkflowPolicy } from '@/lib/service-ops/queue';
+import { autoAssignAndNotify } from '@/lib/service-ops/auto-assign';
+import { listOwnerVaultDocs } from '@/lib/services/vault-docs';
+import {
+  getHouseholdMemberBestEffort,
+  insertServiceTaskWithCompatibility,
+  insertTaskEventBestEffort,
+} from '@/lib/services/task-store';
+import { sendTaskEmailToGovt, canSendEmailBridge } from '@/lib/integrations/email-bridge';
+import { notifyTaskCreated, notifyGovtSent } from '@/lib/integrations/sms-notify';
+import { canSendSMS } from '@/lib/integrations/sms';
+import { getRequestUser } from '@/lib/auth/request-user';
 
-async function getAuthedContext() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
+async function getAuthedContext(request: Request) {
+  return getRequestUser(request);
 }
 
-async function listVaultDocs(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>): Promise<VaultDoc[]> {
-  const { data } = await supabase.from('vault_documents').select('*').order('created_at', { ascending: false });
-  return (data || []).map((row: any) => ({
-    id: row.id,
-    ownerId: row.owner_id,
-    docType: row.doc_type,
-    title: row.title,
-    number: row.number || undefined,
-    issuedOn: row.issued_on || undefined,
-    expiresOn: row.expires_on || undefined,
-    storagePath: row.storage_path || undefined,
-    fileName: row.file_name || undefined,
-    fileSize: row.file_size || undefined,
-    mimeType: row.mime_type || undefined,
-    notes: row.notes || undefined,
-    tags: row.tags || [],
-    linkedServiceSlugs: row.linked_service_slugs || [],
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
-}
-
-async function getTargetMember(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  targetMemberId: string | undefined,
-) {
-  if (!targetMemberId) return null;
-  const { data } = await supabase
-    .from('household_members')
-    .select('*')
-    .eq('id', targetMemberId)
-    .is('archived_at', null)
-    .maybeSingle();
-  return data || null;
-}
-
-export async function GET() {
-  const { supabase, user } = await getAuthedContext();
+export async function GET(request: NextRequest) {
+  const { supabase, user } = await getAuthedContext(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, error } = await supabase
     .from('service_tasks')
     .select('*')
+    .eq('owner_id', user.id)
     .order('updated_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[service-tasks] list error:', error.message);
+    return NextResponse.json({ error: 'Failed to load tasks' }, { status: 500 });
+  }
 
   return NextResponse.json({
     tasks: (data || []).map(mapTaskRow),
@@ -66,7 +42,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { supabase, user } = await getAuthedContext();
+  const { supabase, user } = await getAuthedContext(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: Record<string, unknown>;
@@ -90,7 +66,9 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await supabase
     .from('service_tasks')
     .select('*')
+    .eq('owner_id', user.id)
     .eq('service_slug', serviceSlug)
+    .eq('target_member_id', targetMemberId || null)
     .neq('status', 'completed')
     .maybeSingle();
 
@@ -98,10 +76,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ task: mapTaskRow(existing), reused: true });
   }
 
-  const vaultDocs = await listVaultDocs(supabase);
+  const vaultDocs = await listOwnerVaultDocs(supabase, user.id);
   const state = getTaskStatus(service, vaultDocs);
   const workflow = getWorkflowDefinition(service);
-  const targetMember = await getTargetMember(supabase, targetMemberId);
+  const routing = resolveServiceRouting(service);
+  const policy = await getServiceWorkflowPolicy(routing.departmentKey, service.slug);
+  const deadlines = buildOpsDeadlines(policy || {});
+  const targetMember = await getHouseholdMemberBestEffort(supabase, targetMemberId);
 
   const insertPayload = {
     owner_id: user.id,
@@ -124,20 +105,125 @@ export async function POST(request: NextRequest) {
     milestones: workflow.milestones,
     actions: workflow.actions || [],
     action_state: {},
+    assigned_department_key: routing.departmentKey,
+    assigned_department_name: routing.departmentName,
+    assigned_office_name: routing.officeName,
+    assigned_authority_level: routing.authorityLevel,
+    assigned_role_title: routing.roleTitle,
+    routing_reason: routing.routingReason,
+    routing_confidence: routing.confidence,
+    queue_state: policy?.queue_entry_state || 'new',
+    first_response_due_at: deadlines.firstResponseDueAt,
+    resolution_due_at: deadlines.resolutionDueAt,
+    escalation_level: 0,
     missing_docs: state.missingDocs,
     ready_docs: state.readyDocs,
     answers: {},
   };
 
-  const { data, error } = await supabase.from('service_tasks').insert(insertPayload).select('*').single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { data, error } = await insertServiceTaskWithCompatibility(supabase, insertPayload);
+  if (error) {
+    console.error('[service-tasks] create error:', error.message);
+    return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
+  }
 
-  await supabase.from('service_task_events').insert({
+  await insertTaskEventBestEffort(supabase, {
     task_id: data.id,
     owner_id: user.id,
     event_type: 'task_started',
     note: `Started ${service.title.en}`,
     meta: { service_slug: service.slug, status: state.status },
+  });
+
+  await insertTaskEventBestEffort(supabase, {
+    task_id: data.id,
+    owner_id: user.id,
+    event_type: 'task_routed',
+    note: `Routed to ${routing.departmentName}`,
+    meta: {
+      department_key: routing.departmentKey,
+      authority_level: routing.authorityLevel,
+      office_name: routing.officeName,
+      role_title: routing.roleTitle,
+      confidence: routing.confidence,
+    },
+  });
+
+  // Fire-and-forget: auto-assign to staff + notify department
+  autoAssignAndNotify(supabase, {
+    taskId: data.id,
+    ownerId: user.id,
+    departmentKey: routing.departmentKey,
+    departmentName: routing.departmentName,
+    serviceSlug: service.slug,
+    serviceTitle: service.title.en,
+  });
+
+  // Fire-and-forget: email bridge — send to government office if email target exists
+  if (canSendEmailBridge(service.slug).canSend) {
+    sendTaskEmailToGovt(supabase, {
+      ...data,
+      service_slug: service.slug,
+      service_title: service.title.en,
+      owner_id: user.id,
+      assigned_department_key: routing.departmentKey,
+      assigned_department_name: routing.departmentName,
+      assigned_office_name: routing.officeName,
+      assigned_role_title: routing.roleTitle,
+      missing_docs: state.missingDocs,
+      ready_docs: state.readyDocs,
+    }).catch((err) => {
+      console.error('[service-tasks] email bridge error (non-blocking):', err);
+    });
+  }
+
+  // Fire-and-forget: SMS notification to citizen
+  if (canSendSMS()) {
+    (async () => {
+      try {
+        // Look up user's phone from profiles table
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('phone')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const phone = profile?.phone as string | null;
+        const taskInfo = {
+          id: data.id,
+          owner_id: user.id,
+          service_slug: service.slug,
+          service_title: service.title.en,
+        };
+
+        await notifyTaskCreated(supabase, taskInfo, phone, locale);
+
+        // If email bridge sent to govt, also SMS the citizen about that
+        if (canSendEmailBridge(service.slug).canSend) {
+          const officeName = routing.officeName || routing.departmentName;
+          await notifyGovtSent(supabase, taskInfo, phone, officeName, locale);
+        }
+      } catch (err) {
+        console.error('[service-tasks] SMS notify error (non-blocking):', err);
+      }
+    })();
+  }
+
+  await recordUserActivityBestEffort(supabase, {
+    owner_id: user.id,
+    event_type: 'service_task_started',
+    entity_type: 'service_task',
+    entity_id: data.id,
+    title: `Started ${service.title.en}`,
+    summary: state.nextAction,
+    meta: {
+      service_slug: service.slug,
+      service_category: service.category,
+      status: state.status,
+      target_member_name: targetMember?.display_name || null,
+      assigned_department_name: routing.departmentName,
+      assigned_office_name: routing.officeName,
+    },
   });
 
   return NextResponse.json({ task: mapTaskRow(data), reused: false });

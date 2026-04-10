@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { HouseholdRelationship } from '@/lib/household/types';
+import { recordUserActivityBestEffort } from '@/lib/activity/activity-log';
+import { getRequestUser } from '@/lib/auth/request-user';
 
 const ALLOWED_RELATIONSHIPS: HouseholdRelationship[] = [
   'self',
@@ -19,12 +20,8 @@ function normalizeString(value: unknown, maxLen = 200): string | null {
   return trimmed.slice(0, maxLen);
 }
 
-async function getAuthedContext() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
+async function getAuthedContext(request: Request) {
+  return getRequestUser(request);
 }
 
 function mapMemberRow(row: any) {
@@ -40,13 +37,14 @@ function mapMemberRow(row: any) {
   };
 }
 
-export async function GET() {
-  const { supabase, user } = await getAuthedContext();
+export async function GET(request: NextRequest) {
+  const { supabase, user } = await getAuthedContext(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, error } = await supabase
     .from('household_members')
     .select('*')
+    .eq('owner_id', user.id)
     .is('archived_at', null)
     .order('created_at', { ascending: true });
 
@@ -56,7 +54,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { supabase, user } = await getAuthedContext();
+  const { supabase, user } = await getAuthedContext(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: Record<string, unknown>;
@@ -95,6 +93,19 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await recordUserActivityBestEffort(supabase, {
+    owner_id: user.id,
+    event_type: 'household_member_created',
+    entity_type: 'household_member',
+    entity_id: data.id,
+    title: `Added ${data.display_name}`,
+    summary: `Relationship: ${data.relationship}`,
+    meta: {
+      relationship: data.relationship,
+      target_name: data.display_name,
+    },
+  });
 
   return NextResponse.json({ member: mapMemberRow(data) });
 }
