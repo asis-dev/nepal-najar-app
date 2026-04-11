@@ -1106,6 +1106,176 @@ function getMissingSlots(intakeState: IntakeState, intakeSlots: IntakeSlots) {
   return [];
 }
 
+// ─────────────────────────────────────────────────────────────
+// AI-first intent classification
+// Uses Gemini to understand what the user wants BEFORE trying
+// keyword-based service matching. The AI decides the intent category,
+// and we route to the right service directly.
+// Deterministic patterns serve as FALLBACK when AI is unavailable.
+// ─────────────────────────────────────────────────────────────
+
+const INTENT_CATEGORIES = {
+  civic_complaint: 'local-infrastructure-complaint',
+  corruption_complaint: 'ciaa-complaint',
+  consumer_complaint: 'consumer-complaint',
+  human_rights_complaint: 'human-rights-complaint',
+  government_grievance: 'lokpal-complaint',
+} as const;
+
+/** AI-powered intent classification — asks Gemini to categorize the user's intent */
+async function classifyIntentWithAI(question: string): Promise<{ category: string; confidence: number } | null> {
+  if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) return null;
+  try {
+    const prompt = `You are an intent classifier for a Nepali civic app. Classify the user's message into ONE of these categories:
+
+- civic_complaint: Problems with roads, water supply, drainage, streetlights, garbage, construction, potholes, broken infrastructure, public amenities not working. Any complaint about local infrastructure or public services not functioning.
+- corruption_complaint: Reporting bribery, corruption, abuse of authority by officials.
+- consumer_complaint: Fraud, scam, overcharging, fake products, business cheating.
+- human_rights_complaint: Human rights violations, discrimination, torture.
+- government_grievance: General complaints about government service delays, misconduct by officials.
+- health_emergency: Someone is sick, in pain, injured, needs a doctor or hospital. NOT asking about health insurance or health policy.
+- government_service: Requesting a specific government service (passport, citizenship, license, tax, registration, certificate, etc.)
+- general_question: Anything else — daily life questions, food, transport, entertainment, general info.
+
+User message: "${question}"
+
+Respond with ONLY a JSON object: {"category": "...", "confidence": 0.0-1.0}
+No explanation, no markdown, just the JSON.`;
+
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEN_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 100 },
+        }),
+      },
+    );
+    if (!r.ok) {
+      if (r.status === 429) beginAiCooldown('intent classification quota');
+      return null;
+    }
+    const j = await r.json();
+    const text = j.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (!text) return null;
+    // Extract JSON from response (handle markdown code blocks)
+    const jsonStr = text.replace(/```json\s*/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(jsonStr);
+    if (parsed.category && typeof parsed.confidence === 'number') {
+      return { category: parsed.category, confidence: parsed.confidence };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Deterministic fallback patterns — used when AI is unavailable */
+const CIVIC_COMPLAINT_PATTERNS = [
+  /(?:road|street|path|highway|bridge|footpath|sidewalk|pavement).*(?:broken|damaged|bad|crack|hole|block|collapse|flood|destroy)/i,
+  /(?:broken|damaged|bad|crack|destroy|collapse|flood).*(?:road|street|path|highway|bridge|footpath|sidewalk)/i,
+  /pothole|खाल्ड[ाो]|सडक.*(?:भत्क|बिग्र|खराब|टुट|फुट)|(?:भत्क|बिग्र|खराब|टुट|फुट).*सडक/i,
+  /बाटो.*(?:भत्क|बिग्र|खराब|टुट)|(?:भत्क|बिग्र|खराब|टुट).*बाटो/i,
+  /(?:water|pani|खानेपानी|पानी).*(?:not coming|no |cut|stop|problem|issue|dirty|broken|supply)/i,
+  /पानी.*(?:आउँदैन|छैन|बन्द|समस्या)|(?:आउँदैन|छैन|बन्द).*पानी/i,
+  /(?:drain|sewer|sewage|ढल|नाली).*(?:block|overflow|broken|smell|clog|problem)/i,
+  /ढल.*(?:बन्द|भत्क|बिग्र|गन्ध)|(?:बन्द|भत्क|बिग्र).*ढल/i,
+  /(?:street\s*light|बत्ती).*(?:not work|broken|off|out|dark|problem)/i,
+  /बत्ती.*(?:बलेको छैन|छैन|बिग्र|खराब)/i,
+  /(?:garbage|trash|waste|फोहोर).*(?:not collect|pile|dump|smell|problem)/i,
+  /फोहोर.*(?:उठाएको छैन|छैन|थुप्र|गन्ध)/i,
+  /(?:construction|निर्माण).*(?:dust|noise|block|problem|धुलो|आवाज)/i,
+  /(?:report|complaint|complain|fix|repair).*(?:road|water|drain|light|garbage|construction|infrastructure|pipe|bridge|footpath)/i,
+];
+
+const CORRUPTION_PATTERNS = [
+  /(?:bribe|corrupt|ghus|घुस|भ्रष्ट|अख्तियार|रिश्वत)/i,
+  /(?:official|officer|government).*(?:asking money|bribe|corrupt|demanded)/i,
+];
+
+const CONSUMER_COMPLAINT_PATTERNS = [
+  /(?:fraud|scam|cheat|overcharg|fake product|ठगी|नक्कली)/i,
+  /(?:shop|store|seller|vendor|business).*(?:cheat|fraud|scam|refuse|defective)/i,
+];
+
+function detectIntentDeterministic(question: string): string | null {
+  const q = question.toLowerCase();
+  if (CIVIC_COMPLAINT_PATTERNS.some(p => p.test(q))) return 'civic_complaint';
+  if (CORRUPTION_PATTERNS.some(p => p.test(q))) return 'corruption_complaint';
+  if (CONSUMER_COMPLAINT_PATTERNS.some(p => p.test(q))) return 'consumer_complaint';
+  return null;
+}
+
+function buildIntentResult(svc: Service, locale: 'en' | 'ne', question: string, model: string): AskResult {
+  const answers: Record<string, { en: string; ne: string }> = {
+    'local-infrastructure-complaint': {
+      en: 'I\'ll help you report this to your ward office or municipality.',
+      ne: 'म तपाईंलाई वडा कार्यालय वा नगरपालिकामा रिपोर्ट गर्न मद्दत गर्छु।',
+    },
+    'ciaa-complaint': {
+      en: 'You can report corruption to CIAA. Hotline: 107. I\'ll help you file a complaint.',
+      ne: 'भ्रष्टाचार उजुरी CIAA मा दिन सकिन्छ। हटलाइन: 107।',
+    },
+    'consumer-complaint': {
+      en: 'You can file a consumer complaint. Hotline: 1137. I\'ll guide you through it.',
+      ne: 'उपभोक्ता उजुरी दिन सकिन्छ। हटलाइन: 1137।',
+    },
+    'human-rights-complaint': {
+      en: 'You can file a human rights complaint with NHRC.',
+      ne: 'मानव अधिकार उजुरी NHRC मा दिन सकिन्छ।',
+    },
+    'lokpal-complaint': {
+      en: 'You can file a government grievance through Hello Sarkar (1111).',
+      ne: 'Hello Sarkar (1111) मा सरकारी गुनासो दिन सकिन्छ।',
+    },
+  };
+  const ans = answers[svc.slug] || { en: 'I\'ll help you with this.', ne: 'म मद्दत गर्छु।' };
+  return {
+    answer: locale === 'ne' ? ans.ne : ans.en,
+    cited: [svc],
+    cached: false,
+    model,
+    topService: svc,
+    topServiceConfidence: 0.95,
+    routeMode: 'direct',
+    routeReason: null,
+    followUpPrompt: null,
+    followUpOptions: [],
+    intakeState: inferIntakeState(question),
+    intakeSlots: null,
+  };
+}
+
+async function detectDirectIntent(question: string, locale: 'en' | 'ne'): Promise<AskResult | null> {
+  const all = await getAllServices();
+
+  // ── Try 1: AI classification (primary) ──
+  const aiResult = await classifyIntentWithAI(question);
+  if (aiResult && aiResult.confidence >= 0.7) {
+    const slug = INTENT_CATEGORIES[aiResult.category as keyof typeof INTENT_CATEGORIES];
+    if (slug) {
+      const svc = all.find(s => s.slug === slug);
+      if (svc) return buildIntentResult(svc, locale, question, 'gemini-intent');
+    }
+    // health_emergency → don't direct-route, let the health flow handle it with follow-ups
+    // government_service / general_question → fall through to normal scoring pipeline
+  }
+
+  // ── Try 2: Deterministic fallback (when AI is down) ──
+  const deterministicCategory = detectIntentDeterministic(question);
+  if (deterministicCategory) {
+    const slug = INTENT_CATEGORIES[deterministicCategory as keyof typeof INTENT_CATEGORIES];
+    if (slug) {
+      const svc = all.find(s => s.slug === slug);
+      if (svc) return buildIntentResult(svc, locale, question, 'deterministic');
+    }
+  }
+
+  return null;
+}
+
 export async function ask(
   question: string,
   locale: 'en' | 'ne' = 'en',
@@ -1130,6 +1300,10 @@ export async function ask(
       intakeSlots: null,
     };
   }
+
+  // ── Deterministic fast-path: catch clear intents before scoring ──
+  const fastMatch = await detectDirectIntent(trimmed, locale);
+  if (fastMatch) return fastMatch;
 
   const previousSession = getActiveIntakeSession(sessionId);
   const effectiveQuestion = applySessionContext(trimmed, previousSession);
