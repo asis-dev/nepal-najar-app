@@ -214,8 +214,11 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
   const handleNavigate = useCallback(
     (href: string) => {
-      onClose();
+      // Navigate first, then close — on mobile, closing first can
+      // unmount the portal before router.push fires.
       router.push(href);
+      // Delay close so the navigation has time to start
+      requestAnimationFrame(() => onClose());
     },
     [onClose, router],
   );
