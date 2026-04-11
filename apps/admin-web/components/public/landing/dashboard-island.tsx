@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Loader2, AlertTriangle, Play, Pause } from 'lucide-react';
+import { Loader2, AlertTriangle, Pause, Volume2 } from 'lucide-react';
 import { DailyBriefPlayer } from '@/components/public/daily-brief-player';
 import { useI18n } from '@/lib/i18n';
 import { useIsMobile } from '@/lib/hooks/use-mobile';
@@ -300,7 +300,11 @@ export function DashboardIsland() {
 
         <div className="mb-3 md:mb-5">
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-600/15 px-4 py-3 text-[13px] font-bold text-red-100 transition-colors hover:bg-red-600/25"
+            className={`group flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all ${
+              playingAboutLang
+                ? 'border-red-500/40 bg-red-600/20'
+                : 'border-white/[0.08] bg-white/[0.04] hover:border-red-500/30 hover:bg-red-600/10'
+            }`}
             onClick={() => {
               const lang = locale === 'ne' ? 'ne' : 'en';
               if (playingAboutLang === lang) {
@@ -315,12 +319,37 @@ export function DashboardIsland() {
               setPlayingAboutLang(lang);
             }}
           >
-            {playingAboutLang
-              ? <Pause className="h-5 w-5" />
-              : <Play className="h-5 w-5 fill-current" />}
-            {playingAboutLang
-              ? (locale === 'ne' ? 'बजाउँदै…' : 'Playing…')
-              : (locale === 'ne' ? 'एप बारे सुन्नुहोस्' : 'Listen — What is Nepal Republic?')}
+            {/* YouTube-style play circle */}
+            {playingAboutLang ? (
+              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-600 shadow-lg shadow-red-600/30">
+                <Pause className="h-4 w-4 text-white" />
+              </span>
+            ) : (
+              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-600 shadow-lg shadow-red-600/30 transition-transform group-hover:scale-110">
+                {/* White triangle play icon */}
+                <svg viewBox="0 0 24 24" className="ml-0.5 h-4 w-4" fill="white">
+                  <polygon points="6,4 20,12 6,20" />
+                </svg>
+              </span>
+            )}
+            <div className="flex flex-col items-start text-left">
+              <span className="text-[13px] font-semibold text-white">
+                {playingAboutLang
+                  ? (locale === 'ne' ? 'बजाउँदै… रोक्न थिच्नुहोस्' : 'Playing… tap to pause')
+                  : (locale === 'ne' ? 'नेपाल रिपब्लिक बारे जान्नुहोस्' : 'Learn what Nepal Republic is about')}
+              </span>
+              {!playingAboutLang && (
+                <span className="text-[11px] text-gray-400">
+                  {locale === 'ne' ? '१ मिनेट अडियो' : '1 min audio · tap to play'}
+                </span>
+              )}
+              {playingAboutLang && (
+                <span className="flex items-center gap-1 text-[11px] text-red-400">
+                  <Volume2 className="h-3 w-3" />
+                  <span className="animate-pulse">{locale === 'ne' ? 'अडियो चलिरहेको छ' : 'Audio playing'}</span>
+                </span>
+              )}
+            </div>
           </button>
         </div>
 
