@@ -1131,7 +1131,10 @@ async function smartRouteWithAI(
   question: string,
   locale: 'en' | 'ne',
 ): Promise<{ slug: string; category: string; confidence: number; response: string; followUp: string | null; options: string[] } | null> {
-  if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) return null;
+  if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) {
+    console.log('[smart-router] skipped:', !GEMINI_API_KEY ? 'no-key' : !AI_ENABLED ? 'disabled' : 'cooldown');
+    return null;
+  }
 
   const all = await getAllServices();
   // Build compact service index — slug + English title + Nepali title + summary
@@ -1251,16 +1254,23 @@ Respond with ONLY this JSON:
       },
     );
     if (!r.ok) {
+      const errBody = await r.text().catch(() => '');
+      console.error(`[smart-router] Gemini ${r.status}: ${errBody.slice(0, 200)}`);
       if (r.status === 429) beginAiCooldown('smart-router quota');
       return null;
     }
     const j = await r.json();
     const text = j.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    if (!text) return null;
+    if (!text) {
+      console.warn('[smart-router] empty Gemini response:', JSON.stringify(j).slice(0, 300));
+      return null;
+    }
     // Clean up any markdown code fences the model might add
     const jsonStr = text.replace(/```json\s*/g, '').replace(/```/g, '').trim();
+    console.log('[smart-router] raw AI:', jsonStr.slice(0, 300));
     const parsed = JSON.parse(jsonStr);
     if (parsed.category && typeof parsed.confidence === 'number') {
+      console.log(`[smart-router] routed → ${parsed.slug || 'no-slug'} (${parsed.category}, ${parsed.confidence})`);
       return {
         slug: parsed.slug || null,
         category: parsed.category,
@@ -1270,8 +1280,10 @@ Respond with ONLY this JSON:
         options: Array.isArray(parsed.options) ? parsed.options : [],
       };
     }
+    console.warn('[smart-router] bad parse — missing category/confidence');
     return null;
-  } catch {
+  } catch (err) {
+    console.error('[smart-router] error:', err);
     return null;
   }
 }
