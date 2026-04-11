@@ -1134,45 +1134,109 @@ async function smartRouteWithAI(
   if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) return null;
 
   const all = await getAllServices();
-  // Build compact service index for the AI — slug + title + summary only
-  const serviceIndex = all.map(s => `${s.slug}: ${s.title.en} — ${s.summary.en.slice(0, 80)}`).join('\n');
+  // Build compact service index — slug + English title + Nepali title + summary
+  const serviceIndex = all.map(s =>
+    `${s.slug}: ${s.title.en} (${s.title.ne}) — ${s.summary.en.slice(0, 100)}`
+  ).join('\n');
 
-  const prompt = `You are the brain of Nepal Republic — a civic app that helps Nepalis get things done. You understand Nepali culture, government, and daily life deeply.
+  const prompt = `You are the AI brain of Nepal Republic (नेपाल रिपब्लिक) — a civic super-app that helps every Nepali citizen navigate government services, report problems, and get things done. You think like the smartest, most helpful दिदी/दाजु in the neighborhood who knows exactly which office to go to, which number to call, and what documents to bring.
 
-A user just said: "${question}"
+USER SAID: "${question}"
 
-Your job: figure out EXACTLY what they need and route them to the right service. Think like a smart Nepali friend who knows the system.
+YOUR MISSION: Understand their REAL need (even if poorly worded, in Romanized Nepali, mixed Hindi-Nepali, or broken English) and route them to the exact right service. Be brilliant at reading between the lines.
 
-EXAMPLES of how to think:
-- "the road near my house is broken" → they need to FILE A COMPLAINT about infrastructure → local-infrastructure-complaint
-- "my stomach hurts" → they may need a HOSPITAL → ask if they need hospital/doctor/pharmacy
-- "I need a passport" → direct route to new-passport
-- "police asked me for money" → corruption complaint → ciaa-complaint
-- "water hasn't come in 3 days" → infrastructure complaint about water → local-infrastructure-complaint
-- "I want to go abroad" → could be passport, labor permit, or NOC — ASK which one
-- "mero bato bigrieko cha" → broken road = infrastructure complaint → local-infrastructure-complaint
+═══ HOW TO THINK (30+ examples) ═══
 
-AVAILABLE SERVICES:
+INFRASTRUCTURE & CIVIC COMPLAINTS → local-infrastructure-complaint:
+- "the road near my house is broken" → infrastructure complaint
+- "mero ghar agadi ko bato bigrieko cha" → road complaint
+- "pani aaudaina 3 din bhayo" → water supply complaint
+- "street light baleko chhaina" → streetlight complaint
+- "fohor uthako chhaina" → garbage not collected
+- "nali/drain blocked" → drainage complaint
+- "construction le dhulo airacha" → construction dust complaint
+- "pothole", "खाल्डो", "सडक", "बाटो फुटेको" → road complaint
+- "bijuli chhaina" → power issue → local-infrastructure-complaint
+- "park ma batti chhaina" → park lighting → local-infrastructure-complaint
+
+CORRUPTION → ciaa-complaint:
+- "police asked me for money" → corruption
+- "officer le ghus khayo" → bribery
+- "CDO office ma paisa magyo" → corruption at govt office
+- "I had to pay extra at the passport office" → corruption
+- "bhrastachar", "ghus", "rishwat" → corruption
+
+CONSUMER → consumer-complaint:
+- "shop sold me fake product" → consumer fraud
+- "overcharged at restaurant" → consumer complaint
+- "online shopping scam" → consumer fraud
+- "warranty honour garena" → consumer complaint
+- "paisa firta dina maanena" → refund refused
+
+HUMAN RIGHTS → human-rights-complaint:
+- "discriminated because of my caste" → human rights
+- "jaat ko karan service diyena" → caste discrimination
+- "bonded labor", "child labor", "बाल श्रम" → human rights
+- "mahila hinsa" → gender violence → human rights
+
+GOVT GRIEVANCE → lokpal-complaint:
+- "government office didn't help me" → Hello Sarkar
+- "sarkaari kaam bhayena" → govt grievance
+- "CDO office gaye kaam bhayena" → govt grievance
+- "they keep sending me from one office to another" → govt grievance
+
+HEALTH → category: "health_needs_triage" (NO slug, ask what they need):
+- "my stomach hurts" → DO NOT give medical advice → ask hospital/doctor/pharmacy
+- "biramii chu" → ask if they need hospital
+- "baccha lai jworo aayo" → child has fever → ask hospital
+- "blood pressure high" → ask if they need hospital
+- NEVER say "try ginger tea" or "take rest" — ALWAYS route to medical care
+
+PASSPORT:
+- "I need a passport" → new-passport
+- "passport renew" → passport-renewal
+- "passport kina lagcha" → new-passport
+- "bidesh jaanu cha passport chahiyo" → new-passport
+
+CITIZENSHIP:
+- "nagarikta/nagarikta banauney" → new-citizenship-application
+- "citizenship by descent" → new-citizenship-application
+
+DRIVING LICENSE:
+- "license" / "sawari chalana" → driving-license-new
+- "license renew" → driving-license-renewal
+
+AMBIGUOUS — ask a smart question:
+- "bidesh jaanu cha" → could be passport, labor permit, visa, NOC → ASK
+- "job" → could be govt job (Lok Sewa) or private → ASK
+- "paisa" → could be banking, remittance, tax → ASK
+- "school" → could be admission, transfer, complaint → ASK
+
+═══ SERVICE CATALOG ═══
 ${serviceIndex}
 
-INTENT CATEGORIES for complaints (route to these slugs):
-- Infrastructure problems (road, water, drain, light, garbage, construction) → local-infrastructure-complaint
-- Corruption/bribery → ciaa-complaint
-- Consumer fraud → consumer-complaint
-- Human rights violation → human-rights-complaint
-- Government service grievance → lokpal-complaint
+═══ COMPLAINT ROUTING CHEAT SHEET ═══
+local-infrastructure-complaint → road, water, drain, light, garbage, construction, park, sidewalk, bridge, electricity
+ciaa-complaint → bribery, corruption, ghus, nepotism, govt misconduct
+consumer-complaint → fraud, scam, fake product, overcharge, warranty, refund
+human-rights-complaint → discrimination, caste, gender violence, forced labor, child labor
+lokpal-complaint → govt office not working, Hello Sarkar, bureaucratic runaround
 
-RULES:
-1. If the intent is CLEAR → pick the exact service slug and set confidence high (0.85+)
-2. If the intent needs clarification → set confidence to 0.5, write a short follow-up question, and give 3-4 option buttons
-3. For health symptoms → set category to "health_needs_triage" and ask about hospital/doctor/pharmacy
-4. For vague requests → ask a smart clarifying question
-5. NEVER give medical advice, legal advice, or home remedies. Always route to ACTION (hospital, complaint, service)
-6. Response should be warm, short (1-2 sentences max), in ${locale === 'ne' ? 'Nepali' : 'English'}
-7. Follow-up options should be short button labels (3-6 words each)
+═══ RESPONSE RULES ═══
+1. CLEAR intent → pick exact slug, confidence 0.85-0.95, short warm response
+2. AMBIGUOUS → confidence 0.4-0.6, ask ONE smart clarifying question, give 3-4 option buttons
+3. HEALTH symptoms → category "health_needs_triage", NO slug, ask hospital/doctor/pharmacy — NEVER give medical advice or home remedies
+4. GREETING (namaste, hi, hello, kasto) → category "greeting", slug null, respond warmly, suggest what the app can do
+5. Response language: ${locale === 'ne' ? 'Nepali (use natural Nepali, not overly formal)' : 'English (warm, friendly)'}
+6. Response length: 1-2 sentences MAX. Be concise. No lecturing.
+7. Option buttons: 3-6 words each, actionable ("Report to ward office", "Find nearest hospital")
+8. NEVER say "I cannot help" — always route SOMEWHERE useful
+9. Understand Romanized Nepali (bato = road, pani = water, bijuli = electricity, fohor = garbage)
+10. Understand code-switching: "mero passport expire bhayo" = passport renewal
+11. If user mentions a specific location/ward, acknowledge it in your response
 
-Respond with ONLY this JSON (no markdown, no explanation):
-{"slug": "service-slug-or-null", "category": "civic_complaint|corruption|consumer|health_needs_triage|government_service|general", "confidence": 0.0-1.0, "response": "short helpful message", "followUp": "question if needed or null", "options": ["option1", "option2"]}`;
+Respond with ONLY this JSON:
+{"slug":"service-slug-or-null","category":"civic_complaint|corruption|consumer|human_rights|health_needs_triage|government_service|greeting|general","confidence":0.0,"response":"message","followUp":"question-or-null","options":["opt1","opt2"]}`;
 
   try {
     const r = await fetch(
@@ -1182,7 +1246,7 @@ Respond with ONLY this JSON (no markdown, no explanation):
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.15, maxOutputTokens: 300 },
+          generationConfig: { temperature: 0.1, maxOutputTokens: 400 },
         }),
       },
     );
@@ -1193,6 +1257,7 @@ Respond with ONLY this JSON (no markdown, no explanation):
     const j = await r.json();
     const text = j.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
     if (!text) return null;
+    // Clean up any markdown code fences the model might add
     const jsonStr = text.replace(/```json\s*/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(jsonStr);
     if (parsed.category && typeof parsed.confidence === 'number') {
@@ -1211,45 +1276,71 @@ Respond with ONLY this JSON (no markdown, no explanation):
   }
 }
 
-/** Deterministic fallback patterns — used when AI is unavailable */
+/** Deterministic fallback patterns — comprehensive, used when AI is unavailable */
 const CIVIC_COMPLAINT_PATTERNS = [
-  /(?:road|street|path|highway|bridge|footpath|sidewalk|pavement).*(?:broken|damaged|bad|crack|hole|block|collapse|flood|destroy)/i,
+  // English patterns — road/street/path
+  /(?:road|street|path|highway|bridge|footpath|sidewalk|pavement).*(?:broken|damaged|bad|crack|hole|block|collapse|flood|destroy|repair|fix)/i,
   /(?:broken|damaged|bad|crack|destroy|collapse|flood).*(?:road|street|path|highway|bridge|footpath|sidewalk)/i,
-  /pothole|खाल्ड[ाो]|सडक.*(?:भत्क|बिग्र|खराब|टुट|फुट)|(?:भत्क|बिग्र|खराब|टुट|फुट).*सडक/i,
+  /pothole|manhole/i,
+  // Romanized Nepali — bato, sadak, pul
+  /(?:bato|sadak|road|sarak).*(?:bigr|bhatkk?|kharab|tut|fut|phut|broken|damage|fix)/i,
+  /(?:bigr|bhatkk?|kharab|tut|fut|phut).*(?:bato|sadak|road|sarak)/i,
+  // Devanagari — सडक, बाटो, पुल
+  /खाल्ड[ाो]|सडक.*(?:भत्क|बिग्र|खराब|टुट|फुट)|(?:भत्क|बिग्र|खराब|टुट|फुट).*सडक/i,
   /बाटो.*(?:भत्क|बिग्र|खराब|टुट)|(?:भत्क|बिग्र|खराब|टुट).*बाटो/i,
-  /(?:water|pani|खानेपानी|पानी).*(?:not coming|no |cut|stop|problem|issue|dirty|broken|supply)/i,
+  // Water supply
+  /(?:water|pani|खानेपानी|पानी).*(?:not coming|no |cut|stop|problem|issue|dirty|broken|supply|aaudaina|aayena)/i,
   /पानी.*(?:आउँदैन|छैन|बन्द|समस्या)|(?:आउँदैन|छैन|बन्द).*पानी/i,
-  /(?:drain|sewer|sewage|ढल|नाली).*(?:block|overflow|broken|smell|clog|problem)/i,
+  /pani.*(?:aaudaina|chaina|banda|samasya|nai chaina)/i,
+  // Drainage
+  /(?:drain|sewer|sewage|ढल|नाली|nali).*(?:block|overflow|broken|smell|clog|problem|banda|bhari)/i,
   /ढल.*(?:बन्द|भत्क|बिग्र|गन्ध)|(?:बन्द|भत्क|बिग्र).*ढल/i,
-  /(?:street\s*light|बत्ती).*(?:not work|broken|off|out|dark|problem)/i,
+  // Streetlight / electricity
+  /(?:street\s*light|बत्ती|batti|light\s*post).*(?:not work|broken|off|out|dark|problem|balena|chhaina)/i,
   /बत्ती.*(?:बलेको छैन|छैन|बिग्र|खराब)/i,
-  /(?:garbage|trash|waste|फोहोर).*(?:not collect|pile|dump|smell|problem)/i,
+  /(?:bijuli|बिजुली|electricity|power).*(?:chhaina|छैन|cut|gayo|gone|problem|outage)/i,
+  // Garbage
+  /(?:garbage|trash|waste|फोहोर|fohor).*(?:not collect|pile|dump|smell|problem|uthako chhaina|uthayena)/i,
   /फोहोर.*(?:उठाएको छैन|छैन|थुप्र|गन्ध)/i,
-  /(?:construction|निर्माण).*(?:dust|noise|block|problem|धुलो|आवाज)/i,
-  /(?:report|complaint|complain|fix|repair).*(?:road|water|drain|light|garbage|construction|infrastructure|pipe|bridge|footpath)/i,
+  // Construction nuisance
+  /(?:construction|निर्माण|nirman).*(?:dust|noise|block|problem|धुलो|आवाज|dhulo)/i,
+  // Generic report/complaint + infrastructure keyword
+  /(?:report|complaint|complain|fix|repair|ujuri|गुनासो).*(?:road|water|drain|light|garbage|construction|infrastructure|pipe|bridge|footpath|bato|sadak|pani|bijuli|fohor)/i,
+  /(?:road|bato|sadak|water|pani|light|batti|garbage|fohor|drain|nali).*(?:report|complaint|complain|ujuri|गुनासो)/i,
+  // Park, public space
+  /(?:park|garden|public\s*(?:space|area|toilet)).*(?:broken|dirty|damage|problem|not work|maintain)/i,
 ];
 
 const CORRUPTION_PATTERNS = [
-  /(?:bribe|corrupt|ghus|घुस|भ्रष्ट|अख्तियार|रिश्वत)/i,
-  /(?:official|officer|government).*(?:asking money|bribe|corrupt|demanded)/i,
+  /(?:bribe|corrupt|ghus|घुस|भ्रष्ट|अख्तियार|रिश्वत|rishwat)/i,
+  /(?:official|officer|government|police|sarkar|neta).*(?:asking money|bribe|corrupt|demanded|paisa mag|ghus)/i,
+  /(?:paisa|money|paise).*(?:mag|demand|ask|dinu par|pay extra|under the table)/i,
+  /(?:nepotism|afno manchhe|chakari|source lagaunu|aphno manche)/i,
 ];
 
 const CONSUMER_COMPLAINT_PATTERNS = [
-  /(?:fraud|scam|cheat|overcharg|fake product|ठगी|नक्कली)/i,
-  /(?:shop|store|seller|vendor|business).*(?:cheat|fraud|scam|refuse|defective)/i,
-  /(?:defective|broken|fake|expired).*(?:product|item|goods|सामान)/i,
+  /(?:fraud|scam|cheat|overcharg|fake product|ठगी|नक्कली|thagi|nakkal)/i,
+  /(?:shop|store|seller|vendor|business|pasal|dokan).*(?:cheat|fraud|scam|refuse|defective|thag|nakkal)/i,
+  /(?:defective|broken|fake|expired|nakkal).*(?:product|item|goods|saman|सामान)/i,
+  /(?:refund|paisa firta|warranty|guarantee).*(?:refuse|diyena|didn't|won't|garena|honour)/i,
+  /(?:online.*(?:scam|fraud|thag)|(?:scam|fraud|thag).*online)/i,
 ];
 
 const HUMAN_RIGHTS_PATTERNS = [
-  /(?:human rights|मानव अधिकार|discrimination|भेदभाव|torture|यातना)/i,
-  /(?:caste|जात|gender|लिङ्ग|ethnic).*(?:discriminat|भेदभाव|harass|violence)/i,
-  /(?:forced labor|bonded labor|child labor|बाल श्रम|बन्धुवा)/i,
+  /(?:human rights|मानव अधिकार|manav adhikar|discrimination|भेदभाव|bhedbhav|torture|यातना)/i,
+  /(?:caste|jaat|जात|gender|लिङ्ग|linga|ethnic|dalit|दलित).*(?:discriminat|भेदभाव|bhedbhav|harass|violence|hinsa)/i,
+  /(?:forced labor|bonded labor|child labor|बाल श्रम|बन्धुवा|bal shram|kamaiya)/i,
+  /(?:mahila|women|girl|महिला).*(?:hinsa|violence|harass|abuse|beat|threat|dhamki)/i,
+  /(?:domestic violence|gharelu hinsa|घरेलु हिंसा)/i,
 ];
 
 const GOVT_GRIEVANCE_PATTERNS = [
-  /(?:hello sarkar|हेलो सरकार|1111|government.*(?:not respond|slow|ignore|problem))/i,
+  /(?:hello sarkar|हेलो सरकार|1111)/i,
+  /(?:government|sarkar|सरकार|sarkari).*(?:not respond|slow|ignore|problem|kaam bhayena|help garena)/i,
   /(?:सरकारी.*(?:गुनासो|समस्या)|office.*(?:not help|refuse|delay|corrupt))/i,
   /(?:सरकारी कार्यालय|government office).*(?:गएको|went|visited).*(?:काम भएन|didn't work|no help|nothing happened)/i,
+  /(?:CDO|DAO|ward|vada|वडा|नगरपालिका|municipality).*(?:kaam bhayena|didn't help|refused|ignored|bolayena)/i,
+  /(?:ek office|one office).*(?:arko|another|paisa|send|pathau|पठाउ)/i,
 ];
 
 function detectIntentDeterministic(question: string): string | null {
@@ -1353,7 +1444,7 @@ async function detectDirectIntent(question: string, locale: 'en' | 'ne'): Promis
     }
 
     // AI understood intent but no specific slug — return the AI's response with options
-    if (smart.response && smart.options.length > 0) {
+    if (smart.response) {
       return {
         answer: smart.response,
         cited: [],
@@ -1361,7 +1452,7 @@ async function detectDirectIntent(question: string, locale: 'en' | 'ne'): Promis
         model: 'gemini-smart-router',
         topService: null,
         topServiceConfidence: smart.confidence,
-        routeMode: 'ambiguous',
+        routeMode: smart.options.length > 0 ? 'ambiguous' : 'none',
         routeReason: null,
         followUpPrompt: smart.followUp || null,
         followUpOptions: smart.options,
