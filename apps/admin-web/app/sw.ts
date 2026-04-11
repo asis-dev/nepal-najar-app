@@ -16,31 +16,36 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
-    // Always fetch daily-brief fresh from network
+    // All page navigations — always try network first so users see the
+    // latest deploy.  Falls back to cache only when offline.
     {
-      matcher: /\/api\/daily-brief/,
-      handler: new NetworkFirst({ networkTimeoutSeconds: 10 }),
-    },
-    // Services directory pages — offline-first reference data.
-    // StaleWhileRevalidate so users see cached content instantly and
-    // get a background refresh while online.
-    {
-      matcher: ({ url, request }) =>
-        request.destination === 'document' && url.pathname.startsWith('/services'),
-      handler: new StaleWhileRevalidate({
-        cacheName: 'services-pages',
+      matcher: ({ request }) => request.destination === 'document',
+      handler: new NetworkFirst({
+        cacheName: 'pages',
+        networkTimeoutSeconds: 5,
         plugins: [
-          new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+          new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 7 }),
         ],
       }),
     },
-    // Service OG images
+    // API routes — network first, cache as offline fallback
+    {
+      matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/api/'),
+      handler: new NetworkFirst({
+        cacheName: 'api-cache',
+        networkTimeoutSeconds: 10,
+        plugins: [
+          new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 }),
+        ],
+      }),
+    },
+    // Service OG images — cache first (they change rarely)
     {
       matcher: /\/api\/og\/service/,
       handler: new CacheFirst({
         cacheName: 'services-og',
         plugins: [
-          new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+          new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 7 }),
         ],
       }),
     },
