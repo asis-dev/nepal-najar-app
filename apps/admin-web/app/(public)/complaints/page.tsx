@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, ArrowDownUp, ChevronRight, Loader2, MapPin, MessageSquareWarning, Mic, Search, Send, Square, Users } from 'lucide-react';
@@ -120,7 +120,15 @@ function IssueRow({ complaint, isNe }: { complaint: any; isNe: boolean }) {
   );
 }
 
-export default function ComplaintsPage() {
+export default function ComplaintsPageWrapper() {
+  return (
+    <Suspense>
+      <ComplaintsPage />
+    </Suspense>
+  );
+}
+
+function ComplaintsPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { locale } = useI18n();
