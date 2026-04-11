@@ -15,7 +15,9 @@ import type { Service } from './types';
 import { getAllServices, rankServices, searchServices } from './catalog';
 
 const GEMINI_API_KEY = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const GEN_MODEL = process.env.SERVICES_AI_MODEL || 'gemini-2.0-flash';
+const ROUTER_MODEL = process.env.SERVICES_ROUTER_MODEL || 'gpt-4o-mini';
 const EMBED_MODEL = 'text-embedding-004';
 const AI_ENABLED = process.env.SERVICES_AI_ENABLED !== 'false';
 const DAILY_CAP = parseInt(process.env.SERVICES_AI_DAILY_CAP || '1000', 10);
@@ -24,6 +26,13 @@ const AI_COOLDOWN_MS = Math.max(
   60_000,
   Number.parseInt(process.env.SERVICES_AI_COOLDOWN_MS || '', 10) || 15 * 60 * 1000,
 );
+// Separate cooldown for the OpenAI smart router
+let routerCooldownUntil = 0;
+function isRouterCoolingDown() { return Date.now() < routerCooldownUntil; }
+function beginRouterCooldown(reason: string) {
+  routerCooldownUntil = Date.now() + 120_000; // 2 min cooldown for router
+  console.warn(`[smart-router] Cooling down for 120s: ${reason}`);
+}
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -1131,144 +1140,92 @@ async function smartRouteWithAI(
   question: string,
   locale: 'en' | 'ne',
 ): Promise<{ slug: string; category: string; confidence: number; response: string; followUp: string | null; options: string[] } | null> {
-  if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) {
-    console.log('[smart-router] skipped:', !GEMINI_API_KEY ? 'no-key' : !AI_ENABLED ? 'disabled' : 'cooldown');
+  if (!OPENAI_API_KEY || !AI_ENABLED || isRouterCoolingDown()) {
+    console.log('[smart-router] skipped:', !OPENAI_API_KEY ? 'no-key' : !AI_ENABLED ? 'disabled' : 'cooldown');
     return null;
   }
 
   const all = await getAllServices();
-  // Build compact service index — slug + English title + Nepali title + summary
   const serviceIndex = all.map(s =>
     `${s.slug}: ${s.title.en} (${s.title.ne}) — ${s.summary.en.slice(0, 100)}`
   ).join('\n');
 
-  const prompt = `You are the AI brain of Nepal Republic (नेपाल रिपब्लिक) — a civic super-app that helps every Nepali citizen navigate government services, report problems, and get things done. You think like the smartest, most helpful दिदी/दाजु in the neighborhood who knows exactly which office to go to, which number to call, and what documents to bring.
+  const systemPrompt = `You are the AI brain of Nepal Republic (नेपाल रिपब्लिक) — a civic super-app helping Nepali citizens navigate government services, report problems, and get things done. Think like the smartest दिदी/दाजु who knows exactly which office, number, and documents are needed.
 
-USER SAID: "${question}"
+MISSION: Understand the user's REAL need (even if poorly worded, Romanized Nepali, mixed Hindi-Nepali, or broken English) and route to the exact right service.
 
-YOUR MISSION: Understand their REAL need (even if poorly worded, in Romanized Nepali, mixed Hindi-Nepali, or broken English) and route them to the exact right service. Be brilliant at reading between the lines.
+═══ ROUTING EXAMPLES ═══
 
-═══ HOW TO THINK (30+ examples) ═══
-
-INFRASTRUCTURE & CIVIC COMPLAINTS → local-infrastructure-complaint:
-- "the road near my house is broken" → infrastructure complaint
-- "mero ghar agadi ko bato bigrieko cha" → road complaint
-- "pani aaudaina 3 din bhayo" → water supply complaint
-- "street light baleko chhaina" → streetlight complaint
-- "fohor uthako chhaina" → garbage not collected
-- "nali/drain blocked" → drainage complaint
-- "construction le dhulo airacha" → construction dust complaint
-- "pothole", "खाल्डो", "सडक", "बाटो फुटेको" → road complaint
-- "bijuli chhaina" → power issue → local-infrastructure-complaint
-- "park ma batti chhaina" → park lighting → local-infrastructure-complaint
+INFRASTRUCTURE → local-infrastructure-complaint:
+"the road near my house is broken", "mero ghar agadi ko bato bigrieko cha", "pani aaudaina 3 din bhayo", "street light baleko chhaina", "fohor uthako chhaina", "nali/drain blocked", "construction le dhulo airacha", "pothole", "खाल्डो", "सडक", "बाटो फुटेको", "bijuli chhaina", "park ma batti chhaina"
 
 CORRUPTION → ciaa-complaint:
-- "police asked me for money" → corruption
-- "officer le ghus khayo" → bribery
-- "CDO office ma paisa magyo" → corruption at govt office
-- "I had to pay extra at the passport office" → corruption
-- "bhrastachar", "ghus", "rishwat" → corruption
+"police asked me for money", "officer le ghus khayo", "CDO office ma paisa magyo", "I had to pay extra at the passport office", "bhrastachar", "ghus", "rishwat"
 
 CONSUMER → consumer-complaint:
-- "shop sold me fake product" → consumer fraud
-- "overcharged at restaurant" → consumer complaint
-- "online shopping scam" → consumer fraud
-- "warranty honour garena" → consumer complaint
-- "paisa firta dina maanena" → refund refused
+"shop sold me fake product", "overcharged at restaurant", "online shopping scam", "warranty honour garena", "paisa firta dina maanena"
 
 HUMAN RIGHTS → human-rights-complaint:
-- "discriminated because of my caste" → human rights
-- "jaat ko karan service diyena" → caste discrimination
-- "bonded labor", "child labor", "बाल श्रम" → human rights
-- "mahila hinsa" → gender violence → human rights
+"discriminated because of my caste", "jaat ko karan service diyena", "bonded labor", "child labor", "बाल श्रम", "mahila hinsa"
 
 GOVT GRIEVANCE → lokpal-complaint:
-- "government office didn't help me" → Hello Sarkar
-- "sarkaari kaam bhayena" → govt grievance
-- "CDO office gaye kaam bhayena" → govt grievance
-- "they keep sending me from one office to another" → govt grievance
+"government office didn't help me", "sarkaari kaam bhayena", "CDO office gaye kaam bhayena", "they keep sending me from one office to another"
 
-HEALTH → category: "health_needs_triage" (NO slug, ask what they need):
-- "my stomach hurts" → DO NOT give medical advice → ask hospital/doctor/pharmacy
-- "biramii chu" → ask if they need hospital
-- "baccha lai jworo aayo" → child has fever → ask hospital
-- "blood pressure high" → ask if they need hospital
-- NEVER say "try ginger tea" or "take rest" — ALWAYS route to medical care
+HEALTH → category "health_needs_triage" (NO slug):
+"my stomach hurts", "biramii chu", "baccha lai jworo aayo", "blood pressure high", "pet dukhyo", "tauko dukhyo"
+NEVER give medical advice or home remedies. ALWAYS ask hospital/doctor/pharmacy.
 
-PASSPORT:
-- "I need a passport" → new-passport
-- "passport renew" → passport-renewal
-- "passport kina lagcha" → new-passport
-- "bidesh jaanu cha passport chahiyo" → new-passport
-
-CITIZENSHIP:
-- "nagarikta/nagarikta banauney" → new-citizenship-application
-- "citizenship by descent" → new-citizenship-application
-
-DRIVING LICENSE:
-- "license" / "sawari chalana" → driving-license-new
-- "license renew" → driving-license-renewal
-
-AMBIGUOUS — ask a smart question:
-- "bidesh jaanu cha" → could be passport, labor permit, visa, NOC → ASK
-- "job" → could be govt job (Lok Sewa) or private → ASK
-- "paisa" → could be banking, remittance, tax → ASK
-- "school" → could be admission, transfer, complaint → ASK
+PASSPORT: "I need a passport" → new-passport, "passport renew" → passport-renewal
+CITIZENSHIP: "nagarikta banauney" → new-citizenship-application
+LICENSE: "license" → driving-license-new, "license renew" → driving-license-renewal
+AMBIGUOUS: "bidesh jaanu cha" → ASK (passport/labor permit/visa/NOC), "job" → ASK (Lok Sewa/private)
 
 ═══ SERVICE CATALOG ═══
 ${serviceIndex}
 
-═══ COMPLAINT ROUTING CHEAT SHEET ═══
-local-infrastructure-complaint → road, water, drain, light, garbage, construction, park, sidewalk, bridge, electricity
-ciaa-complaint → bribery, corruption, ghus, nepotism, govt misconduct
-consumer-complaint → fraud, scam, fake product, overcharge, warranty, refund
-human-rights-complaint → discrimination, caste, gender violence, forced labor, child labor
-lokpal-complaint → govt office not working, Hello Sarkar, bureaucratic runaround
+═══ RULES ═══
+1. CLEAR intent → exact slug, confidence 0.85-0.95
+2. AMBIGUOUS → confidence 0.4-0.6, ONE clarifying question, 3-4 option buttons
+3. HEALTH → "health_needs_triage", NO slug, ask hospital/doctor/pharmacy
+4. GREETING → "greeting", null slug, warm response
+5. Language: ${locale === 'ne' ? 'Nepali (natural, not formal)' : 'English (warm, friendly)'}
+6. 1-2 sentences MAX. Options: 3-6 words each, actionable.
+7. NEVER say "I cannot help". Understand Romanized Nepali. Understand code-switching.
 
-═══ RESPONSE RULES ═══
-1. CLEAR intent → pick exact slug, confidence 0.85-0.95, short warm response
-2. AMBIGUOUS → confidence 0.4-0.6, ask ONE smart clarifying question, give 3-4 option buttons
-3. HEALTH symptoms → category "health_needs_triage", NO slug, ask hospital/doctor/pharmacy — NEVER give medical advice or home remedies
-4. GREETING (namaste, hi, hello, kasto) → category "greeting", slug null, respond warmly, suggest what the app can do
-5. Response language: ${locale === 'ne' ? 'Nepali (use natural Nepali, not overly formal)' : 'English (warm, friendly)'}
-6. Response length: 1-2 sentences MAX. Be concise. No lecturing.
-7. Option buttons: 3-6 words each, actionable ("Report to ward office", "Find nearest hospital")
-8. NEVER say "I cannot help" — always route SOMEWHERE useful
-9. Understand Romanized Nepali (bato = road, pani = water, bijuli = electricity, fohor = garbage)
-10. Understand code-switching: "mero passport expire bhayo" = passport renewal
-11. If user mentions a specific location/ward, acknowledge it in your response
-
-Respond with ONLY this JSON:
-{"slug":"service-slug-or-null","category":"civic_complaint|corruption|consumer|human_rights|health_needs_triage|government_service|greeting|general","confidence":0.0,"response":"message","followUp":"question-or-null","options":["opt1","opt2"]}`;
+Respond ONLY with JSON: {"slug":"service-slug-or-null","category":"civic_complaint|corruption|consumer|human_rights|health_needs_triage|government_service|greeting|general","confidence":0.0,"response":"message","followUp":"question-or-null","options":["opt1","opt2"]}`;
 
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEN_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 400 },
-        }),
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
-    );
+      body: JSON.stringify({
+        model: ROUTER_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: question },
+        ],
+        temperature: 0.1,
+        max_tokens: 400,
+        response_format: { type: 'json_object' },
+      }),
+    });
     if (!r.ok) {
       const errBody = await r.text().catch(() => '');
-      console.error(`[smart-router] Gemini ${r.status}: ${errBody.slice(0, 200)}`);
-      if (r.status === 429) beginAiCooldown('smart-router quota');
+      console.error(`[smart-router] OpenAI ${r.status}: ${errBody.slice(0, 200)}`);
+      if (r.status === 429) beginRouterCooldown('OpenAI rate limit');
       return null;
     }
     const j = await r.json();
-    const text = j.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const text = j.choices?.[0]?.message?.content?.trim();
     if (!text) {
-      console.warn('[smart-router] empty Gemini response:', JSON.stringify(j).slice(0, 300));
+      console.warn('[smart-router] empty OpenAI response');
       return null;
     }
-    // Clean up any markdown code fences the model might add
-    const jsonStr = text.replace(/```json\s*/g, '').replace(/```/g, '').trim();
-    console.log('[smart-router] raw AI:', jsonStr.slice(0, 300));
-    const parsed = JSON.parse(jsonStr);
+    console.log('[smart-router] raw AI:', text.slice(0, 300));
+    const parsed = JSON.parse(text);
     if (parsed.category && typeof parsed.confidence === 'number') {
       console.log(`[smart-router] routed → ${parsed.slug || 'no-slug'} (${parsed.category}, ${parsed.confidence})`);
       return {
