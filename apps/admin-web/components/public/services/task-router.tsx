@@ -18,26 +18,38 @@ interface ServiceOption {
 
 const CYCLING_PLACEHOLDERS_EN = [
   'I need a passport...',
+  'Report a broken road near me...',
   'How do I get a driving license?',
-  'My hospital bill is wrong...',
-  'I want to register a business...',
+  'My water supply is cut off...',
   'I need a citizenship certificate...',
   'How to file taxes?',
-  'Land registration process...',
-  'Report a broken road...',
+  'Streetlight not working...',
+  'I want to register a business...',
+  'Report garbage not collected...',
   'Birth certificate for my child...',
+  'Pothole on my street...',
+  'Land registration process...',
+  'My hospital bill is wrong...',
+  'Report construction dust problem...',
+  'How to complain about corruption?',
 ];
 
 const CYCLING_PLACEHOLDERS_NE = [
   'मलाई पासपोर्ट चाहिन्छ...',
+  'सडक भत्किएको छ रिपोर्ट गर्ने...',
   'ड्राइभिङ लाइसेन्स कसरी बनाउने?',
-  'अस्पताल बिल गलत छ...',
-  'व्यापार दर्ता गर्नु छ...',
+  'खानेपानी आउँदैन...',
   'नागरिकता प्रमाणपत्र चाहिन्छ...',
   'कर कसरी फाइल गर्ने?',
-  'जग्गा दर्ता प्रक्रिया...',
-  'बिग्रेको सडक रिपोर्ट गर्ने...',
+  'बत्ती बलेको छैन...',
+  'व्यापार दर्ता गर्नु छ...',
+  'फोहोर उठाएको छैन...',
   'बच्चाको जन्म दर्ता...',
+  'सडकमा खाल्डा छ...',
+  'जग्गा दर्ता प्रक्रिया...',
+  'अस्पताल बिल गलत छ...',
+  'निर्माणको धुलो समस्या...',
+  'भ्रष्टाचार उजुरी कसरी गर्ने?',
 ];
 
 export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
@@ -384,16 +396,13 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
         </div>
       )}
 
-      {/* Quick action pills */}
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
+      {/* Quick action pills — 4 items, single row on mobile */}
+      <div className="mt-3 flex justify-center gap-1.5">
         {[
           { ne: 'पासपोर्ट', en: 'Passport' },
           { ne: 'नागरिकता', en: 'Citizenship' },
-          { ne: 'ड्राइभिङ लाइसेन्स', en: 'License' },
-          { ne: 'विदेश जाने', en: 'Go abroad' },
-          { ne: 'व्यापार दर्ता', en: 'Business' },
-          { ne: 'कर फाइल', en: 'Tax filing' },
-          { ne: 'समस्या रिपोर्ट', en: 'Report issue' },
+          { ne: 'लाइसेन्स', en: 'License' },
+          { ne: 'समस्या', en: 'Report' },
         ].map((item) => (
           <button
             key={item.en}
@@ -401,7 +410,7 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
               setQuestion(isNe ? item.ne : item.en);
               routeQuestion(isNe ? item.ne : item.en);
             }}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-xs text-zinc-400 transition-all hover:border-[#DC143C]/30 hover:bg-[#DC143C]/5 hover:text-white active:scale-95"
+            className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-2.5 py-1 text-[11px] text-zinc-400 transition-all hover:border-[#DC143C]/30 hover:bg-[#DC143C]/5 hover:text-white active:scale-95"
           >
             {isNe ? item.ne : item.en}
           </button>
