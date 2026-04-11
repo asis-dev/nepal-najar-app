@@ -1114,34 +1114,67 @@ function getMissingSlots(intakeState: IntakeState, intakeSlots: IntakeSlots) {
 // Deterministic patterns serve as FALLBACK when AI is unavailable.
 // ─────────────────────────────────────────────────────────────
 
-const INTENT_CATEGORIES = {
+const INTENT_CATEGORIES: Record<string, string> = {
   civic_complaint: 'local-infrastructure-complaint',
   corruption_complaint: 'ciaa-complaint',
   consumer_complaint: 'consumer-complaint',
   human_rights_complaint: 'human-rights-complaint',
   government_grievance: 'lokpal-complaint',
-} as const;
+};
 
-/** AI-powered intent classification — asks Gemini to categorize the user's intent */
-async function classifyIntentWithAI(question: string): Promise<{ category: string; confidence: number } | null> {
+/**
+ * AI-powered smart router — single Gemini call that understands user intent,
+ * picks the right service from the full catalog, and generates a helpful response.
+ * This replaces both intent classification AND answer generation for complaint/action intents.
+ */
+async function smartRouteWithAI(
+  question: string,
+  locale: 'en' | 'ne',
+): Promise<{ slug: string; category: string; confidence: number; response: string; followUp: string | null; options: string[] } | null> {
   if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) return null;
+
+  const all = await getAllServices();
+  // Build compact service index for the AI — slug + title + summary only
+  const serviceIndex = all.map(s => `${s.slug}: ${s.title.en} — ${s.summary.en.slice(0, 80)}`).join('\n');
+
+  const prompt = `You are the brain of Nepal Republic — a civic app that helps Nepalis get things done. You understand Nepali culture, government, and daily life deeply.
+
+A user just said: "${question}"
+
+Your job: figure out EXACTLY what they need and route them to the right service. Think like a smart Nepali friend who knows the system.
+
+EXAMPLES of how to think:
+- "the road near my house is broken" → they need to FILE A COMPLAINT about infrastructure → local-infrastructure-complaint
+- "my stomach hurts" → they may need a HOSPITAL → ask if they need hospital/doctor/pharmacy
+- "I need a passport" → direct route to new-passport
+- "police asked me for money" → corruption complaint → ciaa-complaint
+- "water hasn't come in 3 days" → infrastructure complaint about water → local-infrastructure-complaint
+- "I want to go abroad" → could be passport, labor permit, or NOC — ASK which one
+- "mero bato bigrieko cha" → broken road = infrastructure complaint → local-infrastructure-complaint
+
+AVAILABLE SERVICES:
+${serviceIndex}
+
+INTENT CATEGORIES for complaints (route to these slugs):
+- Infrastructure problems (road, water, drain, light, garbage, construction) → local-infrastructure-complaint
+- Corruption/bribery → ciaa-complaint
+- Consumer fraud → consumer-complaint
+- Human rights violation → human-rights-complaint
+- Government service grievance → lokpal-complaint
+
+RULES:
+1. If the intent is CLEAR → pick the exact service slug and set confidence high (0.85+)
+2. If the intent needs clarification → set confidence to 0.5, write a short follow-up question, and give 3-4 option buttons
+3. For health symptoms → set category to "health_needs_triage" and ask about hospital/doctor/pharmacy
+4. For vague requests → ask a smart clarifying question
+5. NEVER give medical advice, legal advice, or home remedies. Always route to ACTION (hospital, complaint, service)
+6. Response should be warm, short (1-2 sentences max), in ${locale === 'ne' ? 'Nepali' : 'English'}
+7. Follow-up options should be short button labels (3-6 words each)
+
+Respond with ONLY this JSON (no markdown, no explanation):
+{"slug": "service-slug-or-null", "category": "civic_complaint|corruption|consumer|health_needs_triage|government_service|general", "confidence": 0.0-1.0, "response": "short helpful message", "followUp": "question if needed or null", "options": ["option1", "option2"]}`;
+
   try {
-    const prompt = `You are an intent classifier for a Nepali civic app. Classify the user's message into ONE of these categories:
-
-- civic_complaint: Problems with roads, water supply, drainage, streetlights, garbage, construction, potholes, broken infrastructure, public amenities not working. Any complaint about local infrastructure or public services not functioning.
-- corruption_complaint: Reporting bribery, corruption, abuse of authority by officials.
-- consumer_complaint: Fraud, scam, overcharging, fake products, business cheating.
-- human_rights_complaint: Human rights violations, discrimination, torture.
-- government_grievance: General complaints about government service delays, misconduct by officials.
-- health_emergency: Someone is sick, in pain, injured, needs a doctor or hospital. NOT asking about health insurance or health policy.
-- government_service: Requesting a specific government service (passport, citizenship, license, tax, registration, certificate, etc.)
-- general_question: Anything else — daily life questions, food, transport, entertainment, general info.
-
-User message: "${question}"
-
-Respond with ONLY a JSON object: {"category": "...", "confidence": 0.0-1.0}
-No explanation, no markdown, just the JSON.`;
-
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEN_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -1149,22 +1182,28 @@ No explanation, no markdown, just the JSON.`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 100 },
+          generationConfig: { temperature: 0.15, maxOutputTokens: 300 },
         }),
       },
     );
     if (!r.ok) {
-      if (r.status === 429) beginAiCooldown('intent classification quota');
+      if (r.status === 429) beginAiCooldown('smart-router quota');
       return null;
     }
     const j = await r.json();
     const text = j.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
     if (!text) return null;
-    // Extract JSON from response (handle markdown code blocks)
     const jsonStr = text.replace(/```json\s*/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(jsonStr);
     if (parsed.category && typeof parsed.confidence === 'number') {
-      return { category: parsed.category, confidence: parsed.confidence };
+      return {
+        slug: parsed.slug || null,
+        category: parsed.category,
+        confidence: parsed.confidence,
+        response: parsed.response || '',
+        followUp: parsed.followUp || null,
+        options: Array.isArray(parsed.options) ? parsed.options : [],
+      };
     }
     return null;
   } catch {
@@ -1198,6 +1237,19 @@ const CORRUPTION_PATTERNS = [
 const CONSUMER_COMPLAINT_PATTERNS = [
   /(?:fraud|scam|cheat|overcharg|fake product|ठगी|नक्कली)/i,
   /(?:shop|store|seller|vendor|business).*(?:cheat|fraud|scam|refuse|defective)/i,
+  /(?:defective|broken|fake|expired).*(?:product|item|goods|सामान)/i,
+];
+
+const HUMAN_RIGHTS_PATTERNS = [
+  /(?:human rights|मानव अधिकार|discrimination|भेदभाव|torture|यातना)/i,
+  /(?:caste|जात|gender|लिङ्ग|ethnic).*(?:discriminat|भेदभाव|harass|violence)/i,
+  /(?:forced labor|bonded labor|child labor|बाल श्रम|बन्धुवा)/i,
+];
+
+const GOVT_GRIEVANCE_PATTERNS = [
+  /(?:hello sarkar|हेलो सरकार|1111|government.*(?:not respond|slow|ignore|problem))/i,
+  /(?:सरकारी.*(?:गुनासो|समस्या)|office.*(?:not help|refuse|delay|corrupt))/i,
+  /(?:सरकारी कार्यालय|government office).*(?:गएको|went|visited).*(?:काम भएन|didn't work|no help|nothing happened)/i,
 ];
 
 function detectIntentDeterministic(question: string): string | null {
@@ -1205,6 +1257,8 @@ function detectIntentDeterministic(question: string): string | null {
   if (CIVIC_COMPLAINT_PATTERNS.some(p => p.test(q))) return 'civic_complaint';
   if (CORRUPTION_PATTERNS.some(p => p.test(q))) return 'corruption_complaint';
   if (CONSUMER_COMPLAINT_PATTERNS.some(p => p.test(q))) return 'consumer_complaint';
+  if (HUMAN_RIGHTS_PATTERNS.some(p => p.test(q))) return 'human_rights_complaint';
+  if (GOVT_GRIEVANCE_PATTERNS.some(p => p.test(q))) return 'government_grievance';
   return null;
 }
 
@@ -1251,19 +1305,73 @@ function buildIntentResult(svc: Service, locale: 'en' | 'ne', question: string, 
 async function detectDirectIntent(question: string, locale: 'en' | 'ne'): Promise<AskResult | null> {
   const all = await getAllServices();
 
-  // ── Try 1: AI classification (primary) ──
-  const aiResult = await classifyIntentWithAI(question);
-  if (aiResult && aiResult.confidence >= 0.7) {
-    const slug = INTENT_CATEGORIES[aiResult.category as keyof typeof INTENT_CATEGORIES];
-    if (slug) {
-      const svc = all.find(s => s.slug === slug);
-      if (svc) return buildIntentResult(svc, locale, question, 'gemini-intent');
+  // ── Try 1: Smart AI Router (primary) — single Gemini call understands intent + picks service + generates response ──
+  const smart = await smartRouteWithAI(question, locale);
+  if (smart && smart.confidence >= 0.6) {
+    // Health triage — AI says user needs medical help, return with follow-up options
+    if (smart.category === 'health_needs_triage') {
+      return {
+        answer: smart.response || (locale === 'ne' ? 'तपाईंलाई स्वास्थ्य सेवा चाहिन्छ जस्तो छ।' : 'It sounds like you need medical attention.'),
+        cited: [],
+        cached: false,
+        model: 'gemini-smart-router',
+        topService: null,
+        topServiceConfidence: smart.confidence,
+        routeMode: 'ambiguous',
+        routeReason: smart.followUp || (locale === 'ne' ? 'के तपाईंलाई अस्पताल, डाक्टर वा औषधि चाहिन्छ?' : 'Do you need a hospital, doctor, or pharmacy?'),
+        followUpPrompt: smart.followUp || (locale === 'ne' ? 'तल छान्नुहोस्:' : 'Pick one below:'),
+        followUpOptions: smart.options.length > 0 ? smart.options : [
+          locale === 'ne' ? 'हो, मलाई अस्पताल चाहिन्छ' : 'Yes, I need a hospital',
+          locale === 'ne' ? 'नजिकको अस्पताल कुन हो?' : 'Which hospital is nearest?',
+          locale === 'ne' ? 'आज डाक्टर चाहिन्छ' : 'I need a doctor today',
+          locale === 'ne' ? 'फार्मेसी पुग्छ' : 'A pharmacy will do',
+        ],
+        intakeState: inferIntakeState(question),
+        intakeSlots: null,
+      };
     }
-    // health_emergency → don't direct-route, let the health flow handle it with follow-ups
-    // government_service / general_question → fall through to normal scoring pipeline
+
+    // AI picked a specific service slug
+    if (smart.slug) {
+      const svc = all.find(s => s.slug === smart.slug);
+      if (svc) {
+        return {
+          answer: smart.response || (locale === 'ne' ? 'म मद्दत गर्छु।' : 'I\'ll help you with this.'),
+          cited: [svc],
+          cached: false,
+          model: 'gemini-smart-router',
+          topService: svc,
+          topServiceConfidence: smart.confidence,
+          routeMode: smart.confidence >= 0.8 ? 'direct' : 'ambiguous',
+          routeReason: smart.followUp || null,
+          followUpPrompt: smart.followUp || null,
+          followUpOptions: smart.options || [],
+          intakeState: inferIntakeState(question),
+          intakeSlots: null,
+        };
+      }
+    }
+
+    // AI understood intent but no specific slug — return the AI's response with options
+    if (smart.response && smart.options.length > 0) {
+      return {
+        answer: smart.response,
+        cited: [],
+        cached: false,
+        model: 'gemini-smart-router',
+        topService: null,
+        topServiceConfidence: smart.confidence,
+        routeMode: 'ambiguous',
+        routeReason: null,
+        followUpPrompt: smart.followUp || null,
+        followUpOptions: smart.options,
+        intakeState: inferIntakeState(question),
+        intakeSlots: null,
+      };
+    }
   }
 
-  // ── Try 2: Deterministic fallback (when AI is down) ──
+  // ── Try 2: Deterministic fallback (when AI is down or unavailable) ──
   const deterministicCategory = detectIntentDeterministic(question);
   if (deterministicCategory) {
     const slug = INTENT_CATEGORIES[deterministicCategory as keyof typeof INTENT_CATEGORIES];
