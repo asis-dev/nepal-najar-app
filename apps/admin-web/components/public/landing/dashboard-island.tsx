@@ -293,7 +293,7 @@ export function DashboardIsland() {
           )}
         </div>
 
-        {/* ── Listen about app + Report Civic Issue — single row ── */}
+        {/* ── Listen about app ── */}
         <div className="mb-3 md:mb-5">
           <ActiveTasksOverview variant="compact" />
         </div>
