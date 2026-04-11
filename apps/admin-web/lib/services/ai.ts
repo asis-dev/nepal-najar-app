@@ -1185,12 +1185,14 @@ ${serviceIndex}
 
 ═══ RULES ═══
 1. CLEAR intent → exact slug, confidence 0.85-0.95
-2. AMBIGUOUS → confidence 0.4-0.6, ONE clarifying question, 3-4 option buttons
-3. HEALTH → "health_needs_triage", NO slug, ask hospital/doctor/pharmacy
-4. GREETING → "greeting", null slug, warm response
-5. Language: ${locale === 'ne' ? 'Nepali (natural, not formal)' : 'English (warm, friendly)'}
+2. AMBIGUOUS → confidence 0.5-0.7, ONE clarifying question, 3-4 option buttons
+3. HEALTH → "health_needs_triage", NO slug, confidence 0.9, ask hospital/doctor/pharmacy. ALWAYS provide 3-4 options.
+4. GREETING → "greeting", null slug, confidence 0.9, warm response with 3-4 suggestion options
+5. Language: ${locale === 'ne' ? 'Nepali (use natural Nepali, not formal/textbook)' : 'English (warm, friendly)'}
 6. 1-2 sentences MAX. Options: 3-6 words each, actionable.
 7. NEVER say "I cannot help". Understand Romanized Nepali. Understand code-switching.
+8. CONFIDENCE means "how well you understood the user's intent" — if you understand what they need, use 0.85+. Only use low confidence if the request is genuinely ambiguous.
+9. ALWAYS provide options array with 3-4 items. Never return empty options.
 
 Respond ONLY with JSON: {"slug":"service-slug-or-null","category":"civic_complaint|corruption|consumer|human_rights|health_needs_triage|government_service|greeting|general","confidence":0.0,"response":"message","followUp":"question-or-null","options":["opt1","opt2"]}`;
 
@@ -1365,18 +1367,19 @@ function buildIntentResult(svc: Service, locale: 'en' | 'ne', question: string, 
 async function detectDirectIntent(question: string, locale: 'en' | 'ne'): Promise<AskResult | null> {
   const all = await getAllServices();
 
-  // ── Try 1: Smart AI Router (primary) — single Gemini call understands intent + picks service + generates response ──
+  // ── Try 1: Smart AI Router (primary) — single OpenAI call understands intent + picks service + generates response ──
   const smart = await smartRouteWithAI(question, locale);
-  if (smart && smart.confidence >= 0.6) {
-    // Health triage — AI says user needs medical help, return with follow-up options
+
+  if (smart) {
+    // Health triage — ALWAYS accepted regardless of confidence
     if (smart.category === 'health_needs_triage') {
       return {
         answer: smart.response || (locale === 'ne' ? 'तपाईंलाई स्वास्थ्य सेवा चाहिन्छ जस्तो छ।' : 'It sounds like you need medical attention.'),
         cited: [],
         cached: false,
-        model: 'gemini-smart-router',
+        model: 'openai-smart-router',
         topService: null,
-        topServiceConfidence: smart.confidence,
+        topServiceConfidence: Math.max(smart.confidence, 0.8),
         routeMode: 'ambiguous',
         routeReason: smart.followUp || (locale === 'ne' ? 'के तपाईंलाई अस्पताल, डाक्टर वा औषधि चाहिन्छ?' : 'Do you need a hospital, doctor, or pharmacy?'),
         followUpPrompt: smart.followUp || (locale === 'ne' ? 'तल छान्नुहोस्:' : 'Pick one below:'),
@@ -1391,43 +1394,46 @@ async function detectDirectIntent(question: string, locale: 'en' | 'ne'): Promis
       };
     }
 
-    // AI picked a specific service slug
-    if (smart.slug) {
-      const svc = all.find(s => s.slug === smart.slug);
-      if (svc) {
+    // For all other categories, require minimum confidence
+    if (smart.confidence >= 0.5) {
+      // AI picked a specific service slug
+      if (smart.slug) {
+        const svc = all.find(s => s.slug === smart.slug);
+        if (svc) {
+          return {
+            answer: smart.response || (locale === 'ne' ? 'म मद्दत गर्छु।' : 'I\'ll help you with this.'),
+            cited: [svc],
+            cached: false,
+            model: 'openai-smart-router',
+            topService: svc,
+            topServiceConfidence: smart.confidence,
+            routeMode: smart.confidence >= 0.8 ? 'direct' : 'ambiguous',
+            routeReason: smart.followUp || null,
+            followUpPrompt: smart.followUp || null,
+            followUpOptions: smart.options || [],
+            intakeState: inferIntakeState(question),
+            intakeSlots: null,
+          };
+        }
+      }
+
+      // AI understood intent but no specific slug — return the AI's response with options
+      if (smart.response) {
         return {
-          answer: smart.response || (locale === 'ne' ? 'म मद्दत गर्छु।' : 'I\'ll help you with this.'),
-          cited: [svc],
+          answer: smart.response,
+          cited: [],
           cached: false,
-          model: 'gemini-smart-router',
-          topService: svc,
+          model: 'openai-smart-router',
+          topService: null,
           topServiceConfidence: smart.confidence,
-          routeMode: smart.confidence >= 0.8 ? 'direct' : 'ambiguous',
-          routeReason: smart.followUp || null,
+          routeMode: smart.options.length > 0 ? 'ambiguous' : 'none',
+          routeReason: null,
           followUpPrompt: smart.followUp || null,
-          followUpOptions: smart.options || [],
+          followUpOptions: smart.options,
           intakeState: inferIntakeState(question),
           intakeSlots: null,
         };
       }
-    }
-
-    // AI understood intent but no specific slug — return the AI's response with options
-    if (smart.response) {
-      return {
-        answer: smart.response,
-        cited: [],
-        cached: false,
-        model: 'gemini-smart-router',
-        topService: null,
-        topServiceConfidence: smart.confidence,
-        routeMode: smart.options.length > 0 ? 'ambiguous' : 'none',
-        routeReason: null,
-        followUpPrompt: smart.followUp || null,
-        followUpOptions: smart.options,
-        intakeState: inferIntakeState(question),
-        intakeSlots: null,
-      };
     }
   }
 
