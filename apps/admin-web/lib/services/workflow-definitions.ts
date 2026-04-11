@@ -2374,6 +2374,20 @@ AI should help the user pick the right license category (A=bike, B=car, K=scoote
       { id: 'rti_response', label: 'Record response', kind: 'official_site', completionLabel: 'Mark received', placeholder: 'Response date / details', statusOnComplete: 'completed', stepOnComplete: 2, progressOnComplete: 100, nextActionOnComplete: 'RTI response received.', milestoneIndex: 1, estimatedWait: '15 days (by law)', canSkip: false },
     ],
   },
+  'local-infrastructure-complaint': {
+    mode: 'mixed',
+    supportsOnlinePayment: false,
+    officeVisitRequired: true,
+    statusHint: 'Local infrastructure complaint at ward/municipality',
+    nextActionReady: 'Report the infrastructure issue to your ward office or municipality. You can also call Hello Sarkar at 1111.',
+    milestones: ['Report issue', 'Ward acknowledgment', 'Repair / resolution'],
+    aiWorkflowContext: 'Local infrastructure complaints in Nepal — roads, potholes, drainage, streetlights, water supply, sewage, construction dust/noise. Primary channel: visit ward office and file written complaint with ward secretary. Alternative: call Hello Sarkar 1111 or use Nagarik App. Municipality handles larger road/drain projects. Keep photo evidence. Ward must respond within 15 days per Local Government Operation Act. Free.',
+    actions: [
+      { id: 'infra_reported', label: 'Report to ward office', kind: 'directions', completionLabel: 'Mark reported', placeholder: 'Ward office / date / reference', statusOnComplete: 'in_progress', stepOnComplete: 1, progressOnComplete: 30, nextActionOnComplete: 'Wait for ward acknowledgment. Follow up after 7 days if no response. You can also escalate via Hello Sarkar 1111.', milestoneIndex: 0, estimatedFee: 'Free', requiredDocs: ['Written complaint letter', 'Photos of the issue', 'Citizenship copy (optional)'], canSkip: false, aiGuidancePrompt: 'Help user report local infrastructure problem. Ask for: exact location (road name, tole, landmark), ward number, type of issue (pothole, drain, streetlight, water, construction), how long the problem has existed, photos. Direct them to ward office or Hello Sarkar 1111.' },
+      { id: 'infra_acknowledged', label: 'Ward acknowledged', kind: 'call', completionLabel: 'Mark acknowledged', placeholder: 'Acknowledgment date / ref no.', statusOnComplete: 'in_progress', stepOnComplete: 2, progressOnComplete: 60, nextActionOnComplete: 'Track repair progress. If delayed, escalate to municipality or Hello Sarkar.', milestoneIndex: 1, estimatedWait: '7-15 days', canSkip: true },
+      { id: 'infra_resolved', label: 'Issue resolved', kind: 'directions', completionLabel: 'Mark resolved', placeholder: 'Resolution date / details', statusOnComplete: 'completed', stepOnComplete: 3, progressOnComplete: 100, nextActionOnComplete: 'Infrastructure issue resolved.', milestoneIndex: 2, canSkip: false },
+    ],
+  },
   'ciaa-complaint': {
     mode: 'mixed',
     supportsOnlinePayment: false,

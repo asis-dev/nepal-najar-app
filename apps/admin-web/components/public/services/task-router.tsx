@@ -149,6 +149,21 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
         return;
       }
 
+      // Civic complaint services → redirect to complaints flow
+      const COMPLAINT_SLUGS = [
+        'local-infrastructure-complaint',
+        'ciaa-complaint',
+        'consumer-complaint',
+        'human-rights-complaint',
+        'lokpal-complaint',
+      ];
+      const serviceSlug = data.service?.slug || data.task?.service_slug;
+      if (serviceSlug && COMPLAINT_SLUGS.includes(serviceSlug)) {
+        const q = encodeURIComponent(nextQuestion);
+        router.push(`/complaints?q=${q}&type=${serviceSlug}`);
+        return;
+      }
+
       if (data.requiresAuth && data.service) {
         router.push(`/services/${data.service.category}/${data.service.slug}`);
         return;
@@ -378,6 +393,7 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
           { ne: 'विदेश जाने', en: 'Go abroad' },
           { ne: 'व्यापार दर्ता', en: 'Business' },
           { ne: 'कर फाइल', en: 'Tax filing' },
+          { ne: 'समस्या रिपोर्ट', en: 'Report issue' },
         ].map((item) => (
           <button
             key={item.en}

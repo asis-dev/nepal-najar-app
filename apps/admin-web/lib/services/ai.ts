@@ -480,6 +480,21 @@ export function buildRoutingQuery(question: string) {
     signals.add('tax');
   }
 
+  // Civic infrastructure complaints
+  if (/(road|pothole|footpath|sidewalk|drain|sewage|streetlight|street light|garbage|construction|सडक|खाल्डा|खाल्डो|बाटो|ढल|नाली|बत्ती|फोहोर|निर्माण|पूर्वाधार)/.test(normalized)) {
+    signals.add('road');
+    signals.add('infrastructure');
+    signals.add('complaint');
+    signals.add('ward');
+    signals.add('municipality');
+  }
+  // General civic complaint signals
+  if (/(report|complaint|complain|problem|broken|damaged|गुनासो|उजुरी|समस्या|बिग्रिएको|भत्किएको|टुटेको)/.test(normalized)) {
+    signals.add('complaint');
+    signals.add('report');
+    signals.add('infrastructure');
+  }
+
   if (signals.size === 0) {
     return question.trim();
   }
@@ -970,6 +985,13 @@ function buildGeneralStaticAnswer(question: string, locale: 'en' | 'ne'): string
     return isNe
       ? '💰 भुक्तानी र पैसा:\n\n• **eSewa** — QR भुक्तानी, बिल भुक्तानी, पैसा पठाउनुहोस्\n• **Khalti** — डिजिटल वालेट\n• **IME Pay** — रेमिट्यान्स र भुक्तानी\n• **ConnectIPS** — बैंक ट्रान्सफर\n• नजिकको ATM खोज्न Google Maps प्रयोग गर्नुहोस्'
       : '💰 Payments & money:\n\n• **eSewa** — QR payments, bill pay, send money\n• **Khalti** — Digital wallet\n• **IME Pay** — Remittance and payments\n• **ConnectIPS** — Bank-to-bank transfers\n• For ATMs, search Google Maps for your nearest one';
+  }
+
+  // Civic infrastructure complaints
+  if (/(road|pothole|footpath|drain|sewage|streetlight|garbage|construction|broken|damaged|सडक|खाल्डा|ढल|बत्ती|फोहोर|निर्माण|भत्किएको|बिग्रिएको|टुटेको)/i.test(q) && /(report|complaint|problem|issue|fix|repair|complain|गुनासो|उजुरी|समस्या|रिपोर्ट)/i.test(q)) {
+    return isNe
+      ? '🏗️ स्थानीय पूर्वाधार समस्या रिपोर्ट गर्ने:\n\n• **वडा कार्यालय** — लिखित उजुरी दिनुहोस् (फोटो सहित)\n• **1111** — Hello Sarkar (सरकारी गुनासो हटलाइन)\n• **नागरिक एप** — nagarikapp.gov.np बाट पनि उजुरी दिन सकिन्छ\n\nवडा सचिवले १५ दिनभित्र जवाफ दिनुपर्छ। फोटो प्रमाण राख्नुहोस्।'
+      : '🏗️ Report local infrastructure issues:\n\n• **Ward Office** — File a written complaint with photos\n• **1111** — Hello Sarkar (government grievance hotline)\n• **Nagarik App** — nagarikapp.gov.np for online filing\n\nYour ward must respond within 15 days. Keep photo evidence. For urgent issues (e.g., dangerous road damage), also call your municipality office.';
   }
 
   // Emergency

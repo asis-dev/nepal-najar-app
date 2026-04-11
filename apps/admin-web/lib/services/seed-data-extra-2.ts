@@ -577,4 +577,20 @@ export const EXTRA_SERVICES_2: Service[] = [
     officialUrl: 'https://nhrcnepal.org',
     tags: ['nhrc', 'human rights', 'मानव अधिकार'],
   }),
+
+  // ─── LOCAL INFRASTRUCTURE ───
+  svc({
+    slug: 'local-infrastructure-complaint',
+    category: 'legal',
+    providerType: 'gov',
+    providerName: 'Ward Office / Municipality',
+    title: { en: 'Report Local Infrastructure Issue', ne: 'स्थानीय पूर्वाधार समस्या रिपोर्ट' },
+    summary: {
+      en: 'Report road damage, potholes, broken drains, streetlight outages, water supply issues, or construction problems to your ward office or municipality.',
+      ne: 'सडक भत्किएको, खाल्डा, ढल बिग्रिएको, बत्ती नबलेको, खानेपानी समस्या, वा निर्माण समस्या वडा कार्यालय वा नगरपालिकामा रिपोर्ट गर्नुहोस्।',
+    },
+    estimatedTime: { en: '1–4 weeks response', ne: '१–४ हप्ता प्रतिक्रिया' },
+    feeRange: { en: 'Free', ne: 'निःशुल्क' },
+    tags: ['road', 'pothole', 'drain', 'streetlight', 'water', 'construction', 'infrastructure', 'ward', 'municipality', 'सडक', 'खाल्डा', 'ढल', 'बत्ती', 'पूर्वाधार', 'निर्माण', 'वडा', 'नगरपालिका'],
+  }),
 ];

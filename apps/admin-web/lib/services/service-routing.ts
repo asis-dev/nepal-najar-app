@@ -356,6 +356,12 @@ const SERVICE_OVERRIDES: Record<string, Partial<ServiceRoutingSnapshot>> = {
     routingReason: 'Government service grievances route through CIAA / Lokpal.',
     confidence: 0.91,
   },
+  'local-infrastructure-complaint': {
+    departmentKey: 'local-govt', departmentName: 'Ward Office / Municipality',
+    authorityLevel: 'local', roleTitle: 'Ward Secretary', routeType: 'counter',
+    routingReason: 'Local infrastructure issues (roads, drains, streetlights, water, construction) route to your ward office or municipality.',
+    confidence: 0.92,
+  },
 
   // ── Foreign Employment ─────────────────────────────────────────
   'labor-permit': {

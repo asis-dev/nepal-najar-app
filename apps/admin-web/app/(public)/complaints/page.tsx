@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, ArrowDownUp, ChevronRight, Loader2, MapPin, MessageSquareWarning, Mic, Search, Send, Square, Users } from 'lucide-react';
 import { useComplaints } from '@/lib/hooks/use-complaints';
@@ -121,6 +122,7 @@ function IssueRow({ complaint, isNe }: { complaint: any; isNe: boolean }) {
 
 export default function ComplaintsPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const isNe = locale === 'ne';
   const { isAuthenticated, isVerifier } = useAuth();
@@ -137,6 +139,17 @@ export default function ComplaintsPage() {
   // ── Report form state ──
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+
+  // Pre-fill from TaskRouter redirect (q= and type= query params)
+  const prefillDone = useRef(false);
+  useEffect(() => {
+    if (prefillDone.current) return;
+    const q = searchParams?.get('q');
+    if (q) {
+      setDescription(q);
+      prefillDone.current = true;
+    }
+  }, [searchParams]);
   const [rawTranscript, setRawTranscript] = useState('');
   const [inputMode, setInputMode] = useState<'text' | 'voice' | 'mixed'>('text');
   const [municipality, setMunicipality] = useState('');

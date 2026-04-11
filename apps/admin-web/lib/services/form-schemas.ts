@@ -1342,6 +1342,21 @@ export const FORM_SCHEMAS: Record<string, FormSchema> = {
       ]},
     ],
   },
+  'local-infrastructure-complaint': {
+    slug: 'local-infrastructure-complaint', title: 'Report local infrastructure issue', title_ne: 'स्थानीय पूर्वाधार समस्या रिपोर्ट',
+    sections: [
+      NAMES_SECTION, ADDRESS_SECTION, CONTACT_SECTION,
+      { title: 'Issue Details', fields: [
+        { key: 'issue_type', label: 'Type of issue', type: 'select', options: ['road_damage','pothole','drainage','streetlight','water_supply','sewage','footpath','construction_nuisance','garbage','other'], required: true },
+        { key: 'location_description', label: 'Location (road name, landmark, tole)', required: true },
+        { key: 'ward_number', label: 'Ward number', type: 'number' },
+        { key: 'issue_detail', label: 'Describe the problem', type: 'textarea', required: true },
+        { key: 'duration', label: 'How long has this been an issue?', type: 'select', options: ['few_days','1_week','2_4_weeks','1_3_months','over_3_months'] },
+        { key: 'affecting_count', label: 'Approx. people affected', type: 'number' },
+        { key: 'photo_available', label: 'Do you have photos?', type: 'select', options: ['yes','no'] },
+      ]},
+    ],
+  },
   'court-case-lookup': {
     slug: 'court-case-lookup', title: 'Court case status lookup', title_ne: 'मुद्दा स्थिति खोज',
     sections: [
