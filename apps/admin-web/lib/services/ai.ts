@@ -262,7 +262,7 @@ function applySessionContext(question: string, session: IntakeSessionState | nul
 }
 
 function isHealthSymptomNeed(normalized: string) {
-  return /(\bnot feeling well\b|\bunwell\b|\bsick\b|\bill\b|\bfever\b|\bpain\b|\binjury\b|\bcough\b|\bvomit(?:ing)?\b|\bdiarrhea\b|\binfection\b|\bbimari\b|\bbirami\b|\bbiraami\b|बिरामी|ठिक छैन|ज्वरो|दुखाइ|घाउ|खोकी)/.test(normalized);
+  return /(\bnot feeling well\b|\bunwell\b|\bsick\b|\bill\b|\bfever\b|\bpain\b|\bhurts?\b|\binjury\b|\bcough\b|\bvomit(?:ing)?\b|\bdiarrhea\b|\binfection\b|\bstomach\b|\bheadache\b|\bchest\b|\bbreathing\b|\bbleeding\b|\bbroken\s+(?:arm|leg|bone)\b|\bbimari\b|\bbirami\b|\bbiraami\b|बिरामी|ठिक छैन|ज्वरो|दुखाइ|दुख्छ|पेट|टाउको|घाउ|खोकी|श्वास|रगत)/.test(normalized);
 }
 
 function isHospitalNeed(normalized: string) {
@@ -772,7 +772,8 @@ Your job:
 4. If you genuinely don't know — say "I'm not sure about this" and suggest where they could find out.
 5. Be concise, warm, and helpful. Use bullets. Short paragraphs.
 6. When the user's need is vague, ask smart follow-up questions to narrow it down.
-7. Think about the user's REAL situation. "I am hungry" means they want food options. "I am bored" means they want things to do. "I need money" means they need financial help. Be human about it.`;
+7. Think about the user's REAL situation. "I am hungry" means they want food options. "I am bored" means they want things to do. "I need money" means they need financial help. Be human about it.
+8. CRITICAL for health/medical symptoms: NEVER give medical advice or suggest home remedies. If someone says they're in pain, sick, or hurt — your job is to help them GET TO A HOSPITAL or doctor, not treat themselves. Ask which hospital they want, suggest nearby ones, give emergency numbers (102 ambulance). This is an ACTION app, not a medical advice app.`;
 
   return `${instructions}
 
@@ -842,7 +843,8 @@ Rules:
 3. When possible, suggest specific names, phone numbers, apps, websites.
 4. If you're not sure — say so honestly. Don't make things up.
 5. Be concise, warm, and helpful. Use bullets.
-6. Ask follow-up questions if the need is vague — help narrow it down.`;
+6. Ask follow-up questions if the need is vague — help narrow it down.
+7. CRITICAL for health/medical symptoms: NEVER give medical advice or home remedies. If someone says they hurt, are sick, or in pain — help them GET TO A HOSPITAL. Suggest nearby hospitals, give emergency numbers (102 ambulance). This is an ACTION app.`;
 
   return `${instructions}
 
@@ -1242,20 +1244,20 @@ function buildRouteReason(
 
   if (intakeState.domain === 'health' && isMaternityNeed(normalizeIntentText(originalQuestion))) {
     return locale === 'ne'
-      ? 'यो मातृस्वास्थ्यसम्बन्धी आवश्यकता जस्तो देखिन्छ। NepalRepublic ले ANC, delivery, वा specialist care मध्ये के चाहिएको हो भनेर छोटो पुष्टि लिनुपर्छ।'
-      : 'This looks like a maternity or pregnancy-related health need. NepalRepublic should confirm whether this is for ANC, delivery, or specialist care before choosing the path.';
+      ? 'यो गर्भावस्था वा प्रसूतिसम्बन्धी जस्तो देखिन्छ। तल छान्नुहोस् — म सही सेवा खोज्छु।'
+      : 'This looks pregnancy or maternity related. Pick an option below so I can find the right care.';
   }
 
   if (intakeState.domain === 'health' && isHealthSymptomNeed(normalizeIntentText(originalQuestion))) {
     if (intakeState.subject === 'child') {
       return locale === 'ne'
-        ? 'यो बच्चाको स्वास्थ्यसम्बन्धी आवश्यकता जस्तो देखिन्छ। NepalRepublic ले अझै केही छोटा प्रश्न सोधेर सही अस्पताल र care type छान्नुपर्छ।'
-        : 'This looks like a child health need. NepalRepublic should ask a couple of quick questions before picking the right hospital and care path.';
+        ? 'तपाईंको बच्चालाई डाक्टर देखाउनु पर्ला। तल छान्नुहोस् — म सही अस्पताल खोज्छु।'
+        : 'Your child may need medical attention. Pick an option below and I\'ll find the right hospital for you.';
     }
 
     return locale === 'ne'
-      ? 'यो स्वास्थ्यसम्बन्धी आवश्यकता जस्तो देखिन्छ। सही बाटो छान्न NepalRepublic ले केही द्रुत प्रश्न सोध्नुपर्छ।'
-      : 'This looks like a health need. NepalRepublic should narrow it with a few quick questions before choosing the path.';
+      ? 'तपाईंलाई डाक्टर वा अस्पताल चाहिन सक्छ। तल एउटा विकल्प छान्नुहोस्।'
+      : 'You may need to see a doctor. Pick an option below so I can find the right care for you.';
   }
 
   if (ranked.length >= 2) {
@@ -1315,20 +1317,20 @@ function buildFollowUpPrompt(
 
   if (intakeState.domain === 'health' && intakeState.subject === 'child') {
     return locale === 'ne'
-      ? 'बच्चाका लागि अहिले के चाहिएको हो: आजै जाँच, बाल विशेषज्ञ, कि अस्पताल/OPD समय?'
-      : 'For your child, what do you need right now: same-day care, a pediatric specialist, or a hospital/OPD booking?';
+      ? 'बच्चालाई अस्पताल लैजानुपर्छ? तल छान्नुहोस्:'
+      : 'Does your child need to go to a hospital? Pick one:';
   }
 
   if (intakeState.domain === 'health' && intakeState.subject === 'parent') {
     return locale === 'ne'
-      ? 'अभिभावकका लागि अहिले के चाहिएको हो: आजै जाँच, विशेषज्ञ भेट, कि अस्पताल/OPD समय?'
-      : 'For your parent, what do you need right now: same-day care, a specialist appointment, or a hospital/OPD booking?';
+      ? 'बुबा/आमालाई अस्पताल लैजानुपर्छ? तल छान्नुहोस्:'
+      : 'Does your parent need to go to a hospital? Pick one:';
   }
 
   if (isHealthSymptomNeed(normalized)) {
     return locale === 'ne'
-      ? 'तपाईंलाई अहिले कस्तो मद्दत चाहिएको हो: आजै जाँच, विशेषज्ञ भेट, कि अस्पताल/OPD समय?'
-      : 'What do you need right now: same-day medical care, a specialist appointment, or a hospital/OPD booking?';
+      ? 'के तपाईंलाई अस्पताल जानुपर्छ? तल छान्नुहोस्:'
+      : 'Do you need to go to a hospital? Pick one:';
   }
 
   if (isHospitalNeed(normalized)) {
@@ -1448,48 +1450,48 @@ function buildFollowUpOptions(
   if (intakeState.domain === 'health' && intakeState.subject === 'child') {
     return locale === 'ne'
       ? [
-          'आजै बच्चा डाक्टर चाहियो',
-          'बाल विशेषज्ञ चाहियो',
-          'कान्ति अस्पताल ठीक होला',
-          'अर्को अस्पताल विकल्प देखाउनुहोस्',
+          'हो, अस्पताल लैजानुपर्छ',
+          'कान्ति बाल अस्पताल',
+          'नजिकको अस्पताल कुन?',
+          'फार्मेसी मात्र पुग्छ',
         ]
       : [
-          'My child needs a doctor today',
-          'My child needs a pediatric specialist',
-          'Kanti hospital sounds right',
-          'Show other hospital options',
+          'Yes, take to hospital',
+          'Kanti Children\'s Hospital',
+          'Which hospital is nearest?',
+          'A pharmacy will do',
         ];
   }
 
   if (intakeState.domain === 'health' && intakeState.subject === 'parent') {
     return locale === 'ne'
       ? [
-          'आजै डाक्टर चाहियो',
-          'विशेषज्ञ भेट चाहियो',
-          'यो बुबा/आमाका लागि हो',
-          'अर्को अस्पताल विकल्प देखाउनुहोस्',
+          'हो, अस्पताल जानुपर्छ',
+          'नजिकको अस्पताल कुन?',
+          'विशेषज्ञ डाक्टर चाहियो',
+          'फार्मेसी मात्र पुग्छ',
         ]
       : [
-          'My parent needs a doctor today',
-          'My parent needs a specialist appointment',
-          'This is for my father or mother',
-          'Show other hospital options',
+          'Yes, need a hospital',
+          'Which hospital is nearest?',
+          'Need a specialist doctor',
+          'A pharmacy will do',
         ];
   }
 
   if (isHealthSymptomNeed(normalized)) {
     return locale === 'ne'
       ? [
-          'आजै डाक्टर देखाउनुपर्छ',
-          'विशेषज्ञको समय चाहियो',
-          'बाबु/आमाका लागि हो',
-          'बच्चाको लागि हो',
+          'हो, अस्पताल जानुपर्छ',
+          'नजिकको अस्पताल कुन?',
+          'आजै डाक्टर चाहियो',
+          'फार्मेसी मात्र पुग्छ',
         ]
       : [
+          'Yes, I need a hospital',
+          'Which hospital is nearest?',
           'I need a doctor today',
-          'I need a specialist appointment',
-          'This is for my parent',
-          'This is for my child',
+          'A pharmacy will do',
         ];
   }
 
