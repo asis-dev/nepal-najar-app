@@ -20,6 +20,8 @@ const GEN_MODEL = process.env.SERVICES_AI_MODEL || 'gemini-2.0-flash';
 const ROUTER_MODEL = process.env.SERVICES_ROUTER_MODEL || 'gpt-4o-mini';
 const EMBED_MODEL = 'text-embedding-004';
 const AI_ENABLED = process.env.SERVICES_AI_ENABLED !== 'false';
+const ALLOW_DETERMINISTIC_INTENT_FALLBACK =
+  process.env.SERVICES_DETERMINISTIC_INTENT_FALLBACK === 'true';
 const DAILY_CAP = parseInt(process.env.SERVICES_AI_DAILY_CAP || '1000', 10);
 const CACHE_VERSION = 'routing-v3';
 const AI_COOLDOWN_MS = Math.max(
@@ -1140,11 +1142,6 @@ async function smartRouteWithAI(
   question: string,
   locale: 'en' | 'ne',
 ): Promise<{ slug: string; category: string; confidence: number; response: string; followUp: string | null; options: string[] } | null> {
-  if (!OPENAI_API_KEY || !AI_ENABLED || isRouterCoolingDown()) {
-    console.log('[smart-router] skipped:', !OPENAI_API_KEY ? 'no-key' : !AI_ENABLED ? 'disabled' : 'cooldown');
-    return null;
-  }
-
   const all = await getAllServices();
   const serviceIndex = all.map(s =>
     `${s.slug}: ${s.title.en} (${s.title.ne}) — ${s.summary.en.slice(0, 100)}`
@@ -1196,55 +1193,309 @@ ${serviceIndex}
 
 Respond ONLY with JSON: {"slug":"service-slug-or-null","category":"civic_complaint|corruption|consumer|human_rights|health_needs_triage|government_service|greeting|general","confidence":0.0,"response":"message","followUp":"question-or-null","options":["opt1","opt2"]}`;
 
-  try {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: ROUTER_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: question },
-        ],
-        temperature: 0.1,
-        max_tokens: 400,
-        response_format: { type: 'json_object' },
-      }),
-    });
-    if (!r.ok) {
-      const errBody = await r.text().catch(() => '');
-      console.error(`[smart-router] OpenAI ${r.status}: ${errBody.slice(0, 200)}`);
-      if (r.status === 429) beginRouterCooldown('OpenAI rate limit');
+  function parseSmartRouterPayload(text: string) {
+    const cleaned = text
+      .trim()
+      .replace(/^```(?:json)?/i, '')
+      .replace(/```$/i, '')
+      .trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    const candidate = start >= 0 && end >= start ? cleaned.slice(start, end + 1) : cleaned;
+    const parsed = JSON.parse(candidate);
+
+    if (!parsed.category || typeof parsed.confidence !== 'number') {
       return null;
     }
-    const j = await r.json();
-    const text = j.choices?.[0]?.message?.content?.trim();
-    if (!text) {
-      console.warn('[smart-router] empty OpenAI response');
-      return null;
-    }
-    console.log('[smart-router] raw AI:', text.slice(0, 300));
-    const parsed = JSON.parse(text);
-    if (parsed.category && typeof parsed.confidence === 'number') {
-      console.log(`[smart-router] routed → ${parsed.slug || 'no-slug'} (${parsed.category}, ${parsed.confidence})`);
-      return {
-        slug: parsed.slug || null,
-        category: parsed.category,
-        confidence: parsed.confidence,
-        response: parsed.response || '',
-        followUp: parsed.followUp || null,
-        options: Array.isArray(parsed.options) ? parsed.options : [],
-      };
-    }
-    console.warn('[smart-router] bad parse — missing category/confidence');
-    return null;
-  } catch (err) {
-    console.error('[smart-router] error:', err);
-    return null;
+
+    return {
+      slug: typeof parsed.slug === 'string' && parsed.slug.trim() ? parsed.slug.trim() : null,
+      category: String(parsed.category),
+      confidence: parsed.confidence,
+      response: typeof parsed.response === 'string' ? parsed.response : '',
+      followUp: typeof parsed.followUp === 'string' && parsed.followUp.trim() ? parsed.followUp.trim() : null,
+      options: Array.isArray(parsed.options)
+        ? parsed.options
+            .map((option: unknown) => (typeof option === 'string' ? option.trim() : ''))
+            .filter(Boolean)
+        : [],
+    };
   }
+
+  async function smartRouteWithOpenAI() {
+    if (!OPENAI_API_KEY || !AI_ENABLED || isRouterCoolingDown()) {
+      console.log(
+        '[smart-router/openai] skipped:',
+        !OPENAI_API_KEY ? 'no-key' : !AI_ENABLED ? 'disabled' : 'cooldown',
+      );
+      return null;
+    }
+
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: ROUTER_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: question },
+          ],
+          temperature: 0.1,
+          max_tokens: 400,
+          response_format: { type: 'json_object' },
+        }),
+      });
+      if (!r.ok) {
+        const errBody = await r.text().catch(() => '');
+        console.error(`[smart-router/openai] ${r.status}: ${errBody.slice(0, 200)}`);
+        if (r.status === 429) beginRouterCooldown('OpenAI rate limit');
+        return null;
+      }
+      const j = await r.json();
+      const text = j.choices?.[0]?.message?.content?.trim();
+      if (!text) {
+        console.warn('[smart-router/openai] empty response');
+        return null;
+      }
+      console.log('[smart-router/openai] raw AI:', text.slice(0, 300));
+      const parsed = parseSmartRouterPayload(text);
+      if (!parsed) {
+        console.warn('[smart-router/openai] bad parse');
+        return null;
+      }
+      console.log(
+        `[smart-router/openai] routed → ${parsed.slug || 'no-slug'} (${parsed.category}, ${parsed.confidence})`,
+      );
+      return parsed;
+    } catch (err) {
+      console.error('[smart-router/openai] error:', err);
+      return null;
+    }
+  }
+
+  async function smartRouteWithGemini() {
+    if (!GEMINI_API_KEY || !AI_ENABLED || isAiCoolingDown()) {
+      console.log(
+        '[smart-router/gemini] skipped:',
+        !GEMINI_API_KEY ? 'no-key' : !AI_ENABLED ? 'disabled' : 'cooldown',
+      );
+      return null;
+    }
+
+    try {
+      const prompt = `${systemPrompt}\n\nUser message (${locale}): ${question}`;
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEN_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.1,
+              topP: 0.9,
+              maxOutputTokens: 400,
+              responseMimeType: 'application/json',
+            },
+          }),
+        },
+      );
+
+      if (!r.ok) {
+        const body = await r.text().catch(() => '');
+        if (r.status === 429) {
+          beginAiCooldown('router quota exhausted');
+        } else {
+          console.error(`[smart-router/gemini] ${r.status}: ${body.slice(0, 200)}`);
+        }
+        return null;
+      }
+
+      const j = await r.json();
+      const text =
+        j.candidates?.[0]?.content?.parts?.map((part: any) => part.text).join('').trim() || '';
+      if (!text) {
+        console.warn('[smart-router/gemini] empty response');
+        return null;
+      }
+      console.log('[smart-router/gemini] raw AI:', text.slice(0, 300));
+      const parsed = parseSmartRouterPayload(text);
+      if (!parsed) {
+        console.warn('[smart-router/gemini] bad parse');
+        return null;
+      }
+      console.log(
+        `[smart-router/gemini] routed → ${parsed.slug || 'no-slug'} (${parsed.category}, ${parsed.confidence})`,
+      );
+      return parsed;
+    } catch (err) {
+      console.error('[smart-router/gemini] error:', err);
+      return null;
+    }
+  }
+
+  const openAiResult = await smartRouteWithOpenAI();
+  if (openAiResult) return openAiResult;
+
+  return smartRouteWithGemini();
+}
+
+async function chooseBestRankedServiceWithAI(
+  question: string,
+  locale: 'en' | 'ne',
+  ranked: Array<{ service: Service; score: number }>,
+): Promise<{ slug: string; confidence: number; reason: string | null } | null> {
+  if (!AI_ENABLED || ranked.length === 0) return null;
+
+  const candidates = ranked.slice(0, 8);
+  const candidateIndex = candidates
+    .map(({ service, score }, index) => {
+      const offices = service.offices
+        .slice(0, 2)
+        .map((office) => office.name.en)
+        .filter(Boolean)
+        .join(', ');
+
+      return [
+        `${index + 1}. slug=${service.slug}`,
+        `title=${service.title.en}`,
+        `provider=${service.providerName}`,
+        `category=${service.category}`,
+        `score=${score}`,
+        `summary=${service.summary.en.slice(0, 180)}`,
+        offices ? `offices=${offices}` : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+    })
+    .join('\n');
+
+  const schemaInstruction = `Return JSON only:
+{"slug":"candidate-slug-or-null","confidence":0.0,"reason":"short reason or null"}
+
+Rules:
+- Pick exactly one slug only if the user's request clearly matches one candidate.
+- Use confidence >= 0.86 when the target is clear enough to auto-route with no follow-up.
+- Use confidence 0.70-0.85 when one service is likely but a confirmation may still help.
+- Return slug=null if the user is still genuinely ambiguous.
+- Prefer the most specific service, not the broadest one.`;
+
+  const prompt = `User request (${locale}): ${question}
+
+Top candidate services:
+${candidateIndex}
+
+${schemaInstruction}`;
+
+  function parseChoice(text: string) {
+    const cleaned = text
+      .trim()
+      .replace(/^```(?:json)?/i, '')
+      .replace(/```$/i, '')
+      .trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    const candidate = start >= 0 && end >= start ? cleaned.slice(start, end + 1) : cleaned;
+    const parsed = JSON.parse(candidate);
+    if (typeof parsed.confidence !== 'number') return null;
+    return {
+      slug: typeof parsed.slug === 'string' && parsed.slug.trim() ? parsed.slug.trim() : null,
+      confidence: parsed.confidence,
+      reason: typeof parsed.reason === 'string' && parsed.reason.trim() ? parsed.reason.trim() : null,
+    };
+  }
+
+  async function chooseWithOpenAI() {
+    if (!OPENAI_API_KEY || isRouterCoolingDown()) return null;
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: ROUTER_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are selecting the single best Nepal public service route from a shortlist. Be conservative about ambiguity, but do not ask clarifying questions when one target is clearly intended.',
+            },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0,
+          max_tokens: 180,
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      if (!r.ok) {
+        const body = await r.text().catch(() => '');
+        if (r.status === 429) beginRouterCooldown('candidate chooser rate limit');
+        console.warn(`[smart-route-chooser/openai] ${r.status}: ${body.slice(0, 160)}`);
+        return null;
+      }
+
+      const j = await r.json();
+      const text = j.choices?.[0]?.message?.content?.trim();
+      if (!text) return null;
+      return parseChoice(text);
+    } catch (error) {
+      console.warn('[smart-route-chooser/openai] error:', error);
+      return null;
+    }
+  }
+
+  async function chooseWithGemini() {
+    if (!GEMINI_API_KEY || isAiCoolingDown()) return null;
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEN_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0,
+              topP: 0.9,
+              maxOutputTokens: 180,
+              responseMimeType: 'application/json',
+            },
+          }),
+        },
+      );
+
+      if (!r.ok) {
+        const body = await r.text().catch(() => '');
+        if (r.status === 429) beginAiCooldown('candidate chooser rate limit');
+        console.warn(`[smart-route-chooser/gemini] ${r.status}: ${body.slice(0, 160)}`);
+        return null;
+      }
+
+      const j = await r.json();
+      const text =
+        j.candidates?.[0]?.content?.parts?.map((part: any) => part.text).join('').trim() || '';
+      if (!text) return null;
+      return parseChoice(text);
+    } catch (error) {
+      console.warn('[smart-route-chooser/gemini] error:', error);
+      return null;
+    }
+  }
+
+  const choice = (await chooseWithOpenAI()) || (await chooseWithGemini());
+  if (!choice?.slug) return null;
+
+  const matched = candidates.find(({ service }) => service.slug === choice.slug);
+  if (!matched) return null;
+
+  return choice;
 }
 
 /** Deterministic fallback patterns — comprehensive, used when AI is unavailable */
@@ -1437,13 +1688,16 @@ async function detectDirectIntent(question: string, locale: 'en' | 'ne'): Promis
     }
   }
 
-  // ── Try 2: Deterministic fallback (when AI is down or unavailable) ──
-  const deterministicCategory = detectIntentDeterministic(question);
-  if (deterministicCategory) {
-    const slug = INTENT_CATEGORIES[deterministicCategory as keyof typeof INTENT_CATEGORIES];
-    if (slug) {
-      const svc = all.find(s => s.slug === slug);
-      if (svc) return buildIntentResult(svc, locale, question, 'deterministic');
+  // Deterministic intent routing is kept as an emergency escape hatch only.
+  // Default behavior is AI-first, then ranked retrieval + clarifying questions.
+  if (ALLOW_DETERMINISTIC_INTENT_FALLBACK) {
+    const deterministicCategory = detectIntentDeterministic(question);
+    if (deterministicCategory) {
+      const slug = INTENT_CATEGORIES[deterministicCategory as keyof typeof INTENT_CATEGORIES];
+      if (slug) {
+        const svc = all.find(s => s.slug === slug);
+        if (svc) return buildIntentResult(svc, locale, question, 'deterministic');
+      }
     }
   }
 
@@ -1495,12 +1749,27 @@ export async function ask(
   const ranked = reprioritizeRankedServices(await rankServices(routingQuestion, locale), intakeState, effectiveQuestion, userCtx);
   const topRanked = ranked[0];
   const topScore = topRanked?.score ?? 0;
-  const confidentTopService = shouldAutoRoute(effectiveQuestion, ranked) && topRanked
-    ? topRanked.service
+  const aiChosenRoute = await chooseBestRankedServiceWithAI(effectiveQuestion, locale, ranked);
+  const aiChosenService = aiChosenRoute?.slug
+    ? ranked.find((entry) => entry.service.slug === aiChosenRoute.slug)?.service || null
     : null;
+  const confidentTopService = aiChosenService
+    ? aiChosenRoute && aiChosenRoute.confidence >= 0.86
+      ? aiChosenService
+      : null
+    : shouldAutoRoute(effectiveQuestion, ranked) && topRanked
+      ? topRanked.service
+      : null;
   const routeMode: AskResult['routeMode'] =
-    confidentTopService ? 'direct' : ranked.length > 0 ? 'ambiguous' : 'none';
-  const routeReason = buildRouteReason(effectiveQuestion, routingQuestion, ranked, confidentTopService, locale, intakeState);
+    confidentTopService
+      ? 'direct'
+      : aiChosenService || ranked.length > 0
+        ? 'ambiguous'
+        : 'none';
+  const routeReason =
+    !confidentTopService && aiChosenRoute?.reason
+      ? aiChosenRoute.reason
+      : buildRouteReason(effectiveQuestion, routingQuestion, ranked, confidentTopService, locale, intakeState);
   const missingSlots = getMissingSlots(intakeState, intakeSlots);
   // Always generate follow-ups — even for 'none' mode so the user gets suggestions
   const followUpPrompt = routeMode !== 'direct'
@@ -1512,7 +1781,14 @@ export async function ask(
 
   // 2. retrieve
   const cited = ranked.length > 0
-    ? ranked.slice(0, 5).map((entry) => entry.service)
+    ? [
+        ...(aiChosenService ? [aiChosenService] : []),
+        ...ranked
+          .slice(0, 5)
+          .map((entry) => entry.service)
+          .filter((service, index, arr) => arr.findIndex((candidate) => candidate.slug === service.slug) === index)
+          .filter((service) => !aiChosenService || service.slug !== aiChosenService.slug),
+      ].slice(0, 5)
     : await retrieveServices(routingQuestion, locale, 5);
 
   saveIntakeSession(sessionId, intakeState, intakeSlots, trimmed);
@@ -1593,19 +1869,19 @@ function buildRouteReason(
   if (intakeState.domain === 'health' && isMaternityNeed(normalizeIntentText(originalQuestion))) {
     return locale === 'ne'
       ? 'यो गर्भावस्था वा प्रसूतिसम्बन्धी जस्तो देखिन्छ। तल छान्नुहोस् — म सही सेवा खोज्छु।'
-      : 'This looks pregnancy or maternity related. Pick an option below so I can find the right care.';
+      : 'This looks like a pregnancy-related or maternity-related need. Pick an option below so I can find the right care.';
   }
 
   if (intakeState.domain === 'health' && isHealthSymptomNeed(normalizeIntentText(originalQuestion))) {
     if (intakeState.subject === 'child') {
       return locale === 'ne'
         ? 'तपाईंको बच्चालाई डाक्टर देखाउनु पर्ला। तल छान्नुहोस् — म सही अस्पताल खोज्छु।'
-        : 'Your child may need medical attention. Pick an option below and I\'ll find the right hospital for you.';
+        : 'This looks like a child health need. Pick an option below and I\'ll find the right hospital for you.';
     }
 
     return locale === 'ne'
       ? 'तपाईंलाई डाक्टर वा अस्पताल चाहिन सक्छ। तल एउटा विकल्प छान्नुहोस्।'
-      : 'You may need to see a doctor. Pick an option below so I can find the right care for you.';
+      : 'This looks like a health need. Pick an option below so I can find the right care for you.';
   }
 
   if (ranked.length >= 2) {
@@ -1666,19 +1942,19 @@ function buildFollowUpPrompt(
   if (intakeState.domain === 'health' && intakeState.subject === 'child') {
     return locale === 'ne'
       ? 'बच्चालाई अस्पताल लैजानुपर्छ? तल छान्नुहोस्:'
-      : 'Does your child need to go to a hospital? Pick one:';
+      : 'For your child, what do you need right now? Pick one:';
   }
 
   if (intakeState.domain === 'health' && intakeState.subject === 'parent') {
     return locale === 'ne'
       ? 'बुबा/आमालाई अस्पताल लैजानुपर्छ? तल छान्नुहोस्:'
-      : 'Does your parent need to go to a hospital? Pick one:';
+      : 'For your parent, what do you need right now? Pick one:';
   }
 
   if (isHealthSymptomNeed(normalized)) {
     return locale === 'ne'
       ? 'के तपाईंलाई अस्पताल जानुपर्छ? तल छान्नुहोस्:'
-      : 'Do you need to go to a hospital? Pick one:';
+      : 'What do you need right now? Pick one:';
   }
 
   if (isHospitalNeed(normalized)) {
@@ -1799,15 +2075,15 @@ function buildFollowUpOptions(
     return locale === 'ne'
       ? [
           'हो, अस्पताल लैजानुपर्छ',
+          'मेरो बच्चालाई आजै डाक्टर चाहियो',
           'कान्ति बाल अस्पताल',
           'नजिकको अस्पताल कुन?',
-          'फार्मेसी मात्र पुग्छ',
         ]
       : [
           'Yes, take to hospital',
+          'My child needs a doctor today',
           'Kanti Children\'s Hospital',
           'Which hospital is nearest?',
-          'A pharmacy will do',
         ];
   }
 
@@ -1815,15 +2091,15 @@ function buildFollowUpOptions(
     return locale === 'ne'
       ? [
           'हो, अस्पताल जानुपर्छ',
+          'मेरो बुबा/आमालाई आजै डाक्टर चाहियो',
           'नजिकको अस्पताल कुन?',
           'विशेषज्ञ डाक्टर चाहियो',
-          'फार्मेसी मात्र पुग्छ',
         ]
       : [
           'Yes, need a hospital',
+          'My parent needs a doctor today',
           'Which hospital is nearest?',
           'Need a specialist doctor',
-          'A pharmacy will do',
         ];
   }
 

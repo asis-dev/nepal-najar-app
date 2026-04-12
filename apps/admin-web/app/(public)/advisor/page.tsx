@@ -628,8 +628,8 @@ function AdvisorPageInner() {
           setTaskReused(!!data.taskReused);
         }
         if (data.requiresAuth) setRequiresAuth(true);
-        if (data.missingDocs?.length) setMissingDocs(data.missingDocs);
-        if (data.readyDocs?.length) setReadyDocs(data.readyDocs);
+        if (data.missingDocs?.length) setMissingDocs(data.missingDocs.map((d: any) => typeof d === 'string' ? d : d.label || d.docType || String(d)));
+        if (data.readyDocs?.length) setReadyDocs(data.readyDocs.map((d: any) => typeof d === 'string' ? d : d.label || d.docType || String(d)));
         if (data.routing) setRouting(data.routing);
 
         // Build assistant response text
@@ -653,8 +653,8 @@ function AdvisorPageInner() {
               task: data.task || null,
               taskReused: data.taskReused || false,
               requiresAuth: data.requiresAuth || false,
-              missingDocs: data.missingDocs || [],
-              readyDocs: data.readyDocs || [],
+              missingDocs: (data.missingDocs || []).map((d: any) => typeof d === 'string' ? d : d.label || d.docType || String(d)),
+              readyDocs: (data.readyDocs || []).map((d: any) => typeof d === 'string' ? d : d.label || d.docType || String(d)),
               routing: data.routing || null,
               targetMember: data.targetMember || null,
               answer: data.answer || null,

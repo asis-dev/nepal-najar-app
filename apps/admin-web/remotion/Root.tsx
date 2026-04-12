@@ -8,6 +8,7 @@ import { WeekInReview } from './components/WeekInReview';
 import { DailyScorecardEN } from './components/DailyScorecardEN';
 import { DailyReel } from './components/DailyReel';
 import { DailyReelEN } from './components/DailyReelEN';
+import { AIDemo } from './components/AIDemo';
 import { VIDEO_CONFIG } from './types';
 
 export const RemotionRoot: React.FC = () => {
@@ -31,6 +32,17 @@ export const RemotionRoot: React.FC = () => {
         id="DailyReelEN"
         component={DailyReelEN}
         durationInFrames={1800}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{ data: {} as any }}
+      />
+
+      {/* ═══ AI Demo — 45s marketing reel ═══ */}
+      <Composition
+        id="AIDemo"
+        component={AIDemo}
+        durationInFrames={1350}
         fps={30}
         width={1080}
         height={1920}
