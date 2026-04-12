@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRequestUser } from '@/lib/auth/request-user';
 import { generateDraft, loadDraft, storeDraft, updateDraftField, confirmDraftField } from '@/lib/services/form-drafter';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { taskId } = await params;
+  const { id: taskId } = await params;
 
   try {
     const draft = await loadDraft(supabase, user.id, taskId);
@@ -18,11 +18,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { taskId } = await params;
+  const { id: taskId } = await params;
 
   let body: { serviceSlug: string };
   try { body = await request.json(); } catch {
@@ -41,11 +41,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { taskId } = await params;
+  const { id: taskId } = await params;
 
   let body: { fieldKey: string; value?: string; confirm?: boolean };
   try { body = await request.json(); } catch {

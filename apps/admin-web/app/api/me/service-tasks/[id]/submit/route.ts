@@ -5,11 +5,11 @@ import { recordSubmissionAttempt } from '@/lib/services/submission-review';
 import { updateCaseStatus, recordReference } from '@/lib/services/case-operations';
 import { learnFromFormSubmission } from '@/lib/services/profile-memory';
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { taskId } = await params;
+  const { id: taskId } = await params;
 
   let body: { serviceSlug: string; values: Record<string, string>; documents?: Array<{ type: string; vaultDocId: string }> };
   try { body = await request.json(); } catch {

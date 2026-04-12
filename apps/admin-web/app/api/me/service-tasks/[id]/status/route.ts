@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRequestUser } from '@/lib/auth/request-user';
 import { getCaseTimeline, getCaseSummary } from '@/lib/services/case-operations';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { taskId } = await params;
+  const { id: taskId } = await params;
 
   try {
     const timeline = await getCaseTimeline(supabase, taskId);

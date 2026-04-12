@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRequestUser } from '@/lib/auth/request-user';
 import { checkAndEscalate } from '@/lib/services/case-operations';
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { taskId } = await params;
+  const { id: taskId } = await params;
 
   let body: { serviceSlug: string };
   try { body = await request.json(); } catch {

@@ -4,11 +4,11 @@ import { loadDraft } from '@/lib/services/form-drafter';
 import { getAdapter } from '@/lib/services/execution-adapters';
 import { buildReviewPackage, validateApproval, processApprovedSubmission } from '@/lib/services/submission-review';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { taskId } = await params;
+  const { id: taskId } = await params;
 
   try {
     const draft = await loadDraft(supabase, user.id, taskId);
@@ -26,11 +26,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { taskId } = await params;
+  const { id: taskId } = await params;
 
   let body: { approved: boolean; editedFields?: Record<string, string>; declarationsAccepted?: boolean; userNotes?: string };
   try { body = await request.json(); } catch {
