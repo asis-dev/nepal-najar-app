@@ -55,6 +55,10 @@ function normalizeDocList(docs: unknown[]): string[] {
   });
 }
 
+// ── Triage import ────────────────────────────────────────────────
+import { triageRequest } from '@/lib/services/triage';
+import type { TriageResult } from '@/lib/services/triage';
+
 // ── AI import ────────────────────────────────────────────────────
 import { ask as askAIFn, generateGeneralAnswer as generateGeneralAnswerFn } from '@/lib/services/ai';
 import type { UserContext, ActiveTaskContext } from '@/lib/services/ai';
@@ -730,6 +734,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'rate limited' }, { status: 429 });
     }
 
+    // ── Run triage engine (Phase 1: authoritative decision layer) ──
+    let triageResult: TriageResult | null = null;
+    try {
+      triageResult = await triageRequest({
+        userMessage: query,
+        locale,
+      });
+    } catch (triageErr) {
+      console.warn('[advisor] Triage failed (non-blocking):', triageErr);
+    }
+
+    // If triage detects emergency, return immediately with safety guidance
+    if (triageResult?.requiresEmergencyHandling) {
+      return NextResponse.json({
+        steps: [],
+        summary: triageResult.safeNextAction,
+        matched: true,
+        source: 'triage-emergency',
+        triage: triageResult,
+        followUpPrompt: locale === 'ne'
+          ? 'के तपाईंलाई अरू केही मद्दत चाहिन्छ?'
+          : 'Do you need any other assistance?',
+        followUpOptions: locale === 'ne'
+          ? ['एम्बुलेन्स चाहिन्छ', 'नजिकको अस्पताल कुन हो?']
+          : ['I need an ambulance', 'Which is the nearest hospital?'],
+      });
+    }
+
     // ── Fetch user context for location-aware routing ──
     const earlyAuthCtx = await tryGetAuthedContext();
     const userCtx = await tryGetUserContext(earlyAuthCtx);
@@ -901,6 +933,11 @@ export async function POST(req: NextRequest) {
         // Not authenticated but we have a service match
         response.requiresAuth = true;
       }
+    }
+
+    // ── Attach triage result to response ──
+    if (triageResult) {
+      response.triage = triageResult;
     }
 
     return NextResponse.json(response);
