@@ -55,7 +55,7 @@ export default async function ServiceDetailPage({ params }: { params: { category
     ((workflow.actions?.length || 0) > 0 || workflow.mode !== 'guide_only');
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
+    <div className="relative z-10 max-w-3xl mx-auto px-4 py-10">
       <ViewTracker slug={svc.slug} category={cat} />
       {/* Breadcrumb */}
       <div className="text-sm text-zinc-400 mb-4">

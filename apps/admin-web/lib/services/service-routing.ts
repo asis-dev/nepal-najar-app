@@ -114,6 +114,12 @@ const SERVICE_OVERRIDES: Record<string, Partial<ServiceRoutingSnapshot>> = {
     routingReason: 'New passports route through the Department of Passports for biometrics and issuance.',
     confidence: 0.95,
   },
+  'passport-renewal': {
+    departmentKey: 'passport', departmentName: 'Department of Passports',
+    authorityLevel: 'federal', roleTitle: 'Passport Enrollment Officer', routeType: 'hybrid',
+    routingReason: 'Passport renewals are processed at the Department of Passports.',
+    confidence: 0.95,
+  },
   'citizenship-by-descent': {
     departmentKey: 'district-administration', departmentName: 'District Administration Office',
     authorityLevel: 'district', roleTitle: 'Citizenship Officer', routeType: 'counter',

@@ -42,6 +42,19 @@ import type { Service } from '@/lib/services/types';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
+/** Normalize doc status items to plain strings (API may return {label,haveIt,docType} objects) */
+function normalizeDocList(docs: unknown[]): string[] {
+  if (!Array.isArray(docs)) return [];
+  return docs.map((d) => {
+    if (typeof d === 'string') return d;
+    if (d && typeof d === 'object') {
+      const obj = d as Record<string, unknown>;
+      return String(obj.label || obj.docType || JSON.stringify(d));
+    }
+    return String(d);
+  });
+}
+
 // ── AI import ────────────────────────────────────────────────────
 import { ask as askAIFn, generateGeneralAnswer as generateGeneralAnswerFn } from '@/lib/services/ai';
 import type { UserContext, ActiveTaskContext } from '@/lib/services/ai';
@@ -240,13 +253,22 @@ const INTENT_RULES: IntentRule[] = [
   },
   {
     id: 'passport',
-    keywords: ['passport', 'rahadani', 'e-passport', 'emrtd', 'travel document', 'get passport'],
-    keywordsNe: ['राहदानी', 'पासपोर्ट', 'ई-पासपोर्ट'],
+    keywords: ['passport', 'rahadani', 'e-passport', 'emrtd', 'travel document', 'get passport', 'new passport', 'first passport'],
+    keywordsNe: ['राहदानी', 'पासपोर्ट', 'ई-पासपोर्ट', 'नयाँ राहदानी'],
     chain: [
       { slug: 'citizenship-by-descent', why: 'Citizenship certificate is required for passport application' },
       { slug: 'new-passport', why: 'Apply for e-Passport at Department of Passport' },
     ],
     summary: 'Getting a passport requires a citizenship certificate. Apply online at nepalpassport.gov.np, book an appointment, and visit the Passport Department with your documents.',
+  },
+  {
+    id: 'passport-renewal',
+    keywords: ['renew passport', 'passport renewal', 'expired passport', 'passport expire', 'extend passport', 'damaged passport', 'lost passport'],
+    keywordsNe: ['राहदानी नवीकरण', 'पासपोर्ट नवीकरण', 'म्याद सकिएको राहदानी'],
+    chain: [
+      { slug: 'passport-renewal', why: 'Renew your expired or damaged passport at the Department of Passports' },
+    ],
+    summary: 'Passport renewal is done at the Department of Passports. You need your old passport, citizenship certificate, and recent photos. Apply online at nepalpassport.gov.np.',
   },
   {
     id: 'citizenship',
@@ -555,8 +577,8 @@ async function handleTaskCreation(
     return {
       task: mapTaskRow(refreshed || existing),
       taskReused: true,
-      missingDocs: existing.missing_docs || [],
-      readyDocs: existing.ready_docs || [],
+      missingDocs: normalizeDocList(existing.missing_docs || []),
+      readyDocs: normalizeDocList(existing.ready_docs || []),
       routing: null,
       targetMember: null,
     };
@@ -667,8 +689,8 @@ async function handleTaskCreation(
   return {
     task: mapTaskRow(data),
     taskReused: false,
-    missingDocs: state.missingDocs,
-    readyDocs: state.readyDocs,
+    missingDocs: normalizeDocList(state.missingDocs),
+    readyDocs: normalizeDocList(state.readyDocs),
     routing: {
       departmentKey: routing.departmentKey,
       departmentName: routing.departmentName,

@@ -593,4 +593,43 @@ export const EXTRA_SERVICES_2: Service[] = [
     feeRange: { en: 'Free', ne: 'निःशुल्क' },
     tags: ['road', 'pothole', 'drain', 'streetlight', 'water', 'construction', 'infrastructure', 'ward', 'municipality', 'सडक', 'खाल्डा', 'ढल', 'बत्ती', 'पूर्वाधार', 'निर्माण', 'वडा', 'नगरपालिका'],
   }),
+
+  // ─── PASSPORT RENEWAL ───
+  svc({
+    slug: 'passport-renewal',
+    category: 'identity',
+    providerType: 'gov',
+    providerName: 'Department of Passports, Ministry of Foreign Affairs',
+    title: { en: 'Passport Renewal', ne: 'राहदानी नवीकरण' },
+    summary: {
+      en: 'Renew your expired, damaged, or full passport at the Department of Passports.',
+      ne: 'म्याद सकिएको, बिग्रिएको, वा पाना भरिएको राहदानी नवीकरण गर्नुहोस्।',
+    },
+    estimatedTime: { en: 'Normal: 21 days · Fast-track: 3 days', ne: 'सामान्य: २१ दिन · फास्ट-ट्र्याक: ३ दिन' },
+    feeRange: { en: 'Rs. 5,000 (normal) – Rs. 10,000 (fast-track)', ne: 'रु. ५,००० (सामान्य) – रु. १०,००० (फास्ट-ट्र्याक)' },
+    officialUrl: 'https://nepalpassport.gov.np',
+    documents: [
+      { title: { en: 'Old passport (original)', ne: 'पुरानो राहदानी (सक्कल)' }, required: true },
+      { title: { en: 'Citizenship certificate + copy', ne: 'नागरिकता प्रमाणपत्र + प्रतिलिपि' }, required: true },
+      { title: { en: 'Completed renewal form (online)', ne: 'भरिएको नवीकरण फारम (अनलाइन)' }, required: true },
+      { title: { en: 'Fee payment voucher', ne: 'शुल्क भुक्तानी भौचर' }, required: true },
+      { title: { en: 'Police report (if lost/stolen)', ne: 'प्रहरी रिपोर्ट (हराएको/चोरिएको भए)' }, required: false },
+    ],
+    steps: [
+      { order: 1, title: { en: 'Fill renewal form online', ne: 'अनलाइन नवीकरण फारम भर्नुहोस्' }, detail: { en: 'Go to nepalpassport.gov.np → Renewal → fill details → submit.', ne: 'nepalpassport.gov.np → Renewal → विवरण भर्नुहोस् → submit।' } },
+      { order: 2, title: { en: 'Pay fee at bank', ne: 'बैंकमा शुल्क तिर्नुहोस्' }, detail: { en: 'Print voucher. Pay at Nepal Bank or via ConnectIPS.', ne: 'भौचर प्रिन्ट गरी नेपाल बैंक वा ConnectIPS बाट तिर्नुहोस्।' } },
+      { order: 3, title: { en: 'Visit passport office', ne: 'राहदानी कार्यालय जानुहोस्' }, detail: { en: 'Bring old passport + all documents. Biometrics recaptured.', ne: 'पुरानो राहदानी + सबै कागजात लिएर जानुहोस्। बायोमेट्रिक पुन: लिइन्छ।' } },
+      { order: 4, title: { en: 'Collect new passport', ne: 'नयाँ राहदानी लिनुहोस्' }, detail: { en: 'SMS notification when ready. Collect from same office.', ne: 'तयार भएपछि SMS आउँछ। सोही कार्यालयबाट लिनुहोस्।' } },
+    ],
+    offices: [
+      { name: { en: 'Department of Passports, Tripureshwor', ne: 'राहदानी विभाग, त्रिपुरेश्वर' }, address: { en: 'Narayanhiti Path, Tripureshwor, Kathmandu', ne: 'नारायणहिटी पथ, त्रिपुरेश्वर, काठमाडौँ' }, phone: '01-4416011', hours: { en: 'Sun–Fri, 10:00 – 15:00', ne: 'आइत–शुक्र, १०:०० – ३:००' }, lat: 27.6960, lng: 85.3150 },
+    ],
+    commonProblems: [
+      { problem: { en: 'Old passport lost or stolen', ne: 'पुरानो राहदानी हराएको वा चोरिएको' }, solution: { en: 'File a police report first, then apply with the FIR copy.', ne: 'पहिले प्रहरी रिपोर्ट दिनुहोस्, त्यसपछि FIR को प्रतिलिपिसहित आवेदन दिनुहोस्।' } },
+    ],
+    faqs: [
+      { q: { en: 'Can I renew before it expires?', ne: 'म्याद नसकिँदै नवीकरण गर्न सकिन्छ?' }, a: { en: 'Yes, you can renew up to 6 months before expiry.', ne: 'सकिन्छ, म्याद सकिनभन्दा ६ महिना अगाडि नवीकरण गर्न सकिन्छ।' } },
+    ],
+    tags: ['passport', 'renewal', 'expired', 'renew', 'राहदानी', 'नवीकरण'],
+  }),
 ];

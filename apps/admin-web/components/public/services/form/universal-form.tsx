@@ -222,54 +222,88 @@ export function UniversalServiceForm({ schema, onComplete, serviceSlug }: Props)
     }
   }
 
+  const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
   async function submit() {
+    setSubmitError('');
     // Validate required
+    const missing: string[] = [];
     for (const s of schema.sections) {
       for (const f of s.fields) {
         if (f.required && !values[f.key]) {
-          alert(`Missing: ${f.label}`);
-          return;
+          missing.push(f.label);
         }
       }
     }
-    await saveDraft(false);
-    // Track as application
-    await fetch('/api/me/applications', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        service_slug: schema.slug,
-        service_title: schema.title,
-        status: 'in_progress',
-        notes: 'Form completed in-app',
-      }),
-    });
-    // Mark draft submitted
-    await fetch('/api/me/drafts', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        serviceSlug: schema.slug,
-        formKey: schema.slug,
-        data: values,
-        submitted: true,
-      }),
-    });
-    if (taskId) {
-      await fetch(`/api/me/service-tasks/${taskId}/form-state`, {
-        method: 'PATCH',
+    if (missing.length > 0) {
+      setSubmitError(`Please fill required fields: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ` and ${missing.length - 3} more` : ''}`);
+      // Scroll to first missing field
+      for (const s of schema.sections) {
+        for (const f of s.fields) {
+          if (f.required && !values[f.key]) {
+            document.getElementById(`field-${f.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+        }
+      }
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await saveDraft(false);
+
+      // Track as application
+      const appRes = await fetch('/api/me/applications', {
+        method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          service_slug: schema.slug,
+          service_title: schema.title,
+          status: 'in_progress',
+          notes: 'Form completed in-app',
+        }),
+      });
+      if (!appRes.ok) console.warn('Application tracking failed:', appRes.status);
+
+      // Mark draft submitted
+      const draftRes = await fetch('/api/me/drafts', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          serviceSlug: schema.slug,
           formKey: schema.slug,
           data: values,
           submitted: true,
         }),
       });
+      if (!draftRes.ok) console.warn('Draft submission failed:', draftRes.status);
+
+      // Update service task if linked
+      if (taskId) {
+        const taskRes = await fetch(`/api/me/service-tasks/${taskId}/form-state`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            formKey: schema.slug,
+            data: values,
+            submitted: true,
+          }),
+        });
+        if (!taskRes.ok) console.warn('Task update failed:', taskRes.status);
+      }
+
+      setSubmitted(true);
+      markFormCompleted();
+      onComplete?.(values);
+      window.print();
+    } catch (err) {
+      console.error('Form submission error:', err);
+      setSubmitError('Something went wrong submitting your form. Your draft is saved — please try again.');
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitted(true);
-    markFormCompleted();
-    onComplete?.(values);
-    window.print();
   }
 
   async function handleDocumentImport(image: ScannedImage) {
@@ -348,7 +382,7 @@ export function UniversalServiceForm({ schema, onComplete, serviceSlug }: Props)
         </div>
       </div>
 
-      <div className="rounded-2xl bg-white text-black border-2 border-black p-6 print:border-0 print:p-0">
+      <div className="relative z-10 rounded-2xl bg-white text-black border-2 border-black p-6 print:border-0 print:p-0">
         <div className="text-center mb-4 pb-3 border-b-2 border-black">
           <div className="text-[10px] uppercase tracking-widest">Government of Nepal</div>
           <h2 className="text-2xl font-black">{schema.title}</h2>
@@ -360,7 +394,7 @@ export function UniversalServiceForm({ schema, onComplete, serviceSlug }: Props)
             <h3 className="text-xs font-bold uppercase tracking-wide mb-2 border-b border-gray-300 pb-1">{s.title}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {s.fields.map((f) => (
-                <div key={f.key} className="break-inside-avoid">
+                <div key={f.key} id={`field-${f.key}`} className={`break-inside-avoid ${submitError && f.required && !values[f.key] ? 'ring-2 ring-red-400 rounded-lg p-1 -m-1' : ''}`}>
                   <label className="text-[11px] font-semibold text-gray-700 flex items-center gap-1 mb-0.5">
                     {f.label}{f.required && ' *'}
                     {autofilledKeys.has(f.key) && values[f.key] && (
@@ -458,13 +492,22 @@ export function UniversalServiceForm({ schema, onComplete, serviceSlug }: Props)
         <button onClick={() => saveDraft(true)} disabled={saving} className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-700">
           {saving ? 'Saving…' : '💾 Save draft'}
         </button>
-        <button onClick={submit} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500">
-          ✓ Complete & print
+        <button
+          onClick={submit}
+          disabled={submitting}
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {submitting ? 'Submitting…' : '✓ Complete & print'}
         </button>
         {msg && <div className="self-center text-xs text-emerald-400">{msg}</div>}
       </div>
+      {submitError && (
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2 text-sm text-red-400 print:hidden">
+          {submitError}
+        </div>
+      )}
       <div className="text-[11px] text-zinc-500 print:hidden">
-        Tip: after "Complete & print" the form opens the browser print dialog. Save as PDF or print and take to the office.
+        Tip: after &quot;Complete &amp; print&quot; the form opens the browser print dialog. Save as PDF or print and take to the office.
       </div>
 
       {submitted && (
@@ -475,6 +518,17 @@ export function UniversalServiceForm({ schema, onComplete, serviceSlug }: Props)
             <div className="text-xs text-emerald-400/60 mt-1">
               Tracked in <a href="/me/tasks#tracked-applications" className="underline">My Cases</a>. Print the form and take it to the office.
             </div>
+          </div>
+
+          {/* Next steps guidance */}
+          <div className="rounded-xl bg-zinc-800/50 border border-zinc-700 p-4">
+            <h4 className="text-sm font-bold text-zinc-200 mb-2">📋 What to do next</h4>
+            <ol className="space-y-1.5 text-xs text-zinc-400 list-decimal list-inside">
+              <li>Print this form (or save as PDF)</li>
+              <li>Gather the required documents listed above</li>
+              <li>Visit the relevant office with your printed form and documents</li>
+              <li>Keep your case reference in <a href="/me/tasks" className="text-red-400 underline">My Cases</a> for tracking</li>
+            </ol>
           </div>
 
           <ShareFormQR

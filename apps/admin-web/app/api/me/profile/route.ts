@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient, getSupabase } from '@/lib/supabase/server';
 import { normalizeAppRole, type AppRole } from '@/lib/auth/roles';
 import { recordUserActivityBestEffort } from '@/lib/activity/activity-log';
 
@@ -86,9 +86,11 @@ export async function GET() {
         : null,
   };
 
+  // Use service-role client to bypass RLS (avoids 42P17 recursion on profiles table)
+  const adminClient = getSupabase();
   let profileRow: Record<string, unknown> | null = null;
 
-  const { data, error } = await supabase
+  const { data, error } = await adminClient
     .from('profiles')
     .select('*')
     .eq('id', user.id)
@@ -97,13 +99,13 @@ export async function GET() {
   if (!error) {
     profileRow = (data as Record<string, unknown> | null) ?? null;
   } else if (error.code !== 'PGRST116' && error.code !== '42P01') {
-    console.error('[profile] fetch error:', error.message);
+    console.error('[profile] fetch error:', error.code, error.message);
     return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 });
   }
 
   // Ensure a row exists for users created before trigger/migration changes.
   if (!profileRow) {
-    await supabase.from('profiles').upsert(
+    await adminClient.from('profiles').upsert(
       {
         id: user.id,
         email: user.email ?? null,
@@ -113,7 +115,7 @@ export async function GET() {
       { onConflict: 'id' },
     );
 
-    const { data: retryRow } = await supabase
+    const { data: retryRow } = await adminClient
       .from('profiles')
       .select('*')
       .eq('id', user.id)
@@ -158,8 +160,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'No valid profile fields provided' }, { status: 400 });
   }
 
+  // Use service-role client to bypass RLS (avoids infinite recursion in
+  // profiles_update_own policy which subqueries the same table).
+  const adminDb = getSupabase();
+
   // Ensure row exists before updating.
-  await supabase.from('profiles').upsert(
+  await adminDb.from('profiles').upsert(
     {
       id: user.id,
       email: user.email ?? null,
@@ -173,7 +179,7 @@ export async function PATCH(request: NextRequest) {
   );
 
   // Try update with avatar_url; fallback for DBs without avatar_url column.
-  let { error: updateError } = await supabase
+  let { error: updateError } = await adminDb
     .from('profiles')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', user.id);
@@ -181,7 +187,7 @@ export async function PATCH(request: NextRequest) {
   if (updateError && updateError.code === '42703' && 'avatar_url' in updates) {
     const withoutAvatar = { ...updates };
     delete withoutAvatar.avatar_url;
-    const retry = await supabase
+    const retry = await adminDb
       .from('profiles')
       .update({ ...withoutAvatar, updated_at: new Date().toISOString() })
       .eq('id', user.id);
@@ -203,13 +209,13 @@ export async function PATCH(request: NextRequest) {
     await supabase.auth.updateUser({ data: metadataPatch });
   }
 
-  const { data: latestRow } = await supabase
+  const { data: latestRow } = await adminDb
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .maybeSingle();
 
-  await recordUserActivityBestEffort(supabase, {
+  await recordUserActivityBestEffort(adminDb, {
     owner_id: user.id,
     event_type: 'profile_updated',
     entity_type: 'profile',

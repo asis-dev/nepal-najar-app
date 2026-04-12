@@ -41,7 +41,7 @@ export default async function ApplyPage({ params }: { params: { category: string
   const schema = getOrBuildSchema(svc.slug, svc.title.en);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
+    <div className="relative z-10 max-w-3xl mx-auto px-4 py-10">
       {/* Breadcrumb */}
       <div className="text-sm text-zinc-400 mb-4">
         <Link href="/services" className="hover:text-zinc-200">Services</Link>
