@@ -136,7 +136,7 @@ export function triageHealth(input: HealthTriageInput): HealthTriageOutput {
   if (matchesAny(message, EMERGENCY_KEYWORDS)) {
     const flags: string[] = [];
     const t = lower(message);
-    if (matchesAny(t, ['labor', 'labour', 'delivery', 'prasuti', 'sutkeri', 'contractions']))
+    if (matchesAny(t, ['labor', 'labour', 'delivery', 'prasuti', 'sutkeri', 'contractions', 'give birth', 'giving birth', 'water broke']))
       flags.push('labor_emergency');
     if (matchesAny(t, ['chest pain', 'heart attack', 'cardiac']))
       flags.push('chest_pain');
