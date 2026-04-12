@@ -26,6 +26,8 @@ export interface HealthTriageOutput {
 
 const EMERGENCY_KEYWORDS = [
   'labor', 'labour', 'delivery', 'delivering', 'contractions',
+  'give birth', 'giving birth', 'about to deliver', 'water broke',
+  'water breaking', 'in labor', 'janma dina', 'baccha aaudai',
   'prasuti', 'sutkeri',
   'chest pain', 'heart attack', 'cardiac',
   'cannot breathe', 'cant breathe', 'breathing difficulty',
@@ -42,6 +44,8 @@ const EMERGENCY_KEYWORDS = [
 
 const URGENT_KEYWORDS = [
   '3 days fever', 'three days fever', 'tin din jwaro',
+  'fever for 3', 'fever for three', 'fever for 2 days', 'fever for two',
+  'fever since', 'jwaro bhayeko',
   'high fever', 'dherai jwaro', '104', '105', '103',
   'severe pain', 'tivra dukhi', 'dherai dukhi',
   'pregnancy complication', 'garbhama samasya',
@@ -52,6 +56,7 @@ const URGENT_KEYWORDS = [
   'child not eating', 'baccha khanna',
   'rash spreading', 'allergic reaction',
   'vomiting blood', 'blood in stool',
+  'not getting better', 'getting worse', 'bigriraako',
 ];
 
 const CHILD_KEYWORDS = [
