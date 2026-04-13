@@ -60,9 +60,16 @@ export async function POST(request: NextRequest) {
   const locale = body.locale === 'ne' ? 'ne' : 'en';
   if (!serviceSlug) return NextResponse.json({ error: 'serviceSlug required' }, { status: 400 });
 
-  const service = await getServiceBySlug(serviceSlug);
+  let service;
+  try {
+    service = await getServiceBySlug(serviceSlug);
+  } catch (lookupErr) {
+    console.error('[service-tasks] catalog lookup error:', lookupErr);
+    return NextResponse.json({ error: 'Service catalog error', detail: String(lookupErr) }, { status: 500 });
+  }
   if (!service) return NextResponse.json({ error: 'Service not found' }, { status: 404 });
 
+  try {
   const { data: existing } = await supabase
     .from('service_tasks')
     .select('*')
@@ -227,4 +234,8 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ task: mapTaskRow(data), reused: false });
+  } catch (err) {
+    console.error('[service-tasks] POST unhandled error:', err);
+    return NextResponse.json({ error: 'Failed to create task', detail: err instanceof Error ? err.message : String(err) }, { status: 500 });
+  }
 }
