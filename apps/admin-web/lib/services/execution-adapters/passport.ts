@@ -5,6 +5,7 @@ import type {
   ServiceAdapter,
   ExecutionContext,
   ExecutionResult,
+  ExecutionStep,
   AdapterCapabilities,
 } from './index';
 
@@ -69,14 +70,75 @@ function mapPassportProfile(
 // New Passport
 // ---------------------------------------------------------------------------
 
+const NEW_PASSPORT_STEPS: ExecutionStep[] = [
+  {
+    order: 1,
+    action: 'gather_documents',
+    description: 'Collect citizenship certificate (original + copy), 2 passport photos (white background), and ward recommendation if applicable',
+    requiresUser: true,
+    automatable: false,
+  },
+  {
+    order: 2,
+    action: 'fill_online_form',
+    description: 'Fill the online application form at nepalpassport.gov.np/newpassport with your personal details',
+    requiresUser: true,
+    automatable: true,
+  },
+  {
+    order: 3,
+    action: 'book_appointment',
+    description: 'Book an appointment slot through the online portal',
+    requiresUser: true,
+    automatable: false,
+  },
+  {
+    order: 4,
+    action: 'visit_office',
+    description: 'Visit the Department of Passports, Tripureshwor, Kathmandu on your appointment date with all original documents',
+    requiresUser: true,
+    automatable: false,
+  },
+  {
+    order: 5,
+    action: 'biometrics',
+    description: 'Provide biometric data (fingerprints, photo) at the passport office',
+    requiresUser: true,
+    automatable: false,
+  },
+  {
+    order: 6,
+    action: 'pay_fee',
+    description: 'Pay NPR 5,000 (regular) or NPR 10,000 (express) at the counter',
+    requiresUser: true,
+    automatable: false,
+  },
+  {
+    order: 7,
+    action: 'collect_passport',
+    description: 'Collect passport after 5-7 working days (regular) or 2-3 days (express)',
+    requiresUser: true,
+    automatable: false,
+  },
+];
+
 const newPassportAdapter: ServiceAdapter = {
   slug: 'new-passport',
   family: 'passport',
   mode: 'assisted',
+  executionLevel: 'guided',
   capabilities: PASSPORT_CAPABILITIES,
 
   normalizeIntake: normalizePassportIntake,
   mapProfileToForm: mapPassportProfile,
+
+  canExecute() {
+    return false; // In-person visit required
+  },
+
+  getExecutionSteps() {
+    return NEW_PASSPORT_STEPS;
+  },
 
   getRequiredDocuments() {
     return [
@@ -124,10 +186,27 @@ const passportRenewalAdapter: ServiceAdapter = {
   slug: 'passport-renewal',
   family: 'passport',
   mode: 'assisted',
+  executionLevel: 'guided',
   capabilities: PASSPORT_CAPABILITIES,
 
   normalizeIntake: normalizePassportIntake,
   mapProfileToForm: mapPassportProfile,
+
+  canExecute() {
+    return false; // In-person visit required
+  },
+
+  getExecutionSteps() {
+    return [
+      { order: 1, action: 'gather_documents', description: 'Collect citizenship certificate, old passport, 2 passport photos, and police report if lost/stolen', requiresUser: true, automatable: false },
+      { order: 2, action: 'fill_online_form', description: 'Fill the renewal form at nepalpassport.gov.np/passportrenew', requiresUser: true, automatable: true },
+      { order: 3, action: 'book_appointment', description: 'Book an appointment through the online portal', requiresUser: true, automatable: false },
+      { order: 4, action: 'visit_office', description: 'Visit the Department of Passports with all original documents on appointment date', requiresUser: true, automatable: false },
+      { order: 5, action: 'biometrics', description: 'Provide biometric data at the passport office', requiresUser: true, automatable: false },
+      { order: 6, action: 'pay_fee', description: 'Pay NPR 5,000 (regular) or NPR 10,000 (express)', requiresUser: true, automatable: false },
+      { order: 7, action: 'collect_passport', description: 'Collect passport after 5-7 working days (regular) or 2-3 days (express)', requiresUser: true, automatable: false },
+    ];
+  },
 
   getRequiredDocuments() {
     return [

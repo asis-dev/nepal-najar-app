@@ -5,6 +5,7 @@ import type {
   ServiceAdapter,
   ExecutionContext,
   ExecutionResult,
+  ExecutionStep,
   AdapterCapabilities,
 } from './index';
 
@@ -148,11 +149,33 @@ function buildHealthAdapter(info: HospitalInfo): ServiceAdapter {
     slug: info.slug,
     family: 'health',
     mode: 'assisted',
+    executionLevel: 'assisted',
     capabilities: HEALTH_CAPABILITIES,
 
     normalizeIntake: normalizeHealthIntake,
     mapProfileToForm: mapHealthProfile,
     getRequiredDocuments: () => [...HEALTH_DOCUMENTS],
+
+    canExecute() {
+      // Some hospitals (e.g. Patan) offer online booking
+      return info.notes.toLowerCase().includes('online');
+    },
+
+    getExecutionSteps(): ExecutionStep[] {
+      const steps: ExecutionStep[] = [
+        { order: 1, action: 'prepare_documents', description: 'Bring citizenship copy, insurance card (if any), and previous medical records', requiresUser: true, automatable: false },
+        { order: 2, action: 'pre_fill_form', description: `Pre-fill OPD registration form for ${info.name}`, requiresUser: false, automatable: true },
+      ];
+      if (info.notes.toLowerCase().includes('online')) {
+        steps.push({ order: 3, action: 'book_online', description: `Book appointment online at ${info.name}'s portal`, requiresUser: true, automatable: true });
+      }
+      steps.push(
+        { order: steps.length + 1, action: 'visit_hospital', description: `Visit ${info.name} OPD at ${info.location} during ${info.opdHours}`, requiresUser: true, automatable: false },
+        { order: steps.length + 2, action: 'register_opd', description: `Register at OPD counter and pay registration fee`, requiresUser: true, automatable: false },
+        { order: steps.length + 3, action: 'see_doctor', description: 'Wait for your token number and see the doctor', requiresUser: true, automatable: false },
+      );
+      return steps;
+    },
 
     generatePayload(context: ExecutionContext): Record<string, unknown> {
       return {

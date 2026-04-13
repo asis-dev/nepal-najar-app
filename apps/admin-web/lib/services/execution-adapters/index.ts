@@ -9,6 +9,8 @@
 
 export type ExecutionMode = 'guidance_only' | 'assisted' | 'direct';
 
+export type ExecutionLevel = 'direct' | 'assisted' | 'guided';
+
 export interface AdapterCapabilities {
   canPrefill: boolean;
   canSubmitDigitally: boolean;
@@ -37,10 +39,19 @@ export interface ExecutionResult {
   error?: string;
 }
 
+export interface ExecutionStep {
+  order: number;
+  action: string;
+  description: string;
+  requiresUser: boolean;  // true = user must do this step manually
+  automatable: boolean;   // true = system can do this
+}
+
 export interface ServiceAdapter {
   slug: string;
   family: string;
   mode: ExecutionMode;
+  executionLevel: ExecutionLevel;
   capabilities: AdapterCapabilities;
 
   /** Normalize intake data for this service */
@@ -57,6 +68,12 @@ export interface ServiceAdapter {
     label: string;
     required: boolean;
   }>;
+
+  /** Whether online submission is possible */
+  canExecute(): boolean;
+
+  /** Step-by-step for assisted/guided flows */
+  getExecutionSteps(): ExecutionStep[];
 
   /** Generate submission payload */
   generatePayload(context: ExecutionContext): Record<string, unknown>;
@@ -94,10 +111,12 @@ export function listAdapters(): Array<{
   slug: string;
   family: string;
   mode: ExecutionMode;
+  executionLevel: ExecutionLevel;
 }> {
   return ALL_ADAPTERS.map((a) => ({
     slug: a.slug,
     family: a.family,
     mode: a.mode,
+    executionLevel: a.executionLevel,
   }));
 }

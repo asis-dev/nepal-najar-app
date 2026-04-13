@@ -13,7 +13,9 @@ export type FeedbackType =
   | 'answer_wrong' // user marked AI answer as wrong
   | 'case_reassigned' // ops reassigned case
   | 'positive' // user confirmed good experience
-  | 'triage_override'; // user overrode triage decision
+  | 'triage_override' // user overrode triage decision
+  | 'extraction_correction' // user corrected extracted document data
+  | 'draft_correction'; // user corrected a pre-filled draft field
 
 export interface FeedbackEntry {
   id?: string;
@@ -128,16 +130,17 @@ export async function recordDraftCorrection(
   userId: string,
   taskId: string,
   fieldKey: string,
-  aiValue: string,
-  userValue: string,
+  originalValue: string,
+  correctedValue: string,
+  source: string = 'unknown',
 ): Promise<void> {
   await recordFeedback(supabase, {
     userId,
     taskId,
-    feedbackType: 'draft_edit',
-    originalValue: aiValue,
-    correctedValue: userValue,
-    context: { field_key: fieldKey },
+    feedbackType: 'draft_correction',
+    originalValue,
+    correctedValue,
+    context: { field_key: fieldKey, source },
   });
 }
 
@@ -147,16 +150,38 @@ export async function recordDraftCorrection(
 export async function recordRouteCorrection(
   supabase: SupabaseClient,
   userId: string,
-  originalSlug: string,
-  correctedSlug: string,
-  userQuery: string,
+  originalQuery: string,
+  suggestedService: string,
+  chosenService: string,
+  triageMethod: 'ai' | 'keyword' = 'ai',
 ): Promise<void> {
   await recordFeedback(supabase, {
     userId,
     feedbackType: 'route_correction',
-    originalValue: originalSlug,
-    correctedValue: correctedSlug,
-    context: { user_query: userQuery },
+    originalValue: suggestedService,
+    correctedValue: chosenService,
+    context: { user_query: originalQuery, triage_method: triageMethod },
+  });
+}
+
+/**
+ * Record when extracted data from a document is wrong — tracks OCR/extraction
+ * accuracy so we can improve document processing over time.
+ */
+export async function recordDocumentCorrection(
+  supabase: SupabaseClient,
+  userId: string,
+  docType: string,
+  fieldKey: string,
+  extractedValue: string,
+  correctedValue: string,
+): Promise<void> {
+  await recordFeedback(supabase, {
+    userId,
+    feedbackType: 'extraction_correction',
+    originalValue: extractedValue,
+    correctedValue,
+    context: { doc_type: docType, field_key: fieldKey },
   });
 }
 
@@ -237,6 +262,14 @@ export async function getLearningInsights(
           pattern = `AI answers about ${group.slug} are being marked as wrong`;
           suggestedFix = 'Update the knowledge base and FAQ for this service.';
           break;
+        case 'extraction_correction':
+          pattern = `Document extraction for ${group.slug} is frequently corrected`;
+          suggestedFix = 'Review OCR/extraction logic and field mapping for this document type.';
+          break;
+        case 'draft_correction':
+          pattern = `Pre-filled draft fields for ${group.slug} are frequently corrected`;
+          suggestedFix = 'Review autofill data sources and field mapping accuracy.';
+          break;
         default:
           pattern = `${group.type} feedback for ${group.slug}`;
           suggestedFix = 'Review feedback entries for patterns.';
@@ -307,7 +340,8 @@ export async function getAccuracyMetrics(
     }
 
     const routeCorrections = counts['route_correction'] || 0;
-    const draftEdits = counts['draft_edit'] || 0;
+    const draftEdits = (counts['draft_edit'] || 0) + (counts['draft_correction'] || 0);
+    const extractionCorrections = counts['extraction_correction'] || 0;
     const submissionsFailed = counts['submission_failed'] || 0;
     const positives = counts['positive'] || 0;
 
@@ -344,6 +378,122 @@ export async function getAccuracyMetrics(
     };
   } catch {
     return defaults;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Correction Stats
+// ---------------------------------------------------------------------------
+
+export interface CorrectionStat {
+  key: string;
+  count: number;
+  examples: Array<{ original: string; corrected: string }>;
+}
+
+export interface CorrectionStats {
+  routeCorrections: CorrectionStat[];
+  documentCorrections: CorrectionStat[];
+  draftCorrections: CorrectionStat[];
+  totals: {
+    routeCorrections: number;
+    documentCorrections: number;
+    draftCorrections: number;
+  };
+}
+
+/**
+ * Aggregate correction signals to show accuracy breakdowns:
+ * - Most commonly corrected routes (triage accuracy)
+ * - Most commonly corrected document fields (OCR accuracy)
+ * - Most commonly corrected draft fields (autofill accuracy)
+ */
+export async function getCorrectionStats(
+  supabase: SupabaseClient,
+): Promise<CorrectionStats> {
+  const empty: CorrectionStats = {
+    routeCorrections: [],
+    documentCorrections: [],
+    draftCorrections: [],
+    totals: { routeCorrections: 0, documentCorrections: 0, draftCorrections: 0 },
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('service_feedback')
+      .select('feedback_type, original_value, corrected_value, context')
+      .in('feedback_type', ['route_correction', 'extraction_correction', 'draft_correction'])
+      .order('created_at', { ascending: false })
+      .limit(5000);
+
+    if (error) {
+      if (isMissingTable(error.message)) return empty;
+      console.warn('[learning-loop] getCorrectionStats query failed:', error.message);
+      return empty;
+    }
+
+    if (!data || data.length === 0) return empty;
+
+    // Group by type and key
+    const routeMap = new Map<string, { count: number; examples: Array<{ original: string; corrected: string }> }>();
+    const docMap = new Map<string, { count: number; examples: Array<{ original: string; corrected: string }> }>();
+    const draftMap = new Map<string, { count: number; examples: Array<{ original: string; corrected: string }> }>();
+
+    for (const row of data) {
+      const ctx = (row.context as Record<string, unknown>) || {};
+      const original = (row.original_value as string) || '';
+      const corrected = (row.corrected_value as string) || '';
+
+      if (row.feedback_type === 'route_correction') {
+        const key = `${original} → ${corrected}`;
+        const entry = routeMap.get(key) || { count: 0, examples: [] };
+        entry.count += 1;
+        if (entry.examples.length < 3) {
+          entry.examples.push({ original, corrected });
+        }
+        routeMap.set(key, entry);
+      } else if (row.feedback_type === 'extraction_correction') {
+        const fieldKey = (ctx.field_key as string) || 'unknown';
+        const docType = (ctx.doc_type as string) || 'unknown';
+        const key = `${docType}:${fieldKey}`;
+        const entry = docMap.get(key) || { count: 0, examples: [] };
+        entry.count += 1;
+        if (entry.examples.length < 3) {
+          entry.examples.push({ original, corrected });
+        }
+        docMap.set(key, entry);
+      } else if (row.feedback_type === 'draft_correction') {
+        const fieldKey = (ctx.field_key as string) || 'unknown';
+        const entry = draftMap.get(fieldKey) || { count: 0, examples: [] };
+        entry.count += 1;
+        if (entry.examples.length < 3) {
+          entry.examples.push({ original, corrected });
+        }
+        draftMap.set(fieldKey, entry);
+      }
+    }
+
+    const toSorted = (map: Map<string, { count: number; examples: Array<{ original: string; corrected: string }> }>): CorrectionStat[] =>
+      Array.from(map.entries())
+        .map(([key, val]) => ({ key, count: val.count, examples: val.examples }))
+        .sort((a, b) => b.count - a.count);
+
+    const routeCorrections = toSorted(routeMap);
+    const documentCorrections = toSorted(docMap);
+    const draftCorrections = toSorted(draftMap);
+
+    return {
+      routeCorrections,
+      documentCorrections,
+      draftCorrections,
+      totals: {
+        routeCorrections: routeCorrections.reduce((sum, r) => sum + r.count, 0),
+        documentCorrections: documentCorrections.reduce((sum, r) => sum + r.count, 0),
+        draftCorrections: draftCorrections.reduce((sum, r) => sum + r.count, 0),
+      },
+    };
+  } catch {
+    return empty;
   }
 }
 

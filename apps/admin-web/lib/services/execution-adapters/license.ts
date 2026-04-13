@@ -5,6 +5,7 @@ import type {
   ServiceAdapter,
   ExecutionContext,
   ExecutionResult,
+  ExecutionStep,
   AdapterCapabilities,
 } from './index';
 
@@ -63,10 +64,26 @@ const driversLicenseRenewal: ServiceAdapter = {
   slug: 'drivers-license-renewal',
   family: 'license',
   mode: 'assisted',
+  executionLevel: 'guided',
   capabilities: LICENSE_CAPABILITIES,
 
   normalizeIntake: normalizeLicenseIntake,
   mapProfileToForm: mapLicenseProfile,
+
+  canExecute() {
+    return false; // In-person visit required for biometrics
+  },
+
+  getExecutionSteps() {
+    return [
+      { order: 1, action: 'gather_documents', description: 'Collect citizenship copy, old license, medical report, and passport photos', requiresUser: true, automatable: false },
+      { order: 2, action: 'fill_online', description: 'Apply online at dotm.gov.np and upload documents', requiresUser: true, automatable: true },
+      { order: 3, action: 'medical_report', description: 'Get medical fitness report from government hospital or authorized clinic', requiresUser: true, automatable: false },
+      { order: 4, action: 'visit_dotm', description: 'Visit nearest DoTM office with originals on scheduled date', requiresUser: true, automatable: false },
+      { order: 5, action: 'pay_fee', description: 'Pay NPR 1,800 (motorcycle) or NPR 2,500 (car/jeep)', requiresUser: true, automatable: false },
+      { order: 6, action: 'receive_card', description: 'Smart card license mailed within 30-45 days', requiresUser: false, automatable: false },
+    ];
+  },
 
   getRequiredDocuments() {
     return [
@@ -114,10 +131,27 @@ const newDriversLicense: ServiceAdapter = {
   slug: 'new-drivers-license',
   family: 'license',
   mode: 'assisted',
+  executionLevel: 'guided',
   capabilities: LICENSE_CAPABILITIES,
 
   normalizeIntake: normalizeLicenseIntake,
   mapProfileToForm: mapLicenseProfile,
+
+  canExecute() {
+    return false; // In-person exams and biometrics required
+  },
+
+  getExecutionSteps() {
+    return [
+      { order: 1, action: 'gather_documents', description: 'Collect citizenship (original + copy), medical report, blood group report, and 4 passport photos', requiresUser: true, automatable: false },
+      { order: 2, action: 'register_online', description: 'Register at dotm.gov.np and fill the application form', requiresUser: true, automatable: true },
+      { order: 3, action: 'book_written_exam', description: 'Book a written exam date through the DoTM portal', requiresUser: true, automatable: false },
+      { order: 4, action: 'pass_written', description: 'Pass the written exam (multiple choice, 60% required)', requiresUser: true, automatable: false },
+      { order: 5, action: 'pass_trial', description: 'Pass the practical driving trial exam', requiresUser: true, automatable: false },
+      { order: 6, action: 'pay_fee', description: 'Pay NPR 500 (application) + NPR 1,800-2,500 (license fee)', requiresUser: true, automatable: false },
+      { order: 7, action: 'receive_card', description: 'Smart card license printed and mailed within 30-45 days', requiresUser: false, automatable: false },
+    ];
+  },
 
   getRequiredDocuments() {
     return [
@@ -166,6 +200,7 @@ const dotmTrialBooking: ServiceAdapter = {
   slug: 'dotm-trial-booking',
   family: 'license',
   mode: 'assisted',
+  executionLevel: 'assisted',
   capabilities: {
     ...LICENSE_CAPABILITIES,
     canBookAppointment: false, // external portal
@@ -173,6 +208,21 @@ const dotmTrialBooking: ServiceAdapter = {
 
   normalizeIntake: normalizeLicenseIntake,
   mapProfileToForm: mapLicenseProfile,
+
+  canExecute() {
+    return true; // Online form but needs user verification
+  },
+
+  getExecutionSteps() {
+    return [
+      { order: 1, action: 'login_dotm', description: 'Log in to your DoTM account at dotm.gov.np', requiresUser: true, automatable: false },
+      { order: 2, action: 'select_category', description: 'Navigate to Trial Booking and select vehicle category', requiresUser: true, automatable: true },
+      { order: 3, action: 'choose_date', description: 'Choose an available trial date (typically 1-3 months out)', requiresUser: true, automatable: false },
+      { order: 4, action: 'confirm_booking', description: 'Confirm the trial booking and note the date', requiresUser: true, automatable: true },
+      { order: 5, action: 'prepare_documents', description: 'Prepare citizenship, medical report, and written exam pass certificate', requiresUser: true, automatable: false },
+      { order: 6, action: 'attend_trial', description: 'Arrive at trial ground (Ekantakuna or designated center) by 7:00 AM', requiresUser: true, automatable: false },
+    ];
+  },
 
   getRequiredDocuments() {
     return [

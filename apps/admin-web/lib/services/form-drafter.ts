@@ -1,7 +1,7 @@
 /**
  * Phase 4 — Form Drafter
  * Creates pre-filled draft applications by combining profile data,
- * document extractions, and AI inference.
+ * document extractions, prior submissions, and provenance-ranked fields.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getOrBuildSchema } from './form-schemas';
@@ -70,6 +70,17 @@ function deriveMissing(draft: ServiceDraft): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Source candidate — represents one possible value for a field
+// ---------------------------------------------------------------------------
+
+interface SourceCandidate {
+  value: string;
+  source: string;
+  confidence: number;
+  status: FieldStatus;
+}
+
+// ---------------------------------------------------------------------------
 // Generate draft
 // ---------------------------------------------------------------------------
 
@@ -81,39 +92,97 @@ export async function generateDraft(
   // 1. Get form schema
   const schema = getOrBuildSchema(serviceSlug, serviceSlug);
 
-  // 2. Load user profile (graceful if table missing)
-  let profile: Record<string, string | null> = {};
-  try {
-    const { data } = await supabase
-      .from('user_identity_profile')
-      .select('*')
-      .eq('owner_id', userId)
-      .maybeSingle();
-    if (data) {
-      profile = data as Record<string, string | null>;
-    }
-  } catch {
-    // Table may not exist yet — proceed with empty profile
-  }
+  // 2. Load all data sources in parallel (each gracefully handles missing tables)
+  const [profile, docExtractions, priorSubmission, provenanceMap] =
+    await Promise.all([
+      loadUserProfile(supabase, userId),
+      loadDocumentExtractions(supabase, userId),
+      loadPriorSubmission(supabase, userId, serviceSlug),
+      loadProvenanceMap(supabase, userId),
+    ]);
 
-  // 3. Map fields
+  // 3. For each schema field, pick the best value from all sources
   const allFields = schema.sections.flatMap((s) => s.fields);
   const fields: DraftFieldValue[] = allFields.map((f) => {
     const profileKey = f.profileKey;
-    const profileValue =
-      profileKey && profile[profileKey] != null
-        ? String(profile[profileKey])
-        : null;
+    const candidates: SourceCandidate[] = [];
 
-    if (profileValue) {
+    // --- Provenance-backed values (from profile_field_provenance) ---
+    if (profileKey && provenanceMap[profileKey]) {
+      const prov = provenanceMap[profileKey];
+      if (prov.value != null && prov.value !== '') {
+        candidates.push({
+          value: prov.value,
+          source: `provenance:${prov.source}`,
+          confidence: mapSourceConfidence(prov.source, prov.confidence),
+          status: provenanceSourceToStatus(prov.source),
+        });
+      }
+    }
+
+    // --- Profile table values ---
+    if (profileKey && profile[profileKey] != null) {
+      const val = String(profile[profileKey]);
+      if (val !== '') {
+        candidates.push({
+          value: val,
+          source: 'profile',
+          confidence: 0.95,
+          status: 'known',
+        });
+      }
+    }
+
+    // --- Document extractions ---
+    if (profileKey && docExtractions[profileKey] != null) {
+      const val = String(docExtractions[profileKey]);
+      if (val !== '') {
+        candidates.push({
+          value: val,
+          source: `document:${docExtractions[`__source_${profileKey}`] ?? 'ocr'}`,
+          confidence: 0.9,
+          status: 'extracted_from_doc',
+        });
+      }
+    }
+
+    // --- Prior submission values (match by form key) ---
+    if (priorSubmission[f.key] != null) {
+      const val = String(priorSubmission[f.key]);
+      if (val !== '') {
+        candidates.push({
+          value: val,
+          source: 'prior_submission',
+          confidence: 0.85,
+          status: 'known',
+        });
+      }
+    }
+    // Also try matching by profileKey in prior submission
+    if (profileKey && profileKey !== f.key && priorSubmission[profileKey] != null) {
+      const val = String(priorSubmission[profileKey]);
+      if (val !== '') {
+        candidates.push({
+          value: val,
+          source: 'prior_submission',
+          confidence: 0.85,
+          status: 'known',
+        });
+      }
+    }
+
+    // Pick the best candidate by confidence (highest wins)
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.confidence - a.confidence);
+      const best = candidates[0];
       return {
         key: f.key,
         label: f.label,
-        value: profileValue,
-        status: 'known' as FieldStatus,
-        source: 'profile',
-        confidence: 0.95,
-        requiresReview: false,
+        value: best.value,
+        status: best.status,
+        source: best.source,
+        confidence: best.confidence,
+        requiresReview: best.confidence < 0.9,
       };
     }
 
@@ -146,6 +215,165 @@ export async function generateDraft(
     draft.completeness >= 80 && draft.missingRequired.length <= 2;
 
   return draft;
+}
+
+// ---------------------------------------------------------------------------
+// Data loaders (each handles missing tables gracefully)
+// ---------------------------------------------------------------------------
+
+/** Load user_identity_profile row as a flat key-value map */
+async function loadUserProfile(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<Record<string, string | null>> {
+  try {
+    const { data } = await supabase
+      .from('user_identity_profile')
+      .select('*')
+      .eq('owner_id', userId)
+      .maybeSingle();
+    if (data) return data as Record<string, string | null>;
+  } catch {
+    // Table may not exist yet
+  }
+  return {};
+}
+
+/**
+ * Load extracted fields from document_extractions joined with vault_documents.
+ * Returns a flat map of profileKey -> value, plus __source_<key> metadata.
+ */
+async function loadDocumentExtractions(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<Record<string, string>> {
+  const result: Record<string, string> = {};
+  try {
+    const { data } = await supabase
+      .from('document_extractions')
+      .select('field_name, field_value, confidence, vault_documents!inner(owner_id, doc_type)')
+      .eq('vault_documents.owner_id', userId);
+
+    if (data && Array.isArray(data)) {
+      for (const row of data) {
+        const fieldName = row.field_name as string;
+        const fieldValue = row.field_value as string;
+        if (fieldName && fieldValue != null && fieldValue !== '') {
+          // Only overwrite if this extraction has higher confidence or is first
+          if (!result[fieldName]) {
+            result[fieldName] = fieldValue;
+            const docType = (row as any).vault_documents?.doc_type;
+            if (docType) {
+              result[`__source_${fieldName}`] = docType;
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // Table may not exist yet
+  }
+  return result;
+}
+
+/**
+ * Load the most recent prior submission for the same service.
+ * Returns the submitted_values as a flat key-value map.
+ */
+async function loadPriorSubmission(
+  supabase: SupabaseClient,
+  userId: string,
+  serviceSlug: string,
+): Promise<Record<string, string>> {
+  try {
+    const { data } = await supabase
+      .from('service_submissions')
+      .select('submitted_values')
+      .eq('user_id', userId)
+      .eq('service_slug', serviceSlug)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.submitted_values && typeof data.submitted_values === 'object') {
+      return data.submitted_values as Record<string, string>;
+    }
+  } catch {
+    // Table may not exist yet
+  }
+  return {};
+}
+
+/**
+ * Load all provenance records for a user into a lookup map.
+ * Returns field_name -> { value, source, confidence }.
+ */
+async function loadProvenanceMap(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<Record<string, { value: string; source: string; confidence: number }>> {
+  const result: Record<string, { value: string; source: string; confidence: number }> = {};
+  try {
+    const { data } = await supabase
+      .from('profile_field_provenance')
+      .select('field_name, field_value, source, confidence')
+      .eq('user_id', userId);
+
+    if (data && Array.isArray(data)) {
+      for (const row of data) {
+        if (row.field_name && row.field_value != null) {
+          result[row.field_name] = {
+            value: row.field_value,
+            source: row.source,
+            confidence: row.confidence ?? 0.5,
+          };
+        }
+      }
+    }
+  } catch {
+    // Table may not exist yet
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Confidence mapping
+// ---------------------------------------------------------------------------
+
+/**
+ * Map provenance source type to confidence value.
+ * Priority: user_confirmed (1.0) > document_ocr (0.9) > profile (0.95 generic)
+ *           > form_submission (0.85) > ai_inferred (use stored confidence)
+ */
+function mapSourceConfidence(source: string, storedConfidence: number): number {
+  switch (source) {
+    case 'user_input':
+      return 1.0;
+    case 'document_ocr':
+      return 0.9;
+    case 'admin_entry':
+      return 0.88;
+    case 'form_submission':
+      return 0.85;
+    case 'ai_inferred':
+      return Math.min(storedConfidence, 0.8);
+    default:
+      return storedConfidence;
+  }
+}
+
+/** Map provenance source to a DraftFieldValue status */
+function provenanceSourceToStatus(source: string): FieldStatus {
+  switch (source) {
+    case 'user_input':
+      return 'user_confirmed';
+    case 'document_ocr':
+      return 'extracted_from_doc';
+    case 'ai_inferred':
+      return 'inferred';
+    default:
+      return 'known';
+  }
 }
 
 // ---------------------------------------------------------------------------

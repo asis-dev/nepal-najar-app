@@ -309,8 +309,96 @@ export function validateApproval(
 }
 
 // ---------------------------------------------------------------------------
+// SLA expected days (mirrors case-operations SLA_CONFIGS for completion estimate)
+// ---------------------------------------------------------------------------
+
+const SLA_EXPECTED_DAYS: Record<string, number> = {
+  'new-passport': 30,
+  'passport-renewal': 21,
+  'drivers-license-renewal': 14,
+  'new-drivers-license': 30,
+  'nea-bill-payment': 1,
+  'kukl-bill-payment': 1,
+  'bir-hospital-opd': 7,
+  'citizenship-by-descent': 30,
+  'dotm-trial-booking': 7,
+  'nea-new-connection': 14,
+  'kukl-new-connection': 14,
+  'pan-individual': 7,
+};
+
+// ---------------------------------------------------------------------------
+// Next steps builder
+// ---------------------------------------------------------------------------
+
+function buildNextSteps(
+  serviceSlug: string,
+  method: 'online' | 'in_person' | 'hybrid',
+  refNumber: string,
+): string[] {
+  const steps: string[] = [];
+
+  steps.push(`Save your reference number: ${refNumber}`);
+
+  if (method === 'in_person' || method === 'hybrid') {
+    steps.push('Visit the submission office with your original documents and reference number.');
+  }
+
+  if (method === 'online') {
+    steps.push('Your application has been submitted online. No office visit is required for now.');
+  }
+
+  if (method === 'hybrid') {
+    steps.push('Online submission recorded. You may need to visit the office for biometrics or verification.');
+  }
+
+  // Service-specific next steps
+  const serviceSteps: Record<string, string[]> = {
+    'new-passport': [
+      'Bring original citizenship certificate and 2 passport-size photos.',
+      'Biometrics will be collected at the passport office.',
+    ],
+    'passport-renewal': [
+      'Bring your old passport and citizenship certificate.',
+    ],
+    'citizenship-by-descent': [
+      'Both parents may need to be present at the District Administration Office.',
+      'Bring parents\' citizenship certificates and birth certificate.',
+    ],
+    'new-drivers-license': [
+      'Prepare for written and practical driving tests.',
+      'Medical fitness report must be recent (within 1 month).',
+    ],
+    'nea-bill-payment': [
+      'Payment will be reflected in your account within 24 hours.',
+    ],
+    'kukl-bill-payment': [
+      'Payment will be reflected in your account within 24 hours.',
+    ],
+  };
+
+  if (serviceSteps[serviceSlug]) {
+    steps.push(...serviceSteps[serviceSlug]);
+  }
+
+  steps.push('We will track this submission and notify you of any updates.');
+
+  return steps;
+}
+
+// ---------------------------------------------------------------------------
 // Process approved submission
 // ---------------------------------------------------------------------------
+
+export interface SubmissionResult {
+  success: boolean;
+  referenceNumber?: string;
+  estimatedCompletionDate?: string;
+  nextSteps?: string[];
+  error?: string;
+  submittedAt?: string;
+  submissionMethod?: 'online' | 'in_person' | 'hybrid';
+}
 
 export async function processApprovedSubmission(
   supabase: SupabaseClient,
@@ -318,7 +406,7 @@ export async function processApprovedSubmission(
   taskId: string,
   pkg: ReviewPackage,
   decision: ApprovalDecision,
-): Promise<{ success: boolean; referenceNumber?: string; error?: string }> {
+): Promise<SubmissionResult> {
   // Validate first
   const validation = validateApproval(pkg, decision);
   if (!validation.valid) {
@@ -339,6 +427,30 @@ export async function processApprovedSubmission(
     .join('');
   const refNumber = `${refPrefix}-${Date.now().toString(36).toUpperCase()}`;
 
+  const now = new Date();
+  const submittedAt = now.toISOString();
+
+  // Calculate estimated completion date from SLA config
+  const slaExpectedDays = SLA_EXPECTED_DAYS[pkg.serviceSlug] ?? 30;
+  const estimatedCompletion = new Date(now);
+  estimatedCompletion.setDate(estimatedCompletion.getDate() + slaExpectedDays);
+  const estimatedCompletionDate = estimatedCompletion.toISOString();
+
+  // Build next steps based on submission method
+  const nextSteps = buildNextSteps(pkg.serviceSlug, pkg.submissionMethod, refNumber);
+
+  // Store submission proof metadata
+  const proofMetadata = {
+    timestamp: submittedAt,
+    method: pkg.submissionMethod,
+    referenceNumber: refNumber,
+    estimatedCompletionDate,
+    slaExpectedDays,
+    submissionTarget: pkg.submissionTarget,
+    itemCount: pkg.items.length,
+    documentCount: pkg.documents.filter((d) => d.attached).length,
+  };
+
   // Record the submission
   try {
     await supabase.from('service_submissions').insert({
@@ -355,10 +467,12 @@ export async function processApprovedSubmission(
         declarations_accepted: decision.declarationsAccepted,
         user_notes: decision.userNotes,
       },
+      proof_metadata: proofMetadata,
       submission_method: pkg.submissionMethod,
       submission_target: pkg.submissionTarget,
+      estimated_completion_date: estimatedCompletionDate,
       status: 'submitted',
-      submitted_at: new Date().toISOString(),
+      submitted_at: submittedAt,
     });
   } catch {
     // Table may not exist — still return success with reference number
@@ -372,15 +486,23 @@ export async function processApprovedSubmission(
         status: 'submitted',
         submission_ref: refNumber,
         submission_ref_type: 'application_id',
-        submitted_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        submitted_at: submittedAt,
+        estimated_completion_date: estimatedCompletionDate,
+        updated_at: submittedAt,
       })
       .eq('id', taskId);
   } catch {
     // Graceful fallback
   }
 
-  return { success: true, referenceNumber: refNumber };
+  return {
+    success: true,
+    referenceNumber: refNumber,
+    estimatedCompletionDate,
+    nextSteps,
+    submittedAt,
+    submissionMethod: pkg.submissionMethod,
+  };
 }
 
 // ---------------------------------------------------------------------------
