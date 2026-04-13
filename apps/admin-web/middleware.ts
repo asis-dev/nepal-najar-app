@@ -145,14 +145,17 @@ export async function middleware(request: NextRequest) {
     pathname === '/' ||
     PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
   ) {
-    // Still refresh Supabase session on public routes (keeps session alive)
+    // Refresh Supabase session only if the user has auth cookies (skip for anonymous visitors)
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      try {
-        const { supabase, response } = createSupabaseMiddlewareClient(request);
-        await supabase.auth.getUser();
-        return applySecurityHeaders(response, request);
-      } catch {
-        return applySecurityHeaders(NextResponse.next(), request);
+      const hasAuthCookie = request.cookies.getAll().some(c => c.name.includes('auth-token'));
+      if (hasAuthCookie) {
+        try {
+          const { supabase, response } = createSupabaseMiddlewareClient(request);
+          await supabase.auth.getUser();
+          return applySecurityHeaders(response, request);
+        } catch {
+          return applySecurityHeaders(NextResponse.next(), request);
+        }
       }
     }
     return applySecurityHeaders(NextResponse.next(), request);

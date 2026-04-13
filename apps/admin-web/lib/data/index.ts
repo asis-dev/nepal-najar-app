@@ -51,25 +51,11 @@ export async function getPromises(): Promise<GovernmentPromise[]> {
       return enrichActors([...staticPromises]);
     }
 
-    // Optional exact recount from scraped_articles (expensive on large datasets).
-    // Default behavior trusts persisted evidence_count for fast public page loads.
+    // Evidence counts use the precomputed evidence_count column in the
+    // promises table. Recounting from scraped_articles on every read was
+    // fetching 1500+ rows, silently truncated to 1000 by Supabase default
+    // limit, causing inaccurate counts and slow loads.
     const evidenceCountMap: Record<string, number> = {};
-    if (RECOUNT_EVIDENCE_ON_READ) {
-      try {
-        const { data: articles } = await supabase
-          .from('scraped_articles')
-          .select('promise_ids');
-        for (const a of articles || []) {
-          const pids = a.promise_ids as string[] | null;
-          if (!pids) continue;
-          for (const pid of pids) {
-            evidenceCountMap[pid] = (evidenceCountMap[pid] || 0) + 1;
-          }
-        }
-      } catch {
-        console.warn('[data] Failed to compute evidence counts');
-      }
-    }
 
     // Map Supabase snake_case to GovernmentPromise camelCase
     const mapped = enrichActors(data.map((p: Record<string, unknown>) => ({

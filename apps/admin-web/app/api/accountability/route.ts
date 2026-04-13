@@ -112,10 +112,11 @@ export async function GET() {
       .from('scraped_articles')
       .select('id, headline, headline_ne, published_at, scraped_at, promise_ids, confidence, classification, source_name')
       .not('promise_ids', 'eq', '{}')
-      .order('scraped_at', { ascending: false }),
-    supabase.from('data_sources').select('*'),
-    supabase.from('government_org_units').select('*'),
-    supabase.from('public_votes').select('topic_id, vote_type'),
+      .order('scraped_at', { ascending: false })
+      .limit(500),
+    supabase.from('data_sources').select('*').limit(200),
+    supabase.from('government_org_units').select('*').limit(200),
+    supabase.from('public_votes').select('topic_id, vote_type').limit(5000),
     supabase.from('promises').select('id, title, title_ne, category, status, progress').order('id'),
   ]);
 

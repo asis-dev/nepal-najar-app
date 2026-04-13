@@ -117,29 +117,10 @@ export function useAllPromises(options?: UseAllPromisesOptions) {
         return staticPromises;
       }
 
-      // Compute REAL evidence counts from scraped_articles
-      const evidenceCountMap: Record<string, number> = {};
-      try {
-        const { data: articles } = await supabasePublic
-          .from('scraped_articles')
-          .select('promise_ids');
-        for (const a of articles || []) {
-          const pids = (a as Record<string, unknown>).promise_ids as string[] | null;
-          if (!pids) continue;
-          for (const pid of pids) {
-            evidenceCountMap[pid] = (evidenceCountMap[pid] || 0) + 1;
-          }
-        }
-      } catch {
-        console.warn('[useAllPromises] Failed to compute evidence counts');
-      }
-
-      return data.map((row) => {
-        const promise = mapPromise(row);
-        // Override with REAL evidence count from articles
-        promise.evidenceCount = evidenceCountMap[promise.id] || 0;
-        return promise;
-      });
+      // Use precomputed evidence_count from database instead of
+      // recounting all scraped_articles on every page load (was fetching
+      // 1500+ rows client-side, silently truncated to 1000 by Supabase)
+      return data.map((row) => mapPromise(row));
     },
     staleTime: 5 * 60 * 1000, // 5 min
   });
