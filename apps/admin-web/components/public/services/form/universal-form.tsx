@@ -297,6 +297,26 @@ export function UniversalServiceForm({ schema, onComplete, serviceSlug }: Props)
       setSubmitted(true);
       markFormCompleted();
       onComplete?.(values);
+
+      // Phase 2: Learn from form submission — save profile-mapped fields back to identity profile
+      try {
+        const profileUpdates: Record<string, string> = {};
+        for (const s of schema.sections) {
+          for (const f of s.fields) {
+            if (f.profileKey && values[f.key]) {
+              profileUpdates[f.profileKey] = values[f.key];
+            }
+          }
+        }
+        if (Object.keys(profileUpdates).length > 0) {
+          fetch('/api/me/profile/learn', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ fields: profileUpdates, source: 'form_submission', sourceRef: schema.slug }),
+          }).catch(() => {}); // fire-and-forget
+        }
+      } catch { /* non-blocking */ }
+
       window.print();
     } catch (err) {
       console.error('Form submission error:', err);

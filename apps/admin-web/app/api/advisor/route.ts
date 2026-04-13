@@ -546,6 +546,7 @@ async function handleTaskCreation(
   query: string,
   locale: 'en' | 'ne',
   targetMemberId?: string,
+  triage?: TriageResult | null,
 ) {
   const assistantAnswers = buildAssistantTaskAnswers({
     sourceQuery: query,
@@ -632,6 +633,13 @@ async function handleTaskCreation(
     missing_docs: state.missingDocs,
     ready_docs: state.readyDocs,
     answers: assistantAnswers,
+    // Phase 1 triage data
+    ...(triage ? {
+      triage_domain: triage.domain,
+      triage_urgency: triage.urgency,
+      triage_severity: triage.severity,
+      triage_safety_flags: triage.safetyFlags,
+    } : {}),
   });
 
   if (error) {
@@ -662,6 +670,28 @@ async function handleTaskCreation(
       ...assistantAnswers,
     },
   });
+
+  // Fire-and-forget: store triage result for analytics
+  if (triage) {
+    supabase.from('service_task_triage').insert({
+      task_id: data.id,
+      user_id: user.id,
+      domain: triage.domain,
+      subdomain: triage.subdomain,
+      urgency: triage.urgency,
+      severity: triage.severity,
+      target_member_type: triage.targetMemberType,
+      safe_next_action: triage.safeNextAction,
+      requires_emergency: triage.requiresEmergencyHandling,
+      clarification_needed: triage.clarificationNeeded,
+      clarification_question: triage.clarificationQuestion,
+      suggested_service_slugs: triage.suggestedServiceSlugs,
+      confidence: triage.confidence,
+      triage_reason: triage.triageReason,
+      safety_flags: triage.safetyFlags,
+      raw_message: query,
+    }).then(() => {}).catch(() => {});
+  }
 
   // Fire-and-forget: auto-assign to staff + notify department
   autoAssignAndNotify(supabase, {
@@ -917,6 +947,7 @@ export async function POST(req: NextRequest) {
             query,
             locale,
             targetMemberId,
+            triageResult,
           );
           if (taskResult) {
             response.task = taskResult.task;

@@ -518,6 +518,8 @@ function AdvisorPageInner() {
   const voiceLang = isNe ? 'ne-NP' as const : 'en-US' as const;
   const { speak } = useVoiceOutput({ lang: voiceLang });
   const didAutoSubmitRef = useRef(false);
+  const lastQueryRef = useRef('');
+  const topServiceSlugRef = useRef<string | null>(null);
 
   // Auth state
   const authReady = useAuth((s) => s._initialized);
@@ -663,6 +665,10 @@ function AdvisorPageInner() {
             },
           },
         ]);
+
+        // Track for learning loop (route corrections)
+        lastQueryRef.current = searchQuery;
+        topServiceSlugRef.current = data.topService?.slug || null;
 
         if (!data.matched && (!data.steps || data.steps.length === 0)) {
           // Truly no match and no AI general answer
@@ -948,6 +954,21 @@ function AdvisorPageInner() {
                   <Link
                     key={so.slug}
                     href={`/services/${so.category}/${so.slug}`}
+                    onClick={() => {
+                      // Phase 8: Record route correction if user picks a different service
+                      if (topServiceSlugRef.current && topServiceSlugRef.current !== so.slug && lastQueryRef.current) {
+                        fetch('/api/services/feedback', {
+                          method: 'POST',
+                          headers: { 'content-type': 'application/json' },
+                          body: JSON.stringify({
+                            type: 'route_correction',
+                            originalSlug: topServiceSlugRef.current,
+                            correctedSlug: so.slug,
+                            userQuery: lastQueryRef.current,
+                          }),
+                        }).catch(() => {});
+                      }
+                    }}
                     className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-3.5 py-2.5 transition-all hover:border-zinc-700 hover:bg-zinc-800/50"
                   >
                     <div>
