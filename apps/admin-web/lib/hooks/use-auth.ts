@@ -51,6 +51,33 @@ interface AuthState {
   patchUserProfile: (patch: Partial<UserProfile>) => void;
 }
 
+function buildImmediateProfileFromUser(
+  user: {
+    id: string;
+    email?: string | null;
+    phone?: string | null;
+    user_metadata?: Record<string, unknown>;
+  },
+  fallbackEmail?: string | null,
+): UserProfile {
+  const meta = user.user_metadata || {};
+  const email = user.email || fallbackEmail || null;
+
+  return {
+    id: user.id,
+    displayName:
+      (typeof meta.display_name === 'string' && meta.display_name) ||
+      (typeof meta.full_name === 'string' && meta.full_name) ||
+      (email ? email.split('@')[0] : 'Citizen'),
+    email,
+    phone: user.phone || null,
+    role: normalizeAppRole(meta.role, 'citizen'),
+    province: typeof meta.province === 'string' ? meta.province : null,
+    district: typeof meta.district === 'string' ? meta.district : null,
+    avatarUrl: typeof meta.avatar_url === 'string' ? meta.avatar_url : null,
+  };
+}
+
 function isEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
@@ -80,32 +107,54 @@ export const useAuth = create<AuthState>((set, get) => ({
     const { data: { session } } = await supabase.auth.getSession();
 
     if (session?.user) {
-      // Browser client has the session — fast path
-      const [profile, repResult] = await Promise.all([
-        get().fetchProfile(session.user.id),
-        (async () => {
-          try {
-            const { data: repData } = await supabase
-              .from('user_reputation')
-              .select('total_karma, level')
-              .eq('user_id', session.user!.id)
-              .single();
-            return { karma: repData?.total_karma ?? 0, level: repData?.level ?? 1 };
-          } catch { return { karma: 0, level: 1 }; }
-        })(),
-      ]);
-
+      const immediateProfile = buildImmediateProfileFromUser(session.user);
       set({
         session,
-        user: profile,
+        user: immediateProfile,
         isAuthenticated: true,
-        isAdmin: profile?.role === 'admin',
-        isVerifier: profile?.role === 'verifier' || profile?.role === 'admin',
-        isObserver: profile ? !isElevatedRole(profile.role) : false,
-        karma: repResult.karma,
-        level: repResult.level,
+        isAdmin: immediateProfile.role === 'admin',
+        isVerifier: immediateProfile.role === 'verifier' || immediateProfile.role === 'admin',
+        isObserver: !isElevatedRole(immediateProfile.role),
+        karma: 0,
+        level: 1,
         _initialized: true,
       });
+
+      setTimeout(async () => {
+        try {
+          const [profile, repResult] = await Promise.all([
+            get().fetchProfile(session.user.id),
+            (async () => {
+              try {
+                const { data: repData } = await supabase
+                  .from('user_reputation')
+                  .select('total_karma, level')
+                  .eq('user_id', session.user.id)
+                  .single();
+                return { karma: repData?.total_karma ?? 0, level: repData?.level ?? 1 };
+              } catch { return { karma: 0, level: 1 }; }
+            })(),
+          ]);
+
+          if (profile) {
+            set({
+              user: profile,
+              isAdmin: profile.role === 'admin',
+              isVerifier: profile.role === 'verifier' || profile.role === 'admin',
+              isObserver: !isElevatedRole(profile.role),
+              karma: repResult.karma,
+              level: repResult.level,
+            });
+          } else {
+            set({
+              karma: repResult.karma,
+              level: repResult.level,
+            });
+          }
+        } catch {
+          // Immediate profile state is sufficient if enrichment fails.
+        }
+      }, 0);
     } else {
       // Browser client can't read session (cookie format mismatch).
       // Fall back to server-side API route which reads cookies correctly.
@@ -242,16 +291,7 @@ export const useAuth = create<AuthState>((set, get) => ({
 
         // Build an immediate profile from auth metadata so UI updates INSTANTLY
         // (don't wait for API calls that may fail due to cookie timing)
-        const immediateProfile: UserProfile = {
-          id: userId,
-          displayName: meta.display_name || meta.full_name || email.split('@')[0],
-          email: data.user.email || email,
-          phone: data.user.phone || null,
-          role: normalizeAppRole(meta.role, 'citizen'),
-          province: meta.province || null,
-          district: meta.district || null,
-          avatarUrl: meta.avatar_url || null,
-        };
+        const immediateProfile = buildImmediateProfileFromUser(data.user, email);
 
         // Set state immediately so user sees they're logged in
         set({

@@ -42,7 +42,6 @@ function LoginForm() {
     try {
       await signInWithPassword(email, password);
       router.replace(next);
-      router.refresh();
     } catch {
       // error is set in the store
     }

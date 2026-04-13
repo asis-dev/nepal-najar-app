@@ -17,11 +17,19 @@ import { OfflineIndicator } from '@/components/public/services/offline-indicator
 function AuthInitializer() {
   const initialize = useAuth((s) => s.initialize);
   const subscribed = useRef(false);
+  const hasQueuedSignedInSync = useRef<string | null>(null);
 
   const defer = (task: () => Promise<void> | void) => {
-    setTimeout(() => {
+    const scheduler =
+      typeof window !== 'undefined' && 'requestIdleCallback' in window
+        ? (cb: () => void) =>
+            (window as Window & { requestIdleCallback: (callback: () => void, options?: { timeout: number }) => number })
+              .requestIdleCallback(cb, { timeout: 1500 })
+        : (cb: () => void) => window.setTimeout(cb, 0);
+
+    scheduler(() => {
       void Promise.resolve(task()).catch(() => {});
-    }, 0);
+    });
   };
 
   useEffect(() => {
@@ -48,6 +56,8 @@ function AuthInitializer() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
+          if (hasQueuedSignedInSync.current === session.user.id) return;
+          hasQueuedSignedInSync.current = session.user.id;
           defer(async () => {
             await Promise.allSettled([
               mergeOnLogin(session.user.id),
@@ -55,6 +65,8 @@ function AuthInitializer() {
               useUserPreferencesStore.getState().syncFromServer(),
             ]);
           });
+        } else if (event === 'SIGNED_OUT') {
+          hasQueuedSignedInSync.current = null;
         }
       },
     );
