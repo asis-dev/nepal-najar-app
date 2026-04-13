@@ -558,15 +558,23 @@ export const useAuth = create<AuthState>((set, get) => ({
 
     if (!data) return null;
 
+    // API returns camelCase (displayName), DB returns snake_case (display_name)
+    const displayName =
+      (typeof data.displayName === 'string' && data.displayName.trim()) ||
+      (typeof data.display_name === 'string' && data.display_name.trim()) ||
+      '';
+
     return {
       id: String(data.id),
-      displayName: typeof data.display_name === 'string' ? data.display_name : '',
+      displayName,
       email: typeof data.email === 'string' ? data.email : null,
       phone: typeof data.phone === 'string' ? data.phone : null,
       role: normalizeAppRole(data.role, 'citizen'),
       province: typeof data.province === 'string' ? data.province : null,
       district: typeof data.district === 'string' ? data.district : null,
-      avatarUrl: typeof data.avatar_url === 'string' ? data.avatar_url : null,
+      avatarUrl:
+        (typeof data.avatarUrl === 'string' ? data.avatarUrl : null) ||
+        (typeof data.avatar_url === 'string' ? data.avatar_url : null),
     };
   },
 }));
