@@ -118,6 +118,7 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
   const [followUpOptions, setFollowUpOptions] = useState<string[]>([]);
   const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
   const [preview, setPreview] = useState<PreviewData | null>(null);
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [targetMemberId, setTargetMemberId] = useState('');
   const [sessionId, setSessionId] = useState('');
@@ -195,92 +196,173 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
     setFollowUpOptions([]);
     setServiceOptions([]);
     setPreview(null);
+    setAiAnswer(null);
     stopSpeaking();
 
     const wasVoice = inputSourceRef.current === 'voice';
 
     try {
-      // First, get a preview of the matched service
-      const response = await fetch('/api/me/service-tasks/from-query', {
+      // Use the advisor API — it has full AI understanding (GPT-4o-mini intent +
+      // Gemini general answers) not just service catalog matching
+      const response = await fetch('/api/advisor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: nextQuestion,
+          query: nextQuestion,
           locale,
-          sessionId,
           targetMemberId: targetMemberId || undefined,
-          mode: 'preview',
         }),
       });
       const data = await response.json();
 
-      // Ambiguous or no confident match — show follow-ups and service options
-      if (data.ambiguous || (!response.ok && !data.preview)) {
-        setRouteReason(data.routeReason || null);
+      if (!response.ok) {
+        setError(data.error || 'Could not process that request.');
+        return;
+      }
+
+      // ── AI gave a general answer (food, health advice, life question, etc.) ──
+      if (data.source === 'ai-general' || (!data.matched && data.summary)) {
+        const answer = data.aiAnswer || data.summary || null;
+        if (answer) {
+          setAiAnswer(answer);
+          setFollowUpPrompt(data.followUpPrompt || null);
+          setFollowUpOptions(data.followUpOptions || []);
+
+          if (wasVoice) {
+            setTimeout(() => speak(answer.slice(0, 400)), 300);
+          }
+          return;
+        }
+      }
+
+      // ── Task already created (authenticated user + confident match) ──
+      if (data.task) {
+        // Show the service preview card with task info instead of redirecting
+        const topSvc = data.topService || data.task;
+        if (topSvc) {
+          // Fetch full service details for the preview card
+          try {
+            const previewRes = await fetch('/api/me/service-tasks/from-query', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                question: nextQuestion,
+                locale,
+                targetMemberId: targetMemberId || undefined,
+                mode: 'preview',
+              }),
+            });
+            const previewData = await previewRes.json();
+            if (previewData.preview && previewData.service) {
+              setPreview({
+                service: previewData.service,
+                docStatus: previewData.docStatus || null,
+                authenticated: previewData.authenticated,
+                routeReason: data.summary || previewData.routeReason,
+              });
+              if (wasVoice) {
+                const title = isNe ? previewData.service.title.ne : previewData.service.title.en;
+                setTimeout(() => speak(title), 300);
+              }
+              return;
+            }
+          } catch { /* fall through */ }
+        }
+        router.push('/me/tasks');
+        return;
+      }
+
+      // ── Confident service match but not authenticated ──
+      if (data.requiresAuth && data.topService) {
+        // Show preview card with sign-in prompt
+        try {
+          const previewRes = await fetch('/api/me/service-tasks/from-query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              question: nextQuestion,
+              locale,
+              targetMemberId: targetMemberId || undefined,
+              mode: 'preview',
+            }),
+          });
+          const previewData = await previewRes.json();
+          if (previewData.preview && previewData.service) {
+            setPreview({
+              service: previewData.service,
+              docStatus: null,
+              authenticated: false,
+              routeReason: data.summary || previewData.routeReason,
+            });
+            if (wasVoice) {
+              const title = isNe ? previewData.service.title.ne : previewData.service.title.en;
+              setTimeout(() => speak(title), 300);
+            }
+            return;
+          }
+        } catch { /* fall through */ }
+      }
+
+      // ── Matched service with journey steps ──
+      if (data.matched && data.topService) {
+        try {
+          const previewRes = await fetch('/api/me/service-tasks/from-query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              question: nextQuestion,
+              locale,
+              targetMemberId: targetMemberId || undefined,
+              mode: 'preview',
+            }),
+          });
+          const previewData = await previewRes.json();
+          if (previewData.preview && previewData.service) {
+            setPreview({
+              service: previewData.service,
+              docStatus: previewData.docStatus || null,
+              authenticated: previewData.authenticated,
+              routeReason: data.summary || previewData.routeReason,
+            });
+            if (wasVoice) {
+              const title = isNe ? previewData.service.title.ne : previewData.service.title.en;
+              setTimeout(() => speak(title), 300);
+            }
+            return;
+          }
+        } catch { /* fall through */ }
+      }
+
+      // ── Ambiguous / follow-ups needed (health triage, multiple options, etc.) ──
+      if (data.followUpPrompt || data.followUpOptions?.length || data.serviceOptions?.length) {
+        setRouteReason(data.summary || data.routeReason || null);
         setFollowUpPrompt(data.followUpPrompt || null);
         setFollowUpOptions(data.followUpOptions || []);
         setServiceOptions(data.serviceOptions || []);
 
-        // Only speak if input came via voice
-        if (wasVoice && (data.followUpPrompt || data.routeReason)) {
-          setTimeout(() => speak(data.followUpPrompt || data.routeReason), 300);
+        if (wasVoice && (data.followUpPrompt || data.summary)) {
+          setTimeout(() => speak(data.followUpPrompt || data.summary), 300);
         }
         return;
       }
 
-      if (!response.ok) {
-        setError(data.error || 'Could not route that request.');
-        return;
-      }
-
-      // Civic complaint services → redirect to complaints flow
-      const COMPLAINT_SLUGS = [
-        'local-infrastructure-complaint',
-        'ciaa-complaint',
-        'consumer-complaint',
-        'human-rights-complaint',
-        'lokpal-complaint',
-      ];
-      const serviceSlug = data.service?.slug;
-      if (serviceSlug && COMPLAINT_SLUGS.includes(serviceSlug)) {
-        const q = encodeURIComponent(nextQuestion);
-        router.push(`/complaints?q=${q}&type=${serviceSlug}`);
-        return;
-      }
-
-      // Preview mode — show rich service card inline
-      if (data.preview && data.service) {
-        setPreview({
-          service: data.service,
-          docStatus: data.docStatus || null,
-          authenticated: data.authenticated,
-          routeReason: data.routeReason,
-        });
-
-        // Only speak if input came via voice
+      // ── AI gave a summary/answer without follow-ups ──
+      if (data.summary || data.aiAnswer) {
+        setAiAnswer(data.aiAnswer || data.summary);
         if (wasVoice) {
-          const title = isNe ? data.service.title.ne : data.service.title.en;
-          const summary = data.service.summary
-            ? (isNe ? data.service.summary.ne : data.service.summary.en)
-            : '';
-          const speechText = summary
-            ? `${title}. ${summary}`
-            : title;
-          setTimeout(() => speak(speechText), 300);
+          setTimeout(() => speak((data.aiAnswer || data.summary).slice(0, 400)), 300);
         }
         return;
       }
 
-      // Fallback: redirect to service page
-      if (data.service) {
-        router.push(`/services/${data.service.category}/${data.service.slug}`);
-        return;
-      }
+      // ── Nothing matched at all ──
+      setError(isNe
+        ? 'माफ गर्नुहोस्, मैले बुझ्न सकिनँ। कृपया अर्को तरिकाले भन्नुहोस्।'
+        : 'I couldn\'t understand that. Could you try rephrasing?');
     } catch {
       setError('Something went wrong while routing your request.');
     } finally {
       setLoading(false);
-      // Reset input source after processing
       inputSourceRef.current = 'text';
     }
   }
@@ -289,15 +371,14 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
     if (!preview || starting) return;
     setStarting(true);
     try {
-      const response = await fetch('/api/me/service-tasks/from-query', {
+      // Use advisor API which handles task creation for authenticated users
+      const response = await fetch('/api/advisor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question,
+          query: question,
           locale,
-          sessionId,
           targetMemberId: targetMemberId || undefined,
-          mode: 'create',
         }),
       });
       const data = await response.json();
@@ -312,10 +393,8 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
         return;
       }
 
-      if (data.service) {
-        router.push(`/services/${data.service.category}/${data.service.slug}`);
-        return;
-      }
+      // Fallback: navigate to service page
+      router.push(`/services/${preview.service.category}/${preview.service.slug}`);
     } catch {
       setError('Something went wrong starting this service.');
     } finally {
@@ -700,8 +779,54 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
         </div>
       )}
 
+      {/* AI general answer (for non-service queries like "my stomach hurts", "I need food") */}
+      {!preview && aiAnswer && (
+        <div className="mt-4 rounded-2xl border border-zinc-700/50 bg-zinc-950/90 backdrop-blur overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="px-5 py-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-[#DC143C]/20 to-[#003893]/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-[#DC143C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0 text-sm text-zinc-200 leading-relaxed whitespace-pre-line">
+                {aiAnswer}
+              </div>
+            </div>
+          </div>
+          {followUpPrompt && (
+            <div className="px-5 pb-3 text-xs text-zinc-500">{followUpPrompt}</div>
+          )}
+          {followUpOptions.length > 0 && (
+            <div className="px-5 pb-4 flex flex-wrap gap-2">
+              {followUpOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    setQuestion(option);
+                    routeQuestion(option);
+                  }}
+                  className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800 hover:border-[#DC143C]/30"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="px-5 py-3 border-t border-zinc-800/50">
+            <button
+              onClick={() => { setAiAnswer(null); setFollowUpPrompt(null); setFollowUpOptions([]); inputRef.current?.focus(); }}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              {isNe ? 'अर्को प्रश्न सोध्नुहोस्' : 'Ask something else'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* AI routing results — follow-ups and service options */}
-      {!preview && (routeReason || followUpPrompt || followUpOptions.length > 0 || serviceOptions.length > 0) && (
+      {!preview && !aiAnswer && (routeReason || followUpPrompt || followUpOptions.length > 0 || serviceOptions.length > 0) && (
         <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4">
           {routeReason && (
             <div className="text-sm text-zinc-300">{routeReason}</div>
@@ -773,6 +898,21 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
           </button>
         ))}
       </div>
+
+      {/* View my cases link — shown for authenticated users */}
+      {user && (
+        <div className="mt-3 text-center">
+          <Link
+            href="/me/tasks"
+            className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-[#DC143C] transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            {isNe ? 'मेरा केसहरू हेर्नुहोस्' : 'View my cases'}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
