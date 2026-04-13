@@ -404,7 +404,7 @@ function TaskCreatedCard({
       )}
 
       <Link
-        href="/me/tasks"
+        href="/me/cases"
         className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 active:scale-95"
       >
         {isNe ? 'मेरा कार्यहरू हेर्नुहोस्' : 'View My Cases'}

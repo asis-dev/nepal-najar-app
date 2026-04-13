@@ -109,10 +109,10 @@ export default function StartServiceTask({ serviceSlug, serviceTitle, locale = '
               {task.progress}% · {task.status.replace(/_/g, ' ')}{task.targetMemberName ? ` · ${task.targetMemberName}` : ''}
             </div>
             <Link
-              href="/me/tasks"
+              href="/me/cases"
               className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500"
             >
-              {locale === 'ne' ? 'मेरो कार्यहरूमा जारी राख्नुहोस्' : 'Continue in My Tasks'}
+              {locale === 'ne' ? 'मेरो केसहरूमा जारी राख्नुहोस्' : 'Continue in My Cases'}
             </Link>
           </div>
         ) : (

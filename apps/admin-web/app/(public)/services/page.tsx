@@ -32,10 +32,10 @@ export default async function ServicesHomePage() {
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           <Link
-            href="/me/tasks"
+            href="/me/cases"
             className="inline-flex rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500"
           >
-            Continue my tasks
+            Continue my cases
           </Link>
           <Link
             href="/me/vault"

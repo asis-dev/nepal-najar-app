@@ -268,7 +268,7 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
             }
           } catch { /* fall through */ }
         }
-        router.push('/me/tasks');
+        router.push('/me/cases');
         return;
       }
 
@@ -389,7 +389,7 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
       }
 
       if (data.task) {
-        router.push('/me/tasks');
+        router.push('/me/cases');
         return;
       }
 
@@ -903,7 +903,7 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
       {user && (
         <div className="mt-3 text-center">
           <Link
-            href="/me/tasks"
+            href="/me/cases"
             className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-[#DC143C] transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

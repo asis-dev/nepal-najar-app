@@ -18,7 +18,7 @@ const PULSE_COLORS = {
 const navItems = [
   { href: '/', icon: Home, label: 'Home', labelNe: 'गृह', hasPulse: true },
   { href: '/services', icon: Grid3x3, label: 'Services', labelNe: 'सेवाहरू' },
-  { href: '/me/tasks', icon: ListTodo, label: 'Tasks', labelNe: 'कार्यहरू' },
+  { href: '/me/cases', icon: ListTodo, label: 'Cases', labelNe: 'केसहरू' },
   { href: '/complaints', icon: MessageSquareWarning, label: 'Issues', labelNe: 'समस्या' },
   { href: '/me', icon: User, label: 'Me', labelNe: 'म', isMe: true },
 ];
@@ -94,11 +94,11 @@ export function BottomNav() {
             {/* Menu items */}
             <div className="space-y-1">
               <MeSheetLink
-                href="/me/tasks"
+                href="/me/cases"
                 icon={ListTodo}
-                label={locale === 'ne' ? 'मेरो कार्यहरू' : 'My Tasks'}
+                label={locale === 'ne' ? 'मेरो केसहरू' : 'My Cases'}
                 onClick={() => setShowMeSheet(false)}
-                isActive={pathname.startsWith('/me/tasks')}
+                isActive={pathname.startsWith('/me/cases')}
               />
               <MeSheetLink
                 href="/services"

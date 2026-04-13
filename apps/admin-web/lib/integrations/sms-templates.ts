@@ -22,9 +22,9 @@ export function taskCreated(
 ): string {
   const ref = shortRef(caseRef);
   if (locale === 'ne') {
-    return `${serviceName} को लागि तपाईंको अनुरोध दर्ता भयो। केस: ${ref}। nepalrepublic.org/me/tasks मा हेर्नुहोस्`;
+    return `${serviceName} को लागि तपाईंको अनुरोध दर्ता भयो। केस: ${ref}। nepalrepublic.org/me/cases मा हेर्नुहोस्`;
   }
-  return `Your ${serviceName} request submitted. Case: ${ref}. Track at nepalrepublic.org/me/tasks`;
+  return `Your ${serviceName} request submitted. Case: ${ref}. Track at nepalrepublic.org/me/cases`;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,9 +56,9 @@ export function govtReplied(
 ): string {
   const ref = shortRef(caseRef);
   if (locale === 'ne') {
-    return `सरकारले ${serviceName} (${ref}) मा जवाफ दियो। nepalrepublic.org/me/tasks मा विवरण हेर्नुहोस्`;
+    return `सरकारले ${serviceName} (${ref}) मा जवाफ दियो। nepalrepublic.org/me/cases मा विवरण हेर्नुहोस्`;
   }
-  return `Govt responded to ${serviceName} (${ref}). Check nepalrepublic.org/me/tasks`;
+  return `Govt responded to ${serviceName} (${ref}). Check nepalrepublic.org/me/cases`;
 }
 
 // ---------------------------------------------------------------------------

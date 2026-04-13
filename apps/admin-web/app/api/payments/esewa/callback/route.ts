@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
 
     if (serviceTaskId) {
       return NextResponse.redirect(
-        `${BASE_URL}/me/tasks/${serviceTaskId}?payment=failed`,
+        `${BASE_URL}/me/cases/${serviceTaskId}?payment=failed`,
       );
     }
 
@@ -143,7 +143,7 @@ export async function GET(req: NextRequest) {
       // Redirect to task page if we have a task ID, otherwise generic success
       if (serviceTaskId) {
         return NextResponse.redirect(
-          `${BASE_URL}/me/tasks/${serviceTaskId}?payment=success`,
+          `${BASE_URL}/me/cases/${serviceTaskId}?payment=success`,
         );
       }
 
@@ -163,7 +163,7 @@ export async function GET(req: NextRequest) {
 
     if (serviceTaskId) {
       return NextResponse.redirect(
-        `${BASE_URL}/me/tasks/${serviceTaskId}?payment=failed`,
+        `${BASE_URL}/me/cases/${serviceTaskId}?payment=failed`,
       );
     }
 
@@ -175,7 +175,7 @@ export async function GET(req: NextRequest) {
 
     if (serviceTaskId) {
       return NextResponse.redirect(
-        `${BASE_URL}/me/tasks/${serviceTaskId}?payment=failed`,
+        `${BASE_URL}/me/cases/${serviceTaskId}?payment=failed`,
       );
     }
 

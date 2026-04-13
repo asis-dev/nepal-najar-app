@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
           ? `Follow up at ${app.office_name} — your reminder date has arrived.`
           : `Your reminder date for ${app.service_title} has arrived. Check status or visit the office.`,
         icon: '/icon-192.png',
-        url: '/me/tasks#tracked-applications',
+        url: '/me/cases#tracked-applications',
       });
 
       for (const sub of userSubs) {

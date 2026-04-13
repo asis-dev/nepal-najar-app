@@ -73,7 +73,7 @@ const PULSE_COLORS = {
 const desktopPrimaryLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
   { href: '/services', labelKey: 'nav.services', icon: Grid3x3 },
-  { href: '/me/tasks', labelKey: 'nav.tasks', icon: ListTodo },
+  { href: '/me/cases', labelKey: 'nav.cases', icon: ListTodo },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },
   { href: '/complaints', labelKey: 'nav.complaints', icon: MessageSquareWarning },
 ];
@@ -102,7 +102,7 @@ const desktopMoreLinks = [
 const allNavLinks = [
   { href: '/', labelKey: 'nav.home', icon: Eye },
   { href: '/services', labelKey: 'nav.services', icon: Grid3x3 },
-  { href: '/me/tasks', labelKey: 'nav.tasks', icon: ListTodo },
+  { href: '/me/cases', labelKey: 'nav.cases', icon: ListTodo },
   { href: '/me/vault', labelKey: 'nav.vault', icon: FolderLock },
   { href: '/explore/first-100-days', labelKey: 'nav.tracker', icon: Target },
   { href: '/report-card', labelKey: 'nav.reportCard', icon: ClipboardCheck },

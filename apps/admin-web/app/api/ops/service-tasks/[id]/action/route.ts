@@ -369,7 +369,7 @@ export async function POST(
       assignedStaffUserId: assignedUserId,
       title: citizenNotification.title,
       body: citizenNotification.body,
-      link: '/me/tasks',
+      link: '/me/cases',
       metadata: {
         service_slug: task.service_slug,
         queue_state: nextQueueState,

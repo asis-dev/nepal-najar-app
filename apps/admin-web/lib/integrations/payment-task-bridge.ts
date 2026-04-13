@@ -279,7 +279,7 @@ export async function applyVerifiedPaymentToTask(
     ownerId: task.owner_id,
     title: `Payment confirmed for ${task.service_title}`,
     body: `We verified your ${providerKey} payment${receiptValue ? ` with receipt ${receiptValue}` : ''}.`,
-    link: '/me/tasks',
+    link: '/me/cases',
     metadata: {
       service_slug: task.service_slug,
       provider_key: providerKey,
@@ -380,7 +380,7 @@ export async function applyFailedPaymentToTask(
     ownerId: task.owner_id,
     title: `Payment needs attention for ${task.service_title}`,
     body: `Your ${providerKey} payment was not verified. You can retry from My Cases.`,
-    link: '/me/tasks',
+    link: '/me/cases',
     metadata: {
       service_slug: task.service_slug,
       provider_key: providerKey,

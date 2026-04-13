@@ -112,7 +112,7 @@ export async function notifyServiceTaskUsers(
     type: 'system',
     title,
     body,
-    link: link || `/me/tasks`,
+    link: link || `/me/cases`,
     metadata: {
       service_task_id: taskId,
       kind: 'service_task',

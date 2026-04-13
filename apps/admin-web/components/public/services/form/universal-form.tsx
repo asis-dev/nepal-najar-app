@@ -536,7 +536,7 @@ export function UniversalServiceForm({ schema, onComplete, serviceSlug }: Props)
             <div className="text-2xl mb-1">✅</div>
             <div className="text-sm font-bold text-emerald-300">Form completed!</div>
             <div className="text-xs text-emerald-400/60 mt-1">
-              Tracked in <a href="/me/tasks#tracked-applications" className="underline">My Cases</a>. Print the form and take it to the office.
+              Tracked in <a href="/me/cases#tracked-applications" className="underline">My Cases</a>. Print the form and take it to the office.
             </div>
           </div>
 
@@ -547,7 +547,7 @@ export function UniversalServiceForm({ schema, onComplete, serviceSlug }: Props)
               <li>Print this form (or save as PDF)</li>
               <li>Gather the required documents listed above</li>
               <li>Visit the relevant office with your printed form and documents</li>
-              <li>Keep your case reference in <a href="/me/tasks" className="text-red-400 underline">My Cases</a> for tracking</li>
+              <li>Keep your case reference in <a href="/me/cases" className="text-red-400 underline">My Cases</a> for tracking</li>
             </ol>
           </div>
 

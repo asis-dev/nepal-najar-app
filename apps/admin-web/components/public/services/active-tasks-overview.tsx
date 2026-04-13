@@ -49,9 +49,9 @@ export function ActiveTasksOverview({ variant = 'compact' }: ActiveTasksOverview
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-white">Your tasks</h2>
+        <h2 className="text-sm font-bold text-white">Your cases</h2>
         <Link
-          href="/me/tasks"
+          href="/me/cases"
           className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 transition-colors hover:text-cyan-300"
         >
           View all
@@ -66,14 +66,14 @@ export function ActiveTasksOverview({ variant = 'compact' }: ActiveTasksOverview
         </div>
       ) : active.length === 0 ? (
         <p className="mt-2 text-xs text-gray-500">
-          No active tasks. Ask the advisor to start one.
+          No active cases. Ask the advisor to start one.
         </p>
       ) : (
         <div className="mt-2.5 space-y-2">
           {active.map((task) => (
             <Link
               key={task.id}
-              href="/me/tasks"
+              href="/me/cases"
               className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-black/10 p-2.5 transition-colors hover:bg-white/[0.04]"
             >
               {/* Progress ring */}

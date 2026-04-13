@@ -560,7 +560,7 @@ export async function sendTaskEmailToGovt(
     ownerId: task.owner_id,
     title: `Request sent to ${contact.officeName}`,
     body: `Your ${task.service_title} request (${caseRef}) has been emailed to the responsible office.`,
-    link: '/me/tasks',
+    link: '/me/cases',
     metadata: {
       service_slug: task.service_slug,
       case_ref: caseRef,

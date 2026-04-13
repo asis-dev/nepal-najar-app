@@ -518,7 +518,7 @@ export default function MePage() {
               {/* Following */}
               <div className="glass-card p-5">
                 <Link
-                  href="/me/tasks"
+                  href="/me/cases"
                   className="mb-4 flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
                 >
                   <div className="flex items-center gap-3">
@@ -580,7 +580,7 @@ export default function MePage() {
                     <ChevronRight className="h-4 w-4 text-gray-600" />
                   </Link>
                   <Link
-                    href="/me/tasks#tracked-applications"
+                    href="/me/cases#tracked-applications"
                     className="flex items-center justify-between rounded-xl border border-np-border px-4 py-3 transition-colors hover:bg-white/[0.03]"
                   >
                     <div className="flex items-center gap-3">

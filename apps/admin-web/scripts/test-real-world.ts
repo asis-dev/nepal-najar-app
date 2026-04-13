@@ -875,7 +875,7 @@ const authTests = [
   }),
 
   defineTest('Me page — profile, tasks, vault, applications accessible', async () => {
-    const pages = ['/me', '/me/tasks', '/me/vault', '/me/applications', '/me/status-checker'];
+    const pages = ['/me', '/me/cases', '/me/vault', '/me/applications', '/me/status-checker'];
     for (const page of pages) {
       const { status } = await fetchOk(`${BASE}${page}`);
       assert(status === 200, `${page}: ${status}`);

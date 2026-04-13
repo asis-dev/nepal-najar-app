@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   if (!pidx) {
     if (serviceTaskId) {
       return NextResponse.redirect(
-        `${BASE_URL}/me/tasks/${serviceTaskId}?payment=failed`,
+        `${BASE_URL}/me/cases/${serviceTaskId}?payment=failed`,
       );
     }
     return NextResponse.redirect(
@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
     if (result.verified) {
       if (serviceTaskId) {
         return NextResponse.redirect(
-          `${BASE_URL}/me/tasks/${serviceTaskId}?payment=success`,
+          `${BASE_URL}/me/cases/${serviceTaskId}?payment=success`,
         );
       }
 
@@ -157,7 +157,7 @@ export async function GET(req: NextRequest) {
     // Payment not complete
     if (serviceTaskId) {
       return NextResponse.redirect(
-        `${BASE_URL}/me/tasks/${serviceTaskId}?payment=failed`,
+        `${BASE_URL}/me/cases/${serviceTaskId}?payment=failed`,
       );
     }
 
@@ -169,7 +169,7 @@ export async function GET(req: NextRequest) {
 
     if (serviceTaskId) {
       return NextResponse.redirect(
-        `${BASE_URL}/me/tasks/${serviceTaskId}?payment=failed`,
+        `${BASE_URL}/me/cases/${serviceTaskId}?payment=failed`,
       );
     }
 
