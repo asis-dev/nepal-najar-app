@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { useVoiceInput } from '@/lib/hooks/use-voice-input';
+import { useVoiceOutput } from '@/lib/hooks/use-voice-output';
 import { useUserPreferencesStore } from '@/lib/stores/preferences';
 import type { HouseholdMember } from '@/lib/household/types';
 import { HOUSEHOLD_RELATIONSHIP_LABELS } from '@/lib/household/types';
@@ -123,6 +124,13 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Track whether last input came from voice (only speak responses for voice input)
+  const inputSourceRef = useRef<'voice' | 'text'>('text');
+
+  // Voice output — Nepali: HemkalaNeural, English: AriaNeural
+  const voiceLang = isNe ? 'ne-NP' as const : 'en-US' as const;
+  const { speak, stop: stopSpeaking } = useVoiceOutput({ lang: voiceLang });
+
   // Cycle placeholder every 3 seconds
   useEffect(() => {
     const timer = setInterval(() => {
@@ -156,6 +164,7 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
 
   // Voice input
   const handleVoiceResult = useCallback((voiceText: string) => {
+    inputSourceRef.current = 'voice';
     setQuestion(voiceText);
     setTimeout(() => routeQuestion(voiceText), 300);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -186,6 +195,10 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
     setFollowUpOptions([]);
     setServiceOptions([]);
     setPreview(null);
+    stopSpeaking();
+
+    const wasVoice = inputSourceRef.current === 'voice';
+
     try {
       // First, get a preview of the matched service
       const response = await fetch('/api/me/service-tasks/from-query', {
@@ -201,12 +214,17 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
       });
       const data = await response.json();
 
-      // Ambiguous — show follow-ups and service options
-      if (data.serviceOptions?.length && (data.ambiguous || !response.ok)) {
+      // Ambiguous or no confident match — show follow-ups and service options
+      if (data.ambiguous || (!response.ok && !data.preview)) {
         setRouteReason(data.routeReason || null);
         setFollowUpPrompt(data.followUpPrompt || null);
         setFollowUpOptions(data.followUpOptions || []);
         setServiceOptions(data.serviceOptions || []);
+
+        // Only speak if input came via voice
+        if (wasVoice && (data.followUpPrompt || data.routeReason)) {
+          setTimeout(() => speak(data.followUpPrompt || data.routeReason), 300);
+        }
         return;
       }
 
@@ -238,6 +256,18 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
           authenticated: data.authenticated,
           routeReason: data.routeReason,
         });
+
+        // Only speak if input came via voice
+        if (wasVoice) {
+          const title = isNe ? data.service.title.ne : data.service.title.en;
+          const summary = data.service.summary
+            ? (isNe ? data.service.summary.ne : data.service.summary.en)
+            : '';
+          const speechText = summary
+            ? `${title}. ${summary}`
+            : title;
+          setTimeout(() => speak(speechText), 300);
+        }
         return;
       }
 
@@ -250,6 +280,8 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
       setError('Something went wrong while routing your request.');
     } finally {
       setLoading(false);
+      // Reset input source after processing
+      inputSourceRef.current = 'text';
     }
   }
 
@@ -669,7 +701,7 @@ export function TaskRouter({ locale: localeProp }: { locale?: 'en' | 'ne' }) {
       )}
 
       {/* AI routing results — follow-ups and service options */}
-      {!preview && (routeReason || followUpPrompt || serviceOptions.length > 0) && (
+      {!preview && (routeReason || followUpPrompt || followUpOptions.length > 0 || serviceOptions.length > 0) && (
         <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4">
           {routeReason && (
             <div className="text-sm text-zinc-300">{routeReason}</div>

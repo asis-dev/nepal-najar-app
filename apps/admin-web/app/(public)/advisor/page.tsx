@@ -578,8 +578,11 @@ function AdvisorPageInner() {
     scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history]);
 
+  const inputSourceRef = useRef<'voice' | 'text'>('text');
+
   const handleSubmit = useCallback(
-    async (q?: string) => {
+    async (q?: string, source?: 'voice' | 'text') => {
+      if (source) inputSourceRef.current = source;
       const searchQuery = (q || query).trim();
       if (!searchQuery) return;
 
@@ -678,8 +681,8 @@ function AdvisorPageInner() {
           );
           setJourney(null);
 
-          // Speak the follow-up prompt if there is one
-          if (data.followUpPrompt) {
+          // Speak the follow-up prompt only if input came from voice
+          if (data.followUpPrompt && inputSourceRef.current === 'voice') {
             setTimeout(() => speak(data.followUpPrompt), 500);
           }
           return;
@@ -688,8 +691,8 @@ function AdvisorPageInner() {
         // AI general answer (no steps but has content) — show as conversation, not error
         if (data.matched && (!data.steps || data.steps.length === 0) && (data.source === 'ai-general' || data.source === 'ai')) {
           setJourney(null);
-          // Speak the summary
-          if (data.summary) {
+          // Speak the summary only if input came from voice
+          if (data.summary && inputSourceRef.current === 'voice') {
             setTimeout(() => speak(data.summary), 500);
           }
           setTimeout(() => {
@@ -710,7 +713,7 @@ function AdvisorPageInner() {
           resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
 
-        if (data.summary) {
+        if (data.summary && inputSourceRef.current === 'voice') {
           setTimeout(() => speak(data.summary), 500);
         }
       } catch (err: any) {
@@ -724,6 +727,7 @@ function AdvisorPageInner() {
         ]);
       } finally {
         setLoading(false);
+        inputSourceRef.current = 'text'; // Reset after each request
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -832,7 +836,7 @@ function AdvisorPageInner() {
             </p>
           </div>
           <VoiceSearchBar
-            onSubmit={(text) => handleSubmit(text)}
+            onSubmit={(text, source) => handleSubmit(text, source)}
             size="hero"
             placeholder="e.g. I need a passport, I'm not feeling well..."
             placeholderNe="जस्तै: पासपोर्ट चाहिन्छ, सन्चो छैन..."

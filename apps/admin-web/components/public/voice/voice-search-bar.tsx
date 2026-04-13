@@ -7,7 +7,7 @@ import { useUserPreferencesStore } from '@/lib/stores/preferences';
 interface VoiceSearchBarProps {
   placeholder?: string;
   placeholderNe?: string;
-  onSubmit: (text: string) => void;
+  onSubmit: (text: string, source?: 'voice' | 'text') => void;
   size?: 'normal' | 'hero';
   disabled?: boolean;
   initialValue?: string;
@@ -35,8 +35,8 @@ export function VoiceSearchBar({
 
   const handleVoiceResult = useCallback((voiceText: string) => {
     setText(voiceText);
-    // Auto-submit after voice result
-    setTimeout(() => onSubmit(voiceText), 300);
+    // Auto-submit after voice result — mark as voice input
+    setTimeout(() => onSubmit(voiceText, 'voice'), 300);
   }, [onSubmit]);
 
   const {
@@ -61,7 +61,7 @@ export function VoiceSearchBar({
   const handleSubmit = useCallback(() => {
     const trimmed = text.trim();
     if (trimmed && !disabled) {
-      onSubmit(trimmed);
+      onSubmit(trimmed, 'text');
     }
   }, [text, disabled, onSubmit]);
 
