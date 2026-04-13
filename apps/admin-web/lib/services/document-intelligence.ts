@@ -616,9 +616,8 @@ export async function storeExtraction(
         suggested_workflows: result.suggestedWorkflows,
         warnings: result.warnings,
         raw_text: result.rawText || null,
-        extracted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       },
-      { onConflict: 'vault_doc_id' },
     );
 
     if (error) {

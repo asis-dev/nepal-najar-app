@@ -87,7 +87,7 @@ export async function generateDraft(
     const { data } = await supabase
       .from('user_identity_profile')
       .select('*')
-      .eq('user_id', userId)
+      .eq('owner_id', userId)
       .maybeSingle();
     if (data) {
       profile = data as Record<string, string | null>;
@@ -216,8 +216,12 @@ export async function storeDraft(
         user_id: userId,
         task_id: taskId,
         service_slug: draft.serviceSlug,
+        service_title: draft.serviceTitle,
         draft_data: draft,
         completeness: draft.completeness,
+        ready_for_review: draft.readyForReview,
+        missing_required: draft.missingRequired,
+        warnings: draft.warnings,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,task_id' },

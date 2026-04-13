@@ -346,7 +346,7 @@ export async function processApprovedSubmission(
       task_id: taskId,
       service_slug: pkg.serviceSlug,
       reference_number: refNumber,
-      submission_data: {
+      submitted_values: {
         items: pkg.items.map((i) => ({
           ...i,
           value: decision.editedFields[i.fieldKey] ?? i.value,
@@ -370,7 +370,9 @@ export async function processApprovedSubmission(
       .from('service_tasks')
       .update({
         status: 'submitted',
-        reference_number: refNumber,
+        submission_ref: refNumber,
+        submission_ref_type: 'application_id',
+        submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', taskId);
@@ -400,7 +402,7 @@ export async function recordSubmissionAttempt(
       task_id: taskId,
       success: result.success,
       reference_number: result.referenceNumber ?? null,
-      error: result.error ?? null,
+      error_message: result.error ?? null,
       method: result.method,
       attempted_at: new Date().toISOString(),
     });

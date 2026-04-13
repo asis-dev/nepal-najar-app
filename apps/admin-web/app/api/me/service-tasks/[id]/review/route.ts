@@ -3,6 +3,9 @@ import { getRequestUser } from '@/lib/auth/request-user';
 import { loadDraft } from '@/lib/services/form-drafter';
 import { getAdapter } from '@/lib/services/execution-adapters';
 import { buildReviewPackage, validateApproval, processApprovedSubmission } from '@/lib/services/submission-review';
+import { listOwnerVaultDocs } from '@/lib/services/vault-docs';
+import { learnFromFormSubmission } from '@/lib/services/profile-memory';
+import { recordSubmissionAttempt } from '@/lib/services/submission-review';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
@@ -15,10 +18,41 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!draft) return NextResponse.json({ error: 'No draft found — generate a draft first' }, { status: 404 });
 
     const adapter = getAdapter(draft.serviceSlug);
-    // Get attached docs from vault (simplified - just check task)
-    const attachedDocs: string[] = []; // TODO: load from vault
 
-    const pkg = buildReviewPackage(draft, adapter, attachedDocs);
+    // Load real vault documents for this user
+    let attachedDocTypes: string[] = [];
+    try {
+      const vaultDocs = await listOwnerVaultDocs(supabase, user.id);
+      attachedDocTypes = vaultDocs.map((d) => d.docType);
+    } catch {
+      // vault_documents table may not exist — proceed with empty
+    }
+
+    const pkg = buildReviewPackage(draft, adapter, attachedDocTypes);
+
+    // Also load task-level doc status if available
+    try {
+      const { data: task } = await supabase
+        .from('service_tasks')
+        .select('missing_docs, ready_docs')
+        .eq('id', taskId)
+        .maybeSingle();
+      if (task) {
+        // Enrich the package with task-level doc info
+        const readyDocs = (task.ready_docs || []).map((d: any) =>
+          typeof d === 'string' ? d : d.docType || d.label || String(d),
+        );
+        // Mark documents as attached if they appear in ready_docs
+        for (const doc of pkg.documents) {
+          if (readyDocs.some((rd: string) => doc.type.includes(rd) || rd.includes(doc.type))) {
+            doc.attached = true;
+          }
+        }
+      }
+    } catch {
+      // Non-critical
+    }
+
     return NextResponse.json({ review: pkg });
   } catch (err) {
     console.error('[review GET] error:', err);
@@ -42,7 +76,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!draft) return NextResponse.json({ error: 'No draft found' }, { status: 404 });
 
     const adapter = getAdapter(draft.serviceSlug);
-    const pkg = buildReviewPackage(draft, adapter, []);
+
+    // Load real vault docs for validation
+    let attachedDocTypes: string[] = [];
+    try {
+      const vaultDocs = await listOwnerVaultDocs(supabase, user.id);
+      attachedDocTypes = vaultDocs.map((d) => d.docType);
+    } catch { /* non-critical */ }
+
+    const pkg = buildReviewPackage(draft, adapter, attachedDocTypes);
 
     const decision = {
       approved: body.approved,
@@ -57,6 +99,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const result = await processApprovedSubmission(supabase, user.id, taskId, pkg, decision);
+
+    // Record attempt for audit trail
+    await recordSubmissionAttempt(supabase, taskId, {
+      success: result.success,
+      referenceNumber: result.referenceNumber,
+      error: result.error,
+      method: pkg.submissionMethod,
+    });
+
+    // Learn profile fields from the approved submission (fire-and-forget)
+    if (result.success) {
+      const formValues: Record<string, string> = {};
+      for (const item of pkg.items) {
+        const finalValue = decision.editedFields[item.fieldKey] ?? item.value;
+        if (finalValue) formValues[item.fieldKey] = finalValue;
+      }
+      // We don't have the schema here but can pass a minimal one
+      const minimalSchema = {
+        sections: [{ fields: draft.fields.map((f) => ({ key: f.key, profileKey: f.source === 'profile' ? f.key : undefined })) }],
+      };
+      learnFromFormSubmission(supabase, user.id, draft.serviceSlug, formValues, minimalSchema).catch(() => {});
+    }
+
     return NextResponse.json({ submission: result });
   } catch (err) {
     console.error('[review POST] error:', err);

@@ -449,17 +449,17 @@ export async function recordProvenance(
   try {
     const rows = provenances.map((p) => ({
       user_id: userId,
-      field: p.field,
-      value: p.value,
+      field_name: p.field,
+      field_value: p.value,
       source: p.source,
       confidence: p.confidence,
-      last_updated: p.lastUpdated,
       source_ref: p.sourceRef ?? null,
+      updated_at: p.lastUpdated || new Date().toISOString(),
     }));
 
     const { error } = await supabase
       .from('profile_field_provenance')
-      .upsert(rows, { onConflict: 'user_id,field' });
+      .upsert(rows, { onConflict: 'user_id,field_name' });
 
     if (error) {
       // Table may not exist yet — this is expected during early rollout
@@ -488,7 +488,7 @@ export async function getFieldProvenance(
       .from('profile_field_provenance')
       .select('*')
       .eq('user_id', userId)
-      .eq('field', field)
+      .eq('field_name', field)
       .maybeSingle();
 
     if (error) {
@@ -498,11 +498,11 @@ export async function getFieldProvenance(
     if (!data) return null;
 
     return {
-      field: data.field,
-      value: data.value,
+      field: data.field_name,
+      value: data.field_value,
       source: data.source,
       confidence: data.confidence ?? 1,
-      lastUpdated: data.last_updated ?? data.created_at ?? new Date().toISOString(),
+      lastUpdated: data.updated_at ?? data.created_at ?? new Date().toISOString(),
       sourceRef: data.source_ref ?? undefined,
     };
   } catch {
