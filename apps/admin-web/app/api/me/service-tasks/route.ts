@@ -130,8 +130,8 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await insertServiceTaskWithCompatibility(supabase, insertPayload);
   if (error) {
-    console.error('[service-tasks] create error:', error.message);
-    return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
+    console.error('[service-tasks] create error:', error.message, error.code, error.details);
+    return NextResponse.json({ error: 'Failed to create task', detail: error.message, code: error.code }, { status: 500 });
   }
 
   await insertTaskEventBestEffort(supabase, {
