@@ -9,6 +9,8 @@ import { DailyScorecardEN } from './components/DailyScorecardEN';
 import { DailyReel } from './components/DailyReel';
 import { DailyReelEN } from './components/DailyReelEN';
 import { AIDemo } from './components/AIDemo';
+import { ServicesMarketing } from './components/ServicesMarketing';
+import { AppWalkthrough } from './components/AppWalkthrough';
 import { VIDEO_CONFIG } from './types';
 
 export const RemotionRoot: React.FC = () => {
@@ -43,6 +45,28 @@ export const RemotionRoot: React.FC = () => {
         id="AIDemo"
         component={AIDemo}
         durationInFrames={1350}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{ data: {} as any }}
+      />
+
+      {/* ═══ Services Marketing — 45s Facebook ad ═══ */}
+      <Composition
+        id="ServicesMarketing"
+        component={ServicesMarketing}
+        durationInFrames={1350}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{ data: {} as any }}
+      />
+
+      {/* ═══ App Walkthrough — 40s Facebook demo ═══ */}
+      <Composition
+        id="AppWalkthrough"
+        component={AppWalkthrough}
+        durationInFrames={1200}
         fps={30}
         width={1080}
         height={1920}

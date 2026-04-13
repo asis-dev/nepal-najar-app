@@ -3,10 +3,11 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { recordUserActivityBestEffort } from '@/lib/activity/activity-log';
 import { ask } from '@/lib/services/ai';
 import { resolveServiceRouting } from '@/lib/services/service-routing';
-import { getTaskStatus, mapTaskRow } from '@/lib/services/task-engine';
+import { getTaskStatus, getDocStatus, mapTaskRow } from '@/lib/services/task-engine';
 import { getWorkflowDefinition } from '@/lib/services/workflow-definitions';
 import { buildOpsDeadlines, getServiceWorkflowPolicy } from '@/lib/service-ops/queue';
 import { listOwnerVaultDocs } from '@/lib/services/vault-docs';
+import { getServiceBySlug } from '@/lib/services/catalog';
 import {
   buildAssistantTaskAnswers,
   getHouseholdMemberBestEffort,
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
       ? body.targetMemberId.trim()
       : undefined;
   const locale = body.locale === 'ne' ? 'ne' : 'en';
+  const mode = body.mode === 'preview' ? 'preview' : 'create';
   if (!question) return NextResponse.json({ error: 'question required' }, { status: 400 });
 
   const result = await ask(question, locale, sessionId);
@@ -59,6 +61,40 @@ export async function POST(request: NextRequest) {
         title: candidate.title,
         providerName: candidate.providerName,
       })),
+    });
+  }
+
+  // ── Preview mode: return full service details without creating a task ──
+  if (mode === 'preview') {
+    // Fetch the full service definition from catalog
+    const fullService = await getServiceBySlug(service.slug);
+    const serviceDetails = fullService || service;
+
+    // Build document status if user is authenticated
+    let docStatus = null;
+    if (user) {
+      const vaultDocs = await listOwnerVaultDocs(supabase, user.id);
+      docStatus = getDocStatus(serviceDetails as any, vaultDocs);
+    }
+
+    return NextResponse.json({
+      preview: true,
+      service: {
+        slug: service.slug,
+        category: service.category,
+        title: service.title,
+        providerName: service.providerName,
+        summary: (serviceDetails as any).summary || null,
+        estimatedTime: (serviceDetails as any).estimatedTime || null,
+        feeRange: (serviceDetails as any).feeRange || null,
+        officialUrl: (serviceDetails as any).officialUrl || null,
+        documents: (serviceDetails as any).documents || [],
+        steps: (serviceDetails as any).steps || [],
+        offices: ((serviceDetails as any).offices || []).slice(0, 3),
+      },
+      docStatus,
+      authenticated: !!user,
+      routeReason: result.routeReason,
     });
   }
 
