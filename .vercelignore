@@ -1,0 +1,35 @@
+# Build artifacts — Vercel builds from source
+.next/
+apps/admin-web/.next/
+apps/admin-web/.next.bak-*/
+apps/admin-web/.next.prepush-check/
+dist/
+
+# Dependencies — Vercel runs npm install
+node_modules/
+
+# Claude Code worktrees and local state
+.claude/worktrees/
+.claude/settings.local.json
+
+# Testing / tooling
+.playwright-cli/
+coverage/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+.env.vercel-production
+
+# Docker / infra (not needed for Vercel)
+infra/
+services/
+
+# OS files
+.DS_Store
+
+# Misc
+output/
+.turbo/
+*.log
