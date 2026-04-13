@@ -154,6 +154,26 @@ export async function autoAssignAndNotify(
         assignee_user_id: result.assigneeUserId,
       },
     });
+
+    // Notify the citizen that their case was created (email + push if enabled)
+    await notifyServiceTaskUsers(supabase, {
+      taskId: input.taskId,
+      ownerId: input.ownerId,
+      title: `Case submitted: ${input.serviceTitle}`,
+      body: `Your ${input.serviceTitle} case has been submitted and routed to ${input.departmentName}. You'll be notified of any updates.`,
+      link: '/me/cases',
+      action: 'task_created',
+      serviceTitle: input.serviceTitle,
+      departmentName: input.departmentName,
+      metadata: {
+        service_slug: input.serviceSlug,
+        department_key: input.departmentKey,
+        action: 'task_created',
+      },
+      includeOwner: true,
+      includeAssignedStaff: false,
+      includeDepartmentMembers: false,
+    });
   } catch (err: any) {
     console.warn('[auto-assign] failed (non-blocking):', err?.message || err);
   }

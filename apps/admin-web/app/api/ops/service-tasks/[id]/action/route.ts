@@ -370,6 +370,9 @@ export async function POST(
       title: citizenNotification.title,
       body: citizenNotification.body,
       link: '/me/cases',
+      action: normalizedAction,
+      serviceTitle: task.service_title,
+      departmentName: department.name,
       metadata: {
         service_slug: task.service_slug,
         queue_state: nextQueueState,
@@ -391,6 +394,9 @@ export async function POST(
           ? `You are now handling this case for ${department.name}.`
           : `A case was assigned to you in ${department.name}.`,
       link: `/service-ops?task=${task.id}`,
+      action: normalizedAction,
+      serviceTitle: task.service_title,
+      departmentName: department.name,
       metadata: {
         service_slug: task.service_slug,
         queue_state: nextQueueState,

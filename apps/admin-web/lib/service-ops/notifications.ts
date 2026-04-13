@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { dispatchMultiChannel } from './notify-channels';
 
 function isMissingRelation(message?: string, relation?: string) {
   if (!message) return false;
@@ -26,6 +27,12 @@ type NotifyServiceTaskUsersInput = {
   ownerId?: string | null;
   assignedStaffUserId?: string | null;
   departmentKey?: string | null;
+  /** Event action for multi-channel routing (e.g. 'approved', 'rejected', 'resolved') */
+  action?: string;
+  /** Service title for email subject */
+  serviceTitle?: string;
+  /** Department name for email body */
+  departmentName?: string;
 };
 
 type InsertServiceTaskMessageInput = {
@@ -55,6 +62,9 @@ export async function notifyServiceTaskUsers(
     ownerId,
     assignedStaffUserId,
     departmentKey,
+    action,
+    serviceTitle,
+    departmentName,
   }: NotifyServiceTaskUsersInput,
 ) {
   let resolvedOwnerId = ownerId || null;
@@ -125,6 +135,28 @@ export async function notifyServiceTaskUsers(
     if (isMissingRelation(error.message, 'user_notifications')) return 0;
     console.warn('[service-ops] failed to insert notifications:', error.message);
     return 0;
+  }
+
+  // Multi-channel delivery (email + push) — fire and forget
+  if (action) {
+    const recipientIds = Array.from(recipients);
+    dispatchMultiChannel(supabase, {
+      taskId,
+      recipientUserIds: recipientIds,
+      title,
+      body: body || '',
+      link: link || '/me/cases',
+      action,
+      serviceTitle,
+      departmentName,
+      metadata: {
+        service_task_id: taskId,
+        kind: 'service_task',
+        ...metadata,
+      },
+    }).catch((err) => {
+      console.warn('[service-ops] multi-channel dispatch error:', err instanceof Error ? err.message : err);
+    });
   }
 
   return rows.length;
