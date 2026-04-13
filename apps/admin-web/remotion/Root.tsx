@@ -51,11 +51,11 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ data: {} as any }}
       />
 
-      {/* ═══ Services Marketing — 45s Facebook ad ═══ */}
+      {/* ═══ Services Marketing — 50s promo video ═══ */}
       <Composition
         id="ServicesMarketing"
         component={ServicesMarketing}
-        durationInFrames={1350}
+        durationInFrames={1500}
         fps={30}
         width={1080}
         height={1920}
