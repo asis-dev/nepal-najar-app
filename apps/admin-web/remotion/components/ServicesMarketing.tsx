@@ -213,29 +213,21 @@ function HookScene() {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 50px' }}>
         <div style={{
-          fontSize: 28, fontWeight: 600, color: GOLD, textAlign: 'center',
-          marginBottom: 16, opacity: textOpacity,
-          letterSpacing: 3, textTransform: 'uppercase',
-        }}>
-          Introducing
-        </div>
-
-        <div style={{
-          fontSize: 58, fontWeight: 900, color: WHITE, textAlign: 'center',
-          lineHeight: 1.2,
+          fontSize: 64, fontWeight: 900, color: WHITE, textAlign: 'center',
+          lineHeight: 1.15,
           transform: `scale(${textScale})`, opacity: textOpacity,
           textShadow: `0 4px 40px ${RED}50`,
         }}>
-          Nepal's First{'\n'}AI Service{'\n'}Advisor
+          Ever wasted{'\n'}a full day{'\n'}at a{'\n'}
+          <span style={{ color: RED }}>sarkari office?</span>
         </div>
 
         <div style={{
-          fontSize: 32, fontWeight: 600, color: GRAY, textAlign: 'center',
-          marginTop: 28, lineHeight: 1.4,
+          fontSize: 34, fontWeight: 600, color: GOLD, textAlign: 'center',
+          marginTop: 30, lineHeight: 1.4,
           transform: `translateY(${(1 - subIn) * 30}px)`, opacity: subIn,
         }}>
-          Passport. License. Hospital.{'\n'}
-          <span style={{ color: GOLD }}>All in one place.</span>
+          Never again.
         </div>
       </div>
       <BrandBar />
@@ -270,7 +262,7 @@ function PainScene() {
           marginBottom: 50, opacity: titleIn,
           textShadow: '0 0 25px rgba(239,68,68,0.3)',
         }}>
-          Sound familiar?
+          We've all been there.
         </div>
 
         {items.map((item, i) => {
@@ -943,15 +935,15 @@ function CTAScene() {
           lineHeight: 1.2, opacity: titleIn,
           textShadow: `0 0 40px ${RED}30`,
         }}>
-          Your government{'\n'}services,{'\n'}
-          <span style={{ color: GOLD }}>simplified.</span>
+          Stop wasting{'\n'}days.{'\n'}
+          <span style={{ color: GOLD }}>Start in 2 minutes.</span>
         </div>
 
         <div style={{
           fontSize: 24, fontWeight: 500, color: GRAY, textAlign: 'center',
           marginTop: 12, opacity: titleIn,
         }}>
-          तपाईंको सरकारी सेवा, सरल बनाइयो।
+          दिन बर्बाद गर्न छोड्नुहोस्।
         </div>
 
         <div style={{
