@@ -336,11 +336,11 @@ export function DashboardIsland() {
               <span className="text-[13px] font-semibold text-white">
                 {playingAboutLang
                   ? (locale === 'ne' ? 'बजाउँदै… रोक्न थिच्नुहोस्' : 'Playing… tap to pause')
-                  : (locale === 'ne' ? 'नेपाल रिपब्लिक बारे जान्नुहोस्' : 'Learn what Nepal Republic is about')}
+                  : (locale === 'ne' ? 'सरकारको जवाफदेहिता — एक मिनेटमा बुझ्नुहोस्' : 'How Nepal tracks its government — in one minute')}
               </span>
               {!playingAboutLang && (
                 <span className="text-[11px] text-gray-400">
-                  {locale === 'ne' ? '१ मिनेट अडियो' : '1 min audio · tap to play'}
+                  {locale === 'ne' ? '▶ अडियो सुन्नुहोस्' : '▶ Listen now'}
                 </span>
               )}
               {playingAboutLang && (
