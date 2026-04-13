@@ -1,6 +1,8 @@
 import React from 'react';
 import {
   AbsoluteFill,
+  Audio,
+  staticFile,
   useCurrentFrame,
   interpolate,
   spring,
@@ -999,6 +1001,8 @@ export interface ServicesMarketingData {}
 export const ServicesMarketing: React.FC<{ data: ServicesMarketingData }> = () => {
   return (
     <AbsoluteFill style={{ background: DARK, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+      {/* ═══ VISUAL SCENES ═══ */}
+
       {/* 0-3s: Hook */}
       <Sequence from={0} durationInFrames={90}>
         <HookScene />
@@ -1037,6 +1041,53 @@ export const ServicesMarketing: React.FC<{ data: ServicesMarketingData }> = () =
       {/* 44-50s: CTA */}
       <Sequence from={1320} durationInFrames={180}>
         <CTAScene />
+      </Sequence>
+
+      {/* ═══ VOICEOVER AUDIO ═══ */}
+
+      {/* Hook narration — starts at 0.3s, gives visuals a moment */}
+      <Sequence from={9} durationInFrames={81}>
+        <Audio src={staticFile('audio/promo/01-hook.mp3')} volume={1} />
+      </Sequence>
+
+      {/* Pain narration */}
+      <Sequence from={95} durationInFrames={115}>
+        <Audio src={staticFile('audio/promo/02-pain.mp3')} volume={1} />
+      </Sequence>
+
+      {/* Landing page narration */}
+      <Sequence from={220} durationInFrames={200}>
+        <Audio src={staticFile('audio/promo/03-landing.mp3')} volume={1} />
+      </Sequence>
+
+      {/* Advisor demo narration */}
+      <Sequence from={430} durationInFrames={230}>
+        <Audio src={staticFile('audio/promo/04-advisor.mp3')} volume={1} />
+      </Sequence>
+
+      {/* Case tracking narration */}
+      <Sequence from={670} durationInFrames={230}>
+        <Audio src={staticFile('audio/promo/05-tracking.mp3')} volume={1} />
+      </Sequence>
+
+      {/* Services breadth narration */}
+      <Sequence from={910} durationInFrames={230}>
+        <Audio src={staticFile('audio/promo/06-services.mp3')} volume={1} />
+      </Sequence>
+
+      {/* Social proof narration */}
+      <Sequence from={1150} durationInFrames={170}>
+        <Audio src={staticFile('audio/promo/07-proof.mp3')} volume={1} />
+      </Sequence>
+
+      {/* CTA narration (English) */}
+      <Sequence from={1330} durationInFrames={90}>
+        <Audio src={staticFile('audio/promo/08-cta.mp3')} volume={1} />
+      </Sequence>
+
+      {/* CTA narration (Nepali — plays after English) */}
+      <Sequence from={1420} durationInFrames={80}>
+        <Audio src={staticFile('audio/promo/09-hook-ne.mp3')} volume={1} />
       </Sequence>
     </AbsoluteFill>
   );
