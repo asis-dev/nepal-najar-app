@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestUser } from '@/lib/auth/request-user';
 import { getAdapter } from '@/lib/services/execution-adapters';
-import { recordSubmissionAttempt } from '@/lib/services/submission-review';
+import { loadDraft } from '@/lib/services/form-drafter';
+import {
+  buildReviewPackage,
+  recordSubmissionAttempt,
+  validateApproval,
+} from '@/lib/services/submission-review';
+import { listOwnerVaultDocs } from '@/lib/services/vault-docs';
 import { updateCaseStatus, recordReference } from '@/lib/services/case-operations';
-import { learnFromFormSubmission } from '@/lib/services/profile-memory';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
@@ -11,7 +16,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { id: taskId } = await params;
 
-  let body: { serviceSlug: string; values: Record<string, string>; documents?: Array<{ type: string; vaultDocId: string }> };
+  let body: {
+    serviceSlug: string;
+    values?: Record<string, string>;
+    editedFields?: Record<string, string>;
+    declarationsAccepted?: boolean;
+    approved?: boolean;
+    userNotes?: string;
+    documents?: Array<{ type: string; vaultDocId: string }>;
+  };
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
@@ -22,11 +35,56 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
+    const draft = await loadDraft(supabase, user.id, taskId);
+    if (!draft) {
+      return NextResponse.json(
+        { error: 'No draft found — generate and review a draft before submission' },
+        { status: 404 },
+      );
+    }
+
+    let attachedDocTypes: string[] = [];
+    try {
+      const vaultDocs = await listOwnerVaultDocs(supabase, user.id);
+      attachedDocTypes = vaultDocs.map((d) => d.docType);
+    } catch {
+      // Non-critical: validation will rely on the current draft state.
+    }
+
+    const pkg = buildReviewPackage(draft, adapter, attachedDocTypes);
+    const decision = {
+      approved: body.approved === true,
+      editedFields: {
+        ...(body.values || {}),
+        ...(body.editedFields || {}),
+      },
+      declarationsAccepted: body.declarationsAccepted === true,
+      userNotes: body.userNotes,
+    };
+
+    const validation = validateApproval(pkg, decision);
+    if (!validation.valid) {
+      return NextResponse.json(
+        {
+          error: 'Submission requires completed review approval',
+          issues: validation.issues,
+        },
+        { status: 400 },
+      );
+    }
+
     const result = await adapter.execute({
       userId: user.id,
       serviceSlug: body.serviceSlug,
       taskId,
-      draftValues: body.values,
+      draftValues: {
+        ...Object.fromEntries(
+          draft.fields
+            .filter((field) => field.value !== null && field.value !== '')
+            .map((field) => [field.key, String(field.value)]),
+        ),
+        ...decision.editedFields,
+      },
       documents: body.documents || [],
     });
 
@@ -41,9 +99,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       await recordReference(supabase, taskId, result.referenceNumber, 'application_id');
       await updateCaseStatus(supabase, taskId, 'submitted', `Submitted via ${result.mode}`);
     }
-
-    // Learn from this submission to improve profile data
-    // (We'd need the form schema here; skip if unavailable)
 
     return NextResponse.json({ result });
   } catch (err) {

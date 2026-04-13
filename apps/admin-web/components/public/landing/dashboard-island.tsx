@@ -336,7 +336,7 @@ export function DashboardIsland() {
               <span className="text-[13px] font-semibold text-white">
                 {playingAboutLang
                   ? (locale === 'ne' ? 'बजाउँदै… रोक्न थिच्नुहोस्' : 'Playing… tap to pause')
-                  : (locale === 'ne' ? 'सरकारको जवाफदेहिता — एक मिनेटमा बुझ्नुहोस्' : 'How Nepal tracks its government — in one minute')}
+                  : (locale === 'ne' ? 'नेपाल रिपब्लिक एप बारे जान्नुहोस्' : 'Learn about the Nepal Republic app')}
               </span>
               {!playingAboutLang && (
                 <span className="text-[11px] text-gray-400">

@@ -7,6 +7,39 @@ import { listOwnerVaultDocs } from '@/lib/services/vault-docs';
 import { learnFromFormSubmission } from '@/lib/services/profile-memory';
 import { recordSubmissionAttempt } from '@/lib/services/submission-review';
 
+function toLegacyReviewShape(pkg: ReturnType<typeof buildReviewPackage>) {
+  return {
+    serviceTitle: pkg.serviceTitle,
+    target: {
+      office: pkg.submissionTarget,
+      method: pkg.submissionMethod,
+    },
+    fields: pkg.items.map((item) => ({
+      key: item.fieldKey,
+      label: item.label,
+      value: item.value,
+      source: item.source,
+      confidence: Math.round(item.confidence * 100),
+      requiresApproval: item.requiresExplicitApproval,
+      approved: !item.requiresExplicitApproval,
+    })),
+    documents: pkg.documents.map((doc) => ({
+      name: doc.label,
+      required: true,
+      attached: doc.attached,
+    })),
+    declarations: pkg.legalDeclarations.map((text, index) => ({
+      id: `decl-${index + 1}`,
+      text,
+    })),
+    warnings: pkg.warnings.map((message) => ({ message })),
+    blockingReasons: pkg.blockingReasons,
+    feeEstimate: pkg.estimatedFee
+      ? { min: 0, max: 0, currency: pkg.estimatedFee }
+      : null,
+  };
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -53,7 +86,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       // Non-critical
     }
 
-    return NextResponse.json({ review: pkg });
+    return NextResponse.json({
+      ...toLegacyReviewShape(pkg),
+      review: pkg,
+    });
   } catch (err) {
     console.error('[review GET] error:', err);
     return NextResponse.json({ error: 'Failed to build review' }, { status: 500 });
@@ -66,7 +102,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { id: taskId } = await params;
 
-  let body: { approved: boolean; editedFields?: Record<string, string>; declarationsAccepted?: boolean; userNotes?: string };
+  let body: {
+    approved: boolean;
+    editedFields?: Record<string, string>;
+    declarationsAccepted?: boolean;
+    userNotes?: string;
+    fields?: Array<{ key: string; value: string; approved?: boolean }>;
+    declarations?: Array<{ id: string; checked: boolean }>;
+  };
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
@@ -86,10 +129,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const pkg = buildReviewPackage(draft, adapter, attachedDocTypes);
 
+    const editedFields =
+      body.editedFields ||
+      Object.fromEntries(
+        (body.fields || []).map((field) => [field.key, field.value]),
+      );
+    const declarationsAccepted =
+      body.declarationsAccepted ??
+      (body.declarations ? body.declarations.every((decl) => decl.checked) : false);
+
     const decision = {
       approved: body.approved,
-      editedFields: body.editedFields || {},
-      declarationsAccepted: body.declarationsAccepted || false,
+      editedFields,
+      declarationsAccepted,
       userNotes: body.userNotes,
     };
 

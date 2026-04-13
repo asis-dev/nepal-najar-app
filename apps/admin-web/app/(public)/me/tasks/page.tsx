@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
 import type { ServiceTaskRecord, ServiceTaskStatus } from '@/lib/services/task-types';
@@ -8,6 +9,9 @@ import { TaskHistory } from '@/components/public/services/task-history';
 import { TaskIntegrations } from '@/components/public/services/task-integrations';
 import { TaskConversation } from '@/components/public/services/task-conversation';
 import { PortalLinkCard } from '@/components/public/services/portal-link-card';
+
+const SubmissionReview = dynamic(() => import('@/components/public/services/review/submission-review'), { ssr: false });
+const CaseTimeline = dynamic(() => import('@/components/public/services/timeline/case-timeline').then((m) => ({ default: m.CaseTimeline })), { ssr: false });
 
 type ApplicationRecord = {
   id: string;
@@ -42,6 +46,8 @@ export default function MyServiceTasksPage() {
   const [tasks, setTasks] = useState<ServiceTaskRecord[]>([]);
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewOpen, setReviewOpen] = useState<string | null>(null);
+  const [timelineOpen, setTimelineOpen] = useState<string | null>(null);
 
   async function reload() {
     setLoading(true);
@@ -126,10 +132,9 @@ export default function MyServiceTasksPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
       <div className="mb-8">
-        <div className="text-xs uppercase tracking-wide text-red-400 font-bold mb-2">Action layer</div>
         <h1 className="text-3xl md:text-4xl font-black text-white">My Cases</h1>
         <p className="text-zinc-400 mt-2">
-          Service workflows, tracked applications, next actions, missing documents, and progress now live together here.
+          Track your service requests, review submissions, and follow up on progress.
         </p>
       </div>
 
@@ -295,6 +300,43 @@ export default function MyServiceTasksPage() {
                     </ul>
                   </div>
                 </div>
+
+                {/* Review & Timeline panels */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {task.status !== 'completed' && task.status !== 'intake' && (
+                    <button
+                      onClick={() => setReviewOpen(reviewOpen === task.id ? null : task.id)}
+                      className="inline-flex items-center rounded-xl border border-cyan-500/30 px-3 py-2 text-sm font-semibold text-cyan-300 hover:bg-cyan-500/10"
+                    >
+                      {reviewOpen === task.id ? 'Close review' : 'Review & submit'}
+                    </button>
+                  )}
+                  {task.status === 'submitted' && (
+                    <button
+                      onClick={() => setTimelineOpen(timelineOpen === task.id ? null : task.id)}
+                      className="inline-flex items-center rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+                    >
+                      {timelineOpen === task.id ? 'Close timeline' : 'Track status'}
+                    </button>
+                  )}
+                </div>
+
+                {reviewOpen === task.id && (
+                  <div className="mt-4">
+                    <SubmissionReview
+                      taskId={task.id}
+                      serviceSlug={task.serviceSlug}
+                      onApprove={() => { setReviewOpen(null); reload(); }}
+                      onCancel={() => setReviewOpen(null)}
+                    />
+                  </div>
+                )}
+
+                {timelineOpen === task.id && (
+                  <div className="mt-4">
+                    <CaseTimeline taskId={task.id} serviceTitle={task.serviceTitle} />
+                  </div>
+                )}
 
                 <div className="mt-4">
                   <TaskHistory taskId={task.id} />

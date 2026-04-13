@@ -132,14 +132,55 @@ export default function SubmissionReview({
     async function fetchReview() {
       try {
         const res = await fetch(`/api/me/service-tasks/${taskId}/review`);
-        if (!res.ok) throw new Error(`Failed to load review (${res.status})`);
-        const data: ReviewPackage = await res.json();
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Failed to load review (${res.status})`);
+        }
+        const raw = await res.json();
         if (cancelled) return;
-        setReviewData(data);
+
+        // Map API response shape → component ReviewPackage shape
+        const pkg = raw.review || raw;
+        const mapped: ReviewPackage = {
+          serviceTitle: pkg.serviceTitle || serviceSlug,
+          target: {
+            office: pkg.submissionTarget || 'Government office',
+            method: pkg.submissionMethod || 'in_person',
+          },
+          fields: (pkg.items || []).map((item: any) => ({
+            key: item.fieldKey,
+            label: item.label,
+            value: item.value,
+            source: item.source || 'user_input',
+            confidence: Math.round((item.confidence || 0) * 100),
+            requiresApproval: item.requiresExplicitApproval || false,
+            approved: false,
+          })),
+          documents: (pkg.documents || []).map((doc: any) => ({
+            name: doc.label || doc.type,
+            required: true,
+            attached: doc.attached || false,
+          })),
+          declarations: (pkg.legalDeclarations || []).map((text: string, i: number) => ({
+            id: `decl-${i}`,
+            text,
+          })),
+          warnings: (pkg.warnings || []).map((w: string) => ({ message: w })),
+          blockingReasons: pkg.blockingReasons || [],
+          feeEstimate: pkg.estimatedFee
+            ? (() => {
+                const match = pkg.estimatedFee.match(/NPR\s*([\d,]+)/);
+                const amount = match ? parseInt(match[1].replace(/,/g, ''), 10) : 0;
+                return { min: amount, max: amount, currency: 'NPR' };
+              })()
+            : null,
+        };
+
+        setReviewData(mapped);
 
         // initialise declaration state
         const decl: Record<string, boolean> = {};
-        for (const d of data.declarations) {
+        for (const d of mapped.declarations) {
           decl[d.id] = false;
         }
         setDeclarationsChecked(decl);
@@ -154,7 +195,7 @@ export default function SubmissionReview({
     return () => {
       cancelled = true;
     };
-  }, [taskId]);
+  }, [taskId, serviceSlug]);
 
   /* ---------- Field approval toggles ---------- */
 
@@ -232,20 +273,20 @@ export default function SubmissionReview({
     if (!reviewData || !canSubmit) return;
     setApproving(true);
     try {
+      // Build editedFields map for fields the user changed
+      const editedFields: Record<string, string> = {};
+      for (const [key, val] of Object.entries(editValues)) {
+        editedFields[key] = val;
+      }
+
       const res = await fetch(`/api/me/service-tasks/${taskId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           approved: true,
-          fields: reviewData.fields.map((f) => ({
-            key: f.key,
-            value: f.value,
-            approved: f.requiresApproval ? f.approved : true,
-          })),
-          declarations: Object.entries(declarationsChecked).map(([id, checked]) => ({
-            id,
-            checked,
-          })),
+          editedFields,
+          declarationsAccepted: allDeclarationsChecked,
+          userNotes: '',
         }),
       });
       if (!res.ok) throw new Error(`Approval failed (${res.status})`);
