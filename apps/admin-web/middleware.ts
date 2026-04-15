@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware';
-import { isOwnerUser } from '@/lib/auth/owner';
 
 /**
  * Edge-compatible constant-time string comparison.
@@ -74,6 +73,7 @@ const PUBLIC_PREFIXES = [
   '/api/social-post',
   '/complaints',
   '/moderation-policy',
+  '/me',
   '/onboarding',
   '/api/onboarding',
   '/partner',
@@ -192,12 +192,6 @@ export async function middleware(request: NextRequest) {
       if (!profile || profile.role !== 'admin') {
         const loginUrl = new URL('/admin-login', request.url);
         loginUrl.searchParams.set('error', 'not-admin');
-        return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
-      }
-
-      if (!isOwnerUser({ id: user.id, email: user.email || profile.email })) {
-        const loginUrl = new URL('/admin-login', request.url);
-        loginUrl.searchParams.set('error', 'owner-only');
         return applySecurityHeaders(NextResponse.redirect(loginUrl), request);
       }
 

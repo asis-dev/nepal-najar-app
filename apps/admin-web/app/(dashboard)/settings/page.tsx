@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { User, Bell, Shield, Globe, Save, Phone, Mail } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Bell, Shield, Globe, Save, Phone, Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 interface ProfileForm {
   displayName: string;
@@ -32,12 +33,32 @@ interface SystemConfig {
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<'profile' | 'notifications' | 'system'>('profile');
 
+  const authUser = useAuth((s) => s.user);
+  const authReady = useAuth((s) => s._initialized);
+  const patchUserProfile = useAuth((s) => s.patchUserProfile);
+
   const [profile, setProfile] = useState<ProfileForm>({
-    displayName: 'Admin User',
-    email: 'admin@nepaltracker.gov.np',
-    phone: '+977-9841234567',
+    displayName: '',
+    email: '',
+    phone: '',
     language: 'en',
   });
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+
+  // Populate form once auth is ready
+  useEffect(() => {
+    if (authReady && authUser) {
+      setProfile((prev) => ({
+        ...prev,
+        displayName: authUser.displayName || '',
+        email: authUser.email || '',
+        phone: authUser.phone || '',
+      }));
+    }
+  }, [authReady, authUser]);
 
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({
     email_alerts: true,
@@ -58,6 +79,53 @@ export default function SettingsPage() {
     session_timeout_hours: 24,
   });
 
+  const handleSave = async () => {
+    if (activeSection !== 'profile') return;
+
+    if (!profile.displayName.trim()) {
+      setSaveError('Display name is required.');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    try {
+      const res = await fetch('/api/me/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: profile.displayName.trim(),
+          phone: profile.phone.trim() || null,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setSaveError(data.error || 'Failed to save profile.');
+        return;
+      }
+
+      // Sync updated values back to auth store
+      if (data.profile) {
+        patchUserProfile({
+          displayName: data.profile.displayName,
+          phone: data.profile.phone,
+        });
+      }
+
+      setSaveSuccess('Profile saved successfully.');
+      // Clear success message after 4s
+      setTimeout(() => setSaveSuccess(null), 4000);
+    } catch {
+      setSaveError('Failed to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const sections = [
     { key: 'profile' as const, label: 'Profile', icon: User },
     { key: 'notifications' as const, label: 'Notifications', icon: Bell },
@@ -71,10 +139,32 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
           <p className="text-gray-500 mt-1">Configure your account and platform preferences</p>
         </div>
-        <button className="btn-primary flex items-center gap-2">
-          <Save className="w-4 h-4" />
-          Save Changes
-        </button>
+        <div className="flex items-center gap-3">
+          {saveError && (
+            <span className="flex items-center gap-1.5 text-sm text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              {saveError}
+            </span>
+          )}
+          {saveSuccess && (
+            <span className="flex items-center gap-1.5 text-sm text-green-600">
+              <CheckCircle className="w-4 h-4" />
+              {saveSuccess}
+            </span>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={isSaving || activeSection !== 'profile'}
+            className="btn-primary flex items-center gap-2 disabled:opacity-50"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {isSaving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-6">
@@ -84,7 +174,11 @@ export default function SettingsPage() {
             {sections.map((sec) => (
               <button
                 key={sec.key}
-                onClick={() => setActiveSection(sec.key)}
+                onClick={() => {
+                  setActiveSection(sec.key);
+                  setSaveError(null);
+                  setSaveSuccess(null);
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   activeSection === sec.key
                     ? 'bg-primary-50 text-primary-700'
@@ -104,59 +198,81 @@ export default function SettingsPage() {
             <div className="card p-6 space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
 
-              <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-primary-600" />
+              {!authReady ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading profile…
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">{profile.displayName}</p>
-                  <p className="text-sm text-gray-500">Super Admin</p>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
+                    <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
+                      <User className="w-8 h-8 text-primary-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {profile.displayName || 'Admin User'}
+                      </p>
+                      <p className="text-sm text-gray-500">Administrator</p>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
-                  <input
-                    className="input"
-                    value={profile.displayName}
-                    onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                    <input
-                      className="input pl-9"
-                      value={profile.email}
-                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Display Name
+                      </label>
+                      <input
+                        className="input"
+                        value={profile.displayName}
+                        onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                        <span className="ml-1 text-xs text-gray-400 font-normal">(read-only)</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <input
+                          className="input pl-9 bg-gray-50 cursor-not-allowed"
+                          value={profile.email}
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <input
+                          className="input pl-9"
+                          value={profile.phone}
+                          onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Language
+                        <span className="ml-1 text-xs text-gray-400 font-normal">(UI only)</span>
+                      </label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <select
+                          className="input pl-9"
+                          value={profile.language}
+                          onChange={(e) => setProfile({ ...profile, language: e.target.value })}
+                        >
+                          <option value="en">English</option>
+                          <option value="ne">Nepali</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                    <input
-                      className="input pl-9"
-                      value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
-                  <select
-                    className="input"
-                    value={profile.language}
-                    onChange={(e) => setProfile({ ...profile, language: e.target.value })}
-                  >
-                    <option value="en">English</option>
-                    <option value="ne">Nepali</option>
-                  </select>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           )}
 
