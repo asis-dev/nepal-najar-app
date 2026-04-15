@@ -17,6 +17,10 @@
       "schedule": "15 13 * * *"
     },
     {
+      "path": "/api/intelligence/research?all=true&maxVideos=10",
+      "schedule": "45 2 * * *"
+    },
+    {
       "path": "/api/daily-brief?generate=1&noaudio=1",
       "schedule": "45 1,13 * * *"
     },

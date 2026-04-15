@@ -361,6 +361,16 @@ export function TopNav() {
                         <Award className="h-4 w-4" />
                         My Reputation
                       </Link>
+                      {user.role === 'admin' && (
+                        <Link
+                          href="/settings"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200"
+                        >
+                          <Settings className="h-4 w-4" />
+                          {t('auth.settings')}
+                        </Link>
+                      )}
                       {isVerifier && (
                         <>
                           <Link
@@ -471,13 +481,25 @@ export function TopNav() {
             </button>
 
             {isAuthenticated && user ? (
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-red-400"
-              >
-                <LogOut className="h-4 w-4" />
-                {t('auth.signOut')}
-              </button>
+              <>
+                {user.role === 'admin' && (
+                  <Link
+                    href="/settings"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-200"
+                  >
+                    <Settings className="h-4 w-4" />
+                    {t('auth.settings')}
+                  </Link>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-red-400"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {t('auth.signOut')}
+                </button>
+              </>
             ) : (
               <Link
                 href="/login"

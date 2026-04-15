@@ -101,7 +101,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET: List available politicians and their research status
+// GET: List available politicians and their research status,
+// OR trigger research when ?all=true or ?politicianId=X is provided (cron-friendly).
 export async function GET(request: NextRequest) {
   const bearerSecret = getBearerToken(request);
   const cronHeaderSecret = request.headers.get('x-vercel-cron-secret');
@@ -113,6 +114,54 @@ export async function GET(request: NextRequest) {
 
   if (!isCronAuth && !isScrapeAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Cron-friendly trigger: if ?all=true or ?politicianId=X, run research
+  const { searchParams } = new URL(request.url);
+  const triggerAll = searchParams.get('all') === 'true';
+  const triggerId = searchParams.get('politicianId');
+  const maxVideos = Number(searchParams.get('maxVideos')) || 10;
+  const dryRun = searchParams.get('dryRun') === 'true';
+
+  if (triggerAll || triggerId) {
+    try {
+      const options = { maxVideos, dryRun };
+      if (triggerAll) {
+        const result = await researchAllPoliticians(POLITICIANS, options);
+        return NextResponse.json({
+          status: 'completed',
+          triggeredVia: 'GET',
+          politicians: result.results.length,
+          totalVideos: result.totalVideos,
+          totalTranscribed: result.totalTranscribed,
+          totalCommitments: result.totalCommitments,
+          totalErrors: result.totalErrors,
+        });
+      }
+      const profile = POLITICIANS.find((p) => p.id === triggerId);
+      if (!profile) {
+        return NextResponse.json(
+          { error: `Politician not found: ${triggerId}`, available: POLITICIANS.map((p) => p.id) },
+          { status: 404 },
+        );
+      }
+      const result = await researchPolitician(profile, options);
+      return NextResponse.json({
+        status: 'completed',
+        triggeredVia: 'GET',
+        politician: result.politician.name,
+        videosFound: result.videosFound,
+        videosTranscribed: result.videosTranscribed,
+        commitmentsExtracted: result.commitmentsExtracted,
+        newCommitments: result.newCommitments,
+        matchedExisting: result.matchedExisting,
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : 'Research failed' },
+        { status: 500 },
+      );
+    }
   }
 
   try {
