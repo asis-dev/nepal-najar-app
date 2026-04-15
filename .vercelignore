@@ -22,9 +22,10 @@ coverage/
 .env.*.local
 .env.vercel-production
 
-# Docker / infra (not needed for Vercel)
-infra/
-services/
+# Docker / infra (not needed for Vercel) — leading slash anchors to repo root
+# so we don't accidentally exclude apps/admin-web/lib/services, etc.
+/infra/
+/services/
 
 # OS files
 .DS_Store
