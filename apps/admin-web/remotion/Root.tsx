@@ -10,6 +10,9 @@ import { DailyReel } from './components/DailyReel';
 import { DailyReelEN } from './components/DailyReelEN';
 import { AIDemo } from './components/AIDemo';
 import { ServicesMarketing } from './components/ServicesMarketing';
+import { ServicesMarketingNE } from './components/ServicesMarketingNE';
+import { AboutApp } from './components/AboutApp';
+import { AboutAppNE } from './components/AboutAppNE';
 import { AppWalkthrough } from './components/AppWalkthrough';
 import { VIDEO_CONFIG } from './types';
 
@@ -55,7 +58,40 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="ServicesMarketing"
         component={ServicesMarketing}
-        durationInFrames={1500}
+        durationInFrames={1721}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{ data: {} as any }}
+      />
+
+      {/* ═══ Services Marketing Nepali — 70s promo video ═══ */}
+      <Composition
+        id="ServicesMarketingNE"
+        component={ServicesMarketingNE}
+        durationInFrames={2025}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{ data: {} as any }}
+      />
+
+      {/* ═══ About App — 2:20 explainer video ═══ */}
+      <Composition
+        id="AboutApp"
+        component={AboutApp}
+        durationInFrames={4205}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{ data: {} as any }}
+      />
+
+      {/* ═══ About App Nepali — 2:20 explainer video ═══ */}
+      <Composition
+        id="AboutAppNE"
+        component={AboutAppNE}
+        durationInFrames={4221}
         fps={30}
         width={1080}
         height={1920}
