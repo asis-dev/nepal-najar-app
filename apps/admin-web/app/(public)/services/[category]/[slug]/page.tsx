@@ -104,9 +104,6 @@ export default async function ServiceDetailPage({ params }: { params: { category
         )}
       </div>
 
-      {/* Nagarik App bridge */}
-      <NagarikBadge serviceSlug={svc.slug} />
-
       {/* Apply in-app CTA */}
       <div className="rounded-2xl bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/30 p-5 mb-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -144,6 +141,9 @@ export default async function ServiceDetailPage({ params }: { params: { category
       )}
 
       <PortalLinks serviceSlug={svc.slug} />
+
+      {/* Nagarik App bridge — positioned after portals, informational not competing with our CTA */}
+      <NagarikBadge serviceSlug={svc.slug} />
 
       {svc.documents.length > 0 && <SaveToVault serviceSlug={svc.slug} serviceTitle={svc.title.en} />}
 

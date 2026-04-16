@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { findPortalsForService, getPaymentLink } from '@/lib/portals/registry';
 import { PortalLinkCard } from '@/components/public/services/portal-link-card';
+import { getNagarikBridge } from '@/lib/services/nagarik-bridge';
 import type { PortalDeepLink } from '@/lib/integrations/portal-deeplinks';
 
 /**
@@ -19,7 +20,11 @@ export function PortalLinks({ serviceSlug }: { serviceSlug: string }) {
   const [hasDeepLinks, setHasDeepLinks] = useState(false);
   const [checked, setChecked] = useState(false);
 
-  const portals = findPortalsForService(serviceSlug);
+  // Exclude Nagarik App from portal list when the NagarikBadge component handles it
+  const hasNagarikBridge = !!getNagarikBridge(serviceSlug);
+  const portals = findPortalsForService(serviceSlug).filter(
+    (p) => !(hasNagarikBridge && p.id === 'nagarik-app'),
+  );
   const esewa = getPaymentLink(serviceSlug, 'esewa');
   const khalti = getPaymentLink(serviceSlug, 'khalti');
   const connectips = getPaymentLink(serviceSlug, 'connectips');

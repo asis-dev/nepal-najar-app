@@ -3,53 +3,54 @@
 import { getNagarikBridge } from '@/lib/services/nagarik-bridge';
 
 /**
- * NagarikBadge — "Also available on Nagarik App" card shown on service detail pages.
- * Links to the Nagarik App/website and highlights what Nepal Republic adds on top.
+ * NagarikBadge — compact "Also on Nagarik" info card on service detail pages.
+ *
+ * Design principles:
+ * - Positioned AFTER our own CTAs, portal links, and execution panels
+ * - Subtle (zinc bg, not gradient), informational not promotional
+ * - Highlights what WE add on top of what Nagarik offers
+ * - Never competes with our own "Apply in-app" CTA
  */
 export function NagarikBadge({ serviceSlug }: { serviceSlug: string }) {
   const bridge = getNagarikBridge(serviceSlug);
   if (!bridge) return null;
 
   return (
-    <div className="rounded-2xl bg-gradient-to-r from-blue-900/30 to-indigo-900/20 border border-blue-500/30 p-5 mb-6">
-      <div className="flex items-start gap-4">
-        {/* Nagarik App icon */}
-        <div className="shrink-0 w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-          <span className="text-2xl">📱</span>
+    <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-4 mb-6">
+      <div className="flex items-start gap-3">
+        {/* Icon */}
+        <div className="shrink-0 w-8 h-8 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center">
+          <span className="text-sm">📱</span>
         </div>
 
         <div className="min-w-0 flex-1">
           {/* Header */}
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-bold text-blue-300">Also on Nagarik App</h3>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+            <span className="text-xs font-semibold text-zinc-300">Also on Nagarik App</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
               नागरिक एप
             </span>
           </div>
 
           {/* What Nagarik offers */}
-          <p className="text-sm text-zinc-300 mb-1">{bridge.nagarikCapability.en}</p>
-          <p className="text-xs text-zinc-500 mb-3">{bridge.nagarikCapability.ne}</p>
+          <p className="text-xs text-zinc-500 mb-1">{bridge.nagarikCapability.en}</p>
 
-          {/* Our advantage */}
+          {/* What we add — the key differentiator */}
           {bridge.ourAdvantage && (
-            <div className="rounded-lg bg-zinc-900/50 border border-zinc-700/50 p-3 mb-3">
-              <div className="text-[10px] uppercase tracking-wide text-red-400 font-bold mb-1">
-                Nepal Republic adds
-              </div>
-              <p className="text-xs text-zinc-300">{bridge.ourAdvantage.en}</p>
-              <p className="text-[11px] text-zinc-500">{bridge.ourAdvantage.ne}</p>
-            </div>
+            <p className="text-xs text-zinc-400">
+              <span className="text-red-400 font-semibold">Nepal Republic adds:</span>{' '}
+              {bridge.ourAdvantage.en}
+            </p>
           )}
 
-          {/* CTA */}
+          {/* Link */}
           <a
             href={bridge.nagarikUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+            className="mt-2 inline-flex text-[11px] text-blue-400/70 hover:text-blue-300 transition-colors"
           >
-            Open on Nagarik App ↗
+            nagarikapp.gov.np ↗
           </a>
         </div>
       </div>

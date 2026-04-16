@@ -74,38 +74,6 @@ export default async function ServicesHomePage() {
         ))}
       </div>
 
-      {/* Nagarik App integration banner */}
-      <div className="mt-8 rounded-2xl bg-gradient-to-r from-blue-900/30 to-indigo-900/20 border border-blue-500/30 p-6">
-        <div className="flex items-start gap-4">
-          <div className="shrink-0 w-14 h-14 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-            <span className="text-3xl">📱</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-bold text-blue-200 mb-1">
-              Works with Nagarik App · नागरिक एपसँग जोडिएको
-            </h3>
-            <p className="text-sm text-zinc-400 mb-3">
-              {getNagarikSlugs().length} services here are also available on Nepal&apos;s Nagarik App.
-              We add step-by-step guides, document checklists, office wait times, and accountability tracking
-              that Nagarik doesn&apos;t offer.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <a
-                href="https://nagarikapp.gov.np"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600/20 border border-blue-600/30 px-3 py-2 text-xs font-semibold text-blue-400 hover:bg-blue-600/30"
-              >
-                Open Nagarik App ↗
-              </a>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-red-600/20 border border-red-600/30 px-3 py-2 text-xs font-semibold text-red-400">
-                + Guides, checklists, wait times, accountability
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Popular services */}
       <div className="mt-12">
         <h2 className="text-xl font-bold mb-4">Most needed · धेरै चाहिने</h2>
@@ -131,7 +99,38 @@ export default async function ServicesHomePage() {
         </div>
       </div>
 
-      <div className="mt-12 text-center text-xs text-zinc-500">
+      {/* Nagarik App complementary banner — after our content, not competing */}
+      <div className="mt-10 rounded-2xl bg-zinc-900 border border-zinc-800 p-5">
+        <div className="flex items-start gap-4">
+          <div className="shrink-0 w-10 h-10 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+            <span className="text-xl">📱</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-bold text-zinc-200">
+                Works with Nagarik App
+              </h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                नागरिक एप
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500 mb-2">
+              {getNagarikSlugs().length} services above are also on Nepal&apos;s Nagarik App for digital document linking.
+              Nepal Republic adds guides, checklists, wait times, and government accountability tracking.
+            </p>
+            <a
+              href="https://nagarikapp.gov.np"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              nagarikapp.gov.np ↗
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 text-center text-xs text-zinc-500">
         Verified manually by Nepal Republic. Something wrong?{' '}
         <a href="mailto:hello@nepalrepublic.org" className="text-red-400 hover:underline">
           Tell us
