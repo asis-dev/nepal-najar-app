@@ -14,12 +14,24 @@ import { ServicesMarketingNE } from './components/ServicesMarketingNE';
 import { AboutApp } from './components/AboutApp';
 import { AboutAppNE } from './components/AboutAppNE';
 import { AppWalkthrough } from './components/AppWalkthrough';
-import { VIDEO_CONFIG } from './types';
+import { HypeReel } from './components/HypeReel';
+import { VIDEO_CONFIG, HYPE_REEL_CONFIG } from './types';
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      {/* ═══ NEW: Unified 60s reels (replace the 5 separate videos) ═══ */}
+      {/* ═══ HYPE REEL — 15s viral short-form (replaces DailyReel for social) ═══ */}
+      <Composition
+        id="HypeReel"
+        component={HypeReel}
+        durationInFrames={HYPE_REEL_CONFIG.durationInFrames}
+        fps={HYPE_REEL_CONFIG.fps}
+        width={HYPE_REEL_CONFIG.width}
+        height={HYPE_REEL_CONFIG.height}
+        defaultProps={{ data: {} as any }}
+      />
+
+      {/* ═══ Legacy 60s reels (kept for full daily summary) ═══ */}
 
       {/* Nepali Daily Reel — 60s, everything in one video */}
       <Composition

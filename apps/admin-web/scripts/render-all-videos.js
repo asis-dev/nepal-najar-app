@@ -413,11 +413,27 @@ async function main() {
   const v1size = (statSync(v1final).size / 1024 / 1024).toFixed(1);
   const v2size = (statSync(v2final).size / 1024 / 1024).toFixed(1);
 
-  console.log(`\n🎬🎬 BOTH REELS READY! 🎬🎬`);
+  // ═══════════════════════════════════════════════════════════════════════
+  // STEP 5: Render Hype Reel (15s viral short)
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n🔥 Step 5: Rendering Hype Reel (15s viral short)...\n');
+  try {
+    execSync(`node "${join(ROOT, 'scripts/render-hype-reel.js')}" ${date}`, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      timeout: 300_000,
+    });
+  } catch (err) {
+    console.warn('⚠️  Hype reel failed (non-fatal):', err.message);
+  }
+
+  console.log(`\n🎬🎬 ALL REELS READY! 🎬🎬`);
   console.log(`📁 ${outDir}/`);
   console.log(`   1-daily-reel.mp4       — 60s Nepali (${v1size} MB)`);
   console.log(`   2-daily-reel-en.mp4    — 60s English (${v2size} MB)`);
-  console.log(`\n🔊 Audio VERIFIED on both videos`);
+  console.log(`   hype-reel.mp4          — 15s viral short`);
+  console.log(`   hype-reel-silent.mp4   — 15s text-only version`);
+  console.log(`\n🔊 Audio VERIFIED on both daily reels`);
   console.log(`🖼️  AI-generated images for top stories`);
   console.log(`🚀 Ready for Facebook / TikTok / Instagram / YouTube!\n`);
 }

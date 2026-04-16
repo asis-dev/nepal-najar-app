@@ -4,9 +4,13 @@
  * Default: Supabase is used when NEXT_PUBLIC_SUPABASE_URL is configured.
  * Set NEXT_PUBLIC_USE_LIVE_DATA=false to force static data (for local dev without Supabase).
  */
-import { promises as staticPromises, type GovernmentPromise } from './promises';
+import { promises as corePromises, type GovernmentPromise } from './promises';
+import { APRIL_2026_COMMITMENTS } from './seed-commitments-april-2026';
 import { PROMISES_KNOWLEDGE } from '@/lib/intelligence/knowledge-base';
 import { computeLiveScoreBatch } from '@/lib/intelligence/live-score-engine';
+
+/** Static seed data: original 109 + April 2026 discoveries */
+const staticPromises: GovernmentPromise[] = [...corePromises, ...APRIL_2026_COMMITMENTS];
 
 const USE_LIVE_DATA = process.env.NEXT_PUBLIC_USE_LIVE_DATA !== 'false';
 const RECOUNT_EVIDENCE_ON_READ =

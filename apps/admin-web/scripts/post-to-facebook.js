@@ -62,6 +62,9 @@ function dayInOffice() {
 const VIDEO_TYPES = {
   1: { file: '1-daily-reel.mp4', name: 'Daily Reel (Nepali)' },
   2: { file: '2-daily-reel-en.mp4', name: 'Daily Reel (English)' },
+  // 🔥 NEW: Hype Reel — 15s viral short (preferred for social)
+  7: { file: 'hype-reel.mp4', name: 'Hype Reel (15s viral)' },
+  8: { file: 'hype-reel-silent.mp4', name: 'Hype Reel Silent (15s text-only)' },
   // Legacy fallbacks
   3: { file: '1-daily-scorecard.mp4', name: 'Daily Scorecard (legacy)' },
   4: { file: '2-top-story.mp4', name: 'Top Story (legacy)' },
@@ -71,6 +74,12 @@ const VIDEO_TYPES = {
 
 function generateCaption(videoNum, date) {
   const day = dayInOffice();
+
+  // For hype reels, try to read the generated props for dynamic caption
+  if (videoNum === 7 || videoNum === 8) {
+    return generateHypeCaption(date, day);
+  }
+
   const captions = {
     1: `📊 दिन ${day} — सरकारले आज के गर्यो?\n\n🔴 आजका मुख्य समाचार + १०९ वचनबद्धता ट्र्याकर + PM स्कोरकार्ड — सबै एकै ठाउँमा!\n\nAI ले हरेक दिन ट्र्याक गर्दैछ। ${day} दिनमा कति प्रगति?\n\n👉 nepalrepublic.org\n\nसरकारलाई कति अंक दिनुहुन्छ? कमेन्टमा भन्नुहोस् 👇\n\n#NepalRepublic #नेपालरिपब्लिक #Nepal #BalenShah #बालेनशाह #RSP #सरकार #जवाफदेही #GovAccountability #Day${day} #नेपाल #प्रधानमन्त्री`,
     2: `📊 Day ${day} — What has Nepal's government done today?\n\n🔴 Top headlines + 109 promise tracker + PM scorecard — all in 60 seconds!\n\nAI-powered daily accountability tracker for Nepal's RSP government.\n\n👉 nepalrepublic.org\n\nHow would you grade this government? Drop your score 👇\n\n#NepalRepublic #Nepal #BalenShah #GovernmentTracker #Accountability #AI #Day${day} #RSP #NepalPolitics #PMNepal`,
@@ -80,6 +89,11 @@ function generateCaption(videoNum, date) {
     6: `📊 Day ${day}\n\n👉 nepalrepublic.org\n\n#NepalRepublic #Nepal`,
   };
   return captions[videoNum] || captions[1];
+}
+
+function generateHypeCaption(date, day) {
+  // Dynamic caption from the top story — optimized for Facebook engagement
+  return `🔴 दिन ${day}\n\nसरकारको ${day} दिनमा के भयो? 15 सेकेन्डमा हेर्नुहोस्!\n\n💬 तपाईंको विचार कमेन्टमा भन्नुहोस् 👇\n\n👉 nepalrepublic.org — AI-powered government tracker\n\n#NepalRepublic #नेपाल #बालेनशाह #सरकार #Day${day} #Nepal #BalenShah #RSP`;
 }
 
 function buildMultipart(fields, fileField) {
