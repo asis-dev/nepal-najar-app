@@ -3,6 +3,7 @@ import { getAllServices } from '@/lib/services/catalog';
 import { CATEGORY_LABELS, CATEGORY_ICONS, type ServiceCategory } from '@/lib/services/types';
 import { ServicesInstantSearch } from '@/components/public/services/instant-search';
 import { TaskRouter } from '@/components/public/services/task-router';
+import { getNagarikSlugs } from '@/lib/services/nagarik-bridge';
 
 export const revalidate = 300;
 
@@ -71,6 +72,38 @@ export default async function ServicesHomePage() {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* Nagarik App integration banner */}
+      <div className="mt-8 rounded-2xl bg-gradient-to-r from-blue-900/30 to-indigo-900/20 border border-blue-500/30 p-6">
+        <div className="flex items-start gap-4">
+          <div className="shrink-0 w-14 h-14 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+            <span className="text-3xl">📱</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg font-bold text-blue-200 mb-1">
+              Works with Nagarik App · नागरिक एपसँग जोडिएको
+            </h3>
+            <p className="text-sm text-zinc-400 mb-3">
+              {getNagarikSlugs().length} services here are also available on Nepal&apos;s Nagarik App.
+              We add step-by-step guides, document checklists, office wait times, and accountability tracking
+              that Nagarik doesn&apos;t offer.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="https://nagarikapp.gov.np"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600/20 border border-blue-600/30 px-3 py-2 text-xs font-semibold text-blue-400 hover:bg-blue-600/30"
+              >
+                Open Nagarik App ↗
+              </a>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-red-600/20 border border-red-600/30 px-3 py-2 text-xs font-semibold text-red-400">
+                + Guides, checklists, wait times, accountability
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Popular services */}

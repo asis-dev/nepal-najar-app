@@ -16,6 +16,7 @@ import { TransportExecutionPanel } from '@/components/public/services/transport-
 import { ServiceExecutionPanel } from '@/components/public/services/service-execution-panel';
 import { CounterpartyStatusCard } from '@/components/public/services/counterparty-status-card';
 import { IntegrationStatusCard } from '@/components/public/services/integration-status-card';
+import { NagarikBadge } from '@/components/public/services/nagarik-badge';
 import { getWorkflowDefinition } from '@/lib/services/workflow-definitions';
 import { withOgVersion } from '@/lib/share/brand';
 
@@ -102,6 +103,9 @@ export default async function ServiceDetailPage({ params }: { params: { category
           </a>
         )}
       </div>
+
+      {/* Nagarik App bridge */}
+      <NagarikBadge serviceSlug={svc.slug} />
 
       {/* Apply in-app CTA */}
       <div className="rounded-2xl bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/30 p-5 mb-6">

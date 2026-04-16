@@ -8,7 +8,8 @@ import type { Service, ServiceCategory } from './types';
 import { SEED_SERVICES as CORE } from './seed-data';
 import { EXTRA_SERVICES } from './seed-data-extra';
 import { EXTRA_SERVICES_2 } from './seed-data-extra-2';
-const SEED_SERVICES = [...CORE, ...EXTRA_SERVICES, ...EXTRA_SERVICES_2];
+import { NAGARIK_SERVICES } from './seed-data-nagarik';
+const SEED_SERVICES = [...CORE, ...EXTRA_SERVICES, ...EXTRA_SERVICES_2, ...NAGARIK_SERVICES];
 
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'to', 'for', 'of', 'and', 'or', 'my', 'me', 'i', 'need', 'want',
@@ -33,6 +34,14 @@ const TOKEN_SYNONYMS: Record<string, string[]> = {
   electricity: ['nea', 'bill', 'power'],
   water: ['kukl', 'bill', 'connection'],
   bank: ['account', 'kyc'],
+  nagarik: ['nagarikapp', 'nagrik', 'citizen', 'digital', 'identity'],
+  chalan: ['challan', 'fine', 'traffic', 'violation'],
+  epf: ['provident', 'retirement', 'pension', 'contribution'],
+  clearance: ['police', 'character', 'certificate'],
+  voter: ['election', 'registration', 'vote'],
+  neb: ['plus two', 'grade 12', 'board'],
+  ssf: ['social security', 'contribution'],
+  malpot: ['land revenue', 'land tax'],
   अस्पताल: ['hospital', 'opd', 'doctor', 'appointment', 'admission'],
   समय: ['appointment', 'slot', 'book'],
   टिकट: ['opd', 'hospital', 'appointment'],
