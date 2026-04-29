@@ -108,14 +108,12 @@ export async function getCommitmentCatalogSummary(
   const catalog = await getCommitmentCatalog();
   const slice = catalog.slice(0, limit);
 
+  // Compact format — drop summary blob and actors. Keep only id, title, category.
+  // For tier-1 classification the model only needs to pick an ID; the title and
+  // category give enough discrimination. Saves ~4K tokens per call so the prompt
+  // fits in an 8K-context local model. (Was ~6K tokens, now ~1.5K.)
   return {
-    lines: slice.map((entry) => {
-      const actorLabel =
-        entry.actors.length > 0 ? ` | actors: ${entry.actors.slice(0, 3).join(', ')}` : '';
-      const summary =
-        entry.summary.length > 0 ? ` | ${entry.summary.slice(0, 120)}` : '';
-      return `${entry.id}: ${entry.title} — ${entry.category} | scope: ${entry.scope}${actorLabel}${summary}`;
-    }),
+    lines: slice.map((entry) => `${entry.id}: ${entry.title} [${entry.category}]`),
     knownIds: new Set(catalog.map((entry) => entry.id)),
     total: catalog.length,
   };
