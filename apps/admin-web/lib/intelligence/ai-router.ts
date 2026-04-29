@@ -396,7 +396,9 @@ async function callOpenAICompatible(
       max_tokens: config.maxTokens,
       temperature: config.temperature,
     }),
-    signal: AbortSignal.timeout(180_000),
+    // Local models hang harder than cloud APIs when stuck — fail fast (60s)
+    // so the chain can fall through to a cloud fallback. 180s is fine for cloud.
+    signal: AbortSignal.timeout(config.provider === 'local' ? 60_000 : 180_000),
   });
 
   if (!res.ok) {
