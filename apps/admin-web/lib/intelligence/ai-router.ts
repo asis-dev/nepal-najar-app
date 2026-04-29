@@ -204,7 +204,14 @@ function buildProviderChain(task: TaskType): AIConfig[] {
     chain.push(openClawConfig);
   }
 
-  // Priority 1: OpenRouter/Qwen (FREE — try first)
+  // INTELLIGENCE_PREFER_LOCAL=true → put local LM Studio first.
+  // Used by the laptop-cron setup so AI work stays free.
+  const preferLocal = process.env.INTELLIGENCE_PREFER_LOCAL === 'true';
+  if (preferLocal) {
+    chain.push(getLocalConfig(task));
+  }
+
+  // Priority 1 (cloud): OpenRouter/Qwen (FREE — try first)
   if (process.env.OPENROUTER_API_KEY) {
     chain.push({
       provider: 'openrouter',
@@ -216,7 +223,7 @@ function buildProviderChain(task: TaskType): AIConfig[] {
     });
   }
 
-  // Priority 2: OpenAI (paid fallback)
+  // Priority 2 (cloud): OpenAI (paid fallback)
   if (process.env.OPENAI_API_KEY) {
     chain.push({
       provider: 'openai',
@@ -228,8 +235,10 @@ function buildProviderChain(task: TaskType): AIConfig[] {
     });
   }
 
-  // Local LM Studio (offline fallback)
-  chain.push(getLocalConfig(task));
+  // Local LM Studio (last-resort fallback when not preferred)
+  if (!preferLocal) {
+    chain.push(getLocalConfig(task));
+  }
   return chain;
 }
 

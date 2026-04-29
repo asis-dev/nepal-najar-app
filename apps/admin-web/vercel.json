@@ -1,36 +1,9 @@
 {
+  "$comment": "AI-heavy crons (sweep, worker, daily-brief, research) moved to laptop launchd plists in scripts/local-cron/. The crons below run lightweight, user-facing tasks that must fire on time even when the laptop is off.",
   "crons": [
-    {
-      "path": "/api/intelligence/sweep?mode=full",
-      "schedule": "15 1,13,19 * * *"
-    },
-    {
-      "path": "/api/intelligence/worker?limit=10&batchSize=10&translationBatchSize=20",
-      "schedule": "30 1,13,19 * * *"
-    },
-    {
-      "path": "/api/ops/ai/worker?limit=10",
-      "schedule": "35 1,13,19 * * *"
-    },
     {
       "path": "/api/ministers/refresh",
       "schedule": "15 13 * * *"
-    },
-    {
-      "path": "/api/intelligence/research?all=true&maxVideos=10",
-      "schedule": "45 2 * * *"
-    },
-    {
-      "path": "/api/daily-brief?generate=1&noaudio=1",
-      "schedule": "45 1,13 * * *"
-    },
-    {
-      "path": "/api/daily-brief?audioonly=1",
-      "schedule": "0 2,14 * * *"
-    },
-    {
-      "path": "/api/daily-brief?videoonly=1",
-      "schedule": "10 2,14 * * *"
     },
     {
       "path": "/api/vault/reminders/tick",

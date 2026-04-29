@@ -129,12 +129,18 @@ export async function POST(request: NextRequest) {
       briefResult = await regenerateBriefAndAudio();
     }
 
+    // Pre-warm commitment briefings made stale by freshly classified signals
+    const briefingPrewarm = includesSignalAnalysis(jobTypes) && result.completed > 0
+      ? await prewarmStaleBriefings()
+      : null;
+
     return NextResponse.json({
       status: 'ok',
       bootstrap,
       translation,
       trendingResult,
       briefResult,
+      briefingPrewarm,
       ...result,
     });
   } catch (err) {
@@ -200,12 +206,18 @@ export async function GET(request: NextRequest) {
       ? await regenerateBriefAndAudio()
       : null;
 
+    // Pre-warm commitment briefings made stale by freshly classified signals
+    const briefingPrewarm = includesSignalAnalysis(jobTypes) && result.completed > 0
+      ? await prewarmStaleBriefings()
+      : null;
+
     return NextResponse.json({
       status: 'ok',
       bootstrap,
       translation,
       trendingResult,
       briefResult,
+      briefingPrewarm,
       ...result,
     });
   } catch (err) {
@@ -240,6 +252,86 @@ async function regenerateBriefAndAudio(): Promise<{
   } catch (err) {
     console.warn('[Worker] Brief regen error:', err instanceof Error ? err.message : 'unknown');
     return { regenerated: false, audioGenerated: false, error: err instanceof Error ? err.message : 'unknown' };
+  }
+}
+
+/**
+ * Pre-warm commitment briefings whose newest matched signal is newer than the
+ * cached briefing. Runs after the worker classifies signals (matched_promise_ids
+ * is set inside the brain pass), so this is the natural place to refresh briefings.
+ * Capped at 10 commitments per worker run to bound AI cost.
+ */
+async function prewarmStaleBriefings(): Promise<{
+  warmed: number;
+  failed: number;
+  candidates: number;
+  stale: number;
+}> {
+  try {
+    const { getSupabase } = await import('@/lib/supabase/server');
+    const supabase = getSupabase();
+    const lookbackIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: recentMatched } = await supabase
+      .from('intelligence_signals')
+      .select('matched_promise_ids, discovered_at')
+      .gte('discovered_at', lookbackIso)
+      .not('matched_promise_ids', 'eq', '{}')
+      .limit(5000);
+
+    const newestSignalAt = new Map<number, number>();
+    for (const sig of recentMatched || []) {
+      const ts = new Date((sig as { discovered_at: string }).discovered_at).getTime();
+      const ids = ((sig as { matched_promise_ids: number[] | null }).matched_promise_ids) || [];
+      for (const id of ids) {
+        const prev = newestSignalAt.get(id) || 0;
+        if (ts > prev) newestSignalAt.set(id, ts);
+      }
+    }
+
+    if (newestSignalAt.size === 0) {
+      return { warmed: 0, failed: 0, candidates: 0, stale: 0 };
+    }
+
+    const candidateIds = Array.from(newestSignalAt.keys());
+    const { data: existing } = await supabase
+      .from('commitment_briefings')
+      .select('commitment_id, generated_at')
+      .in('commitment_id', candidateIds);
+
+    const briefingAt = new Map<number, number>();
+    for (const row of existing || []) {
+      briefingAt.set(
+        (row as { commitment_id: number }).commitment_id,
+        new Date((row as { generated_at: string }).generated_at).getTime(),
+      );
+    }
+
+    const stale = candidateIds.filter((id) => {
+      const sig = newestSignalAt.get(id) || 0;
+      const brief = briefingAt.get(id) || 0;
+      return brief < sig;
+    });
+
+    const capped = stale
+      .sort((a, b) => (newestSignalAt.get(b)! - (briefingAt.get(b) || 0)) - (newestSignalAt.get(a)! - (briefingAt.get(a) || 0)))
+      .slice(0, 10);
+
+    if (capped.length === 0) {
+      return { warmed: 0, failed: 0, candidates: candidateIds.length, stale: stale.length };
+    }
+
+    const { generateBriefingBatch } = await import('@/lib/intelligence/commitment-briefing');
+    const result = await generateBriefingBatch(capped);
+    return {
+      warmed: result.generated,
+      failed: result.failed,
+      candidates: candidateIds.length,
+      stale: stale.length,
+    };
+  } catch (err) {
+    console.warn('[Worker] Briefing pre-warm error:', err instanceof Error ? err.message : 'unknown');
+    return { warmed: 0, failed: 0, candidates: 0, stale: 0 };
   }
 }
 

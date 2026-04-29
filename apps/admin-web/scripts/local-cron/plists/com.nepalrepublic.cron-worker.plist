@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Intelligence worker — processes queued signal-classification jobs, translates Nepali,
+  refreshes daily brief + audio, and pre-warms commitment briefings made stale by new signals.
+
+  Schedule: every hour at :30 (24x/day). Each run handles up to 15 jobs × 12 signals = 180 signals,
+  plus 25 translations. That clears ~1100/day inflow with headroom.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nepalrepublic.cron-worker</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/scripts/local-cron/cron-runner.sh</string>
+    <string>worker</string>
+    <string>/api/intelligence/worker?limit=15&amp;batchSize=12&amp;translationBatchSize=25</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Minute</key><integer>30</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/cron-worker.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/cron-worker.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/priyanka.shrestha/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>

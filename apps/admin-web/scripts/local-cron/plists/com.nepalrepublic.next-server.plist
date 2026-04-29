@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Keeps `next start` running on port 3000 so the local-cron plists can hit it.
+  The local-cron plists curl http://127.0.0.1:3000/api/... with CRON_SECRET.
+
+  Build first:
+    cd ~/Desktop/nepal-progress/apps/admin-web && npm run build
+
+  Then install with:
+    bash ~/Desktop/nepal-progress/apps/admin-web/scripts/local-cron/install.sh
+
+  Uses caffeinate -s to keep the machine awake while the server runs.
+  RunAtLoad=true → starts at login.
+  KeepAlive=true → restarts if the process exits.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nepalrepublic.next-server</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/caffeinate</string>
+    <string>-s</string>
+    <string>/Users/priyanka.shrestha/.nvm/versions/node/v20.20.0/bin/npm</string>
+    <string>run</string>
+    <string>start</string>
+    <string>--</string>
+    <string>--port</string>
+    <string>3030</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/next-server.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/next-server.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/priyanka.shrestha/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key>
+    <string>/Users/priyanka.shrestha</string>
+    <key>NODE_ENV</key>
+    <string>production</string>
+  </dict>
+</dict>
+</plist>

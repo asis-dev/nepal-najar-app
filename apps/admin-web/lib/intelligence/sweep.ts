@@ -1052,34 +1052,76 @@ export async function runFullSweep(
     );
   }
 
-  // ── Pre-warm briefings — regenerate for ALL commitments that got new signals (no cap) ──
+  // ── Pre-warm briefings — find commitments whose briefings are stale relative to recent signals ──
+  // NOTE: In queued-analysis mode, signals discovered in THIS sweep don't yet have
+  // matched_promise_ids set (the brain pass runs in the worker). So restricting to
+  // sweepStartedAtIso would miss everything. Instead, look at all signals matched in
+  // the last 24h and warm any commitment whose briefing is older than its newest signal.
   try {
     const { generateBriefingBatch } = await import('./commitment-briefing');
     const { generateImpactBatch } = await import('./impact-predictor');
-    // Find commitments that got new signals in this sweep
-    const { data: updatedCommitments } = await supabase
-      .from('intelligence_signals')
-      .select('matched_promise_ids')
-      .gte('discovered_at', sweepStartedAtIso)
-      .not('matched_promise_ids', 'eq', '{}');
+    const lookbackIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const affectedIds = new Set<number>();
-    for (const sig of updatedCommitments || []) {
+    const { data: recentMatched } = await supabase
+      .from('intelligence_signals')
+      .select('matched_promise_ids, discovered_at')
+      .gte('discovered_at', lookbackIso)
+      .not('matched_promise_ids', 'eq', '{}')
+      .limit(5000);
+
+    // Track newest signal per commitment
+    const newestSignalAt = new Map<number, number>();
+    for (const sig of recentMatched || []) {
+      const ts = new Date(sig.discovered_at as string).getTime();
       const ids = (sig.matched_promise_ids as number[]) || [];
-      for (const id of ids) affectedIds.add(id);
+      for (const id of ids) {
+        const prev = newestSignalAt.get(id) || 0;
+        if (ts > prev) newestSignalAt.set(id, ts);
+      }
     }
 
-    if (affectedIds.size > 0) {
-      const idsToWarm = Array.from(affectedIds); // No cap — warm all affected
-      const warmResult = await generateBriefingBatch(idsToWarm);
-      console.log(
-        `[Sweep] Pre-warmed ${warmResult.generated} briefings (${warmResult.failed} failed) for ${idsToWarm.length} commitments`,
-      );
-      // Also refresh impact predictions for affected commitments
-      const impactResult = await generateImpactBatch(idsToWarm);
-      console.log(
-        `[Sweep] Pre-warmed ${impactResult.generated} impact predictions for ${idsToWarm.length} commitments`,
-      );
+    if (newestSignalAt.size > 0) {
+      // Fetch current briefing freshness for affected commitments
+      const candidateIds = Array.from(newestSignalAt.keys());
+      const { data: existing } = await supabase
+        .from('commitment_briefings')
+        .select('commitment_id, generated_at')
+        .in('commitment_id', candidateIds);
+
+      const briefingAt = new Map<number, number>();
+      for (const row of existing || []) {
+        briefingAt.set(
+          row.commitment_id as number,
+          new Date(row.generated_at as string).getTime(),
+        );
+      }
+
+      // Warm commitments where briefing is missing OR older than the newest matched signal
+      const idsToWarm = candidateIds.filter((id) => {
+        const sig = newestSignalAt.get(id) || 0;
+        const brief = briefingAt.get(id) || 0;
+        return brief < sig;
+      });
+
+      // Cap to avoid runaway cost — process up to 30 staleest first
+      const capped = idsToWarm
+        .sort((a, b) => (newestSignalAt.get(b)! - (briefingAt.get(b) || 0)) - (newestSignalAt.get(a)! - (briefingAt.get(a) || 0)))
+        .slice(0, 30);
+
+      if (capped.length > 0) {
+        const warmResult = await generateBriefingBatch(capped);
+        console.log(
+          `[Sweep] Pre-warmed ${warmResult.generated}/${capped.length} stale briefings (${warmResult.failed} failed); ${idsToWarm.length} total stale, ${newestSignalAt.size} candidates`,
+        );
+        const impactResult = await generateImpactBatch(capped);
+        console.log(
+          `[Sweep] Pre-warmed ${impactResult.generated}/${capped.length} impact predictions`,
+        );
+      } else {
+        console.log(
+          `[Sweep] Briefing pre-warm: ${newestSignalAt.size} candidates, all briefings already fresh`,
+        );
+      }
     }
   } catch (err) {
     result.analysis.errors.push(

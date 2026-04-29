@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Full intelligence sweep — runs all collectors (RSS / YouTube / social), classifies via local AI.
+
+  Schedule: 07:15 and 19:15 NPT (twice a day, matching prior Vercel cron times).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nepalrepublic.cron-sweep</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/scripts/local-cron/cron-runner.sh</string>
+    <string>sweep-full</string>
+    <string>/api/intelligence/sweep?mode=full</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key><integer>7</integer>
+      <key>Minute</key><integer>15</integer>
+    </dict>
+    <dict>
+      <key>Hour</key><integer>19</integer>
+      <key>Minute</key><integer>15</integer>
+    </dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/cron-sweep.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/cron-sweep.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/priyanka.shrestha/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>

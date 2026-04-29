@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily brief audio (2-min Nepali + English). Runs after the text-brief cron.
+
+  Schedule: 08:00 and 20:00 NPT.
+  Audio uses Edge TTS (free Sagar voice for Nepali) → ElevenLabs → OpenAI fallback.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nepalrepublic.cron-daily-brief-audio</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/scripts/local-cron/cron-runner.sh</string>
+    <string>daily-brief-audio</string>
+    <string>/api/daily-brief?audioonly=1</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key><integer>8</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+    <dict>
+      <key>Hour</key><integer>20</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/cron-daily-brief-audio.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/cron-daily-brief-audio.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/priyanka.shrestha/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily brief text generation. Audio handled by separate cron-daily-brief-audio.plist.
+
+  Schedule: 07:45 and 19:45 NPT (~30 min after sweep, so signals are classified).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nepalrepublic.cron-daily-brief</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/scripts/local-cron/cron-runner.sh</string>
+    <string>daily-brief</string>
+    <string>/api/daily-brief?generate=1&amp;noaudio=1</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key><integer>7</integer>
+      <key>Minute</key><integer>45</integer>
+    </dict>
+    <dict>
+      <key>Hour</key><integer>19</integer>
+      <key>Minute</key><integer>45</integer>
+    </dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/cron-daily-brief.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/priyanka.shrestha/Library/Logs/nepal-republic/cron-daily-brief.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/priyanka.shrestha/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
