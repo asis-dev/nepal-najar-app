@@ -347,7 +347,7 @@ export async function tier1ClassifyBatch(
     return `--- SIGNAL ${idx + 1} (ID: ${signal.id}) ---
 Type: ${signal.signal_type}
 Title: ${signal.title}
-Content: ${(signal.content || '').slice(0, 1500)}
+Content: ${(signal.content || '').slice(0, 600)}
 Source: ${signal.source_id}
 Date: ${signal.published_at || 'unknown'}
 Author: ${signal.author || 'unknown'}
