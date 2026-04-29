@@ -14,9 +14,9 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/priyanka.shrestha/Desktop/nepal-progress/apps/admin-web/scripts/local-cron/cron-runner.sh</string>
-    <string>worker</string>
-    <string>/api/intelligence/worker?limit=15&amp;batchSize=12&amp;translationBatchSize=25</string>
+    <string>/bin/zsh</string>
+    <string>-c</string>
+    <string>"$HOME/Library/Application Support/nepal-republic/cron-runner.sh" worker '/api/intelligence/worker?limit=15&amp;batchSize=12&amp;translationBatchSize=25'</string>
   </array>
 
   <key>StartCalendarInterval</key>
@@ -32,6 +32,8 @@
 
   <key>EnvironmentVariables</key>
   <dict>
+    <key>HOME</key>
+    <string>/Users/priyanka.shrestha</string>
     <key>PATH</key>
     <string>/Users/priyanka.shrestha/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
