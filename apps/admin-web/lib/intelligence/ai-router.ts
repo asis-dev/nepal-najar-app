@@ -211,11 +211,24 @@ function buildProviderChain(task: TaskType): AIConfig[] {
     chain.push(getLocalConfig(task));
   }
 
-  // Priority 1 (cloud): OpenRouter/Qwen (FREE — try first)
+  // Priority 1 (cloud, free): Gemini 2.5 Flash. Generous free tier.
+  if (process.env.GEMINI_API_KEY) {
+    chain.push({
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
+      apiKey: process.env.GEMINI_API_KEY,
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      maxTokens: task === 'classify' ? 1000 : 4000,
+      temperature: task === 'classify' ? 0.1 : 0.2,
+    });
+  }
+
+  // Priority 2 (cloud, free): OpenRouter Llama 3.1 8B (the qwen3.6 model name
+  // returns 404 — model doesn't exist on OpenRouter).
   if (process.env.OPENROUTER_API_KEY) {
     chain.push({
       provider: 'openrouter',
-      model: 'qwen/qwen3.6-plus-preview:free',
+      model: 'meta-llama/llama-3.1-8b-instruct:free',
       apiKey: process.env.OPENROUTER_API_KEY,
       baseUrl: 'https://openrouter.ai/api/v1',
       maxTokens: task === 'classify' ? 1000 : 4000,
@@ -223,7 +236,7 @@ function buildProviderChain(task: TaskType): AIConfig[] {
     });
   }
 
-  // Priority 2 (cloud): OpenAI (paid fallback)
+  // Priority 3 (cloud, paid): OpenAI fallback.
   if (process.env.OPENAI_API_KEY) {
     chain.push({
       provider: 'openai',
