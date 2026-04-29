@@ -1676,4 +1676,27 @@ export const PROMISES_KNOWLEDGE: PromiseKnowledge[] = [
     keyMinistries: ['Ministry of Youth & Sports', 'National Sports Council'],
     budgetRelevance: 'NPR 1-3B for athlete welfare programs',
   },
+  {
+    id: 122,
+    title: 'Energy Consumption Growth and Export Strategy 2026 (24,500 MW by 2035)',
+    titleNe: 'ऊर्जा खपत वृद्धि तथा निर्यात रणनीति, २०२६',
+    category: 'Economy',
+    description:
+      'Cabinet-approved strategy targeting 24,500 MW of electricity generation by FY 2035/36 through combined government, public, and private investment. Sets domestic consumption growth and export expansion path; pairs with the IBN digital one-stop service for investor onboarding.',
+    keyAspects:
+      'Hydropower, solar, energy export, IPP, NEA, IBN, cross-border power trade, India electricity sale, Bangladesh power export, transmission corridor, MW capacity',
+    progressIndicators:
+      'New PPAs signed, projects under construction, transmission lines commissioned, PPA tariff reforms, India/Bangladesh export volume rising, IBN portal onboarding investors',
+    stallIndicators:
+      'Strategy unimplemented, no MW added, financial closure stuck, transmission constraints, India trade deal stalled',
+    keyOfficials: ['Finance Minister', 'Energy Minister', 'IBN CEO'],
+    keyMinistries: [
+      'Ministry of Energy, Water Resources & Irrigation',
+      'Ministry of Finance',
+      'Investment Board Nepal (IBN)',
+      'Nepal Electricity Authority (NEA)',
+    ],
+    budgetRelevance:
+      'Multi-year capital plan, hundreds of billions NPR — mostly private sector with public co-financing',
+  },
 ];

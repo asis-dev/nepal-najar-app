@@ -910,6 +910,23 @@ const PROMISE_KEYWORDS: Record<string, string[]> = {
     'दुर्गम जिल्ला इन्टरनेट', 'ग्रामीण ब्रोडब्यान्ड', 'भूउपग्रह इन्टरनेट',
     'दूरसञ्चार स्याटेलाइट', 'दुर्गम क्षेत्र इन्टरनेट',
   ],
+  '122': [
+    'energy strategy 2026', 'energy consumption growth', 'energy export strategy',
+    '24500 mw', '24,500 mw', '24500 megawatt', 'twenty four thousand five hundred megawatt',
+    'hydropower export', 'electricity export nepal', 'cross border power trade',
+    'india power trade', 'bangladesh power export', 'power trade agreement',
+    'investment board nepal energy', 'ibn one stop service', 'ossc.ibn.gov.np',
+    'energy policy 2026', 'fy 2035/36 power', 'fy 2092/93 power',
+    'ppa nepal', 'power purchase agreement', 'ipp nepal', 'independent power producer',
+    'nea export', 'nepal electricity authority export', 'transmission corridor',
+    'energy minister', 'mwi', 'ministry of energy water resources',
+    'ऊर्जा रणनीति', 'ऊर्जा खपत वृद्धि', 'ऊर्जा निर्यात रणनीति',
+    '२४५०० मेगावाट', '२४,५०० मेगावाट', 'विद्युत निर्यात',
+    'जलविद्युत निर्यात', 'भारतमा विद्युत निर्यात', 'बंगलादेशमा विद्युत निर्यात',
+    'विद्युत व्यापार', 'विद्युत खरिद सम्झौता', 'विप्पा',
+    'लगानी बोर्ड नेपाल', 'ऊर्जा मन्त्रालय',
+    'नेपाल विद्युत प्राधिकरण', 'प्रसारण लाइन', 'अन्तरदेशीय विद्युत व्यापार',
+  ],
 };
 
 interface MatchInput {
