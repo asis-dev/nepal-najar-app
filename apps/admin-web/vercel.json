@@ -1,5 +1,4 @@
 {
-  "$comment": "AI-heavy crons (sweep, worker, daily-brief, research) moved to laptop launchd plists in scripts/local-cron/. The crons below run lightweight, user-facing tasks that must fire on time even when the laptop is off.",
   "crons": [
     {
       "path": "/api/ministers/refresh",
