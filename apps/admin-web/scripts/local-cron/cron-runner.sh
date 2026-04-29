@@ -14,7 +14,7 @@
 set -u
 
 label="${1:?missing task label}"
-path="${2:?missing api path}"
+api_path="${2:?missing api path}"
 port="${LOCAL_CRON_PORT:-3030}"
 
 repo_root="/Users/priyanka.shrestha/Desktop/nepal-progress"
@@ -36,7 +36,7 @@ if [[ -z "$cron_secret" ]]; then
 fi
 
 ts="$(date -Iseconds)"
-echo "[$ts] $label START $path" >> "$log_file"
+echo "[$ts] $label START $api_path" >> "$log_file"
 
 # Hit the local server. Long timeout to allow heavy sweeps to finish.
 # --max-time 1500 = 25 min hard ceiling.
@@ -44,7 +44,7 @@ http_code=$(curl -sS -o /tmp/cron-runner-${label}.body -w '%{http_code}' \
   --max-time 1500 \
   -H "x-vercel-cron-secret: ${cron_secret}" \
   -H "Authorization: Bearer ${cron_secret}" \
-  "http://127.0.0.1:${port}${path}" 2>>"$log_file" || echo "000")
+  "http://127.0.0.1:${port}${api_path}" 2>>"$log_file" || echo "000")
 
 body_head=$(head -c 1000 /tmp/cron-runner-${label}.body 2>/dev/null || echo "")
 ts_done="$(date -Iseconds)"
