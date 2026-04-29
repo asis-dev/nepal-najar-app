@@ -169,11 +169,17 @@ function buildProviderChain(task: TaskType): AIConfig[] {
   const chain: AIConfig[] = [];
   const openClawConfig = getOpenClawConfig(task);
 
-  // ── SUMMARIZE tasks (daily brief) → OpenAI ONLY ──
-  // The editorial brief prompt is tuned for OpenAI. Free models produce garbage.
+  // ── SUMMARIZE tasks (daily brief, signal summaries, translations) ──
+  // OpenAI was the preferred path for editorial quality, but it gets rate-limited.
+  // With INTELLIGENCE_PREFER_LOCAL=true we route through local first so the
+  // pipeline keeps working at $0 even when cloud APIs are throttled.
   if (task === 'summarize') {
     if (OPENCLAW_PREFERRED && openClawConfig) {
       chain.push(openClawConfig);
+    }
+    const preferLocalSummary = process.env.INTELLIGENCE_PREFER_LOCAL === 'true';
+    if (preferLocalSummary) {
+      chain.push(getLocalConfig(task));
     }
     if (process.env.OPENAI_API_KEY) {
       chain.push({
@@ -185,16 +191,18 @@ function buildProviderChain(task: TaskType): AIConfig[] {
         temperature: 0.1,
       });
     }
-    // Fallback only: Qwen (no Gemini — it produces unparseable responses)
-    if (process.env.OPENROUTER_API_KEY) {
+    if (process.env.GEMINI_API_KEY) {
       chain.push({
-        provider: 'openrouter',
-        model: 'qwen/qwen3.6-plus-preview:free',
-        apiKey: process.env.OPENROUTER_API_KEY,
-        baseUrl: 'https://openrouter.ai/api/v1',
+        provider: 'gemini',
+        model: 'gemini-2.5-flash',
+        apiKey: process.env.GEMINI_API_KEY,
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
         maxTokens: 4000,
         temperature: 0.1,
       });
+    }
+    if (!preferLocalSummary) {
+      chain.push(getLocalConfig(task));
     }
     return chain;
   }
